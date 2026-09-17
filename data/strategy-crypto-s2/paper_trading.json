@@ -1,8 +1,8 @@
 {
   "status": "awaiting_api",
-  "label": "模擬倉 · Bybit Demo",
-  "exchange": "Bybit Demo",
-  "venue": "bybit_demo",
+  "label": "模擬倉 · Binance Demo",
+  "exchange": "Binance Demo",
+  "venue": "binance_demo",
   "strategy_id": "strategy-crypto-s2",
   "strategy_name": "S2 NEAR Donchian",
   "selected_variant": "donchian_breakout_atr__NEAR__4h",
@@ -14,5 +14,7 @@
   "started_at_taipei": "2026-09-18 00:42:18 CST",
   "signals": [],
   "open_positions": [],
-  "notes": "模擬倉選定 Bybit Demo。虛擬權益／未平倉／成交待 API 接通後灌入；最近成交亦可由 settlement.json 同步顯示。"
+  "notes": "模擬倉選定 Binance Demo（demo-api.binance.com / NEARUSDT）。虛擬權益／未平倉／成交待 API 接通後灌入；最近成交亦可由 settlement.json 同步顯示。",
+  "api_base": "https://demo-api.binance.com",
+  "market_symbol": "NEARUSDT"
 }

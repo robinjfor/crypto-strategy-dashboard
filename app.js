@@ -618,7 +618,7 @@
             <tbody>${fillRows}</tbody>
           </table></div>
           <p style="margin-top:10px;font-size:0.75rem;color:var(--text-muted)">
-            Bybit Demo API 接通後更新 <code>paper_trading.json</code>（virtual_equity / open_positions）；成交結算寫 <code>settlement.json</code>。
+            Binance Demo API 接通後更新 <code>paper_trading.json</code>（virtual_equity / open_positions）；成交結算寫 <code>settlement.json</code>。
           </p>
         </div></div>
       </div>
