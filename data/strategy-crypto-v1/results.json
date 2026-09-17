@@ -1,0 +1,298 @@
+{
+  "strategy_id": "strategy-v-crypto-1",
+  "market": "crypto",
+  "selected_variant": "sma200_confirm5",
+  "selection_note": "Close>SMA200 for 5 consecutive days → 99% long; exit after 5 days below SMA200. Round3 spirit; preferred over sma200_hold despite slightly lower score (fewer trades, similar TiM/DD).",
+  "selection_score_formula": "total_return + 0.15*TiM + 8*Sharpe + 35*min(ret/BH,1.05) - 0.15*|MaxDD|; penalty if TiM<40 or MaxDD<-55; prefer sma200_confirm5 if within 8pts of best",
+  "honest_assessment": "Selected sma200_confirm5: +144.2% vs BTC B&H +62.1% (outperformance +82.1 pp) over 2021-09-17→2026-09-17. TiM 53.3%, MaxDD -35.5% (far better than BTC B&H MaxDD -76.6%), Sharpe 0.57, 7 trades. Edge comes from sitting in cash through the 2022 crypto winter — regime-specific, not alpha forever. sma200_hold scored slightly higher (+149.9%) but confirm5 preferred (Round3 spirit, fewer whipsaws, within 8 score pts). dual_ma_rsi_atr (+16%, TiM 30%) is the low-participation control. Costs: 15bps one-way (10 commission + 5 slippage).",
+  "buy_hold": {
+    "symbol": "BTC-USD",
+    "period_start": "2021-09-17",
+    "period_end": "2026-09-17",
+    "total_return_pct": 62.1346,
+    "max_drawdown_pct": -76.6346,
+    "note": "BTC-USD buy-and-hold over evaluation window (primary benchmark)."
+  },
+  "bh_ceiling_proof": {
+    "btc_bh_return_pct": 62.1346,
+    "btc_bh_max_dd_pct": -76.6346,
+    "sma200_above_pct": 53.04,
+    "sma200_signal_lag_gross_return_pct": 169.6816,
+    "one_way_cost_bps": 15.0,
+    "conclusion": "Unlike the equity Round3 bull-heavy SPY window, THIS crypto sample includes the 2022 bear (BTC B&H MaxDD -76.6%). SMA200 signal-lag GROSS (~169.7%) EXCEEDS BTC B&H (+62.1%) because exiting below the slow MA avoided most of the crash; costs (15bps one-way) trim but do not erase the edge. Beating B&H here is regime-dependent — not a guarantee for future cycles."
+  },
+  "cost_assumptions": {
+    "commission_bps": 10.0,
+    "slippage_bps": 5.0,
+    "one_way_bps": 15.0,
+    "round_trip_bps": 30.0,
+    "note": "Elevated vs equity V1 (5+5bps). Mid of 10–20 bps one-way guidance."
+  },
+  "all_variants": [
+    {
+      "name": "sma50_hold",
+      "note": "Close>SMA50 → 98% long; exit on break.",
+      "score": 161.7269,
+      "cagr_pct": 19.2628,
+      "max_drawdown_pct": -56.9897,
+      "sharpe": 0.5765,
+      "n_trades": 54,
+      "win_rate_pct": 22.2222,
+      "profit_factor": 1.7773,
+      "total_return_pct": 141.2529,
+      "buy_hold_return_pct": 62.1346,
+      "time_in_market_pct": 51.07,
+      "final_equity": 241252.88,
+      "bh_capture_pct": 227.33,
+      "params": {
+        "symbols": [
+          "BTC-USD"
+        ],
+        "commission_bps": 10.0,
+        "slippage_bps": 5.0,
+        "one_way_cost_bps": 15.0,
+        "max_position_pct": 98.0,
+        "initial_capital": 100000.0,
+        "eval_start": "2021-09-17"
+      }
+    },
+    {
+      "name": "sma200_hold",
+      "note": "Close>SMA200 → 98% long; exit on break.",
+      "score": 193.7727,
+      "cagr_pct": 20.1047,
+      "max_drawdown_pct": -36.4848,
+      "sharpe": 0.5814,
+      "n_trades": 21,
+      "win_rate_pct": 28.5714,
+      "profit_factor": 2.9835,
+      "total_return_pct": 149.8882,
+      "buy_hold_return_pct": 62.1346,
+      "time_in_market_pct": 53.04,
+      "final_equity": 249888.21,
+      "bh_capture_pct": 241.23,
+      "params": {
+        "symbols": [
+          "BTC-USD"
+        ],
+        "commission_bps": 10.0,
+        "slippage_bps": 5.0,
+        "one_way_cost_bps": 15.0,
+        "max_position_pct": 98.0,
+        "initial_capital": 100000.0,
+        "eval_start": "2021-09-17"
+      }
+    },
+    {
+      "name": "sma200_confirm5",
+      "note": "PRIMARY candidate: 5-day confirm vs SMA200 (Round3 spirit, crypto costs).",
+      "score": 188.1608,
+      "cagr_pct": 19.5532,
+      "max_drawdown_pct": -35.5268,
+      "sharpe": 0.5683,
+      "n_trades": 7,
+      "win_rate_pct": 57.1429,
+      "profit_factor": 4.3822,
+      "total_return_pct": 144.2044,
+      "buy_hold_return_pct": 62.1346,
+      "time_in_market_pct": 53.26,
+      "final_equity": 244204.38,
+      "bh_capture_pct": 232.08,
+      "params": {
+        "symbols": [
+          "BTC-USD"
+        ],
+        "commission_bps": 10.0,
+        "slippage_bps": 5.0,
+        "one_way_cost_bps": 15.0,
+        "max_position_pct": 99.0,
+        "initial_capital": 100000.0,
+        "eval_start": "2021-09-17"
+      }
+    },
+    {
+      "name": "dual_ma_rsi_atr",
+      "note": "Control: MA20/50 cross + RSI 35–75 + ATR trail (low TiM).",
+      "score": 5.9129,
+      "cagr_pct": 3.0182,
+      "max_drawdown_pct": -11.5483,
+      "sharpe": 0.3832,
+      "n_trades": 16,
+      "win_rate_pct": 25.0,
+      "profit_factor": 2.1237,
+      "total_return_pct": 16.0274,
+      "buy_hold_return_pct": 62.1346,
+      "time_in_market_pct": 30.16,
+      "final_equity": 116027.39,
+      "bh_capture_pct": 25.79,
+      "params": {
+        "symbols": [
+          "BTC-USD"
+        ],
+        "commission_bps": 10.0,
+        "slippage_bps": 5.0,
+        "one_way_cost_bps": 15.0,
+        "max_position_pct": 95.0,
+        "initial_capital": 100000.0,
+        "eval_start": "2021-09-17",
+        "fast_ma": 20,
+        "slow_ma": 50,
+        "rsi_entry_min": 35.0,
+        "rsi_entry_max": 75.0,
+        "atr_stop_mult": 3.0,
+        "atr_trail_mult": 4.0,
+        "risk_per_trade_pct": 2.0
+      }
+    },
+    {
+      "name": "btc_eth_eq_sma200",
+      "note": "BTC+ETH equal-capital; each holds when Close>SMA200.",
+      "score": 112.9636,
+      "cagr_pct": 11.1356,
+      "max_drawdown_pct": -33.5024,
+      "sharpe": 0.4286,
+      "n_trades": 28,
+      "win_rate_pct": 32.1429,
+      "profit_factor": 2.3081,
+      "total_return_pct": 69.5257,
+      "buy_hold_return_pct": 17.3697,
+      "time_in_market_pct": 55.23,
+      "final_equity": 169525.7,
+      "bh_capture_pct": 400.27,
+      "params": {
+        "symbols": [
+          "BTC-USD",
+          "ETH-USD"
+        ],
+        "commission_bps": 10.0,
+        "slippage_bps": 5.0,
+        "one_way_cost_bps": 15.0,
+        "max_position_pct": 98.0,
+        "initial_capital": 100000.0,
+        "eval_start": "2021-09-17"
+      }
+    }
+  ],
+  "metrics": {
+    "symbol": "BTC-USD",
+    "symbols": [
+      "BTC-USD"
+    ],
+    "period_start": "2021-09-17",
+    "period_end": "2026-09-17",
+    "years": 4.999,
+    "initial_capital": 100000.0,
+    "final_equity": 244204.38,
+    "total_return_pct": 144.2044,
+    "cagr_pct": 19.5532,
+    "max_drawdown_pct": -35.5268,
+    "sharpe": 0.5683,
+    "n_trades": 7,
+    "win_rate_pct": 57.1429,
+    "profit_factor": 4.3822,
+    "avg_win": 46710.27,
+    "avg_loss": -14212.23,
+    "buy_hold_return_pct": 62.1346,
+    "time_in_market_pct": 53.26,
+    "params": {
+      "strategy_id": "crypto_trend_v1",
+      "variant": "sma200_confirm5",
+      "symbol_default": "BTC-USD",
+      "timeframe": "1D",
+      "allow_short": false,
+      "commission_bps": 10.0,
+      "slippage_bps": 5.0,
+      "one_way_cost_bps": 15.0,
+      "confirm_days": 5,
+      "sma_period": 200,
+      "max_position_pct": 99.0,
+      "initial_capital": 100000.0
+    },
+    "generated_at_taipei": "2026-09-17 23:46:48 CST"
+  },
+  "trades": [
+    {
+      "entry_date": "2021-10-05",
+      "exit_date": "2022-01-01",
+      "entry_price": 51592.0847,
+      "exit_price": 47615.2823,
+      "shares": 1.918899,
+      "pnl": -7631.08,
+      "pnl_pct": -7.7082,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2023-01-17",
+      "exit_date": "2023-08-21",
+      "entry_price": 21193.2618,
+      "exit_price": 26084.9544,
+      "shares": 4.3148256,
+      "pnl": 21106.8,
+      "pnl_pct": 23.0814,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2023-10-20",
+      "exit_date": "2024-07-08",
+      "entry_price": 29727.4736,
+      "exit_price": 56620.04,
+      "shares": 3.77902819,
+      "pnl": 101627.77,
+      "pnl_pct": 90.4637,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2024-07-17",
+      "exit_date": "2024-08-07",
+      "entry_price": 64214.9712,
+      "exit_price": 54944.9197,
+      "shares": 3.31624302,
+      "pnl": -30741.74,
+      "pnl_pct": -14.436,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2024-10-18",
+      "exit_date": "2025-04-01",
+      "entry_price": 68521.4172,
+      "exit_price": 85041.4181,
+      "shares": 2.66366534,
+      "pnl": 44003.75,
+      "pnl_pct": 24.1093,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2025-04-26",
+      "exit_date": "2025-11-07",
+      "entry_price": 94788.9001,
+      "exit_price": 103217.3476,
+      "shares": 2.38510881,
+      "pnl": 20102.76,
+      "pnl_pct": 8.8918,
+      "reason": "confirm_exit",
+      "symbol": "BTC-USD"
+    },
+    {
+      "entry_date": "2026-08-23",
+      "exit_date": "2026-09-17",
+      "entry_price": 77871.8985,
+      "exit_price": 76522.0679,
+      "shares": 3.15882342,
+      "pnl": -4263.88,
+      "pnl_pct": -1.7334,
+      "reason": "end_of_data",
+      "symbol": "BTC-USD"
+    }
+  ],
+  "n_signals": 7,
+  "extensions": {
+    "ETH-USD": "Same SMA confirm rules; expect higher vol → optional confirm_days=7.",
+    "portfolio": "btc_eth_eq_sma200 equal-splits capital; B&H benchmark = equal-weight BTC+ETH."
+  },
+  "generated_at_taipei": "2026-09-17 23:46:48 CST"
+}

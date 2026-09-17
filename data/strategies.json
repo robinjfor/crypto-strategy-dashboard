@@ -1,0 +1,52 @@
+{
+  "strategies": [
+    {
+      "id": "strategy-crypto-v1",
+      "path": "./data/strategy-crypto-v1",
+      "has_equity_csv": true,
+      "has_settlement": true,
+      "results_mtime": "2026-09-17 23:54:09",
+      "is_crypto": true,
+      "selected_variant": "sma200_confirm5",
+      "generated_at_taipei": "2026-09-17 23:46:48 CST",
+      "symbol": "BTC-USD",
+      "symbols": [
+        "BTC-USD"
+      ],
+      "total_return_pct": 144.2044,
+      "cagr_pct": 19.5532,
+      "sharpe": 0.5683
+    },
+    {
+      "id": "strategy-v1",
+      "path": "./data/strategy-v1",
+      "has_equity_csv": true,
+      "has_settlement": true,
+      "results_mtime": "2026-09-17 23:54:09",
+      "is_crypto": false,
+      "selected_variant": "r2_trend_trail",
+      "generated_at_taipei": "2026-09-17 23:38:42 CST",
+      "symbol": "SPY",
+      "symbols": null,
+      "total_return_pct": 12.4013,
+      "cagr_pct": 2.366,
+      "sharpe": 0.7556
+    },
+    {
+      "id": "strategy-v1-round3",
+      "path": "./data/strategy-v1-round3",
+      "has_equity_csv": true,
+      "has_settlement": true,
+      "results_mtime": "2026-09-17 23:54:09",
+      "is_crypto": false,
+      "selected_variant": "trend_hold_sma200",
+      "generated_at_taipei": "2026-09-17 23:45:29 CST",
+      "symbol": "SPY",
+      "symbols": null,
+      "total_return_pct": 53.6467,
+      "cagr_pct": 8.9707,
+      "sharpe": 0.811
+    }
+  ],
+  "default": "strategy-crypto-v1"
+}

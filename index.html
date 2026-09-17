@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto 策略績效儀表板</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">₿</div>
+        <div>
+          <h1>Crypto 策略績效儀表板</h1>
+          <div class="sub">加密市場策略績效 · 純靜態 / GitHub Pages</div>
+        </div>
+      </div>
+      <div class="controls">
+        <label class="ctrl">策略／標的
+          <select id="strategySelect"></select>
+        </label>
+        <button type="button" class="primary" id="btnRefresh">重整</button>
+        <span class="meta-pill" id="lastUpdated">最後更新：—</span>
+      </div>
+    </header>
+
+    <div class="err-banner" id="errBanner"></div>
+    <div id="main" class="loading">載入中…</div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
