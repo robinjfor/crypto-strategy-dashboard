@@ -235,15 +235,22 @@
     const note = meta.approval_note || "";
     if (!status && !label) return "";
     const isUnapproved = status === "research_unapproved";
-    const cls = isUnapproved ? "approval-banner warn" : "approval-banner info";
+    const isCandidate = status === "candidate_pending_sim";
+    const cls = isUnapproved
+      ? "approval-banner warn"
+      : isCandidate
+        ? "approval-banner candidate"
+        : "approval-banner info";
     const title = label || status;
     return `<div class="${cls}" role="status">
       <strong>${escapeHtml(title)}</strong>
       ${note ? `<span>${escapeHtml(note)}</span>` : ""}
       ${
         isUnapproved
-          ? "<span>尚未贏過 B&amp;H，不可當作已核准上線策略；S2 通過後才切預設。</span>"
-          : ""
+          ? "<span>尚未贏過 B&amp;H，不可當作已核准上線策略。</span>"
+          : isCandidate
+            ? "<span>已贏 B&amp;H，但仍無 OOS／模擬盤；僅候選預設，實盤前需再過模擬。</span>"
+            : ""
       }
     </div>`;
   }

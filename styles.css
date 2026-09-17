@@ -211,3 +211,10 @@ footer {
 }
 .approval-banner.warn strong { color: #fcd34d; }
 .approval-banner.info strong { color: var(--text); }
+
+.approval-banner.candidate {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+.approval-banner.candidate strong { color: #bbf7d0; }
