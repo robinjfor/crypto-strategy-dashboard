@@ -1,8 +1,18 @@
 {
-  "status": "running",
-  "label": "模擬盤進行中",
-  "started_at_taipei": null,
+  "status": "awaiting_api",
+  "label": "模擬倉 · Bybit Demo",
+  "exchange": "Bybit Demo",
+  "venue": "bybit_demo",
+  "strategy_id": "strategy-crypto-s2",
+  "strategy_name": "S2 NEAR Donchian",
+  "selected_variant": "donchian_breakout_atr__NEAR__4h",
+  "symbol": "NEAR",
+  "timeframe": "4h",
+  "currency": "USDT",
+  "virtual_equity": null,
+  "virtual_equity_source": "pending_api",
+  "started_at_taipei": "2026-09-18 00:42:18 CST",
   "signals": [],
   "open_positions": [],
-  "notes": "空殼：之後由資金控管／策略分析師寫入即時信號與模擬成交；結算仍寫 settlement.json。"
+  "notes": "模擬倉選定 Bybit Demo。虛擬權益／未平倉／成交待 API 接通後灌入；最近成交亦可由 settlement.json 同步顯示。"
 }

@@ -533,55 +533,92 @@
   }
 
   function renderPaperTrading(payload) {
-    const pt = payload.paper_trading || null;
-    const signals = (pt && Array.isArray(pt.signals) ? pt.signals : []).slice().reverse();
-    const opens = pt && Array.isArray(pt.open_positions) ? pt.open_positions : [];
-    const statusLabel = (pt && (pt.label || pt.status)) || "模擬盤空殼";
-    const rowsSig = signals.length
-      ? signals
-          .slice(0, 20)
-          .map((s) => {
-            return `<tr>
-              <td>${escapeHtml(s.time || s.ts || "—")}</td>
-              <td>${escapeHtml(s.symbol || "—")}</td>
-              <td>${escapeHtml(s.side || s.action || "—")}</td>
-              <td class="num">${escapeHtml(s.price != null ? s.price : "—")}</td>
-              <td>${escapeHtml(s.note || s.reason || "")}</td>
-            </tr>`;
-          })
-          .join("")
-      : `<tr><td colspan="5" class="empty-row">尚無即時信號（寫入 data/${escapeHtml(payload.id)}/paper_trading.json 的 signals[]）</td></tr>`;
-    const rowsPos = opens.length
+    const pt = payload.paper_trading || {};
+    const settlements = Array.isArray(payload.settlements)
+      ? payload.settlements.slice()
+      : [];
+    const recent = settlements
+      .slice()
+      .sort((a, b) => String(b.exit_time || b.exit_date || "").localeCompare(String(a.entry_time || a.entry_date || "")))
+      .slice(0, 12);
+    const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
+    const exchange = pt.exchange || pt.venue || "—";
+    const strategyName =
+      pt.strategy_name ||
+      payload.id ||
+      "—";
+    const variant = pt.selected_variant || (payload.results && payload.results.selected_variant) || "";
+    const equity =
+      pt.virtual_equity != null
+        ? fmtNum(pt.virtual_equity, 2)
+        : "待 API";
+    const equityHint = pt.virtual_equity_source || pt.status || "";
+    const currency = pt.currency || "USDT";
+    const statusLabel = pt.label || "模擬倉";
+
+    const openRows = opens.length
       ? opens
-          .map((s) => {
-            return `<tr>
+          .map((s) => `<tr>
               <td>${escapeHtml(s.symbol || "—")}</td>
               <td>${escapeHtml(s.side || "—")}</td>
               <td class="num">${escapeHtml(s.qty != null ? s.qty : "—")}</td>
               <td class="num">${escapeHtml(s.entry_price != null ? s.entry_price : "—")}</td>
+              <td class="num ${clsSigned(s.unrealized_pnl)}">${escapeHtml(
+                s.unrealized_pnl != null ? fmtNum(s.unrealized_pnl, 2) : "—"
+              )}</td>
               <td>${escapeHtml(s.opened_at || "—")}</td>
+            </tr>`)
+          .join("")
+      : `<tr><td colspan="6" class="empty-row">尚無未平倉（API 接通後寫入 paper_trading.json → open_positions[]）</td></tr>`;
+
+    const fillRows = recent.length
+      ? recent
+          .map((s) => {
+            const pnl = s.pnl;
+            return `<tr>
+              <td>${escapeHtml(s.exit_time || s.exit_date || s.entry_time || "—")}</td>
+              <td>${escapeHtml(s.symbol || pt.symbol || "—")}</td>
+              <td>${escapeHtml(s.side || "—")}</td>
+              <td class="num ${clsSigned(pnl)}">${escapeHtml(
+                pnl != null ? fmtNum(pnl, 2) : "—"
+              )}</td>
+              <td class="num">${escapeHtml(s.fee != null ? fmtNum(s.fee, 4) : "—")}</td>
+              <td class="num">${escapeHtml(
+                s.cumulative_equity != null ? fmtNum(s.cumulative_equity, 2) : "—"
+              )}</td>
+              <td>${escapeHtml(s.note || "")}</td>
             </tr>`;
           })
           .join("")
-      : `<tr><td colspan="5" class="empty-row">無未平倉模擬部位</td></tr>`;
+      : `<tr><td colspan="7" class="empty-row">尚無成交（讀 settlement.json；API／模擬結算寫入後顯示）</td></tr>`;
+
     return `<section class="section">
-      <div class="section-head"><h2>模擬盤／即時信號</h2><span class="hint">${escapeHtml(statusLabel)}</span></div>
-      <div class="grid-2">
-        <div class="card"><div class="card-body">
-          <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">信號</h2></div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>時間</th><th>標的</th><th>方向</th><th class="num">價格</th><th>備註</th></tr></thead>
-            <tbody>${rowsSig}</tbody>
-          </table></div>
-        </div></div>
+      <div class="section-head"><h2>模擬倉</h2><span class="hint">${escapeHtml(statusLabel)}</span></div>
+      <div class="kpi-grid paper-account">
+        <div class="kpi"><div class="kpi-label">交易所</div><div class="kpi-value">${escapeHtml(exchange)}</div></div>
+        <div class="kpi"><div class="kpi-label">策略</div><div class="kpi-value">${escapeHtml(strategyName)}${
+          variant ? `<div class="kpi-sub">${escapeHtml(variant)}</div>` : ""
+        }</div></div>
+        <div class="kpi"><div class="kpi-label">虛擬權益（${escapeHtml(currency)}）</div><div class="kpi-value">${escapeHtml(equity)}</div><div class="kpi-sub">${escapeHtml(equityHint)}</div></div>
+        <div class="kpi"><div class="kpi-label">未平倉筆數</div><div class="kpi-value">${fmtInt(opens.length)}</div></div>
+        <div class="kpi"><div class="kpi-label">最近成交筆數</div><div class="kpi-value">${fmtInt(recent.length)}</div><div class="kpi-sub">來源 settlement.json</div></div>
+      </div>
+      <div class="grid-2" style="margin-top:14px">
         <div class="card"><div class="card-body">
           <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">未平倉</h2></div>
           <div class="table-wrap"><table>
-            <thead><tr><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th>時間</th></tr></thead>
-            <tbody>${rowsPos}</tbody>
+            <thead><tr><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">未實現損益</th><th>時間</th></tr></thead>
+            <tbody>${openRows}</tbody>
+          </table></div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">最近成交</h2><span class="hint">settlement</span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>時間</th><th>標的</th><th>方向</th><th class="num">損益</th><th class="num">手續費</th><th class="num">累計權益</th><th>備註</th></tr></thead>
+            <tbody>${fillRows}</tbody>
           </table></div>
           <p style="margin-top:10px;font-size:0.75rem;color:var(--text-muted)">
-            模擬結算請寫入 <code>settlement.json</code>；信號／部位寫 <code>paper_trading.json</code>。
+            Bybit Demo API 接通後更新 <code>paper_trading.json</code>（virtual_equity / open_positions）；成交結算寫 <code>settlement.json</code>。
           </p>
         </div></div>
       </div>
