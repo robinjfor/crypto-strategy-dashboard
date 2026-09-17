@@ -1,0 +1,8 @@
+{
+  "status": "running",
+  "label": "模擬盤進行中",
+  "started_at_taipei": null,
+  "signals": [],
+  "open_positions": [],
+  "notes": "空殼：之後由資金控管／策略分析師寫入即時信號與模擬成交；結算仍寫 settlement.json。"
+}

@@ -236,9 +236,10 @@
     if (!status && !label) return "";
     const isUnapproved = status === "research_unapproved";
     const isCandidate = status === "candidate_pending_sim";
+    const isMainline = status === "mainline_candidate_paper";
     const cls = isUnapproved
       ? "approval-banner warn"
-      : isCandidate
+      : isMainline || isCandidate
         ? "approval-banner candidate"
         : "approval-banner info";
     const title = label || status;
@@ -248,9 +249,11 @@
       ${
         isUnapproved
           ? "<span>尚未贏過 B&amp;H，不可當作已核准上線策略。</span>"
-          : isCandidate
-            ? "<span>已贏 B&amp;H，但仍無 OOS／模擬盤；僅候選預設，實盤前需再過模擬。</span>"
-            : ""
+          : isMainline
+            ? "<span>Emily 已認可回測；模擬盤進行中，結算／信號接入 settlement 與 paper_trading。</span>"
+            : isCandidate
+              ? "<span>已贏 B&amp;H，但仍無 OOS／模擬盤；僅候選預設，實盤前需再過模擬。</span>"
+              : ""
       }
     </div>`;
   }
@@ -529,6 +532,62 @@
       </section>`;
   }
 
+  function renderPaperTrading(payload) {
+    const pt = payload.paper_trading || null;
+    const signals = (pt && Array.isArray(pt.signals) ? pt.signals : []).slice().reverse();
+    const opens = pt && Array.isArray(pt.open_positions) ? pt.open_positions : [];
+    const statusLabel = (pt && (pt.label || pt.status)) || "模擬盤空殼";
+    const rowsSig = signals.length
+      ? signals
+          .slice(0, 20)
+          .map((s) => {
+            return `<tr>
+              <td>${escapeHtml(s.time || s.ts || "—")}</td>
+              <td>${escapeHtml(s.symbol || "—")}</td>
+              <td>${escapeHtml(s.side || s.action || "—")}</td>
+              <td class="num">${escapeHtml(s.price != null ? s.price : "—")}</td>
+              <td>${escapeHtml(s.note || s.reason || "")}</td>
+            </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="5" class="empty-row">尚無即時信號（寫入 data/${escapeHtml(payload.id)}/paper_trading.json 的 signals[]）</td></tr>`;
+    const rowsPos = opens.length
+      ? opens
+          .map((s) => {
+            return `<tr>
+              <td>${escapeHtml(s.symbol || "—")}</td>
+              <td>${escapeHtml(s.side || "—")}</td>
+              <td class="num">${escapeHtml(s.qty != null ? s.qty : "—")}</td>
+              <td class="num">${escapeHtml(s.entry_price != null ? s.entry_price : "—")}</td>
+              <td>${escapeHtml(s.opened_at || "—")}</td>
+            </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="5" class="empty-row">無未平倉模擬部位</td></tr>`;
+    return `<section class="section">
+      <div class="section-head"><h2>模擬盤／即時信號</h2><span class="hint">${escapeHtml(statusLabel)}</span></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">信號</h2></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>時間</th><th>標的</th><th>方向</th><th class="num">價格</th><th>備註</th></tr></thead>
+            <tbody>${rowsSig}</tbody>
+          </table></div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">未平倉</h2></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th>時間</th></tr></thead>
+            <tbody>${rowsPos}</tbody>
+          </table></div>
+          <p style="margin-top:10px;font-size:0.75rem;color:var(--text-muted)">
+            模擬結算請寫入 <code>settlement.json</code>；信號／部位寫 <code>paper_trading.json</code>。
+          </p>
+        </div></div>
+      </div>
+    </section>`;
+  }
+
   function renderSettlement(payload) {
     const settlements = payload.settlements || [];
     const rows = settlements
@@ -611,10 +670,11 @@
     $("main").innerHTML = '<div class="loading">載入策略…</div>';
     const base = `${DATA_BASE}/${encodeURIComponent(id)}`;
     try {
-      const [results, csvText, settlementRaw] = await Promise.all([
+      const [results, csvText, settlementRaw, paperRaw] = await Promise.all([
         fetchJSON(`${base}/results.json`),
         fetchText(`${base}/equity_curve.csv`).catch(() => ""),
         fetchJSON(`${base}/settlement.json`).catch(() => []),
+        fetchJSON(`${base}/paper_trading.json`).catch(() => null),
       ]);
       const equity = csvText ? parseEquityCSV(csvText) : [];
       const metrics = enrichShortHorizonMetrics(results.metrics || {}, equity);
@@ -629,6 +689,7 @@
         results: resultsCopy,
         equity,
         settlements: loadSettlements(settlementRaw),
+        paper_trading: paperRaw,
         last_updated:
           metrics.generated_at_taipei ||
           results.generated_at_taipei ||
@@ -647,6 +708,7 @@
         renderChart() +
         renderVariants(payload) +
         renderTrades(payload) +
+        renderPaperTrading(payload) +
         renderSettlement(payload) +
         renderFooter(payload);
       mountChart(payload.equity || []);

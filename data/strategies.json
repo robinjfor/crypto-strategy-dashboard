@@ -59,9 +59,9 @@
       "sharpe": 1.3037,
       "buy_hold_return_pct": 26.121,
       "max_drawdown_pct": -41.4377,
-      "approval_status": "candidate_pending_sim",
-      "approval_label": "候選核准／待模擬（已贏 B&H，無 OOS）",
-      "approval_note": "硬性關卡通過：donchian_breakout_atr__NEAR__4h（+589% vs B&H +26%，MaxDD -41%）。尚無 OOS／模擬盤，僅候選預設。"
+      "approval_status": "mainline_candidate_paper",
+      "approval_label": "主線候選（Emily 認可回報）／模擬盤進行中",
+      "approval_note": "Emily 已認可 S2 回測結果；目前進入模擬盤階段。尚無 OOS 實盤核准。"
     },
     {
       "id": "strategy-v1",
