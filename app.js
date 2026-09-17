@@ -555,7 +555,14 @@
       pt.virtual_equity != null
         ? fmtNum(pt.virtual_equity, 2)
         : "待 API";
-    const equityHint = pt.virtual_equity_source || pt.status || "";
+    const bals = pt.balances || {};
+    const balBits = [];
+    if (bals.USDT != null) balBits.push(`USDT ${fmtNum(bals.USDT, 2)}`);
+    if (bals.NEAR != null) balBits.push(`NEAR ${fmtNum(bals.NEAR, 3)}`);
+    const equityHint =
+      (balBits.length ? balBits.join(" · ") + " · " : "") +
+      (pt.virtual_equity_source || pt.status || "") +
+      (pt.last_action ? ` · ${pt.last_action}` : "");
     const currency = pt.currency || "USDT";
     const statusLabel = pt.label || "模擬倉";
 

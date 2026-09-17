@@ -1,20 +1,57 @@
 {
-  "status": "awaiting_api",
+  "status": "live_demo",
   "label": "模擬倉 · Binance Demo",
   "exchange": "Binance Demo",
   "venue": "binance_demo",
+  "api_base": "https://demo-api.binance.com",
+  "market_symbol": "NEARUSDT",
+  "symbol": "NEAR",
+  "timeframe": "4h",
   "strategy_id": "strategy-crypto-s2",
   "strategy_name": "S2 NEAR Donchian",
   "selected_variant": "donchian_breakout_atr__NEAR__4h",
-  "symbol": "NEAR",
-  "timeframe": "4h",
   "currency": "USDT",
-  "virtual_equity": null,
-  "virtual_equity_source": "pending_api",
-  "started_at_taipei": "2026-09-18 00:42:18 CST",
-  "signals": [],
-  "open_positions": [],
-  "notes": "模擬倉選定 Binance Demo（demo-api.binance.com / NEARUSDT）。虛擬權益／未平倉／成交待 API 接通後灌入；最近成交亦可由 settlement.json 同步顯示。",
-  "api_base": "https://demo-api.binance.com",
-  "market_symbol": "NEARUSDT"
+  "virtual_equity": 4998.50015,
+  "virtual_equity_source": "binance_demo_live",
+  "balances": {
+    "USDT": 3500.15,
+    "NEAR": 504.495
+  },
+  "signal": {
+    "ready": true,
+    "bar_open_ms": 1789660800000,
+    "close": 2.97,
+    "donch_hi": 2.916,
+    "donch_lo": 2.297,
+    "atr": 0.10703839526524801,
+    "long_entry": true,
+    "exit_long": false,
+    "stop": 2.755923209469504,
+    "trail_dist": 0.32111518579574405
+  },
+  "last_action": "BUY 505.0",
+  "open_positions": [
+    {
+      "symbol": "NEARUSDT",
+      "side": "LONG",
+      "qty": 505.0,
+      "entry_price": 2.97,
+      "unrealized_pnl": null,
+      "unrealized_pct": 0.0,
+      "stop": 2.755923209469504,
+      "opened_at": "2026-09-18 00:56:26 CST"
+    }
+  ],
+  "signals": [
+    {
+      "time": "2026-09-18 00:56:26 CST",
+      "symbol": "NEARUSDT",
+      "side": "BUY",
+      "price": 2.97,
+      "note": "BUY 505.0"
+    }
+  ],
+  "started_at_taipei": null,
+  "updated_at_taipei": "2026-09-18 00:56:26 CST",
+  "notes": "Binance Demo 第一筆已成交：BUY 505.0。USDT=3500.15 NEAR=504.495。"
 }
