@@ -543,6 +543,9 @@
       .slice(0, 12);
     const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
     const exchange = pt.exchange || pt.venue || "—";
+    const apiBase = (pt.api_base || "").replace(/^https?:\/\//, "") || "";
+    const marketSymbol = pt.market_symbol || (pt.symbol ? `${pt.symbol}USDT` : "");
+    const exchangeSub = [apiBase, marketSymbol].filter(Boolean).join(" · ");
     const strategyName =
       pt.strategy_name ||
       payload.id ||
@@ -595,7 +598,9 @@
     return `<section class="section">
       <div class="section-head"><h2>模擬倉</h2><span class="hint">${escapeHtml(statusLabel)}</span></div>
       <div class="kpi-grid paper-account">
-        <div class="kpi"><div class="kpi-label">交易所</div><div class="kpi-value">${escapeHtml(exchange)}</div></div>
+        <div class="kpi"><div class="kpi-label">交易所</div><div class="kpi-value">${escapeHtml(exchange)}</div>${
+          exchangeSub ? `<div class="kpi-sub">${escapeHtml(exchangeSub)}</div>` : ""
+        }</div>
         <div class="kpi"><div class="kpi-label">策略</div><div class="kpi-value">${escapeHtml(strategyName)}${
           variant ? `<div class="kpi-sub">${escapeHtml(variant)}</div>` : ""
         }</div></div>
