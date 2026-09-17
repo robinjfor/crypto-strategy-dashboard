@@ -151,8 +151,18 @@
       opt.value = s.id;
       const ret = s.total_return_pct != null ? ` (${fmtPct(s.total_return_pct)})` : "";
       const sym = s.symbol ? ` · ${s.symbol}` : "";
+      const badge =
+        s.approval_status === "research_unapproved"
+          ? " 【未核准】"
+          : s.approval_label
+            ? ` 【${s.approval_label}】`
+            : "";
       opt.textContent =
-        s.id + (s.selected_variant ? ` · ${s.selected_variant}` : "") + sym + ret;
+        s.id +
+        (s.selected_variant ? ` · ${s.selected_variant}` : "") +
+        sym +
+        ret +
+        badge;
       parent.appendChild(opt);
     }
 
@@ -207,6 +217,35 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+
+  function metaFor(id) {
+    return (
+      (strategiesMeta &&
+        (strategiesMeta.strategies || []).find((s) => s.id === id)) ||
+      {}
+    );
+  }
+
+  function renderApprovalBanner(payload) {
+    const meta = metaFor(payload.id);
+    const status = meta.approval_status || "";
+    const label = meta.approval_label || "";
+    const note = meta.approval_note || "";
+    if (!status && !label) return "";
+    const isUnapproved = status === "research_unapproved";
+    const cls = isUnapproved ? "approval-banner warn" : "approval-banner info";
+    const title = label || status;
+    return `<div class="${cls}" role="status">
+      <strong>${escapeHtml(title)}</strong>
+      ${note ? `<span>${escapeHtml(note)}</span>` : ""}
+      ${
+        isUnapproved
+          ? "<span>尚未贏過 B&amp;H，不可當作已核准上線策略；S2 通過後才切預設。</span>"
+          : ""
+      }
+    </div>`;
   }
 
   function renderKPIs(payload) {
@@ -596,6 +635,7 @@
         payload.last_updated
       )}</strong>`;
       $("main").innerHTML =
+        renderApprovalBanner(payload) +
         renderKPIs(payload) +
         renderChart() +
         renderVariants(payload) +

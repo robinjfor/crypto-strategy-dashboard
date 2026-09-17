@@ -189,3 +189,25 @@ footer {
   font-size: 0.75rem; color: var(--text-muted);
   display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between;
 }
+
+/* Approval / research status */
+.approval-banner {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 16px; padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 0.85rem; line-height: 1.45;
+}
+.approval-banner strong { font-size: 0.9rem; }
+.approval-banner.warn {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+.approval-banner.info {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: var(--text-dim);
+}
+.approval-banner.warn strong { color: #fcd34d; }
+.approval-banner.info strong { color: var(--text); }
