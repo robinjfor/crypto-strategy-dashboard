@@ -225,3 +225,111 @@ footer {
 
 .kpi-sub { margin-top: 4px; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
 .paper-account .kpi-value { font-size: 1.05rem; }
+
+/* —— Live page / shared nav —— */
+.nav-links {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.nav-link {
+  display: inline-flex; align-items: center;
+  padding: 7px 14px; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none !important;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.nav-link:hover {
+  color: var(--text);
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+.nav-link.active {
+  color: #93c5fd;
+  background: var(--accent-soft);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.auto-toggle {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+.auto-toggle input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+
+.strategy-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.strategy-card {
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%;
+  color: inherit;
+  font-family: inherit;
+}
+.strategy-card:hover {
+  border-color: #2f4058;
+  background: var(--bg-card-hover);
+}
+.strategy-card.active {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25), var(--shadow);
+  background: linear-gradient(180deg, rgba(59,130,246,0.08), var(--bg-card));
+}
+.strategy-card .sc-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.strategy-card .sc-meta {
+  font-size: 0.75rem; color: var(--text-dim);
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+}
+.strategy-card .sc-row {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 0.8rem;
+}
+.strategy-card .dim { color: var(--text-muted); }
+.strategy-card .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.strategy-card .card-err {
+  font-size: 0.72rem; color: #fecaca;
+  background: var(--red-soft); padding: 6px 8px; border-radius: 6px;
+}
+
+.alloc-bar { padding: 0 0 8px; }
+.alloc-bar-row td { padding-top: 0 !important; border-bottom: 1px solid var(--border-soft); }
+.alloc-bar-track {
+  position: relative;
+  height: 8px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+.alloc-bar-target {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: rgba(59, 130, 246, 0.25);
+  border-right: 2px solid rgba(59, 130, 246, 0.7);
+}
+.alloc-bar-actual {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(34,211,238,0.55), rgba(34,197,94,0.55));
+  border-radius: 999px;
+  opacity: 0.85;
+}
+.mark-src {
+  font-size: 0.7rem !important;
+  color: var(--text-muted) !important;
+  white-space: normal !important;
+  max-width: 160px;
+}

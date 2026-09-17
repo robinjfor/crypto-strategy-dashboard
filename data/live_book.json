@@ -1,0 +1,21 @@
+{
+  "title": "Binance Demo 模擬倉",
+  "exchange": "Binance Demo",
+  "api_base": "https://demo-api.binance.com",
+  "total_capital_usdt": 5000,
+  "target_allocation": [
+    {"asset": "NEAR", "pct": 40},
+    {"asset": "SUI", "pct": 25},
+    {"asset": "DOGE", "pct": 20},
+    {"asset": "CASH", "pct": 15, "symbol": "USDT"}
+  ],
+  "strategies": [
+    {
+      "id": "strategy-crypto-s2",
+      "name": "S2 NEAR Donchian",
+      "paper_path": "./data/strategy-crypto-s2/paper_trading.json",
+      "settlement_path": "./data/strategy-crypto-s2/settlement.json"
+    }
+  ],
+  "auto_refresh_sec": 15
+}
