@@ -1,0 +1,56 @@
+{
+  "total_usdt": 5000,
+  "yellow_light": true,
+  "updated": "2026-09-18 21:38:58 UTC+08:00",
+  "ruling": "optimize_c approved: FET/OP replace SUI/DOGE; yellow docs only no open",
+  "core": {
+    "symbol": "NEARUSDT",
+    "pct": 40,
+    "variant": "donchian_breakout_atr__NEAR__4h",
+    "status": "HOLD_NO_ADD",
+    "demo_qty": 505,
+    "entry_approx": 2.97
+  },
+  "satellite_A": {
+    "symbol": "FETUSDT",
+    "pct": 25,
+    "notional_usdt": 1250,
+    "variant": "donchian55_s2.0_t3.0__FET__1h",
+    "params": {
+      "donchian": 55,
+      "tf": "1h",
+      "atr_stop": 2.0,
+      "atr_trail": 3.0
+    },
+    "oos": "4/6",
+    "maxdd_pct": -40.9,
+    "status": "EXPECTED_HOLDING_YELLOW_NO_OPEN",
+    "open_when": "green light + 1h close above Donchian55 high"
+  },
+  "satellite_B": {
+    "symbol": "OPUSDT",
+    "pct": 20,
+    "notional_usdt": 1000,
+    "variant": "donchian20_s1.5_t2.5__OP__4h",
+    "params": {
+      "donchian": 20,
+      "tf": "4h",
+      "atr_stop": 1.5,
+      "atr_trail": 2.5
+    },
+    "oos": "4/6",
+    "maxdd_pct": -33.1,
+    "status": "EXPECTED_HOLDING_YELLOW_NO_OPEN",
+    "open_when": "green light + 4h close above Donchian20 high",
+    "note": "old deep-DD OP variant void"
+  },
+  "cash_pct": 15,
+  "removed": [
+    "SUI",
+    "DOGE"
+  ],
+  "rejected": {
+    "OP_old_deep_dd": "void",
+    "ARB": "candidate OOS fail only"
+  }
+}
