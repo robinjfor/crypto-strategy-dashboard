@@ -16,6 +16,7 @@
   let timerId = null;
   let loading = false;
   let allocChart = null;
+  let pendingPieParts = [];
   let modalProfile = null;
 
   function fmtPct(v, digits = 2) {
@@ -351,20 +352,20 @@
         }).join("")
       : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉（黃燈衛星等綠燈）</td></tr>`;
 
-    // pie data from actual coin holdings + cash
+    // pie data from actual coin holdings + cash (pendingPieParts; innerHTML strips <script>)
     const pieParts = [];
     if (usdtCash > 0) pieParts.push({ label: "USDT 現金", value: usdtCash });
     for (const [asset, h] of Object.entries(holdings)) {
       if ((h.value || 0) > 0) pieParts.push({ label: asset, value: h.value });
     }
     if (!pieParts.length && equity > 0) pieParts.push({ label: "權益", value: equity });
+    pendingPieParts = pieParts;
 
     return `
       <section class="section">
         <div class="section-head"><h2>資產配置</h2><span class="hint">圓餅＝實際市值比重（含現金）</span></div>
         <div class="card" style="padding:16px">
           <div class="alloc-pie-wrap"><canvas id="allocPie" height="220"></canvas></div>
-          <script type="application/json" id="allocPieData">${JSON.stringify(pieParts).replace(/</g, "\u003c")}</script>
         </div>
       </section>
       <section class="section">
@@ -644,27 +645,22 @@
   }
 
 
-  function mountAllocPie() {
+  function mountAllocPie(parts) {
     const canvas = $("allocPie");
-    const dataEl = $("allocPieData");
-    if (!canvas || !dataEl) return;
+    if (!canvas) return;
+    const wrap = canvas.parentElement;
+    wrap.querySelectorAll(".pie-empty-hint").forEach((el) => el.remove());
     if (typeof Chart === "undefined") {
-      canvas.parentElement.insertAdjacentHTML("beforeend", '<p class="hint" style="text-align:center">圖表庫未載入</p>');
+      wrap.insertAdjacentHTML("beforeend", '<p class="hint pie-empty-hint" style="text-align:center">圖表庫未載入</p>');
       return;
     }
-    let raw = (dataEl.textContent || "").trim();
-    // legacy: escaped quotes from escapeHtml
-    if (raw.includes("&quot;")) {
-      raw = raw.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-    }
-    let parts = [];
-    try { parts = JSON.parse(raw || "[]"); } catch (_) { parts = []; }
+    parts = Array.isArray(parts) ? parts : pendingPieParts;
     if (allocChart) {
       allocChart.destroy();
       allocChart = null;
     }
     if (!parts.length) {
-      canvas.parentElement.insertAdjacentHTML("beforeend", '<p class="hint" style="text-align:center">尚無配置資料</p>');
+      wrap.insertAdjacentHTML("beforeend", '<p class="hint pie-empty-hint" style="text-align:center">尚無配置資料</p>');
       return;
     }
     allocChart = new Chart(canvas.getContext("2d"), {
@@ -680,6 +676,16 @@
       options: {
         plugins: {
           legend: { position: "bottom", labels: { color: "#8b9bb0" } },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const v = Number(ctx.raw) || 0;
+                const sum = (ctx.dataset.data || []).reduce((a, b) => a + Number(b || 0), 0);
+                const pct = sum > 0 ? (v / sum) * 100 : 0;
+                return ctx.label + ": " + v.toFixed(2) + " USDT (" + pct.toFixed(1) + "%)";
+              },
+            },
+          },
         },
       },
     });
@@ -764,7 +770,7 @@
       renderAllocation(alloc) +
       renderStrategyCards(strategyPayloads) +
       renderDetail(selected);
-    mountAllocPie();
+    mountAllocPie(pendingPieParts);
     wireLiveClicks();
 
     main.querySelectorAll(".strategy-card").forEach((btn) => {
