@@ -462,7 +462,7 @@
             <td>${escapeHtml(pl.leverage || "1x")}</td>
           </tr>`;
         }).join("")
-      : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉（黃燈衛星等綠燈）</td></tr>`;
+      : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉</td></tr>`;
 
     return `
       <section class="section">
@@ -640,10 +640,10 @@
     const satCards = sats
       .map((s) => `<div class="strategy-card-wrap">
         <button type="button" class="strategy-card dim-card" data-sat="${escapeHtml(s.id)}">
-          <div class="sc-top"><strong>${escapeHtml(s.name)}</strong><span class="badge warn">${escapeHtml(s.status || "pending")}</span></div>
+          <div class="sc-top"><strong>${escapeHtml(s.name)}</strong><span class="badge ${s.status === "armed_wait_breakout" || s.status === "pending_green" ? "ok" : "warn"}">${escapeHtml(s.status || "pending")}</span></div>
           <div class="sc-meta"><span>${escapeHtml(s.symbol || s.asset || "")}</span><span class="dim">·</span><span>${escapeHtml(s.timeframe || "")}</span></div>
           <div class="sc-row"><span class="dim">目標配置</span><span>${fmtNum(s.target_pct, 0)}%</span></div>
-          <div class="sc-row"><span class="dim">狀態</span><span>黃燈暫緩 · 未開倉</span></div>
+          <div class="sc-row"><span class="dim">狀態</span><span>${escapeHtml(s.oos_note || s.status || "綠燈・待訊號")}</span></div>
         </button>
         <button type="button" class="ghost strategy-info-btn" data-sat-profile="${escapeHtml(s.id)}">策略說明</button>
       </div>`)
@@ -655,7 +655,7 @@
         <div class="strategy-cards">${cards || `<div class="empty-state">尚未配置策略</div>`}</div>
       </section>
       <section class="section">
-        <div class="section-head"><h2>預計策略（衛星）</h2><span class="hint">黃燈未解除前不會真開</span></div>
+        <div class="section-head"><h2>預計策略（衛星）</h2><span class="hint">綠燈・訊號觸發後可開／已開</span></div>
         <div class="strategy-cards">${satCards || `<div class="empty-state">無衛星策略</div>`}</div>
       </section>`;
   }
