@@ -333,3 +333,6 @@ footer {
   white-space: normal !important;
   max-width: 160px;
 }
+
+/* live holdings split */
+.table-scroll td strong { font-weight: 650; }

@@ -4,17 +4,82 @@
   "api_base": "https://demo-api.binance.com",
   "total_capital_usdt": 5000,
   "target_allocation": [
-    {"asset": "NEAR", "pct": 40},
-    {"asset": "SUI", "pct": 25},
-    {"asset": "DOGE", "pct": 20},
-    {"asset": "CASH", "pct": 15, "symbol": "USDT"}
+    {
+      "asset": "NEAR",
+      "pct": 40
+    },
+    {
+      "asset": "SUI",
+      "pct": 25
+    },
+    {
+      "asset": "DOGE",
+      "pct": 20
+    },
+    {
+      "asset": "CASH",
+      "pct": 15,
+      "symbol": "USDT"
+    }
+  ],
+  "planned_positions": [
+    {
+      "asset": "NEAR",
+      "target_pct": 40,
+      "status": "open",
+      "status_label": "已進場（黃燈：只抱現倉不加碼）",
+      "entry_rule": "Donchian20 突破（4h）",
+      "exit_rule": "收盤跌破通道低點 或 ATR trail 出場",
+      "stop_mode": "atr_stop_x2",
+      "stop_note": "進場價 − 2×ATR；現倉 stop 見未平倉列",
+      "leverage": "1x 現貨",
+      "notes": "主線 S2"
+    },
+    {
+      "asset": "SUI",
+      "target_pct": 25,
+      "status": "pending_green",
+      "status_label": "預計持倉 · 黃燈暫緩（等綠燈）",
+      "entry_rule": "SUI 4h Donchian 突破",
+      "exit_rule": "同族：跌破通道／ATR trail",
+      "stop_mode": "pending",
+      "stop_note": "未開倉 → 尚無有效止損",
+      "leverage": "1x 現貨（預定）",
+      "notes": "衛星"
+    },
+    {
+      "asset": "DOGE",
+      "target_pct": 20,
+      "status": "pending_green",
+      "status_label": "預計持倉 · 黃燈暫緩（等綠燈）",
+      "entry_rule": "DOGE 1h Donchian 突破",
+      "exit_rule": "同族：跌破通道／ATR trail",
+      "stop_mode": "pending",
+      "stop_note": "未開倉 → 尚無有效止損",
+      "leverage": "1x 現貨（預定）",
+      "notes": "衛星"
+    },
+    {
+      "asset": "CASH",
+      "target_pct": 15,
+      "status": "reserve",
+      "status_label": "保留現金",
+      "entry_rule": "—",
+      "exit_rule": "—",
+      "stop_mode": "n/a",
+      "stop_note": "不適用",
+      "leverage": "—",
+      "notes": "USDT"
+    }
   ],
   "strategies": [
     {
       "id": "strategy-crypto-s2",
       "name": "S2 NEAR Donchian",
       "paper_path": "./data/strategy-crypto-s2/paper_trading.json",
-      "settlement_path": "./data/strategy-crypto-s2/settlement.json"
+      "settlement_path": "./data/strategy-crypto-s2/settlement.json",
+      "leverage": "1x",
+      "market_type": "spot"
     }
   ],
   "auto_refresh_sec": 15

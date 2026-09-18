@@ -11,6 +11,8 @@
   "strategy_name": "S2 NEAR Donchian",
   "selected_variant": "donchian_breakout_atr__NEAR__4h",
   "currency": "USDT",
+  "leverage": "1x",
+  "market_type": "spot",
   "virtual_equity": 4998.50015,
   "virtual_equity_source": "binance_demo_live",
   "balances": {
@@ -39,6 +41,7 @@
       "unrealized_pnl": null,
       "unrealized_pct": 0.0,
       "stop": 2.755923209469504,
+      "leverage": "1x",
       "opened_at": "2026-09-18 00:56:26 CST"
     }
   ],
@@ -51,7 +54,6 @@
       "note": "BUY 505.0"
     }
   ],
-  "started_at_taipei": null,
   "updated_at_taipei": "2026-09-18 00:56:26 CST",
-  "notes": "Binance Demo 第一筆已成交：BUY 505.0。USDT=3500.15 NEAR=504.495。"
+  "notes": "Binance Demo：BUY 505.0; USDT=3500.15 NEAR=504.495"
 }

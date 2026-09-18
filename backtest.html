@@ -3,29 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>模擬倉即時 · Binance Demo</title>
+  <title>Crypto 策略績效儀表板</title>
   <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">⚡</div>
+        <div class="brand-mark">₿</div>
         <div>
-          <h1 id="pageTitle">模擬倉即時 · Binance Demo</h1>
-          <div class="sub" id="pageSub">活策略模擬倉 · 純靜態 / GitHub Pages</div>
+          <h1>Crypto 策略績效儀表板</h1>
+          <div class="sub">加密市場策略績效 · 純靜態 / GitHub Pages</div>
         </div>
       </div>
       <nav class="nav-links" aria-label="主選單">
-        <a class="nav-link active" href="./">模擬倉即時</a>
-        <a class="nav-link" href="./backtest.html">回測績效</a>
+        <a class="nav-link" href="./">模擬倉即時</a>
+        <a class="nav-link active" href="./backtest.html">回測績效</a>
       </nav>
       <div class="controls">
-        <label class="ctrl auto-toggle" title="自動重整">
-          <span>自動重整</span>
-          <input type="checkbox" id="autoRefresh" checked />
+        <label class="ctrl">策略／標的
+          <select id="strategySelect"></select>
         </label>
-        <span class="meta-pill" id="countdownPill">倒數：—</span>
         <button type="button" class="primary" id="btnRefresh">重整</button>
         <span class="meta-pill" id="lastUpdated">最後更新：—</span>
       </div>
@@ -35,6 +34,6 @@
     <div id="main" class="loading">載入中…</div>
   </div>
 
-  <script src="./app-live.js"></script>
+  <script src="./backtest.js"></script>
 </body>
 </html>
