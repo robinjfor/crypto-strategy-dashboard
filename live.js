@@ -322,14 +322,14 @@
           const ref = mark && mark.price != null ? Number(mark.price) : pl.ref_price != null ? Number(pl.ref_price) : null;
           const notional = pl.target_notional_usdt != null ? Number(pl.target_notional_usdt) : targetUsdt;
           let buyQty = pl.target_buy_qty;
-          if (pl.no_order && pl.asset === "DOGE") {
-            buyQty = 0;
+          if (pl.display_only || pl.status === "candidate_oos") {
+            buyQty = null;
           } else if ((buyQty == null || buyQty === "") && ref && ref > 0) {
             buyQty = notional / ref;
           }
           let buyLabel;
-          if (pl.asset === "DOGE" || pl.status === "pending_swap") {
-            buyLabel = `不購買<div class="kpi-sub">槽位待置換→ARB</div>`;
+          if (pl.display_only || pl.status === "candidate_oos") {
+            buyLabel = `不下單<div class="kpi-sub">候選人／OOS 未過關</div>`;
           } else if (buyQty != null) {
             buyLabel = fmtNum(buyQty, 3) + `<div class="kpi-sub">≈ 目標 ${fmtNum(notional, 0)} USDT` + (ref ? ` ÷ ${fmtNum(ref, 4)}` : "") + `</div>`;
           } else {
