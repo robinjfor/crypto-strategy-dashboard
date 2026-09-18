@@ -13,8 +13,9 @@
       "pct": 25
     },
     {
-      "asset": "DOGE",
-      "pct": 20
+      "asset": "ARB",
+      "pct": 20,
+      "note": "黃燈後由 DOGE 槽置換"
     },
     {
       "asset": "CASH",
@@ -56,33 +57,22 @@
       "strategy_name": "SUI 4h Donchian（衛星）"
     },
     {
-      "asset": "DOGE",
+      "asset": "ARB",
       "target_pct": 20,
-      "status": "pending_green",
-      "status_label": "預計持倉 · 黃燈暫緩（等綠燈）",
-      "entry_rule": "DOGE 1h Donchian 突破",
-      "exit_rule": "同族：跌破通道／ATR trail",
+      "status": "pending_green_swap",
+      "status_label": "黃燈後置換→ARB（原 DOGE 20% 槽）",
+      "entry_rule": "ARB/USDT · donchian_breakout_atr · 4h 突破進場",
+      "exit_rule": "跌破 Donchian 下軌或 ATR 停損／trail",
       "stop_mode": "pending",
-      "stop_note": "未開倉 → 尚無有效止損",
+      "stop_note": "未開倉 → 無有效止損（綠燈開倉後設進場−2×ATR）",
       "leverage": "1x 現貨（預定）",
-      "notes": "衛星",
-      "target_price_note": "綠燈後依 1h Donchian 突破市價進場",
+      "notes": "置換自 DOGE 槽；UNI 不上",
+      "strategy_id": "satellite-arb",
+      "strategy_name": "ARB 4h Donchian（置換衛星）",
+      "target_price_note": "綠燈後依 4h Donchian 突破市價進場",
       "ref_price": null,
       "target_buy_qty": null,
-      "strategy_id": "strategy-crypto-s2-satellite-doge",
-      "strategy_name": "DOGE 1h Donchian（衛星）"
-    },
-    {
-      "asset": "CASH",
-      "target_pct": 15,
-      "status": "reserve",
-      "status_label": "保留現金",
-      "entry_rule": "—",
-      "exit_rule": "—",
-      "stop_mode": "n/a",
-      "stop_note": "不適用",
-      "leverage": "—",
-      "notes": "USDT"
+      "replaces": "DOGE"
     }
   ],
   "strategies": [
@@ -123,19 +113,22 @@
       "backtest_url": "./backtest.html"
     },
     {
-      "id": "satellite-doge",
-      "name": "DOGE 1h Donchian（衛星）",
-      "asset": "DOGE",
-      "status": "pending_green",
-      "summary": "黃燈暫緩。綠燈後以 DOGE/USDT 1h Donchian 突破開倉，目標配置約 20%。",
-      "entry_rule": "DOGE 1h Donchian20 突破",
+      "id": "satellite-arb",
+      "name": "ARB 4h Donchian（置換衛星）",
+      "asset": "ARB",
+      "status": "pending_green_swap",
+      "summary": "原 DOGE 20% 槽，黃燈後置換為 ARB。策略 donchian_breakout_atr 4h。黃燈前勿顯示已開倉。",
+      "entry_rule": "ARB/USDT 4h Donchian20 突破（donchian_breakout_atr）",
       "exit_rule": "跌破通道下軌或 ATR 停損／trail",
       "stop_rule": "開倉後設進場 − 2×ATR",
-      "timeframe": "1h",
-      "symbol": "DOGEUSDT",
+      "timeframe": "4h",
+      "symbol": "ARBUSDT",
       "target_pct": 20,
       "leverage": "1x",
-      "backtest_url": "./backtest.html"
+      "replaces": "DOGE",
+      "backtest_url": "./backtest.html",
+      "oos_note": "置換衛星；回測檔待策略側補"
     }
-  ]
+  ],
+  "allocation_note": "DOGE 20% 槽改黃燈後置換→ARB；SUI 仍預計持倉；NEAR／現金不變；UNI 不上。黃燈前勿顯示已開倉。"
 }
