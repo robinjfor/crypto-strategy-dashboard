@@ -13,23 +13,26 @@
   "currency": "USDT",
   "leverage": "1x",
   "market_type": "spot",
-  "virtual_equity": 4998.50015,
-  "virtual_equity_source": "binance_demo_live",
+  "virtual_equity": 5265.8825,
+  "virtual_equity_source": "recalc_balances_x_mark",
   "balances": {
     "USDT": 3500.15,
     "NEAR": 504.495
   },
   "signal": {
     "ready": true,
-    "bar_open_ms": 1789660800000,
-    "close": 2.97,
-    "donch_hi": 2.916,
+    "bar_open_ms": 1789704000000,
+    "close": 3.5,
+    "donch_hi": 3.508,
     "donch_lo": 2.297,
-    "atr": 0.10703839526524801,
-    "long_entry": true,
+    "atr": 0.14579647329370052,
+    "long_entry": false,
     "exit_long": false,
-    "stop": 2.755923209469504,
-    "trail_dist": 0.32111518579574405
+    "stop": 3.1346105801188986,
+    "trail_dist": 0.4373894198811016,
+    "peak_since_entry": 3.572,
+    "source": "binance_vision_4h_recalc",
+    "recalc_at_taipei": "2026-09-18 18:07:52 CST"
   },
   "last_action": "BUY 505.0",
   "open_positions": [
@@ -38,11 +41,12 @@
       "side": "LONG",
       "qty": 505.0,
       "entry_price": 2.97,
-      "unrealized_pnl": null,
-      "unrealized_pct": 0.0,
-      "stop": 2.755923209469504,
+      "unrealized_pnl": 267.6499999999999,
+      "unrealized_pct": 17.845117845117837,
+      "stop": 3.1346105801188986,
       "leverage": "1x",
-      "opened_at": "2026-09-18 00:56:26 CST"
+      "opened_at": "2026-09-18 00:56:26 CST",
+      "mark_price": 3.5
     }
   ],
   "signals": [
@@ -54,6 +58,6 @@
       "note": "BUY 505.0"
     }
   ],
-  "updated_at_taipei": "2026-09-18 00:56:26 CST",
+  "updated_at_taipei": "2026-09-18 18:07:52 CST",
   "notes": "Binance Demo：BUY 505.0; USDT=3500.15 NEAR=504.495"
 }

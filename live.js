@@ -4,7 +4,8 @@
 
   const $ = (id) => document.getElementById(id);
   const BOOK_URL = "./data/live_book.json";
-  const BINANCE_TICKER = "https://api.binance.com/api/v3/ticker/price?symbol=";
+  const BINANCE_TICKER = "https://data-api.binance.vision/api/v3/ticker/price?symbol=";
+  const BINANCE_KLINES = "https://data-api.binance.vision/api/v3/klines";
 
   let book = null;
   let strategyPayloads = []; // [{ meta, paper, settlement, error }]
@@ -148,6 +149,78 @@
     return { price: null, source: "無" };
   }
 
+
+  function atrWilder(bars, n) {
+    const trs = [];
+    for (let i = 1; i < bars.length; i++) {
+      const h = bars[i].h, l = bars[i].l, pc = bars[i - 1].c;
+      trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+    }
+    if (trs.length < n) return null;
+    let atr = trs.slice(0, n).reduce((a, b) => a + b, 0) / n;
+    for (let i = n; i < trs.length; i++) atr = (atr * (n - 1) + trs[i]) / n;
+    return atr;
+  }
+
+  async function refreshSignalFromKlines(payloads) {
+    for (const p of payloads) {
+      if (!p.paper) continue;
+      const sym = String(p.paper.market_symbol || ((p.paper.symbol || "") + "USDT")).toUpperCase();
+      if (!sym || sym === "USDT") continue;
+      try {
+        const url = BINANCE_KLINES + "?symbol=" + encodeURIComponent(sym) + "&interval=4h&limit=80";
+        const raw = await fetchJSON(url);
+        if (!Array.isArray(raw) || raw.length < 25) continue;
+        const bars = raw.map((r) => ({ t: r[0], h: Number(r[2]), l: Number(r[3]), c: Number(r[4]) }));
+        const closed = bars.slice(0, -1);
+        const last = closed[closed.length - 1];
+        const win = closed.slice(-21, -1);
+        const donch_hi = Math.max(...win.map((b) => b.h));
+        const donch_lo = Math.min(...win.map((b) => b.l));
+        const atr = atrWilder(closed.slice(-60), 14);
+        if (atr == null) continue;
+        const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
+        let peak = last.c;
+        for (const o of opens) {
+          const entry = o.entry_price != null ? Number(o.entry_price) : null;
+          if (entry != null) peak = Math.max(peak, entry);
+        }
+        peak = Math.max(peak, ...closed.slice(-40).map((b) => b.h));
+        for (const o of opens) {
+          const entry = o.entry_price != null ? Number(o.entry_price) : null;
+          if (entry == null) continue;
+          const hard = entry - 2 * atr;
+          const trail = peak - 3 * atr;
+          const stop = Math.max(hard, trail);
+          o.stop = stop;
+          o.mark_price = last.c;
+          if (o.qty != null) {
+            const q = Number(o.qty);
+            o.unrealized_pnl = (last.c - entry) * q;
+            o.unrealized_pct = entry ? ((last.c - entry) / entry) * 100 : null;
+          }
+        }
+        p.paper.signal = Object.assign({}, p.paper.signal || {}, {
+          ready: true,
+          bar_open_ms: last.t,
+          close: last.c,
+          donch_hi,
+          donch_lo,
+          atr,
+          stop: opens[0] && opens[0].stop != null ? opens[0].stop : peak - 3 * atr,
+          trail_dist: 3 * atr,
+          peak_since_entry: peak,
+          exit_long: last.c < donch_lo,
+          source: "binance_vision_4h_live",
+        });
+        // mark price cache
+        markPrices[sym] = { price: last.c, source: "Binance 4h 收盤" };
+      } catch (_) {
+        /* keep paper snapshot */
+      }
+    }
+  }
+
   function computeAllocation(book, payloads) {
     const { balances, virtualEquity } = aggregateAccount(payloads);
     const capital = Number(book.total_capital_usdt) || 5000;
@@ -265,8 +338,7 @@
     for (const [asset, h] of Object.entries(holdings)) {
       const qty = h.qty || 0;
       const spot = h.price;
-      let entry = null, stop = null, upnl = null, upct = null, side = "LONG";
-      let targetPx = null; // 目標／出場參考：通道下軌或 stop 旁註
+      let entry = null, stop = null, exitLo = null, upnl = null, upct = null, side = "LONG";
       for (const p of strategyPayloads) {
         const pt = p.paper || {};
         for (const o of pt.open_positions || []) {
@@ -283,30 +355,28 @@
           }
         }
         if (pt.signal && (String(pt.symbol || "").toUpperCase() === asset || String(pt.market_symbol || "").toUpperCase() === asset + "USDT")) {
-          if (pt.signal.donch_lo != null) targetPx = Number(pt.signal.donch_lo);
+          if (pt.signal.donch_lo != null) exitLo = Number(pt.signal.donch_lo);
+          if (stop == null && pt.signal.stop != null) stop = Number(pt.signal.stop);
         }
       }
-      actualRows.push({ asset, qty, spot, entry, stop, targetPx, upnl, upct, source: h.source || "—", value: h.value || 0 });
+      actualRows.push({ asset, qty, spot, entry, stop, exitLo, upnl, upct, source: h.source || "—", value: h.value || 0 });
     }
 
     const actualHtml = actualRows.length
       ? actualRows.map((r) => {
-          const tgtStop = [
-            r.targetPx != null ? `目標參考(下軌) ${fmtNum(r.targetPx, 4)}` : "目標：跌破下軌／trail",
-            r.stop != null ? `止損 ${fmtNum(r.stop, 4)}` : "止損 未設定",
-          ].join(" · ");
           const pnl = r.upnl == null ? "—" : `${fmtNum(r.upnl, 2)} (${fmtPct(r.upct)})`;
           return `<tr>
             <td><strong>${escapeHtml(r.asset)}</strong></td>
             <td class="num">${fmtNum(r.qty, 3)}</td>
             <td class="num">${r.spot != null ? fmtNum(r.spot, 4) : "—"}<div class="kpi-sub">${escapeHtml(r.source)}</div></td>
             <td class="num">${r.entry != null ? fmtNum(r.entry, 4) : "—"}</td>
-            <td>${escapeHtml(tgtStop)}</td>
+            <td class="num">${r.stop != null ? fmtNum(r.stop, 4) : "—"}<div class="kpi-sub">只會上移 · 非上漲目標</div></td>
+            <td class="num">${r.exitLo != null ? fmtNum(r.exitLo, 4) : "—"}<div class="kpi-sub">Donchian 下軌 · 跌破才結算</div></td>
             <td class="num">${fmtNum(r.value, 2)}</td>
             <td class="num ${clsSigned(r.upnl)}"><strong>${pnl}</strong></td>
           </tr>`;
         }).join("")
-      : `<tr><td colspan="7" class="empty-row">尚無幣種持倉</td></tr>`;
+      : `<tr><td colspan="8" class="empty-row">尚無幣種持倉</td></tr>`;
 
     // 預計持倉：排除已 open、CASH/reserve
     const planned = (Array.isArray(book.planned_positions) ? book.planned_positions : []).filter(
@@ -355,7 +425,7 @@
         <div class="section-head"><h2>實際持倉</h2><span class="hint">現金見上方帳戶總覽；此處只列幣種倉</span></div>
         <div class="card"><div class="table-scroll"><table class="data">
           <thead><tr>
-            <th>資產</th><th class="num">數量</th><th class="num">現價</th><th class="num">進場價</th><th>目標價格／止損</th><th class="num">USDT 市值</th><th class="num">目前損益</th>
+            <th>資產</th><th class="num">數量</th><th class="num">現價</th><th class="num">進場價</th><th class="num">移動止損</th><th class="num">出場下軌</th><th class="num">USDT 市值</th><th class="num">目前損益</th>
           </tr></thead>
           <tbody>${actualHtml}</tbody>
         </table></div></div>
@@ -577,11 +647,8 @@
               }
               const notional = qty != null && (markPx != null || entry != null) ? qty * (markPx != null ? markPx : entry) : null;
               const lev = o.leverage || levDefault || "1x";
-              const targetPx = latestSignal && latestSignal.donch_lo != null ? Number(latestSignal.donch_lo) : null;
-              const tgtStop = [
-                targetPx != null ? `目標參考 ${fmtNum(targetPx, 4)}` : "目標：跌破下軌／trail",
-                o.stop != null ? `止損 ${fmtNum(o.stop, 4)}` : "止損 未設定",
-              ].join(" · ");
+              const exitLo = latestSignal && latestSignal.donch_lo != null ? Number(latestSignal.donch_lo) : null;
+              const trailStop = o.stop != null ? Number(o.stop) : (latestSignal && latestSignal.stop != null ? Number(latestSignal.stop) : null);
               const pnlCell = upnl == null ? "—" : `${fmtNum(upnl, 2)} USDT` + (upct != null ? `<div class="kpi-sub">${fmtPct(upct)}</div>` : "");
               return `<tr>
                 <td>${escapeHtml(o.opened_at || "—")}</td>
@@ -592,7 +659,8 @@
                 <td class="num">${markPx != null ? fmtNum(markPx, 4) : "—"}<div class="kpi-sub">${escapeHtml((mark && mark.source) || "—")}</div></td>
                 <td class="num">${notional != null ? fmtNum(notional, 2) : "—"}</td>
                 <td class="num ${clsSigned(upnl)}"><strong>${pnlCell}</strong></td>
-                <td>${escapeHtml(tgtStop)}</td>
+                <td class="num">${trailStop != null ? fmtNum(trailStop, 4) : "—"}<div class="kpi-sub">移動止損 · 只會上移</div></td>
+                <td class="num">${exitLo != null ? fmtNum(exitLo, 4) : "—"}<div class="kpi-sub">出場下軌 · 跌破才結算</div></td>
                 <td>${escapeHtml(String(lev))} · 現貨</td>
               </tr>`;
             })
@@ -624,7 +692,7 @@
           </div>
           <div class="table-scroll"><table class="data">
             <thead><tr>
-              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">現價</th><th class="num">USDT 價值</th><th class="num">目前損益</th><th>目標價格／止損</th><th>倍數</th>
+              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">現價</th><th class="num">USDT 價值</th><th class="num">目前損益</th><th class="num">移動止損</th><th class="num">出場下軌</th><th>倍數</th>
             </tr></thead>
             <tbody>${openRows}</tbody>
           </table></div>
