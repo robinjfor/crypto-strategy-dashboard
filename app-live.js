@@ -172,6 +172,7 @@
         const raw = await fetchJSON(url);
         if (!Array.isArray(raw) || raw.length < 25) continue;
         const bars = raw.map((r) => ({ t: r[0], h: Number(r[2]), l: Number(r[3]), c: Number(r[4]) }));
+        const forming = bars[bars.length - 1];
         const closed = bars.slice(0, -1);
         const last = closed[closed.length - 1];
         const win = closed.slice(-21, -1);
@@ -180,12 +181,17 @@
         const atr = atrWilder(closed.slice(-60), 14);
         if (atr == null) continue;
         const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
-        let peak = last.c;
+        let peak = forming.c;
         for (const o of opens) {
           const entry = o.entry_price != null ? Number(o.entry_price) : null;
           if (entry != null) peak = Math.max(peak, entry);
         }
-        peak = Math.max(peak, ...closed.slice(-40).map((b) => b.h));
+        peak = Math.max(peak, ...closed.slice(-40).map((b) => b.h), forming.h);
+        // Live mark: prefer already-fetched ticker; else forming-bar close (tracks spot)
+        const live =
+          markPrices[sym] && markPrices[sym].price != null
+            ? Number(markPrices[sym].price)
+            : Number(forming.c);
         for (const o of opens) {
           const entry = o.entry_price != null ? Number(o.entry_price) : null;
           if (entry == null) continue;
@@ -193,28 +199,31 @@
           const trail = peak - 3 * atr;
           const stop = Math.max(hard, trail);
           o.stop = stop;
-          o.mark_price = last.c;
+          o.mark_price = live;
           if (o.qty != null) {
             const q = Number(o.qty);
-            o.unrealized_pnl = (last.c - entry) * q;
-            o.unrealized_pct = entry ? ((last.c - entry) / entry) * 100 : null;
+            o.unrealized_pnl = (live - entry) * q;
+            o.unrealized_pct = entry ? ((live - entry) / entry) * 100 : null;
           }
         }
         p.paper.signal = Object.assign({}, p.paper.signal || {}, {
           ready: true,
-          bar_open_ms: last.t,
-          close: last.c,
+          bar_open_ms: forming.t,
+          close: live,
+          last_closed: last.c,
           donch_hi,
           donch_lo,
           atr,
           stop: opens[0] && opens[0].stop != null ? opens[0].stop : peak - 3 * atr,
           trail_dist: 3 * atr,
           peak_since_entry: peak,
-          exit_long: last.c < donch_lo,
-          source: "binance_vision_4h_live",
+          exit_long: live < donch_lo,
+          source: "binance_vision_live_mark",
         });
-        // mark price cache
-        markPrices[sym] = { price: last.c, source: "Binance 4h 收盤" };
+        // Do not overwrite a fresher ticker with a stale closed bar
+        if (!markPrices[sym] || markPrices[sym].price == null) {
+          markPrices[sym] = { price: live, source: "Binance 進行中 4h" };
+        }
       } catch (_) {
         /* keep paper snapshot */
       }
@@ -238,10 +247,8 @@
       positionsValue += value;
     }
 
-    const equity =
-      virtualEquity != null
-        ? virtualEquity
-        : usdtCash + positionsValue;
+    // Always mark-to-market from live prices; paper virtual_equity is a stale snapshot
+    const equity = usdtCash + positionsValue;
 
     const targets = Array.isArray(book.target_allocation)
       ? book.target_allocation
@@ -289,6 +296,43 @@
       holdings,
       rows,
     };
+  }
+
+
+  function syncUnrealizedFromMarks(payloads) {
+    for (const p of payloads) {
+      if (!p.paper) continue;
+      const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
+      for (const o of opens) {
+        const os = String(o.symbol || "").toUpperCase();
+        const mark = markPrices[os];
+        const spot = mark && mark.price != null ? Number(mark.price) : o.mark_price != null ? Number(o.mark_price) : null;
+        const entry = o.entry_price != null ? Number(o.entry_price) : null;
+        if (spot == null || entry == null || o.qty == null) continue;
+        const q = Number(o.qty);
+        const side = String(o.side || "LONG").toUpperCase();
+        const diff = side === "SHORT" ? entry - spot : spot - entry;
+        o.mark_price = spot;
+        o.unrealized_pnl = diff * q;
+        o.unrealized_pct = entry ? (diff / entry) * 100 : null;
+      }
+      if (p.paper.signal && opens[0] && opens[0].mark_price != null) {
+        p.paper.signal.close = Number(opens[0].mark_price);
+      }
+      // refresh paper equity to live MTM for any leftover readers
+      const bal = p.paper.balances || {};
+      let eq = Number(bal.USDT || 0);
+      for (const [asset, qty] of Object.entries(bal)) {
+        if (asset === "USDT") continue;
+        const pair = asset + "USDT";
+        const m = markPrices[pair];
+        if (m && m.price != null) eq += Number(qty || 0) * Number(m.price);
+      }
+      if (eq > 0) {
+        p.paper.virtual_equity = eq;
+        p.paper.virtual_equity_source = "live_mark_to_market";
+      }
+    }
   }
 
   async function fetchMarkPrices(payloads) {
@@ -891,8 +935,9 @@
       strategyPayloads = payloads;
       if (!selectedId && payloads.length) selectedId = payloads[0].meta.id;
 
-      await fetchMarkPrices(payloads);
       await refreshSignalFromKlines(payloads);
+      await fetchMarkPrices(payloads);
+      syncUnrealizedFromMarks(payloads);
       renderAll();
       $("lastUpdated").innerHTML =
         "最後更新：<strong>" + escapeHtml(nowTaipeiLabel()) + "</strong>";
