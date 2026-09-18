@@ -259,8 +259,6 @@
   function renderAllocation(alloc) {
     const capital = alloc.capital || 5000;
     const holdings = alloc.holdings || {};
-    const usdtCash = alloc.usdtCash || 0;
-    const equity = alloc.equity || 0;
 
     // 實際持倉：不含 USDT 現金列
     const actualRows = [];
@@ -352,22 +350,7 @@
         }).join("")
       : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉（黃燈衛星等綠燈）</td></tr>`;
 
-    // pie data from actual coin holdings + cash (pendingPieParts; innerHTML strips <script>)
-    const pieParts = [];
-    if (usdtCash > 0) pieParts.push({ label: "USDT 現金", value: usdtCash });
-    for (const [asset, h] of Object.entries(holdings)) {
-      if ((h.value || 0) > 0) pieParts.push({ label: asset, value: h.value });
-    }
-    if (!pieParts.length && equity > 0) pieParts.push({ label: "權益", value: equity });
-    pendingPieParts = pieParts;
-
     return `
-      <section class="section">
-        <div class="section-head"><h2>資產配置</h2><span class="hint">圓餅＝實際市值比重（含現金）</span></div>
-        <div class="card" style="padding:16px">
-          <div class="alloc-pie-wrap"><canvas id="allocPie" height="220"></canvas></div>
-        </div>
-      </section>
       <section class="section">
         <div class="section-head"><h2>實際持倉</h2><span class="hint">現金見上方帳戶總覽；此處只列幣種倉</span></div>
         <div class="card"><div class="table-scroll"><table class="data">
@@ -395,31 +378,47 @@
       .find((t) => t.asset === "CASH" || (t.symbol || "").toUpperCase() === "USDT");
     const cashPct = cashTarget ? Number(cashTarget.pct) || 15 : 15;
     const cashTargetUsdt = (cashPct / 100) * (alloc.capital || 5000);
+    const holdings = alloc.holdings || {};
+    const usdtCash = alloc.usdtCash || 0;
+    const equity = alloc.equity || 0;
+    const pieParts = [];
+    if (usdtCash > 0) pieParts.push({ label: "USDT 現金", value: usdtCash });
+    for (const [asset, h] of Object.entries(holdings)) {
+      if ((h.value || 0) > 0) pieParts.push({ label: asset, value: h.value });
+    }
+    if (!pieParts.length && equity > 0) pieParts.push({ label: "權益", value: equity });
+    pendingPieParts = pieParts;
     return `
       <section class="section">
         <div class="section-head"><h2>帳戶總覽</h2>
-          <span class="hint">${escapeHtml(book.exchange || "")} · ${escapeHtml(book.api_base || "")}</span>
+          <span class="hint">${escapeHtml(book.exchange || "")} · ${escapeHtml(book.api_base || "")} · 圓餅＝實際市值比重（含現金）</span>
         </div>
-        <div class="kpi-grid">
-          <div class="kpi">
-            <div class="label">虛擬權益</div>
-            <div class="value">${fmtNum(alloc.equity, 2)}</div>
-            <div class="sublabel">USDT</div>
+        <div class="overview-row">
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="label">虛擬權益</div>
+              <div class="value">${fmtNum(alloc.equity, 2)}</div>
+              <div class="sublabel">USDT</div>
+            </div>
+            <div class="kpi">
+              <div class="label">起始資金／保留現金目標</div>
+              <div class="value neutral">${fmtNum(alloc.capital, 2)}</div>
+              <div class="sublabel">目標保留現金 ${fmtNum(cashPct, 0)}% ≈ ${fmtNum(cashTargetUsdt, 0)} USDT · 目前現金 ${fmtNum(alloc.usdtCash, 2)}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">損益 %</div>
+              <div class="value ${clsSigned(alloc.pnlPct)}">${fmtPct(alloc.pnlPct)}</div>
+              <div class="sublabel">${fmtNum(alloc.pnl, 2)} USDT</div>
+            </div>
+            <div class="kpi">
+              <div class="label">持倉市值</div>
+              <div class="value">${fmtNum(alloc.positionsValue, 2)}</div>
+              <div class="sublabel">幣種 mark-to-market</div>
+            </div>
           </div>
-          <div class="kpi">
-            <div class="label">起始資金／保留現金目標</div>
-            <div class="value neutral">${fmtNum(alloc.capital, 2)}</div>
-            <div class="sublabel">目標保留現金 ${fmtNum(cashPct, 0)}% ≈ ${fmtNum(cashTargetUsdt, 0)} USDT · 目前現金 ${fmtNum(alloc.usdtCash, 2)}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">損益 %</div>
-            <div class="value ${clsSigned(alloc.pnlPct)}">${fmtPct(alloc.pnlPct)}</div>
-            <div class="sublabel">${fmtNum(alloc.pnl, 2)} USDT</div>
-          </div>
-          <div class="kpi">
-            <div class="label">持倉市值</div>
-            <div class="value">${fmtNum(alloc.positionsValue, 2)}</div>
-            <div class="sublabel">幣種 mark-to-market</div>
+          <div class="kpi kpi-pie" title="實際市值比重（含現金）">
+            <div class="label">資產配置</div>
+            <div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div>
           </div>
         </div>
       </section>`;
@@ -675,7 +674,7 @@
       },
       options: {
         plugins: {
-          legend: { position: "bottom", labels: { color: "#8b9bb0" } },
+          legend: { position: "bottom", labels: { color: "#8b9bb0", boxWidth: 10, font: { size: 10 }, padding: 6 } },
           tooltip: {
             callbacks: {
               label(ctx) {
