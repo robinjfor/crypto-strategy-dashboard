@@ -41,11 +41,12 @@
     },
     "oos": "4/6",
     "maxdd_pct": -22.7,
-    "status": "ARMED_WAIT_BREAKOUT",
+    "status": "SIGNAL_TRIGGERED_AWAITING_FILL",
     "open_when": "4h close above Donchian20 high",
     "note": "upgraded tighter trail; old -53.6% void; s1.5_t2.5 backup",
     "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
-    "can_open_demo": true
+    "can_open_demo": true,
+    "last_signal_ts": "2026-09-19T04:01:24.684308+08:00"
   },
   "cash_pct": 15,
   "removed": [
