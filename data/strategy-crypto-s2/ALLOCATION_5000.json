@@ -31,12 +31,12 @@
     "symbol": "OPUSDT",
     "pct": 20,
     "notional_usdt": 1000,
-    "variant": "donchian20_s1.5_t2.5__OP__4h",
+    "variant": "donchian20_s1.5_t1.5__OP__4h",
     "params": {
       "donchian": 20,
       "tf": "4h",
       "atr_stop": 1.5,
-      "atr_trail": 2.5
+      "atr_trail": 1.5
     },
     "oos": "4/6",
     "maxdd_pct": -33.1,
