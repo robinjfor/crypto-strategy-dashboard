@@ -61,7 +61,7 @@
       "max_drawdown_pct": -41.4377,
       "approval_status": "mainline_candidate_paper",
       "approval_label": "主線候選（Emily 認可回報）／模擬盤進行中",
-      "approval_note": "Emily 已認可 S2 回測結果；目前進入模擬盤階段。尚無 OOS 實盤核准。"
+      "approval_note": "Emily 已認可；OOS 4/6 勝 BH、縫合仍勝 BH，近兩折落後現貨。模擬盤進行中（黃燈不加碼）。"
     },
     {
       "id": "strategy-v1",

@@ -532,6 +532,61 @@
       </section>`;
   }
 
+  function renderOOS(payload) {
+    const oos = payload.oos;
+    if (!oos) return "";
+    const folds = Array.isArray(oos.folds) ? oos.folds : [];
+    const beat = oos.folds_beating_bh;
+    const n = oos.n_folds || folds.length;
+    const stitched = oos.stitched_return_pct;
+    const stitchedBh = oos.stitched_bh_return_pct;
+    const rows = folds.length
+      ? folds
+          .map((f) => {
+            const beatBh = f.beat_bh === true || f.beat_bh === "是";
+            return `<tr>
+              <td>${escapeHtml(f.fold != null ? f.fold : "—")}</td>
+              <td>${escapeHtml((f.oos_start || "") + (f.oos_end ? "→" + f.oos_end : ""))}</td>
+              <td class="num ${clsSigned(f.strategy_return_pct)}">${fmtPct(f.strategy_return_pct)}</td>
+              <td class="num ${clsSigned(f.bh_return_pct)}">${fmtPct(f.bh_return_pct)}</td>
+              <td class="num ${clsSigned(f.excess_pct)}">${fmtPct(f.excess_pct)}</td>
+              <td class="num ${clsSigned(f.max_drawdown_pct)}">${fmtPct(f.max_drawdown_pct)}</td>
+              <td class="num">${fmtInt(f.n_trades)}</td>
+              <td>${beatBh ? "是" : f.beat_bh === false ? "否" : "—"}</td>
+            </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="8" class="empty-row">無 OOS 折資料</td></tr>`;
+    const png = oos.equity_oos_png
+      ? `<div class="card" style="margin-top:14px"><div class="card-body">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">縫合 OOS 資金曲線</h2></div>
+          <img src="${escapeHtml(payload.path + "/" + oos.equity_oos_png.replace(/^\.\//, ""))}" alt="OOS equity" style="width:100%;border-radius:8px;border:1px solid var(--border)" />
+        </div></div>`
+      : "";
+    return `<section class="section">
+      <div class="section-head"><h2>OOS／樣本外</h2><span class="hint">${escapeHtml(oos.generated_at_taipei || "")}</span></div>
+      <div class="approval-banner ${oos.stitched_beats_bh ? "candidate" : "warn"}" role="status">
+        <strong>${escapeHtml(oos.headline || "OOS")}</strong>
+        <span>勝 BH 折數：${escapeHtml(beat != null ? beat + " / " + n : "—")} · 縫合報酬 ${fmtPct(stitched)} vs BH ${fmtPct(stitchedBh)}</span>
+        ${oos.selection_bias_warning ? `<span>${escapeHtml(oos.selection_bias_warning)}</span>` : ""}
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">鎖定變體</div><div class="kpi-value" style="font-size:0.95rem">${escapeHtml(oos.locked_variant || "—")}</div></div>
+        <div class="kpi"><div class="kpi-label">OOS 勝 BH</div><div class="kpi-value">${escapeHtml(beat != null ? beat + "/" + n : "—")}</div></div>
+        <div class="kpi"><div class="kpi-label">縫合 OOS 報酬</div><div class="kpi-value ${clsSigned(stitched)}">${fmtPct(stitched)}</div></div>
+        <div class="kpi"><div class="kpi-label">縫合 MaxDD</div><div class="kpi-value ${clsSigned(oos.stitched_max_drawdown_pct)}">${fmtPct(oos.stitched_max_drawdown_pct)}</div></div>
+        <div class="kpi"><div class="kpi-label">縫合 Sharpe</div><div class="kpi-value">${fmtNum(oos.stitched_sharpe, 2)}</div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="card-body">
+        <div class="table-wrap"><table>
+          <thead><tr><th>折</th><th>OOS 區間</th><th class="num">策略%</th><th class="num">BH%</th><th class="num">超額</th><th class="num">MaxDD</th><th class="num">交易</th><th>勝 BH</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div></div>
+      ${png}
+    </section>`;
+  }
+
   function renderPaperTrading(payload) {
     const pt = payload.paper_trading || {};
     const settlements = Array.isArray(payload.settlements)
@@ -719,11 +774,12 @@
     $("main").innerHTML = '<div class="loading">載入策略…</div>';
     const base = `${DATA_BASE}/${encodeURIComponent(id)}`;
     try {
-      const [results, csvText, settlementRaw, paperRaw] = await Promise.all([
+      const [results, csvText, settlementRaw, paperRaw, oosRaw] = await Promise.all([
         fetchJSON(`${base}/results.json`),
         fetchText(`${base}/equity_curve.csv`).catch(() => ""),
         fetchJSON(`${base}/settlement.json`).catch(() => []),
         fetchJSON(`${base}/paper_trading.json`).catch(() => null),
+        fetchJSON(`${base}/oos_meta.json`).catch(() => null),
       ]);
       const equity = csvText ? parseEquityCSV(csvText) : [];
       const metrics = enrichShortHorizonMetrics(results.metrics || {}, equity);
@@ -739,6 +795,7 @@
         equity,
         settlements: loadSettlements(settlementRaw),
         paper_trading: paperRaw,
+        oos: oosRaw,
         last_updated:
           metrics.generated_at_taipei ||
           results.generated_at_taipei ||
@@ -756,6 +813,7 @@
         renderKPIs(payload) +
         renderChart() +
         renderVariants(payload) +
+        renderOOS(payload) +
         renderTrades(payload) +
         renderPaperTrading(payload) +
         renderSettlement(payload) +
