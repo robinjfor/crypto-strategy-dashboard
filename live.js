@@ -320,9 +320,21 @@
           const pair = (pl.asset || "") + "USDT";
           const mark = markPrices[pair];
           const ref = mark && mark.price != null ? Number(mark.price) : pl.ref_price != null ? Number(pl.ref_price) : null;
+          const notional = pl.target_notional_usdt != null ? Number(pl.target_notional_usdt) : targetUsdt;
           let buyQty = pl.target_buy_qty;
-          if ((buyQty == null || buyQty === "") && ref && ref > 0) buyQty = targetUsdt / ref;
-          const buyLabel = buyQty != null ? fmtNum(buyQty, 3) + (ref ? `<div class="kpi-sub">≈ 目標 ${fmtNum(targetUsdt, 0)} ÷ ${fmtNum(ref, 4)}</div>` : "") : `待定<div class="kpi-sub">綠燈時依市價估算</div>`;
+          if (pl.no_order && pl.asset === "DOGE") {
+            buyQty = 0;
+          } else if ((buyQty == null || buyQty === "") && ref && ref > 0) {
+            buyQty = notional / ref;
+          }
+          let buyLabel;
+          if (pl.asset === "DOGE" || pl.status === "pending_swap") {
+            buyLabel = `不購買<div class="kpi-sub">槽位待置換→ARB</div>`;
+          } else if (buyQty != null) {
+            buyLabel = fmtNum(buyQty, 3) + `<div class="kpi-sub">≈ 目標 ${fmtNum(notional, 0)} USDT` + (ref ? ` ÷ ${fmtNum(ref, 4)}` : "") + `</div>`;
+          } else {
+            buyLabel = `待定<div class="kpi-sub">≈ ${fmtNum(notional, 0)} USDT · 綠燈後依市價</div>`;
+          }
           const stopLabel = pl.stop_mode === "pending" ? "未開倉 → 無有效止損" : (pl.stop_note || "—");
           const sid = pl.strategy_id || ("planned-" + pl.asset);
           return `<tr class="click-row" data-profile="${escapeHtml(sid)}" role="button" tabindex="0">
