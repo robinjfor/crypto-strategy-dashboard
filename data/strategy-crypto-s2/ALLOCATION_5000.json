@@ -1,8 +1,8 @@
 {
   "total_usdt": 5000,
-  "yellow_light": true,
-  "updated": "2026-09-18 21:38:58 UTC+08:00",
-  "ruling": "optimize_c approved: FET/OP replace SUI/DOGE; yellow docs only no open",
+  "yellow_light": false,
+  "updated": "2026-09-19 00:51:41 UTC+08:00",
+  "ruling": "capital control: yellow→green by judgment; FET/OP open on signal Demo; NEAR hold no add",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
@@ -24,8 +24,9 @@
     },
     "oos": "4/6",
     "maxdd_pct": -40.9,
-    "status": "EXPECTED_HOLDING_YELLOW_NO_OPEN",
-    "open_when": "green light + 1h close above Donchian55 high"
+    "status": "ARMED_WAIT_BREAKOUT",
+    "open_when": "1h close above Donchian55 high",
+    "can_open_demo": true
   },
   "satellite_B": {
     "symbol": "OPUSDT",
@@ -39,10 +40,12 @@
       "atr_trail": 1.5
     },
     "oos": "4/6",
-    "maxdd_pct": -33.1,
-    "status": "EXPECTED_HOLDING_YELLOW_NO_OPEN",
-    "open_when": "green light + 4h close above Donchian20 high",
-    "note": "old deep-DD OP variant void"
+    "maxdd_pct": -22.7,
+    "status": "ARMED_WAIT_BREAKOUT",
+    "open_when": "4h close above Donchian20 high",
+    "note": "upgraded tighter trail; old -53.6% void; s1.5_t2.5 backup",
+    "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
+    "can_open_demo": true
   },
   "cash_pct": 15,
   "removed": [
@@ -52,5 +55,16 @@
   "rejected": {
     "OP_old_deep_dd": "void",
     "ARB": "candidate OOS fail only"
+  },
+  "ruling_op_tighten": "B -> s1.5_t1.5; s1.5_t2.5 backup; old -53.6% void",
+  "light": "GREEN",
+  "traffic_light": "GREEN",
+  "green_ruling": {
+    "at": "2026-09-19 00:51:41 UTC+08:00",
+    "near": "HOLD_NO_ADD",
+    "fet": "ALLOW_DEMO_ON_BREAKOUT ~1250",
+    "op": "ALLOW_DEMO_ON_BREAKOUT ~1000",
+    "live": "NO until LIVE_GRADUATION",
+    "preopen": "both wait breakout"
   }
 }
