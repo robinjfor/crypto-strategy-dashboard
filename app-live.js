@@ -892,6 +892,7 @@
       if (!selectedId && payloads.length) selectedId = payloads[0].meta.id;
 
       await fetchMarkPrices(payloads);
+      await refreshSignalFromKlines(payloads);
       renderAll();
       $("lastUpdated").innerHTML =
         "最後更新：<strong>" + escapeHtml(nowTaipeiLabel()) + "</strong>";
