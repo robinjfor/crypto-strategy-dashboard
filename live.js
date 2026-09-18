@@ -364,7 +364,7 @@
         <div class="section-head"><h2>資產配置</h2><span class="hint">圓餅＝實際市值比重（含現金）</span></div>
         <div class="card" style="padding:16px">
           <div class="alloc-pie-wrap"><canvas id="allocPie" height="220"></canvas></div>
-          <script type="application/json" id="allocPieData">${escapeHtml(JSON.stringify(pieParts))}</script>
+          <script type="application/json" id="allocPieData">${JSON.stringify(pieParts).replace(/</g, "\u003c")}</script>
         </div>
       </section>
       <section class="section">
@@ -647,14 +647,26 @@
   function mountAllocPie() {
     const canvas = $("allocPie");
     const dataEl = $("allocPieData");
-    if (!canvas || !dataEl || typeof Chart === "undefined") return;
+    if (!canvas || !dataEl) return;
+    if (typeof Chart === "undefined") {
+      canvas.parentElement.insertAdjacentHTML("beforeend", '<p class="hint" style="text-align:center">圖表庫未載入</p>');
+      return;
+    }
+    let raw = (dataEl.textContent || "").trim();
+    // legacy: escaped quotes from escapeHtml
+    if (raw.includes("&quot;")) {
+      raw = raw.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    }
     let parts = [];
-    try { parts = JSON.parse(dataEl.textContent || "[]"); } catch (_) { parts = []; }
+    try { parts = JSON.parse(raw || "[]"); } catch (_) { parts = []; }
     if (allocChart) {
       allocChart.destroy();
       allocChart = null;
     }
-    if (!parts.length) return;
+    if (!parts.length) {
+      canvas.parentElement.insertAdjacentHTML("beforeend", '<p class="hint" style="text-align:center">尚無配置資料</p>');
+      return;
+    }
     allocChart = new Chart(canvas.getContext("2d"), {
       type: "doughnut",
       data: {
