@@ -15,6 +15,8 @@
   let countdown = 15;
   let timerId = null;
   let loading = false;
+  let allocChart = null;
+  let modalProfile = null;
 
   function fmtPct(v, digits = 2) {
     if (v == null || Number.isNaN(Number(v))) return "—";
@@ -257,130 +259,129 @@
     const capital = alloc.capital || 5000;
     const holdings = alloc.holdings || {};
     const usdtCash = alloc.usdtCash || 0;
+    const equity = alloc.equity || 0;
 
-    // 實際持倉 rows
+    // 實際持倉：不含 USDT 現金列
     const actualRows = [];
-    if (usdtCash || true) {
-      actualRows.push({
-        asset: "USDT 現金",
-        qty: usdtCash,
-        price: 1,
-        value: usdtCash,
-        pct: alloc.equity > 0 ? (usdtCash / alloc.equity) * 100 : 0,
-        pnl: null,
-        pnlPct: null,
-        stop: "—",
-        source: "balances.USDT",
-      });
-    }
     for (const [asset, h] of Object.entries(holdings)) {
       const qty = h.qty || 0;
-      const price = h.price;
-      const value = h.value || 0;
-      // find matching open for pnl/stop
+      const spot = h.price;
       let entry = null, stop = null, upnl = null, upct = null, side = "LONG";
+      let targetPx = null; // 目標／出場參考：通道下軌或 stop 旁註
       for (const p of strategyPayloads) {
-        for (const o of (p.paper && p.paper.open_positions) || []) {
+        const pt = p.paper || {};
+        for (const o of pt.open_positions || []) {
           const os = String(o.symbol || "").toUpperCase();
           if (os === asset + "USDT" || os === asset || os.startsWith(asset)) {
             entry = o.entry_price != null ? Number(o.entry_price) : entry;
-            stop = o.stop != null ? o.stop : stop;
+            stop = o.stop != null ? Number(o.stop) : stop;
             side = o.side || side;
-            if (price != null && entry != null && o.qty != null) {
-              const diff = String(side).toUpperCase() === "SHORT" ? entry - price : price - entry;
+            if (spot != null && entry != null && o.qty != null) {
+              const diff = String(side).toUpperCase() === "SHORT" ? entry - spot : spot - entry;
               upnl = diff * Number(o.qty);
               upct = entry !== 0 ? (diff / entry) * 100 : null;
             }
           }
         }
+        if (pt.signal && (String(pt.symbol || "").toUpperCase() === asset || String(pt.market_symbol || "").toUpperCase() === asset + "USDT")) {
+          if (pt.signal.donch_lo != null) targetPx = Number(pt.signal.donch_lo);
+        }
       }
-      actualRows.push({
-        asset,
-        qty,
-        price,
-        value,
-        pct: alloc.equity > 0 ? (value / alloc.equity) * 100 : 0,
-        pnl: upnl,
-        pnlPct: upct,
-        stop: stop != null ? stop : "未設定",
-        source: h.source || "—",
-        entry,
-      });
+      actualRows.push({ asset, qty, spot, entry, stop, targetPx, upnl, upct, source: h.source || "—", value: h.value || 0 });
     }
 
-    const actualHtml = actualRows
-      .map((r) => `<tr>
-        <td><strong>${escapeHtml(r.asset)}</strong></td>
-        <td class="num">${fmtNum(r.qty, r.asset.includes("USDT") ? 2 : 3)}</td>
-        <td class="num">${r.price != null ? fmtNum(r.price, 4) : "—"}</td>
-        <td class="num">${fmtNum(r.value, 2)}</td>
-        <td class="num">${fmtNum(r.pct, 1)}%</td>
-        <td class="num ${clsSigned(r.pnl)}">${r.pnl == null ? "—" : fmtNum(r.pnl, 2) + (r.pnlPct != null ? ` (${fmtPct(r.pnlPct)})` : "")}</td>
-        <td>${typeof r.stop === "number" ? fmtNum(r.stop, 4) : escapeHtml(String(r.stop))}</td>
-        <td class="mark-src">${escapeHtml(r.source)}</td>
-      </tr>`)
-      .join("");
+    const actualHtml = actualRows.length
+      ? actualRows.map((r) => {
+          const tgtStop = [
+            r.targetPx != null ? `目標參考(下軌) ${fmtNum(r.targetPx, 4)}` : "目標：跌破下軌／trail",
+            r.stop != null ? `止損 ${fmtNum(r.stop, 4)}` : "止損 未設定",
+          ].join(" · ");
+          const pnl = r.upnl == null ? "—" : `${fmtNum(r.upnl, 2)} (${fmtPct(r.upct)})`;
+          return `<tr>
+            <td><strong>${escapeHtml(r.asset)}</strong></td>
+            <td class="num">${fmtNum(r.qty, 3)}</td>
+            <td class="num">${r.spot != null ? fmtNum(r.spot, 4) : "—"}<div class="kpi-sub">${escapeHtml(r.source)}</div></td>
+            <td class="num">${r.entry != null ? fmtNum(r.entry, 4) : "—"}</td>
+            <td>${escapeHtml(tgtStop)}</td>
+            <td class="num">${fmtNum(r.value, 2)}</td>
+            <td class="num ${clsSigned(r.upnl)}"><strong>${pnl}</strong></td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="7" class="empty-row">尚無幣種持倉</td></tr>`;
 
-    const planned = Array.isArray(book.planned_positions) ? book.planned_positions : [];
-    const plannedHtml = planned
-      .map((pl) => {
-        const targetUsdt = (Number(pl.target_pct) || 0) / 100 * capital;
-        const stopLabel =
-          pl.stop_mode === "pending"
-            ? "尚未開倉 → 無有效止損"
-            : pl.stop_mode === "n/a"
-              ? "不適用"
-              : pl.stop_note || pl.stop_mode || "—";
-        return `<tr>
-          <td><strong>${escapeHtml(pl.asset === "CASH" ? "現金 USDT" : pl.asset)}</strong></td>
-          <td class="num">${fmtNum(pl.target_pct, 0)}%</td>
-          <td class="num">${fmtNum(targetUsdt, 2)}</td>
-          <td>${escapeHtml(pl.status_label || pl.status || "—")}</td>
-          <td>${escapeHtml(pl.entry_rule || "—")}</td>
-          <td>${escapeHtml(pl.exit_rule || "—")}</td>
-          <td>${escapeHtml(stopLabel)}</td>
-          <td>${escapeHtml(pl.leverage || "1x 現貨")}</td>
-        </tr>`;
-      })
-      .join("");
+    // 預計持倉：排除已 open、CASH/reserve
+    const planned = (Array.isArray(book.planned_positions) ? book.planned_positions : []).filter(
+      (pl) => pl.status !== "open" && pl.status !== "reserve" && pl.asset !== "CASH"
+    );
+
+    const plannedHtml = planned.length
+      ? planned.map((pl) => {
+          const targetUsdt = ((Number(pl.target_pct) || 0) / 100) * capital;
+          const pair = (pl.asset || "") + "USDT";
+          const mark = markPrices[pair];
+          const ref = mark && mark.price != null ? Number(mark.price) : pl.ref_price != null ? Number(pl.ref_price) : null;
+          let buyQty = pl.target_buy_qty;
+          if ((buyQty == null || buyQty === "") && ref && ref > 0) buyQty = targetUsdt / ref;
+          const buyLabel = buyQty != null ? fmtNum(buyQty, 3) + (ref ? `<div class="kpi-sub">≈ 目標 ${fmtNum(targetUsdt, 0)} ÷ ${fmtNum(ref, 4)}</div>` : "") : `待定<div class="kpi-sub">綠燈時依市價估算</div>`;
+          const stopLabel = pl.stop_mode === "pending" ? "未開倉 → 無有效止損" : (pl.stop_note || "—");
+          const sid = pl.strategy_id || ("planned-" + pl.asset);
+          return `<tr class="click-row" data-profile="${escapeHtml(sid)}" role="button" tabindex="0">
+            <td><strong>${escapeHtml(pl.asset)}</strong><div class="kpi-sub">${escapeHtml(pl.strategy_name || pl.notes || "")}</div></td>
+            <td class="num">${fmtNum(pl.target_pct, 0)}%</td>
+            <td class="num">${fmtNum(targetUsdt, 2)}</td>
+            <td class="num">${buyLabel}</td>
+            <td>${escapeHtml(pl.status_label || pl.status || "—")}</td>
+            <td>${escapeHtml(pl.entry_rule || "—")}</td>
+            <td>${escapeHtml(pl.exit_rule || "—")}</td>
+            <td>${escapeHtml(stopLabel)}</td>
+            <td>${escapeHtml(pl.leverage || "1x")}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉（黃燈衛星等綠燈）</td></tr>`;
+
+    // pie data from actual coin holdings + cash
+    const pieParts = [];
+    if (usdtCash > 0) pieParts.push({ label: "USDT 現金", value: usdtCash });
+    for (const [asset, h] of Object.entries(holdings)) {
+      if ((h.value || 0) > 0) pieParts.push({ label: asset, value: h.value });
+    }
+    if (!pieParts.length && equity > 0) pieParts.push({ label: "權益", value: equity });
 
     return `
       <section class="section">
-        <div class="section-head">
-          <h2>實際持倉</h2>
-          <span class="hint">帳戶現況（標記價計算市值／未實現損益）</span>
-        </div>
-        <div class="card">
-          <div class="table-scroll">
-            <table class="data">
-              <thead><tr>
-                <th>資產</th><th class="num">數量</th><th class="num">標記價</th><th class="num">USDT 市值</th><th class="num">佔比</th><th class="num">未實現損益</th><th>止損</th><th>價源</th>
-              </tr></thead>
-              <tbody>${actualHtml || `<tr><td colspan="8" class="empty-row">尚無持倉資料</td></tr>`}</tbody>
-            </table>
-          </div>
+        <div class="section-head"><h2>資產配置</h2><span class="hint">圓餅＝實際市值比重（含現金）</span></div>
+        <div class="card" style="padding:16px">
+          <div class="alloc-pie-wrap"><canvas id="allocPie" height="220"></canvas></div>
+          <script type="application/json" id="allocPieData">${escapeHtml(JSON.stringify(pieParts))}</script>
         </div>
       </section>
       <section class="section">
-        <div class="section-head">
-          <h2>預計持倉／配置目標</h2>
-          <span class="hint">資金簿計畫（總額 ${fmtNum(capital, 0)} USDT）· 進場／結算目標與止損狀態</span>
-        </div>
-        <div class="card">
-          <div class="table-scroll">
-            <table class="data">
-              <thead><tr>
-                <th>資產</th><th class="num">目標%</th><th class="num">目標 USDT</th><th>狀態</th><th>進場條件</th><th>結算／出場目標</th><th>止損</th><th>倍數</th>
-              </tr></thead>
-              <tbody>${plannedHtml || `<tr><td colspan="8" class="empty-row">尚未設定預計持倉</td></tr>`}</tbody>
-            </table>
-          </div>
-          <p class="hint" style="padding:10px 16px 14px;margin:0">黃燈裁定下：只抱 NEAR 現倉不加碼；SUI／DOGE 衛星等綠燈再開。目標%是配置計畫，不是保證會立刻買滿。</p>
+        <div class="section-head"><h2>實際持倉</h2><span class="hint">現金見上方帳戶總覽；此處只列幣種倉</span></div>
+        <div class="card"><div class="table-scroll"><table class="data">
+          <thead><tr>
+            <th>資產</th><th class="num">數量</th><th class="num">現價</th><th class="num">進場價</th><th>目標價格／止損</th><th class="num">USDT 市值</th><th class="num">目前損益</th>
+          </tr></thead>
+          <tbody>${actualHtml}</tbody>
+        </table></div></div>
+      </section>
+      <section class="section">
+        <div class="section-head"><h2>預計持倉</h2><span class="hint">尚未開倉的配置計畫 · 點列可看策略說明</span></div>
+        <div class="card"><div class="table-scroll"><table class="data">
+          <thead><tr>
+            <th>資產</th><th class="num">目標%</th><th class="num">目標 USDT</th><th class="num">預計購買量</th><th>狀態</th><th>進場條件</th><th>結算／出場</th><th>止損</th><th>倍數</th>
+          </tr></thead>
+          <tbody>${plannedHtml}</tbody>
+        </table></div>
+        <p class="hint" style="padding:10px 16px 14px;margin:0">已進場標的不重複列在這裡。點列開啟策略簡介；回測詳情可從彈窗進入。</p>
         </div>
       </section>`;
   }
 
   function renderKpis(alloc) {
+    const cashTarget = (Array.isArray(book.target_allocation) ? book.target_allocation : [])
+      .find((t) => t.asset === "CASH" || (t.symbol || "").toUpperCase() === "USDT");
+    const cashPct = cashTarget ? Number(cashTarget.pct) || 15 : 15;
+    const cashTargetUsdt = (cashPct / 100) * (alloc.capital || 5000);
     return `
       <section class="section">
         <div class="section-head"><h2>帳戶總覽</h2>
@@ -393,9 +394,9 @@
             <div class="sublabel">USDT</div>
           </div>
           <div class="kpi">
-            <div class="label">起始資金</div>
+            <div class="label">起始資金／保留現金目標</div>
             <div class="value neutral">${fmtNum(alloc.capital, 2)}</div>
-            <div class="sublabel">USDT</div>
+            <div class="sublabel">目標保留現金 ${fmtNum(cashPct, 0)}% ≈ ${fmtNum(cashTargetUsdt, 0)} USDT · 目前現金 ${fmtNum(alloc.usdtCash, 2)}</div>
           </div>
           <div class="kpi">
             <div class="label">損益 %</div>
@@ -403,16 +404,77 @@
             <div class="sublabel">${fmtNum(alloc.pnl, 2)} USDT</div>
           </div>
           <div class="kpi">
-            <div class="label">USDT 現金</div>
-            <div class="value">${fmtNum(alloc.usdtCash, 2)}</div>
-          </div>
-          <div class="kpi">
             <div class="label">持倉市值</div>
             <div class="value">${fmtNum(alloc.positionsValue, 2)}</div>
-            <div class="sublabel">mark-to-market</div>
+            <div class="sublabel">幣種 mark-to-market</div>
           </div>
         </div>
       </section>`;
+  }
+
+  function profileFromMeta(meta, paper) {
+    const pt = paper || {};
+    return {
+      id: meta.id,
+      name: meta.name || pt.strategy_name || meta.id,
+      summary: meta.summary || pt.notes || "",
+      description: meta.description || "",
+      entry_rule: meta.entry_rule || "",
+      exit_rule: meta.exit_rule || "",
+      stop_rule: meta.stop_rule || "",
+      timeframe: meta.timeframe || pt.timeframe || "",
+      symbol: meta.symbol || pt.market_symbol || pt.symbol || "",
+      leverage: meta.leverage || pt.leverage || "1x",
+      oos_note: meta.oos_note || "",
+      backtest_url: meta.backtest_url || `./backtest.html?strategy=${encodeURIComponent(meta.id)}`,
+      status: pt.status || meta.status || "",
+    };
+  }
+
+  function openStrategyModal(profile) {
+    modalProfile = profile;
+    const modal = $("strategyModal");
+    const body = $("modalBody");
+    if (!modal || !body || !profile) return;
+    body.innerHTML = `
+      <h2 style="margin:0 0 8px;font-size:1.15rem">${escapeHtml(profile.name)}</h2>
+      <div class="chips" style="margin-bottom:12px">
+        ${profile.symbol ? `<span class="chip">${escapeHtml(profile.symbol)}</span>` : ""}
+        ${profile.timeframe ? `<span class="chip">${escapeHtml(profile.timeframe)}</span>` : ""}
+        ${profile.leverage ? `<span class="chip">${escapeHtml(profile.leverage)} 現貨</span>` : ""}
+        ${profile.status ? `<span class="badge">${escapeHtml(profile.status)}</span>` : ""}
+      </div>
+      <p style="color:var(--text);margin:0 0 10px">${escapeHtml(profile.summary || "—")}</p>
+      ${profile.description ? `<p class="hint" style="margin:0 0 14px">${escapeHtml(profile.description)}</p>` : ""}
+      <div class="grid-2">
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">進場規則</h2></div>
+          <p style="margin:0">${escapeHtml(profile.entry_rule || "—")}</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">出場／結算</h2></div>
+          <p style="margin:0">${escapeHtml(profile.exit_rule || "—")}</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">止損</h2></div>
+          <p style="margin:0">${escapeHtml(profile.stop_rule || "—")}</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">回測／OOS</h2></div>
+          <p style="margin:0 0 10px">${escapeHtml(profile.oos_note || "可至回測頁查看 IS／OOS")}</p>
+          <a class="nav-link active" style="display:inline-block" href="${escapeHtml(profile.backtest_url)}">打開回測資料 →</a>
+        </div></div>
+      </div>`;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeStrategyModal() {
+    const modal = $("strategyModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    modalProfile = null;
   }
 
   function renderStrategyCards(payloads) {
@@ -429,39 +491,46 @@
         const openSummary =
           opens.length === 0
             ? "無未平倉"
-            : opens
-                .map(
-                  (o) =>
-                    `${o.side || "?"} ${fmtNum(o.qty, 3)} @ ${fmtNum(o.entry_price, 4)}`
-                )
-                .join(" · ");
-        const errNote = p.error
-          ? `<div class="card-err">${escapeHtml(p.error)}</div>`
-          : "";
-        return `<button type="button" class="strategy-card${active}" data-id="${escapeHtml(p.meta.id)}">
-          <div class="sc-top">
-            <strong>${escapeHtml(p.meta.name || pt.strategy_name || p.meta.id)}</strong>
-            <span class="badge ${status === "live_demo" || status === "live" ? "ok" : status === "error" ? "warn" : ""}">${escapeHtml(status)}</span>
-          </div>
-          <div class="sc-meta">
-            <span>${escapeHtml(symbol)}</span>
-            <span class="dim">·</span>
-            <span class="mono dim">${escapeHtml(variant)}</span>
-          </div>
-          <div class="sc-row"><span class="dim">最近動作</span><span>${escapeHtml(lastAction)}</span></div>
-          <div class="sc-row"><span class="dim">未平倉</span><span>${escapeHtml(openSummary)}</span></div>
-          <div class="sc-row"><span class="dim">權益</span><span class="mono">${equity}</span></div>
-          ${errNote}
-        </button>`;
+            : opens.map((o) => `${o.side || "?"} ${fmtNum(o.qty, 3)} @ ${fmtNum(o.entry_price, 4)}`).join(" · ");
+        const errNote = p.error ? `<div class="card-err">${escapeHtml(p.error)}</div>` : "";
+        return `<div class="strategy-card-wrap">
+          <button type="button" class="strategy-card${active}" data-id="${escapeHtml(p.meta.id)}">
+            <div class="sc-top">
+              <strong>${escapeHtml(p.meta.name || pt.strategy_name || p.meta.id)}</strong>
+              <span class="badge ${status === "live_demo" || status === "live" ? "ok" : status === "error" ? "warn" : ""}">${escapeHtml(status)}</span>
+            </div>
+            <div class="sc-meta"><span>${escapeHtml(symbol)}</span><span class="dim">·</span><span class="mono dim">${escapeHtml(variant)}</span></div>
+            <div class="sc-row"><span class="dim">最近動作</span><span>${escapeHtml(lastAction)}</span></div>
+            <div class="sc-row"><span class="dim">未平倉</span><span>${escapeHtml(openSummary)}</span></div>
+            <div class="sc-row"><span class="dim">權益</span><span class="mono">${equity}</span></div>
+            ${errNote}
+          </button>
+          <button type="button" class="ghost strategy-info-btn" data-profile-id="${escapeHtml(p.meta.id)}">策略說明／回測</button>
+        </div>`;
       })
+      .join("");
+
+    const sats = Array.isArray(book.satellite_strategies) ? book.satellite_strategies : [];
+    const satCards = sats
+      .map((s) => `<div class="strategy-card-wrap">
+        <button type="button" class="strategy-card dim-card" data-sat="${escapeHtml(s.id)}">
+          <div class="sc-top"><strong>${escapeHtml(s.name)}</strong><span class="badge warn">${escapeHtml(s.status || "pending")}</span></div>
+          <div class="sc-meta"><span>${escapeHtml(s.symbol || s.asset || "")}</span><span class="dim">·</span><span>${escapeHtml(s.timeframe || "")}</span></div>
+          <div class="sc-row"><span class="dim">目標配置</span><span>${fmtNum(s.target_pct, 0)}%</span></div>
+          <div class="sc-row"><span class="dim">狀態</span><span>黃燈暫緩 · 未開倉</span></div>
+        </button>
+        <button type="button" class="ghost strategy-info-btn" data-sat-profile="${escapeHtml(s.id)}">策略說明</button>
+      </div>`)
       .join("");
 
     return `
       <section class="section">
-        <div class="section-head"><h2>正在跑的策略</h2>
-          <span class="hint">點選卡片檢視詳情</span>
-        </div>
-        <div class="strategy-cards">${cards || `<div class="empty-state">live_book 尚未配置策略</div>`}</div>
+        <div class="section-head"><h2>正在跑的策略</h2><span class="hint">點卡片看倉位詳情；「策略說明」看規則與回測</span></div>
+        <div class="strategy-cards">${cards || `<div class="empty-state">尚未配置策略</div>`}</div>
+      </section>
+      <section class="section">
+        <div class="section-head"><h2>預計策略（衛星）</h2><span class="hint">黃燈未解除前不會真開</span></div>
+        <div class="strategy-cards">${satCards || `<div class="empty-state">無衛星策略</div>`}</div>
       </section>`;
   }
 
@@ -474,8 +543,8 @@
     const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
     const signals = Array.isArray(pt.signals) ? pt.signals.slice().reverse() : [];
     const latestSignal = pt.signal || null;
-
     const levDefault = pt.leverage || (payload.meta && payload.meta.leverage) || "1x";
+
     const openRows =
       opens.length === 0
         ? `<tr><td colspan="10" class="empty-row">尚無未平倉</td></tr>`
@@ -483,27 +552,25 @@
             .map((o) => {
               const pair = (o.symbol || "").toUpperCase();
               const mark = markPrices[pair];
-              let upnl = o.unrealized_pnl;
-              let upct = o.unrealized_pct;
               const entry = o.entry_price != null ? Number(o.entry_price) : null;
               const qty = o.qty != null ? Number(o.qty) : null;
               const markPx = mark && mark.price != null ? Number(mark.price) : null;
+              let upnl = o.unrealized_pnl;
+              let upct = o.unrealized_pct;
               if (markPx != null && entry != null && qty != null) {
                 const side = (o.side || "LONG").toUpperCase();
                 const diff = side === "SHORT" ? entry - markPx : markPx - entry;
                 upnl = diff * qty;
                 upct = entry !== 0 ? (diff / entry) * 100 : null;
               }
-              const notional =
-                qty != null && (markPx != null || entry != null)
-                  ? qty * (markPx != null ? markPx : entry)
-                  : null;
+              const notional = qty != null && (markPx != null || entry != null) ? qty * (markPx != null ? markPx : entry) : null;
               const lev = o.leverage || levDefault || "1x";
-              const stop = o.stop != null ? fmtNum(o.stop, 4) : "未設定";
-              const pnlCell =
-                upnl == null
-                  ? "—"
-                  : `${fmtNum(upnl, 2)} USDT` + (upct != null ? `<div class="kpi-sub">${fmtPct(upct)}</div>` : "");
+              const targetPx = latestSignal && latestSignal.donch_lo != null ? Number(latestSignal.donch_lo) : null;
+              const tgtStop = [
+                targetPx != null ? `目標參考 ${fmtNum(targetPx, 4)}` : "目標：跌破下軌／trail",
+                o.stop != null ? `止損 ${fmtNum(o.stop, 4)}` : "止損 未設定",
+              ].join(" · ");
+              const pnlCell = upnl == null ? "—" : `${fmtNum(upnl, 2)} USDT` + (upct != null ? `<div class="kpi-sub">${fmtPct(upct)}</div>` : "");
               return `<tr>
                 <td>${escapeHtml(o.opened_at || "—")}</td>
                 <td>${escapeHtml(o.symbol || "—")}</td>
@@ -513,8 +580,8 @@
                 <td class="num">${markPx != null ? fmtNum(markPx, 4) : "—"}<div class="kpi-sub">${escapeHtml((mark && mark.source) || "—")}</div></td>
                 <td class="num">${notional != null ? fmtNum(notional, 2) : "—"}</td>
                 <td class="num ${clsSigned(upnl)}"><strong>${pnlCell}</strong></td>
-                <td class="num">${stop}</td>
-                <td>${escapeHtml(String(lev).includes("x") || String(lev).includes("X") ? lev : lev + "x")} · 現貨</td>
+                <td>${escapeHtml(tgtStop)}</td>
+                <td>${escapeHtml(String(lev))} · 現貨</td>
               </tr>`;
             })
             .join("");
@@ -522,118 +589,134 @@
     const fillRows =
       settlements.length === 0
         ? `<tr><td colspan="8" class="empty-row">尚無成交</td></tr>`
-        : settlements
-            .slice(0, 30)
-            .map((s) => {
-              return `<tr>
-                <td>${escapeHtml(s.ts || s.entry_time || "—")}</td>
-                <td>${escapeHtml(s.symbol || "—")}</td>
-                <td><span class="badge">${escapeHtml(s.side || "—")}</span></td>
-                <td>${fmtNum(s.qty != null ? s.qty : s.shares, 4)}</td>
-                <td>${fmtNum(s.price != null ? s.price : s.entry_price, 4)}</td>
-                <td>${escapeHtml(s.status || "—")}</td>
-                <td>${escapeHtml(s.reason || s.note || "—")}</td>
-                <td>${s.orderId != null ? escapeHtml(String(s.orderId)) : "—"}</td>
-              </tr>`;
-            })
-            .join("");
-
-    const signalRows =
-      signals.length === 0 && !latestSignal
-        ? `<tr><td colspan="5" class="empty-row">尚無信號</td></tr>`
-        : (signals.length
-            ? signals.slice(0, 20)
-            : [
-                {
-                  time: pt.updated_at_taipei,
-                  symbol: pt.market_symbol,
-                  side: latestSignal && latestSignal.long_entry ? "BUY" : latestSignal && latestSignal.exit_long ? "EXIT" : "—",
-                  price: latestSignal && latestSignal.close,
-                  note: pt.last_action,
-                },
-              ]
-          )
-            .map(
-              (s) => `<tr>
-                <td>${escapeHtml(s.time || "—")}</td>
-                <td>${escapeHtml(s.symbol || "—")}</td>
-                <td>${escapeHtml(s.side || "—")}</td>
-                <td>${fmtNum(s.price, 4)}</td>
-                <td>${escapeHtml(s.note || "—")}</td>
-              </tr>`
-            )
-            .join("");
-
-    let liveSignalHtml = "";
-    if (latestSignal) {
-      liveSignalHtml = `
-        <div class="signal-snapshot card-body" style="border-bottom:1px solid var(--border-soft)">
-          <div class="chips">
-            <span class="chip">close ${fmtNum(latestSignal.close, 4)}</span>
-            <span class="chip">donch_hi ${fmtNum(latestSignal.donch_hi, 4)}</span>
-            <span class="chip">donch_lo ${fmtNum(latestSignal.donch_lo, 4)}</span>
-            <span class="chip">ATR ${fmtNum(latestSignal.atr, 5)}</span>
-            <span class="chip stock">stop ${fmtNum(latestSignal.stop, 4)}</span>
-            ${latestSignal.long_entry ? '<span class="badge ok">long_entry</span>' : ""}
-            ${latestSignal.exit_long ? '<span class="badge warn">exit_long</span>' : ""}
-            ${latestSignal.ready ? '<span class="badge ok">ready</span>' : ""}
-          </div>
-          ${pt.notes ? `<p class="hint" style="margin-top:10px">${escapeHtml(pt.notes)}</p>` : ""}
-        </div>`;
-    }
+        : settlements.slice(0, 30).map((s) => `<tr>
+              <td>${escapeHtml(s.ts || s.entry_time || "—")}</td>
+              <td>${escapeHtml(s.symbol || "—")}</td>
+              <td><span class="badge">${escapeHtml(s.side || "—")}</span></td>
+              <td class="num">${fmtNum(s.qty != null ? s.qty : s.shares, 4)}</td>
+              <td class="num">${fmtNum(s.price != null ? s.price : s.entry_price, 4)}</td>
+              <td>${escapeHtml(s.status || "—")}</td>
+              <td>${escapeHtml(s.reason || s.note || "—")}</td>
+              <td>${s.orderId != null ? escapeHtml(String(s.orderId)) : "—"}</td>
+            </tr>`).join("");
 
     return `
       <section class="section">
         <div class="section-head">
           <h2>策略詳情 · ${escapeHtml(payload.meta.name || payload.meta.id)}</h2>
-          <span class="hint">更新：${escapeHtml(pt.updated_at_taipei || "—")}</span>
+          <span class="hint">更新：${escapeHtml(pt.updated_at_taipei || "—")} · <button type="button" class="linkish" id="btnOpenProfile">策略說明／回測</button></span>
         </div>
         <div class="card" style="margin-bottom:14px">
           <div class="section-head" style="padding:12px 16px 0;margin:0">
             <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">未平倉 · 目前損益</h2>
-            <span class="hint">數量／USDT 價值／止損／倍數（Demo 現貨預設 1x）</span>
           </div>
-          <div class="table-scroll">
-            <table class="data">
-              <thead><tr>
-                <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">標記價</th><th class="num">USDT 價值</th><th class="num">目前損益</th><th class="num">止損</th><th>倍數</th>
-              </tr></thead>
-              <tbody>${openRows}</tbody>
-            </table>
-          </div>
+          <div class="table-scroll"><table class="data">
+            <thead><tr>
+              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">現價</th><th class="num">USDT 價值</th><th class="num">目前損益</th><th>目標價格／止損</th><th>倍數</th>
+            </tr></thead>
+            <tbody>${openRows}</tbody>
+          </table></div>
         </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="section-head" style="padding:12px 16px 0;margin:0">
-              <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">最近成交</h2>
-              <span class="hint">settlement</span>
-            </div>
-            <div class="table-scroll">
-              <table class="data">
-                <thead><tr>
-                  <th>時間</th><th>標的</th><th>方向</th><th>數量</th><th>價格</th><th>狀態</th><th>原因</th><th>orderId</th>
-                </tr></thead>
-                <tbody>${fillRows}</tbody>
-              </table>
-            </div>
+        <div class="card">
+          <div class="section-head" style="padding:12px 16px 0;margin:0">
+            <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">最近成交</h2>
           </div>
-          <div class="card">
-            <div class="section-head" style="padding:12px 16px 0;margin:0">
-              <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">最新信號</h2>
-              <span class="hint">paper.signal / signals[]</span>
-            </div>
-            ${liveSignalHtml}
-            <div class="table-scroll">
-              <table class="data">
-                <thead><tr>
-                  <th>時間</th><th>標的</th><th>方向</th><th>價格</th><th>備註</th>
-                </tr></thead>
-                <tbody>${signalRows}</tbody>
-              </table>
-            </div>
-          </div>
+          <div class="table-scroll"><table class="data">
+            <thead><tr>
+              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">價格</th><th>狀態</th><th>原因</th><th>orderId</th>
+            </tr></thead>
+            <tbody>${fillRows}</tbody>
+          </table></div>
         </div>
       </section>`;
+  }
+
+
+  function mountAllocPie() {
+    const canvas = $("allocPie");
+    const dataEl = $("allocPieData");
+    if (!canvas || !dataEl || typeof Chart === "undefined") return;
+    let parts = [];
+    try { parts = JSON.parse(dataEl.textContent || "[]"); } catch (_) { parts = []; }
+    if (allocChart) {
+      allocChart.destroy();
+      allocChart = null;
+    }
+    if (!parts.length) return;
+    allocChart = new Chart(canvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: parts.map((p) => p.label),
+        datasets: [{
+          data: parts.map((p) => p.value),
+          backgroundColor: ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#22d3ee"],
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        plugins: {
+          legend: { position: "bottom", labels: { color: "#8b9bb0" } },
+        },
+      },
+    });
+  }
+
+  function wireLiveClicks() {
+    document.querySelectorAll(".strategy-info-btn[data-profile-id]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute("data-profile-id");
+        const payload = strategyPayloads.find((x) => x.meta.id === id);
+        if (payload) openStrategyModal(profileFromMeta(payload.meta, payload.paper));
+      });
+    });
+    document.querySelectorAll(".strategy-info-btn[data-sat-profile]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute("data-sat-profile");
+        const sat = (book.satellite_strategies || []).find((s) => s.id === id);
+        if (sat) openStrategyModal(sat);
+      });
+    });
+    document.querySelectorAll(".strategy-card[data-sat]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-sat");
+        const sat = (book.satellite_strategies || []).find((s) => s.id === id);
+        if (sat) openStrategyModal(sat);
+      });
+    });
+    document.querySelectorAll("tr.click-row[data-profile]").forEach((tr) => {
+      tr.addEventListener("click", () => {
+        const id = tr.getAttribute("data-profile");
+        const sat = (book.satellite_strategies || []).find((s) => s.id === id || s.asset && id.includes(s.asset.toLowerCase()));
+        const planned = (book.planned_positions || []).find((p) => (p.strategy_id || ("planned-" + p.asset)) === id);
+        if (sat) return openStrategyModal(sat);
+        if (planned) {
+          openStrategyModal({
+            id,
+            name: planned.strategy_name || planned.asset,
+            summary: planned.status_label || "",
+            description: planned.notes || "",
+            entry_rule: planned.entry_rule,
+            exit_rule: planned.exit_rule,
+            stop_rule: planned.stop_note || planned.stop_mode,
+            timeframe: "",
+            symbol: planned.asset + "USDT",
+            leverage: planned.leverage || "1x",
+            status: planned.status,
+            backtest_url: "./backtest.html",
+            oos_note: "衛星策略回測待綠燈後補檔",
+          });
+        }
+      });
+    });
+    const btnProf = $("btnOpenProfile");
+    if (btnProf) {
+      btnProf.addEventListener("click", () => {
+        const payload = strategyPayloads.find((x) => x.meta.id === selectedId);
+        if (payload) openStrategyModal(profileFromMeta(payload.meta, payload.paper));
+      });
+    }
   }
 
   function renderAll() {
@@ -657,6 +740,8 @@
       renderAllocation(alloc) +
       renderStrategyCards(strategyPayloads) +
       renderDetail(selected);
+    mountAllocPie();
+    wireLiveClicks();
 
     main.querySelectorAll(".strategy-card").forEach((btn) => {
       btn.addEventListener("click", () => {

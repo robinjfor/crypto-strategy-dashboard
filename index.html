@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>模擬倉即時 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -33,6 +34,13 @@
 
     <div class="err-banner" id="errBanner"></div>
     <div id="main" class="loading">載入中…</div>
+    <div id="strategyModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" id="modalClose" aria-label="關閉">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
   </div>
 
   <script src="./app-live.js"></script>

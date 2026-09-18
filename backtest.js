@@ -193,7 +193,14 @@
     if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
     else if (defaultId && [...sel.options].some((o) => o.value === defaultId))
       sel.value = defaultId;
-    currentId = sel.value;
+    const params = new URLSearchParams(location.search);
+    const q = params.get("strategy");
+    if (q && [...sel.options].some((o) => o.value === q)) {
+      sel.value = q;
+      currentId = q;
+    } else {
+      currentId = sel.value;
+    }
     return currentId;
   }
 

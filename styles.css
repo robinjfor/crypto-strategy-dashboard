@@ -336,3 +336,40 @@ footer {
 
 /* live holdings split */
 .table-scroll td strong { font-weight: 650; }
+
+/* Modal + pie + clickable rows */
+.modal.hidden { display: none; }
+.modal {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+}
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+}
+.modal-card {
+  position: relative; z-index: 1;
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 20px 24px;
+  box-shadow: var(--shadow);
+}
+.modal-close {
+  position: absolute; top: 10px; right: 12px;
+  border: none; background: transparent;
+  color: var(--text-dim); font-size: 1.4rem; cursor: pointer;
+}
+.alloc-pie-wrap { max-width: 360px; margin: 0 auto; }
+tr.click-row { cursor: pointer; }
+tr.click-row:hover td { background: rgba(59,130,246,0.08); }
+.strategy-card-wrap { display: flex; flex-direction: column; gap: 8px; }
+.strategy-info-btn { width: 100%; }
+.dim-card { opacity: 0.85; }
+button.linkish {
+  background: none; border: none; color: var(--cyan);
+  cursor: pointer; font: inherit; padding: 0; text-decoration: underline;
+}
