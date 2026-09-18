@@ -946,6 +946,28 @@
       updateCountdown();
     });
     autoOn = chk.checked;
+
+    const modal = $("strategyModal");
+    const closeBtn = $("modalClose");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeStrategyModal();
+      });
+    }
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        const t = e.target;
+        if (t && (t.getAttribute("data-close") === "1" || t.classList.contains("modal-backdrop"))) {
+          closeStrategyModal();
+        }
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeStrategyModal();
+    });
+
     loadAll();
     startTimer();
   }
