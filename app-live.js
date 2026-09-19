@@ -117,6 +117,14 @@
     return { balances, virtualEquity, openPositions };
   }
 
+
+  function posEntry(o) {
+    if (!o) return null;
+    if (o.entry_price != null) return Number(o.entry_price);
+    if (o.entry != null) return Number(o.entry);
+    return null;
+  }
+
   function resolveMarkPrice(asset, payloads) {
     if (asset === "CASH" || asset === "USDT") {
       return { price: 1, source: "現金" };
@@ -183,7 +191,7 @@
         const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
         let peak = forming.c;
         for (const o of opens) {
-          const entry = o.entry_price != null ? Number(o.entry_price) : null;
+          const entry = posEntry(o) != null ? posEntry(o) : null;
           if (entry != null) peak = Math.max(peak, entry);
         }
         peak = Math.max(peak, ...closed.slice(-40).map((b) => b.h), forming.h);
@@ -193,7 +201,7 @@
             ? Number(markPrices[sym].price)
             : Number(forming.c);
         for (const o of opens) {
-          const entry = o.entry_price != null ? Number(o.entry_price) : null;
+          const entry = posEntry(o) != null ? posEntry(o) : null;
           if (entry == null) continue;
           const hard = entry - 2 * atr;
           const trail = peak - 3 * atr;
@@ -307,7 +315,7 @@
         const os = String(o.symbol || "").toUpperCase();
         const mark = markPrices[os];
         const spot = mark && mark.price != null ? Number(mark.price) : o.mark_price != null ? Number(o.mark_price) : null;
-        const entry = o.entry_price != null ? Number(o.entry_price) : null;
+        const entry = posEntry(o) != null ? posEntry(o) : null;
         if (spot == null || entry == null || o.qty == null) continue;
         const q = Number(o.qty);
         const side = String(o.side || "LONG").toUpperCase();
@@ -388,7 +396,7 @@
         for (const o of pt.open_positions || []) {
           const os = String(o.symbol || "").toUpperCase();
           if (os === asset + "USDT" || os === asset || os.startsWith(asset)) {
-            entry = o.entry_price != null ? Number(o.entry_price) : entry;
+            entry = posEntry(o) != null ? posEntry(o) : entry;
             stop = o.stop != null ? Number(o.stop) : stop;
             side = o.side || side;
             if (spot != null && entry != null && o.qty != null) {
@@ -398,7 +406,12 @@
             }
           }
         }
-        if (pt.signal && (String(pt.symbol || "").toUpperCase() === asset || String(pt.market_symbol || "").toUpperCase() === asset + "USDT")) {
+        const byAsset = pt.signals_by_asset || (pt.signal && pt.signal.by_asset) || {};
+        const assetSig = byAsset[asset] || byAsset[String(asset).toUpperCase()];
+        if (assetSig) {
+          if (assetSig.donch_lo != null) exitLo = Number(assetSig.donch_lo);
+          if (stop == null && assetSig.stop != null) stop = Number(assetSig.stop);
+        } else if (pt.signal && (String(pt.symbol || "").toUpperCase() === asset || String(pt.market_symbol || "").toUpperCase() === asset + "USDT")) {
           if (pt.signal.donch_lo != null) exitLo = Number(pt.signal.donch_lo);
           if (stop == null && pt.signal.stop != null) stop = Number(pt.signal.stop);
         }
@@ -617,7 +630,7 @@
         const openSummary =
           opens.length === 0
             ? "無未平倉"
-            : opens.map((o) => `${o.side || "?"} ${fmtNum(o.qty, 3)} @ ${fmtNum(o.entry_price, 4)}`).join(" · ");
+            : opens.map((o) => `${o.side || "?"} ${fmtNum(o.qty, 3)} @ ${fmtNum(posEntry(o), 4)}`).join(" · ");
         const errNote = p.error ? `<div class="card-err">${escapeHtml(p.error)}</div>` : "";
         return `<div class="strategy-card-wrap">
           <button type="button" class="strategy-card${active}" data-id="${escapeHtml(p.meta.id)}">
@@ -678,7 +691,7 @@
             .map((o) => {
               const pair = (o.symbol || "").toUpperCase();
               const mark = markPrices[pair];
-              const entry = o.entry_price != null ? Number(o.entry_price) : null;
+              const entry = posEntry(o) != null ? posEntry(o) : null;
               const qty = o.qty != null ? Number(o.qty) : null;
               const markPx = mark && mark.price != null ? Number(mark.price) : null;
               let upnl = o.unrealized_pnl;

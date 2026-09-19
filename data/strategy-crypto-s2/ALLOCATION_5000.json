@@ -1,8 +1,8 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-19 09:10:11 UTC+08:00",
-  "ruling": "sat B OP cancelled pending → FIL donch55 s1.5 t2.5 1h; FET A keep; green wait FIL breakout",
+  "updated": "2026-09-19 12:19:22 CST",
+  "ruling": "box_paper_24h: FIL filled; NEAR hold; FET armed; no Windows dependency",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
@@ -41,7 +41,7 @@
     },
     "oos": "4/6",
     "maxdd_pct": -30.5,
-    "status": "SIGNAL_TRIGGERED_AWAITING_FILL",
+    "status": "OPEN_FILLED",
     "open_when": "1h close > Donchian55 high",
     "replaces": "OP",
     "last_signal": {
@@ -55,6 +55,17 @@
       "stop_ref": 0.9255,
       "variant": "donchian55_s1.5_t2.5__FIL__1h",
       "status": "TRIGGERED_AWAITING_DEMO_FILL"
+    },
+    "filled": {
+      "qty": 1016.673444,
+      "entry": 0.9836,
+      "stop": 0.953538,
+      "at": "2026-09-19 12:19:22 CST"
+    },
+    "fill": {
+      "qty": 1016.673444,
+      "price": 0.9836,
+      "stop": 0.953538
     }
   },
   "cash_pct": 15,
@@ -86,5 +97,7 @@
       "donchian20_s1.5_t1.5__OP__4h backup",
       "old -53.6% void"
     ]
-  }
+  },
+  "paper_engine": "box_paper_vision",
+  "paper_trading_path": "/workspace/strategy-crypto-s2/paper_trading.json"
 }

@@ -1,64 +1,111 @@
 {
   "status": "live_demo",
-  "label": "模擬倉 · Binance Demo",
-  "exchange": "Binance Demo",
-  "venue": "binance_demo",
-  "api_base": "https://demo-api.binance.com",
+  "label": "模擬倉 · Box Paper（24h）",
+  "exchange": "Box Paper",
+  "venue": "box_paper_vision",
+  "api_base": "https://data-api.binance.vision",
   "market_symbol": "NEARUSDT",
   "symbol": "NEAR",
   "timeframe": "4h",
   "strategy_id": "strategy-crypto-s2",
-  "strategy_name": "S2 NEAR Donchian",
+  "strategy_name": "multi: NEAR4h + FIL1h; FET armed",
   "selected_variant": "donchian_breakout_atr__NEAR__4h",
   "currency": "USDT",
   "leverage": "1x",
   "market_type": "spot",
-  "virtual_equity": 5353.160135,
-  "virtual_equity_source": "binance_ticker_mtm",
+  "virtual_equity": 5403.515,
+  "virtual_equity_source": "box_paper_24h",
   "balances": {
-    "USDT": 3500.15,
-    "NEAR": 504.495
+    "USDT": 2498.15,
+    "NEAR": 505.0,
+    "FIL": 1016.673444
   },
-  "signal": {
-    "ready": true,
-    "bar_open_ms": 1789704000000,
-    "close": 3.673,
-    "donch_hi": 3.572,
-    "donch_lo": 2.297,
-    "atr": 0.14835501305154405,
-    "long_entry": false,
-    "exit_long": false,
-    "stop": 3.351934960845368,
-    "trail_dist": 0.4373894198811016,
-    "peak_since_entry": 3.572,
-    "source": "binance_ticker_mtm",
-    "recalc_at_taipei": "2026-09-18 23:57:01 CST",
-    "last_closed": 3.505
-  },
-  "last_action": "BUY 505.0",
   "open_positions": [
     {
       "symbol": "NEARUSDT",
       "side": "LONG",
       "qty": 505.0,
+      "entry": 2.97,
+      "stop": 3.275701,
+      "mark_price": 3.773,
+      "unrealized_pct": 27.04,
+      "variant": "donchian_breakout_atr__NEAR__4h",
+      "donch_lo": 2.297,
       "entry_price": 2.97,
-      "unrealized_pnl": 355.01499999999993,
-      "unrealized_pct": 23.670033670033664,
-      "stop": 3.351934960845368,
-      "leverage": "1x",
-      "opened_at": "2026-09-18 00:56:26 CST",
-      "mark_price": 3.673
-    }
-  ],
-  "signals": [
+      "unrealized_pnl": 405.515
+    },
     {
-      "time": "2026-09-18 00:56:26 CST",
-      "symbol": "NEARUSDT",
-      "side": "BUY",
-      "price": 2.97,
-      "note": "BUY 505.0"
+      "symbol": "FILUSDT",
+      "side": "LONG",
+      "qty": 1016.673444,
+      "entry": 0.9836,
+      "stop": 0.953538,
+      "mark_price": 0.9836,
+      "unrealized_pct": 0.0,
+      "variant": "donchian55_s1.5_t2.5__FIL__1h",
+      "donch_lo": 0.787,
+      "trail_atr_mult": 2.5,
+      "stop_atr_mult": 1.5,
+      "entry_price": 0.9836,
+      "unrealized_pnl": 0.0
     }
   ],
-  "updated_at_taipei": "2026-09-18 23:57:01 CST",
-  "notes": "Binance Demo：BUY 505.0; USDT=3500.15 NEAR=504.495"
+  "signal": {
+    "ready": true,
+    "close": 3.773,
+    "donch_hi": 3.914,
+    "donch_lo": 2.297,
+    "atr": 0.165766,
+    "stop": 3.275701,
+    "by_asset": {
+      "FIL": {
+        "ready": true,
+        "close": 0.9836,
+        "donch_hi": 0.99,
+        "donch_lo": 0.787,
+        "atr": 0.020041,
+        "stop": 0.953538
+      },
+      "NEAR": {
+        "ready": true,
+        "close": 3.773,
+        "donch_hi": 3.914,
+        "donch_lo": 2.297,
+        "atr": 0.165766,
+        "stop": 3.275701
+      },
+      "FET": {
+        "mark": 0.1805,
+        "status": "WAIT_BREAKOUT"
+      }
+    }
+  },
+  "signals_by_asset": {
+    "FIL": {
+      "ready": true,
+      "close": 0.9836,
+      "donch_hi": 0.99,
+      "donch_lo": 0.787,
+      "atr": 0.020041,
+      "stop": 0.953538
+    },
+    "NEAR": {
+      "ready": true,
+      "close": 3.773,
+      "donch_hi": 3.914,
+      "donch_lo": 2.297,
+      "atr": 0.165766,
+      "stop": 3.275701
+    },
+    "FET": {
+      "mark": 0.1805,
+      "status": "WAIT_BREAKOUT"
+    }
+  },
+  "last_action": "BOX_PAPER BUY FIL ~1016.6734 @ 0.9836 (quote 1000 + fee 2.00)",
+  "light": "GREEN",
+  "updated_at_taipei": "2026-09-19 12:19:22 CST",
+  "notes": "Box paper engine 24h; Binance Vision marks; no Windows dependency",
+  "base_url": "https://data-api.binance.vision",
+  "strategy": "multi: NEAR4h + FIL1h; FET armed"
 }

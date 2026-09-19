@@ -1,7 +1,7 @@
 {
-  "title": "Binance Demo 模擬倉",
-  "exchange": "Binance Demo",
-  "api_base": "https://demo-api.binance.com",
+  "title": "Box Paper 模擬倉（24h）",
+  "exchange": "Box Paper",
+  "api_base": "https://data-api.binance.vision",
   "total_capital_usdt": 5000,
   "target_allocation": [
     {
@@ -64,21 +64,21 @@
     {
       "asset": "FIL",
       "target_pct": 20,
-      "status": "signal_triggered_pending_fill",
-      "status_label": "預計持倉 20% · 訊號已觸發／待成交",
+      "status": "open",
+      "status_label": "實際持倉（現倉）· Demo 已成交",
       "entry_rule": "1h 收盤站上 Donchian(55) 上軌（已觸發）→ 待成交",
       "exit_rule": "跌破通道下軌或 ATR 停損／移動停損",
       "stop_mode": "pending",
       "stop_note": "未開倉 → 無有效止損；開倉後進場 − 1.5×ATR／trail 2.5×ATR",
       "leverage": "1x 現貨（預定）",
-      "notes": "~1000 USDT；donchian55_s1.5_t2.5__FIL__1h；訊號已觸發，Demo 待成交後改列實際持倉",
+      "notes": "box paper 已開；qty≈1016.67 @ 0.9836",
       "strategy_id": "satellite-fil",
       "strategy_name": "donchian55_s1.5_t2.5__FIL__1h",
       "selected_variant": "donchian55_s1.5_t2.5__FIL__1h",
       "target_notional_usdt": 1000,
       "target_buy_qty": null,
       "ref_price": null,
-      "no_order": false,
+      "no_order": true,
       "orderable_on_signal": true,
       "replaces": "OP",
       "signal_triggered": true
@@ -87,21 +87,21 @@
   "strategies": [
     {
       "id": "strategy-crypto-s2",
-      "name": "S2 NEAR Donchian",
+      "name": "S2 Box Paper（NEAR＋FIL）",
       "paper_path": "./data/strategy-crypto-s2/paper_trading.json",
       "settlement_path": "./data/strategy-crypto-s2/settlement.json",
       "leverage": "1x",
       "market_type": "spot",
-      "summary": "主線：NEAR/USDT 4h Donchian20 突破進場；黃燈下只抱現倉不加碼。",
+      "summary": "Box 紙上引擎 24h：NEAR 續抱；FIL 已開；FET 待突破。",
       "description": "鎖定 donchian_breakout_atr__NEAR__4h。成本假設單邊 20bps。OOS 4/6 勝 BH，近兩折落後現貨。",
       "entry_rule": "4h 收盤突破 Donchian20 上軌進場做多",
       "exit_rule": "4h 收盤跌破 Donchian 下軌，或觸及 ATR 停損／移動停利",
       "stop_rule": "硬止損：進場價 − 2×ATR14；移動停利：− 3×ATR trail",
       "timeframe": "4h",
-      "symbol": "NEARUSDT",
+      "symbol": "MULTI",
       "brief_path": "./data/strategy-crypto-s2/BRIEF.md",
       "backtest_url": "./backtest.html?strategy=strategy-crypto-s2",
-      "oos_note": "OOS 4/6 勝 BH；縫合仍勝 BH；近兩折落後現貨"
+      "oos_note": "exchange: Box Paper · Vision marks"
     }
   ],
   "auto_refresh_sec": 15,
@@ -124,28 +124,9 @@
       "backtest_url": "./backtest.html",
       "oos_note": "待突破／綠燈可依訊號開 Demo",
       "replaces": "SUI"
-    },
-    {
-      "id": "satellite-fil",
-      "name": "donchian55_s1.5_t2.5__FIL__1h",
-      "asset": "FIL",
-      "status": "signal_triggered_pending_fill",
-      "summary": "預計持倉 20%（~1000 USDT）。訊號已觸發／待成交；成交後改實際持倉。",
-      "entry_rule": "1h 收盤站上 Donchian(55) 上軌",
-      "exit_rule": "跌破通道下軌或 ATR×1.5 停損／ATR×2.5 移動停損",
-      "stop_rule": "開倉後進場 − 1.5×ATR；移動 trail 2.5×ATR",
-      "timeframe": "1h",
-      "symbol": "FILUSDT",
-      "target_pct": 20,
-      "target_notional_usdt": 1000,
-      "leverage": "1x",
-      "selected_variant": "donchian55_s1.5_t2.5__FIL__1h",
-      "backtest_url": "./backtest.html",
-      "oos_note": "訊號已觸發／待成交",
-      "replaces": "OP"
     }
   ],
-  "allocation_note": "燈號：綠燈。NEAR 續抱不加倉；FIL 訊號已觸發／待成交；FET 仍待突破；OP 已移除；現金 15%。",
+  "allocation_note": "Box Paper（24h）。NEAR＋FIL 實際持倉；FET 仍待訊號；OP 已移除；現金見總覽。",
   "spec_path": "./data/strategy-crypto-s2/DASHBOARD_EXPECTED_HOLDINGS.md",
   "allocation_path": "./data/strategy-crypto-s2/ALLOCATION_5000.json",
   "satellite_rules_path": "./data/strategy-crypto-s2/SATELLITE_OPEN_RULES.md",

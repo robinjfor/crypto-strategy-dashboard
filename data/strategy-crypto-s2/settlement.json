@@ -1,5 +1,22 @@
 [
   {
+    "ts": "2026-09-19 12:19:22 CST",
+    "engine": "box_paper_vision",
+    "symbol": "FILUSDT",
+    "side": "BUY",
+    "qty": 1016.673444,
+    "price": 0.9836,
+    "quote": 1000.0,
+    "fee": 2.0,
+    "stop": 0.953538,
+    "reason": "donch55_breakout_1h_fill_after_pc_offline",
+    "fee_usdt": 2.0,
+    "notional_usdt": 1000.0,
+    "entry_price": 0.9836,
+    "status": "FILLED",
+    "time": "2026-09-19 12:19:22 CST"
+  },
+  {
     "ts": "2026-09-18T00:56:25.735891+08:00",
     "kind": "sim",
     "strategy": "donchian_breakout_atr__NEAR__4h",
