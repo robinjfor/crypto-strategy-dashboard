@@ -1,8 +1,8 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-19T15:18:38.990453+08:00",
-  "ruling": "FIL stopped out 15:17; sat B empty pending review; NEAR hold; FET armed",
+  "updated": "2026-09-19 15:25:54 UTC+08:00",
+  "ruling": "sat B -> OP s1.5_t1.5 after FIL stop; wait 4h breakout box_paper",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
@@ -29,25 +29,22 @@
     "can_open_demo": true
   },
   "satellite_B": {
-    "symbol": null,
+    "symbol": "OPUSDT",
     "pct": 20,
     "notional_usdt": 1000,
-    "status": "EMPTY_AFTER_FIL_STOP",
-    "last_fill": {
-      "ts": "2026-09-19T15:18:38.990453+08:00",
-      "kind": "exit",
-      "engine": "box_paper_vision",
-      "symbol": "FILUSDT",
-      "side": "SELL",
-      "qty": 1016.673444,
-      "price": 0.9483,
-      "entry": 0.9836,
-      "reason": "stop",
-      "pnl_net_approx": -39.8,
-      "status": "CLOSED",
-      "variant": "donchian55_s1.5_t2.5__FIL__1h"
+    "variant": "donchian20_s1.5_t1.5__OP__4h",
+    "params": {
+      "donchian": 20,
+      "tf": "4h",
+      "atr_stop": 1.5,
+      "atr_trail": 1.5
     },
-    "awaiting": "next_candidate_proposal"
+    "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
+    "oos": "4/6",
+    "maxdd_pct": -22.7,
+    "status": "ARMED_WAIT_BREAKOUT",
+    "open_when": "4h close > Donchian20 high via box_paper_vision",
+    "fil": "REMOVED_NO_RETRY"
   },
   "cash_pct": 15,
   "removed": [
@@ -80,5 +77,9 @@
     ]
   },
   "paper_engine": "box_paper_vision",
-  "paper_trading_path": "/workspace/strategy-crypto-s2/paper_trading.json"
+  "paper_trading_path": "/workspace/strategy-crypto-s2/paper_trading.json",
+  "pepe": {
+    "status": "OBSERVE_ONLY",
+    "not_in_slot": true
+  }
 }
