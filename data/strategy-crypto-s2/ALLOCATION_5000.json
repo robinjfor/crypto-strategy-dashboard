@@ -1,7 +1,7 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-19 15:25:54 UTC+08:00",
+  "updated": "2026-09-19 15:27:06 UTC+08:00",
   "ruling": "sat B -> OP s1.5_t1.5 after FIL stop; wait 4h breakout box_paper",
   "core": {
     "symbol": "NEARUSDT",
@@ -42,9 +42,21 @@
     "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
     "oos": "4/6",
     "maxdd_pct": -22.7,
-    "status": "ARMED_WAIT_BREAKOUT",
+    "status": "SIGNAL_ACTIVE_OPEN_NOW",
     "open_when": "4h close > Donchian20 high via box_paper_vision",
-    "fil": "REMOVED_NO_RETRY"
+    "fil": "REMOVED_NO_RETRY",
+    "preopen": "op_preopen_2026-09-19",
+    "signal": {
+      "bar_close_cst": "2026-09-19 08:00",
+      "close": 0.1279,
+      "donch20_hi": 0.1219,
+      "atr14": 0.005171,
+      "stop_ref": 0.12014286,
+      "trail": 0.007757,
+      "quote_usdt": 1000,
+      "qty_approx": 7818.61,
+      "verdict": "OPEN_NOW"
+    }
   },
   "cash_pct": 15,
   "removed": [
