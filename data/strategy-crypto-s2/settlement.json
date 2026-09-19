@@ -1,5 +1,30 @@
 [
   {
+    "ts": "2026-09-19 15:28:04 CST",
+    "engine": "box_paper_vision",
+    "kind": "OPEN",
+    "symbol": "OPUSDT",
+    "side": "BUY",
+    "qty": 8169.934641,
+    "price": 0.1224,
+    "quote": 1000.0,
+    "fee": 2.0,
+    "stop": 0.114594,
+    "variant": "donchian20_s1.5_t1.5__OP__4h",
+    "equity_after": 5320.7732,
+    "balances": {
+      "USDT": 2458.3332040913097,
+      "NEAR": 505.0,
+      "FIL": 0.0,
+      "OP": 8169.934641
+    },
+    "fee_usdt": 2.0,
+    "notional_usdt": 1000.0,
+    "entry_price": 0.1224,
+    "status": "FILLED",
+    "time": "2026-09-19 15:28:04 CST"
+  },
+  {
     "ts": "2026-09-19 15:17:41 CST",
     "engine": "box_paper_vision",
     "symbol": "FILUSDT",
