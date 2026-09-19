@@ -1,8 +1,8 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-19 12:19:22 CST",
-  "ruling": "box_paper_24h: FIL filled; NEAR hold; FET armed; no Windows dependency",
+  "updated": "2026-09-19T15:18:38.990453+08:00",
+  "ruling": "FIL stopped out 15:17; sat B empty pending review; NEAR hold; FET armed",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
@@ -29,44 +29,25 @@
     "can_open_demo": true
   },
   "satellite_B": {
-    "symbol": "FILUSDT",
+    "symbol": null,
     "pct": 20,
     "notional_usdt": 1000,
-    "variant": "donchian55_s1.5_t2.5__FIL__1h",
-    "params": {
-      "donchian": 55,
-      "tf": "1h",
-      "atr_stop": 1.5,
-      "atr_trail": 2.5
-    },
-    "oos": "4/6",
-    "maxdd_pct": -30.5,
-    "status": "OPEN_FILLED",
-    "open_when": "1h close > Donchian55 high",
-    "replaces": "OP",
-    "last_signal": {
-      "ts": "2026-09-19T09:11:18.397874+08:00",
-      "kind": "signal",
+    "status": "EMPTY_AFTER_FIL_STOP",
+    "last_fill": {
+      "ts": "2026-09-19T15:18:38.990453+08:00",
+      "kind": "exit",
+      "engine": "box_paper_vision",
       "symbol": "FILUSDT",
-      "side": "BUY",
-      "quoteOrderQty": 1000,
-      "trigger_close": 0.9547,
-      "donch_hi": 0.9456,
-      "stop_ref": 0.9255,
-      "variant": "donchian55_s1.5_t2.5__FIL__1h",
-      "status": "TRIGGERED_AWAITING_DEMO_FILL"
-    },
-    "filled": {
+      "side": "SELL",
       "qty": 1016.673444,
+      "price": 0.9483,
       "entry": 0.9836,
-      "stop": 0.953538,
-      "at": "2026-09-19 12:19:22 CST"
+      "reason": "stop",
+      "pnl_net_approx": -39.8,
+      "status": "CLOSED",
+      "variant": "donchian55_s1.5_t2.5__FIL__1h"
     },
-    "fill": {
-      "qty": 1016.673444,
-      "price": 0.9836,
-      "stop": 0.953538
-    }
+    "awaiting": "next_candidate_proposal"
   },
   "cash_pct": 15,
   "removed": [

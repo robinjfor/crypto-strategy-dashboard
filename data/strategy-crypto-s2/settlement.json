@@ -1,5 +1,23 @@
 [
   {
+    "ts": "2026-09-19 15:17:41 CST",
+    "engine": "box_paper_vision",
+    "symbol": "FILUSDT",
+    "side": "SELL",
+    "qty": 1016.673444,
+    "price": 0.9483,
+    "fee": 1.9282,
+    "reason": "stop",
+    "entry": 0.9836,
+    "pnl_pct": -3.59,
+    "net_pnl_usdt_approx": -39.82,
+    "equity_after": 5335.9032,
+    "fee_usdt": 1.9282,
+    "entry_price": 0.9836,
+    "status": "FILLED",
+    "time": "2026-09-19 15:17:41 CST"
+  },
+  {
     "ts": "2026-09-19 12:19:22 CST",
     "engine": "box_paper_vision",
     "symbol": "FILUSDT",

@@ -8,17 +8,16 @@
   "symbol": "NEAR",
   "timeframe": "4h",
   "strategy_id": "strategy-crypto-s2",
-  "strategy_name": "multi: NEAR4h + FIL1h; FET armed",
+  "strategy_name": "multi box paper",
   "selected_variant": "donchian_breakout_atr__NEAR__4h",
   "currency": "USDT",
   "leverage": "1x",
   "market_type": "spot",
-  "virtual_equity": 5403.515,
+  "virtual_equity": 5335.9032,
   "virtual_equity_source": "box_paper_24h",
   "balances": {
-    "USDT": 2498.15,
-    "NEAR": 505.0,
-    "FIL": 1016.673444
+    "USDT": 3460.3332040913097,
+    "NEAR": 505.0
   },
   "open_positions": [
     {
@@ -27,85 +26,48 @@
       "qty": 505.0,
       "entry": 2.97,
       "stop": 3.275701,
-      "mark_price": 3.773,
-      "unrealized_pct": 27.04,
+      "mark_price": 3.714,
+      "unrealized_pct": 25.05,
       "variant": "donchian_breakout_atr__NEAR__4h",
       "donch_lo": 2.297,
       "entry_price": 2.97,
-      "unrealized_pnl": 405.515
-    },
-    {
-      "symbol": "FILUSDT",
-      "side": "LONG",
-      "qty": 1016.673444,
-      "entry": 0.9836,
-      "stop": 0.953538,
-      "mark_price": 0.9836,
-      "unrealized_pct": 0.0,
-      "variant": "donchian55_s1.5_t2.5__FIL__1h",
-      "donch_lo": 0.787,
-      "trail_atr_mult": 2.5,
-      "stop_atr_mult": 1.5,
-      "entry_price": 0.9836,
-      "unrealized_pnl": 0.0
+      "unrealized_pnl": 375.7199999999999
     }
   ],
   "signal": {
     "ready": true,
-    "close": 3.773,
-    "donch_hi": 3.914,
+    "close": 3.714,
     "donch_lo": 2.297,
-    "atr": 0.165766,
     "stop": 3.275701,
     "by_asset": {
-      "FIL": {
-        "ready": true,
-        "close": 0.9836,
-        "donch_hi": 0.99,
-        "donch_lo": 0.787,
-        "atr": 0.020041,
-        "stop": 0.953538
-      },
       "NEAR": {
         "ready": true,
-        "close": 3.773,
-        "donch_hi": 3.914,
+        "close": 3.714,
         "donch_lo": 2.297,
-        "atr": 0.165766,
         "stop": 3.275701
-      },
-      "FET": {
-        "mark": 0.1805,
-        "status": "WAIT_BREAKOUT"
       }
     }
   },
   "signals_by_asset": {
-    "FIL": {
-      "ready": true,
-      "close": 0.9836,
-      "donch_hi": 0.99,
-      "donch_lo": 0.787,
-      "atr": 0.020041,
-      "stop": 0.953538
-    },
     "NEAR": {
       "ready": true,
-      "close": 3.773,
-      "donch_hi": 3.914,
+      "close": 3.714,
       "donch_lo": 2.297,
-      "atr": 0.165766,
       "stop": 3.275701
-    },
-    "FET": {
-      "mark": 0.1805,
-      "status": "WAIT_BREAKOUT"
     }
   },
-  "last_action": "BOX_PAPER BUY FIL ~1016.6734 @ 0.9836 (quote 1000 + fee 2.00)",
+  "last_action": "SELL FILUSDT qty=1016.673444 @ 0.9483 (stop)",
   "light": "GREEN",
-  "updated_at_taipei": "2026-09-19 12:19:22 CST",
-  "notes": "Box paper engine 24h; Binance Vision marks; no Windows dependency",
+  "updated_at_taipei": "2026-09-19 15:17:42 CST",
+  "notes": "FIL stop-closed; NEAR hold; FET armed; sat B empty",
   "base_url": "https://data-api.binance.vision",
-  "strategy": "multi: NEAR4h + FIL1h; FET armed"
+  "strategy": "multi box paper",
+  "armed": {
+    "FETUSDT": {
+      "variant": "donchian55_s2.0_t3.0__FET__1h",
+      "quote": 1250,
+      "status": "WAIT_BREAKOUT",
+      "mark": 0.1805
+    }
+  }
 }
