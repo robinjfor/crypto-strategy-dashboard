@@ -1,8 +1,8 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-19 00:51:41 UTC+08:00",
-  "ruling": "capital control: yellow→green by judgment; FET/OP open on signal Demo; NEAR hold no add",
+  "updated": "2026-09-19 09:10:11 UTC+08:00",
+  "ruling": "sat B OP cancelled pending → FIL donch55 s1.5 t2.5 1h; FET A keep; green wait FIL breakout",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
@@ -29,24 +29,21 @@
     "can_open_demo": true
   },
   "satellite_B": {
-    "symbol": "OPUSDT",
+    "symbol": "FILUSDT",
     "pct": 20,
     "notional_usdt": 1000,
-    "variant": "donchian20_s1.5_t1.5__OP__4h",
+    "variant": "donchian55_s1.5_t2.5__FIL__1h",
     "params": {
-      "donchian": 20,
-      "tf": "4h",
+      "donchian": 55,
+      "tf": "1h",
       "atr_stop": 1.5,
-      "atr_trail": 1.5
+      "atr_trail": 2.5
     },
     "oos": "4/6",
-    "maxdd_pct": -22.7,
-    "status": "SIGNAL_TRIGGERED_AWAITING_FILL",
-    "open_when": "4h close above Donchian20 high",
-    "note": "upgraded tighter trail; old -53.6% void; s1.5_t2.5 backup",
-    "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
-    "can_open_demo": true,
-    "last_signal_ts": "2026-09-19T04:01:24.684308+08:00"
+    "maxdd_pct": -30.5,
+    "status": "ARMED_WAIT_BREAKOUT",
+    "open_when": "1h close > Donchian55 high",
+    "replaces": "OP"
   },
   "cash_pct": 15,
   "removed": [
@@ -55,7 +52,9 @@
   ],
   "rejected": {
     "OP_old_deep_dd": "void",
-    "ARB": "candidate OOS fail only"
+    "ARB": "candidate OOS fail only",
+    "OP_pending_cancel": "signal triggered but no fill; replaced by FIL",
+    "INJ": "OOS 1/6"
   },
   "ruling_op_tighten": "B -> s1.5_t1.5; s1.5_t2.5 backup; old -53.6% void",
   "light": "GREEN",
@@ -67,5 +66,13 @@
     "op": "ALLOW_DEMO_ON_BREAKOUT ~1000",
     "live": "NO until LIVE_GRADUATION",
     "preopen": "both wait breakout"
+  },
+  "op_status": {
+    "pending_fill": "CANCELLED",
+    "role": "backup_observe_only",
+    "variants_void_or_backup": [
+      "donchian20_s1.5_t1.5__OP__4h backup",
+      "old -53.6% void"
+    ]
   }
 }

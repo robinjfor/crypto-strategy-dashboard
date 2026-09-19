@@ -13,7 +13,7 @@
       "pct": 25
     },
     {
-      "asset": "OP",
+      "asset": "FIL",
       "pct": 20
     },
     {
@@ -62,26 +62,25 @@
       "orderable_on_signal": true
     },
     {
-      "asset": "OP",
+      "asset": "FIL",
       "target_pct": 20,
-      "status": "signal_triggered_pending_fill",
-      "status_label": "預計持倉 20% · 訊號已觸發／待成交",
-      "entry_rule": "4h 收盤站上 Donchian(20) 上軌（已觸發）→ 待成交",
+      "status": "armed_wait_breakout",
+      "status_label": "預計持倉 20% · 待突破／綠燈可依訊號開 Demo",
+      "entry_rule": "1h 收盤站上 Donchian(55) 上軌 → 可開／已開",
       "exit_rule": "跌破通道下軌或 ATR 停損／移動停損",
       "stop_mode": "pending",
-      "stop_note": "未開倉 → 無有效止損；開倉後 ATR stop/trail 皆 ×1.5",
+      "stop_note": "未開倉 → 無有效止損；開倉後進場 − 1.5×ATR／trail 2.5×ATR",
       "leverage": "1x 現貨（預定）",
-      "notes": "~1000 USDT；donchian20_s1.5_t1.5__OP__4h；訊號已觸發，Demo 待成交後改列實際持倉",
-      "strategy_id": "satellite-op",
-      "strategy_name": "donchian20_s1.5_t1.5__OP__4h",
-      "selected_variant": "donchian20_s1.5_t1.5__OP__4h",
+      "notes": "~1000 USDT；donchian55_s1.5_t2.5__FIL__1h；取代 OP（pending 已取消）",
+      "strategy_id": "satellite-fil",
+      "strategy_name": "donchian55_s1.5_t2.5__FIL__1h",
+      "selected_variant": "donchian55_s1.5_t2.5__FIL__1h",
       "target_notional_usdt": 1000,
       "target_buy_qty": null,
       "ref_price": null,
       "no_order": false,
-      "replaces": "DOGE",
       "orderable_on_signal": true,
-      "signal_triggered": true
+      "replaces": "OP"
     }
   ],
   "strategies": [
@@ -111,7 +110,7 @@
       "name": "donchian55_s2.0_t3.0__FET__1h",
       "asset": "FET",
       "status": "armed_wait_breakout",
-      "summary": "預計持倉 25%。待突破／綠燈可依訊號開 Demo。",
+      "summary": "預計持倉 25%（~1250 USDT）。待突破／綠燈可依訊號開 Demo。",
       "entry_rule": "1h 收盤站上 Donchian(55) 上軌",
       "exit_rule": "跌破通道下軌或 ATR×2 停損／ATR×3 移動停損",
       "stop_rule": "開倉後進場 − 2×ATR；移動 trail 3×ATR",
@@ -126,26 +125,26 @@
       "replaces": "SUI"
     },
     {
-      "id": "satellite-op",
-      "name": "donchian20_s1.5_t1.5__OP__4h",
-      "asset": "OP",
-      "status": "signal_triggered_pending_fill",
-      "summary": "預計持倉 20%（~1000 USDT）。訊號已觸發／待成交；成交後改實際持倉。",
-      "entry_rule": "4h 收盤站上 Donchian(20) 上軌",
-      "exit_rule": "跌破通道下軌或 ATR×1.5 停損／ATR×1.5 移動停損",
-      "stop_rule": "開倉後進場 − 1.5×ATR；移動 trail 1.5×ATR",
-      "timeframe": "4h",
-      "symbol": "OPUSDT",
+      "id": "satellite-fil",
+      "name": "donchian55_s1.5_t2.5__FIL__1h",
+      "asset": "FIL",
+      "status": "armed_wait_breakout",
+      "summary": "預計持倉 20%（~1000 USDT）。取代 OP；待突破／綠燈可依訊號開 Demo。",
+      "entry_rule": "1h 收盤站上 Donchian(55) 上軌",
+      "exit_rule": "跌破通道下軌或 ATR×1.5 停損／ATR×2.5 移動停損",
+      "stop_rule": "開倉後進場 − 1.5×ATR；移動 trail 2.5×ATR",
+      "timeframe": "1h",
+      "symbol": "FILUSDT",
       "target_pct": 20,
       "target_notional_usdt": 1000,
       "leverage": "1x",
-      "selected_variant": "donchian20_s1.5_t1.5__OP__4h",
+      "selected_variant": "donchian55_s1.5_t2.5__FIL__1h",
       "backtest_url": "./backtest.html",
-      "oos_note": "訊號已觸發／待成交",
-      "replaces": "DOGE"
+      "oos_note": "OOS 4/6 · MaxDD≈−30.5% · 待突破",
+      "replaces": "OP"
     }
   ],
-  "allocation_note": "燈號：綠燈。NEAR 續抱不加倉；OP 訊號已觸發／待成交；FET 仍待突破；現金 15%。",
+  "allocation_note": "燈號：綠燈。NEAR 續抱不加倉；FET 25% 待突破；FIL 20%（取代 OP，pending 已取消）待突破／綠燈可依訊號開 Demo；現金 15%。",
   "spec_path": "./data/strategy-crypto-s2/DASHBOARD_EXPECTED_HOLDINGS.md",
   "allocation_path": "./data/strategy-crypto-s2/ALLOCATION_5000.json",
   "satellite_rules_path": "./data/strategy-crypto-s2/SATELLITE_OPEN_RULES.md",
