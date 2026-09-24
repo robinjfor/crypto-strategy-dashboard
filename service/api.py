@@ -14,7 +14,7 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval
 from state_store import StateStore
 from strategy import now_iso_taipei
 
@@ -665,6 +665,9 @@ def approve():
     family = (body.get("family") or (slot or {}).get("family") or "").lower()
     if body.get("passed_threshold") is False:
         return jsonify({"ok": False, "error": "未過門檻，無法核准"}), 400
+    # Emily 資金控管：雙過門檻（3年＋全期）才可核准
+    if body.get("gate_pass_both") is False:
+        return jsonify({"ok": False, "error": "未過雙門檻（3年＋全期），無法核准"}), 400
     supported = body.get("supported_by_runner")
     if supported is None:
         supported = family in SUPPORTED_FAMILIES or family.startswith("donchian")
@@ -681,27 +684,72 @@ def approve():
         notional = 1000.0
     notional = min(max(notional, 10.0), float(MAX_NOTIONAL_USDT))
 
+    summary_holder: dict = {}
+
     def mut(st):
-        approved = _ensure_approved(st)
-        approved[strategy_id] = {
-            "slot": (slot or {}).get("id"),
-            "notional_usdt": notional,
-            "approved_at": now_iso_taipei(),
-            "status": "live_standby",
-            "family": family or (slot or {}).get("family"),
-            "label_zh": "已核准 · 上線待命",
-        }
-        st["approved"] = approved
+        _ensure_approved(st)
+        # Dynamic slot: if unknown, synthesize from body (ICP etc.)
+        nonlocal_slot = slot
+        if nonlocal_slot is None and body.get("symbol") and body.get("timeframe"):
+            # Register ephemeral monitored config under signal_only until approved
+            st.setdefault("dynamic_slots", {})[strategy_id] = {
+                "id": f"dyn_{strategy_id[:24]}",
+                "strategy_id": strategy_id,
+                "family": family or "donchian",
+                "symbol": body.get("symbol"),
+                "tf": body.get("timeframe"),
+                "donch_n": int((body.get("params") or {}).get("donch") or 55),
+                "stop_atr_mult": float((body.get("params") or {}).get("stop_atr") or 2.0),
+                "trail_atr_mult": float((body.get("params") or {}).get("trail_atr") or 3.0),
+                "quote_usdt": notional,
+                "require_reset_below_hi": True,
+                "armed": True,
+                "satellite_slot": body.get("slot") or body.get("satellite_slot"),
+            }
+        if (slot or {}).get("satellite_slot") or (body.get("slot") == "satellite_A"):
+            # Ensure slot dict available
+            use_slot = slot or st.get("dynamic_slots", {}).get(strategy_id)
+            if use_slot and not slot:
+                # temporarily inject into lookup via signal_only meta
+                st.setdefault("signal_only", {})[strategy_id] = {
+                    **(st.get("signal_only", {}).get(strategy_id) or {}),
+                    "slot": use_slot["id"],
+                    "satellite_slot": use_slot.get("satellite_slot") or "satellite_A",
+                }
+            summary_holder["r"] = apply_satellite_slot_approval(
+                st, strategy_id, notional=notional, approved_at=now_iso_taipei()
+            )
+        else:
+            approved = st.setdefault("approved", {})
+            st.setdefault("signal_only", {}).pop(strategy_id, None)
+            approved[strategy_id] = {
+                "slot": (slot or {}).get("id"),
+                "notional_usdt": notional,
+                "approved_at": now_iso_taipei(),
+                "approved": True,
+                "mode": "live",
+                "status": "live_standby",
+                "family": family or (slot or {}).get("family"),
+                "label_zh": "已核准 · 上線待命",
+            }
+            st["approved"] = approved
+            summary_holder["r"] = {"approved_id": strategy_id, "demoted": []}
         return st
 
     try:
         StateStore().mutate(mut)
+        r = summary_holder.get("r") or {}
+        msg = f"已核准 {strategy_id}（上線待命）"
+        if r.get("demoted"):
+            msg += f"；同槽下架：{", ".join(r["demoted"])}"
         return jsonify({
             "ok": True,
-            "message": f"已核准 {strategy_id}（上線待命）",
+            "message": msg,
             "strategy_id": strategy_id,
             "notional_usdt": notional,
             "status": "live_standby",
+            "satellite_slot": r.get("satellite_slot"),
+            "demoted": r.get("demoted") or [],
         })
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500

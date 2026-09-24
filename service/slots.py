@@ -21,6 +21,54 @@ SLOTS: list[dict] = [
         "require_reset_below_hi": False,
         "armed": True,
         "stop_reference": None,
+        "satellite_slot": "satellite_A",
+        "role": "incumbent",
+        "mode": "signal_only",
+    },
+    # Satellite A candidates (pending Emily) — monitored signal-only until approved
+    {
+        "id": "sat_fet_4h",
+        "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
+        "family": "donchian",
+        "symbol": "FETUSDT",
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 96,
+        "quote_usdt": 1250.0,
+        "target_pct": 25.0,
+        "variant": "donchian55_s2.0_t3.0",
+        "require_reset_below_hi": True,
+        "armed": True,
+        "stop_reference": None,
+        "btc_regime": False,
+        "satellite_slot": "satellite_A",
+        "role": "primary_candidate",
+        "mode": "signal_only",
+        "review": "PENDING_EMILY",
+    },
+    {
+        "id": "sat_fet_4h_btc",
+        "strategy_id": "donchian55_s2.0_t3.0_btcRegimeD__FET__4h",
+        "family": "donchian",
+        "symbol": "FETUSDT",
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 96,
+        "quote_usdt": 1250.0,
+        "target_pct": 25.0,
+        "variant": "donchian55_s2.0_t3.0_btcRegimeD",
+        "require_reset_below_hi": True,
+        "armed": True,
+        "stop_reference": None,
+        "btc_regime": True,
+        "satellite_slot": "satellite_A",
+        "role": "alternate_candidate",
+        "mode": "signal_only",
+        "review": "PENDING_EMILY",
     },
     {
         "id": "sat_op_4h",
@@ -106,7 +154,32 @@ DEFAULT_SIGNAL_ONLY: dict[str, dict] = {
         "approved": False,
         "label_zh": "只算訊號（未核准）",
         "gate_pass": False,
+        "satellite_slot": "satellite_A",
         "gate_fail_reasons": ["maxdd worse than -45% (3y unified scores)"],
+    },
+    "donchian55_s2.0_t3.0__FET__4h": {
+        "slot": "sat_fet_4h",
+        "notional_usdt": 1250.0,
+        "seeded": True,
+        "mode": "signal_only",
+        "approved": False,
+        "label_zh": "只算訊號（未核准）",
+        "gate_pass": True,
+        "satellite_slot": "satellite_A",
+        "role": "primary_candidate",
+        "review": "PENDING_EMILY",
+    },
+    "donchian55_s2.0_t3.0_btcRegimeD__FET__4h": {
+        "slot": "sat_fet_4h_btc",
+        "notional_usdt": 1250.0,
+        "seeded": True,
+        "mode": "signal_only",
+        "approved": False,
+        "label_zh": "只算訊號（未核准）",
+        "gate_pass": True,
+        "satellite_slot": "satellite_A",
+        "role": "alternate_candidate",
+        "review": "PENDING_EMILY",
     },
     "donchian20_atr_btcRegime__SOL__1d": {
         "slot": "core_sol",
@@ -164,3 +237,73 @@ def approval_mode(state: dict | None, strategy_id: str) -> str:
 
 def is_approved_live(state: dict | None, strategy_id: str) -> bool:
     return approval_mode(state, strategy_id) == "live"
+
+
+def strategies_in_satellite_slot(slot_name: str) -> list[dict]:
+    out = []
+    for s in SLOTS:
+        if s.get("satellite_slot") == slot_name:
+            out.append(s)
+    return out
+
+
+def apply_satellite_slot_approval(
+    state: dict,
+    strategy_id: str,
+    *,
+    notional: float,
+    approved_at: str,
+) -> dict:
+    """Approve one strategy into its satellite_slot; demote siblings to signal_only.
+
+    Mutually exclusive: at most one live strategy per satellite_slot.
+    Returns a summary dict for API responses / unit tests.
+    """
+    slot = slot_by_strategy_id(strategy_id)
+    if not slot:
+        # Allow approving a scores-only id by deriving config from strategy_id
+        raise KeyError(f"unknown strategy_id: {strategy_id}")
+    sat = slot.get("satellite_slot")
+    approved = state.setdefault("approved", {})
+    monitored = state.setdefault("signal_only", {})
+    demoted: list[str] = []
+    if sat:
+        for sib in strategies_in_satellite_slot(sat):
+            sid = sib["strategy_id"]
+            if sid == strategy_id:
+                continue
+            if sid in approved:
+                approved.pop(sid, None)
+            monitored[sid] = {
+                **(DEFAULT_SIGNAL_ONLY.get(sid) or {}),
+                "slot": sib["id"],
+                "mode": "signal_only",
+                "approved": False,
+                "label_zh": LABEL_SIGNAL_ONLY,
+                "satellite_slot": sat,
+                "demoted_by": strategy_id,
+                "updated_at": approved_at,
+            }
+            demoted.append(sid)
+    # Promote chosen
+    monitored.pop(strategy_id, None)
+    approved[strategy_id] = {
+        "slot": slot["id"],
+        "notional_usdt": float(notional),
+        "approved_at": approved_at,
+        "approved": True,
+        "mode": "live",
+        "status": "live_standby",
+        "family": slot.get("family"),
+        "satellite_slot": sat,
+        "label_zh": "已核准 · 上線待命",
+    }
+    state["approved"] = approved
+    state["signal_only"] = monitored
+    return {
+        "approved_id": strategy_id,
+        "slot": slot["id"],
+        "satellite_slot": sat,
+        "demoted": demoted,
+        "notional_usdt": float(notional),
+    }

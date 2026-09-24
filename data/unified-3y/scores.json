@@ -1,0 +1,2315 @@
+{
+  "meta": {
+    "period": {
+      "start_utc": "2023-09-24 00:00:00+00:00",
+      "end_utc": "2026-09-24 00:00:00+00:00",
+      "note": "Warmup indicators use pre-period bars; trading/equity normalized from 2023-09-24. Last closed kline used."
+    },
+    "initial": 10000.0,
+    "costs": {
+      "fee_bps": 10,
+      "slippage_bps": 10,
+      "one_way_bps": 20
+    },
+    "gate": {
+      "ret_3y_gt_bh": true,
+      "oos_pass_min": "4/6",
+      "maxdd_max_abs": 45,
+      "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward."
+    },
+    "scoring_method": {
+      "only_gate_passers_nonzero": true,
+      "weights": {
+        "cagr_3y": 35,
+        "ret_1y": 30,
+        "maxdd": 15,
+        "oos_pass": 10,
+        "excess_vs_bh": 10
+      },
+      "minmax": "For cagr_3y, ret_1y, excess=(ret_3y-bh_ret_3y), and maxdd_quality=(-abs(maxdd)): norm=(x-min)/(max-min) among gate passers; if only one passer or max==min, norm=1.0",
+      "oos_points": "oos_wins/6*10 (absolute, not minmax)",
+      "sort": "score desc, then ret_3y desc",
+      "notes": [],
+      "notes_rescore": []
+    },
+    "generated_at": "2026-09-24 16:01:10 CST",
+    "n_strategies": 20,
+    "n_gate_pass": 9,
+    "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
+    "fet_lowdd": {
+      "n_tested": 14,
+      "n_gate_3y": 4,
+      "n_gate_both": 4,
+      "best_id": "donchian55_s2.0_t3.0__FET__4h",
+      "report": "fet_lowdd/FET_LOWDD.md"
+    },
+    "core_dual_gate_scan": {
+      "source": "s3 results.json saved buckets only (not full 946 raw dump — those were not persisted per-combo)",
+      "n_unique_specs_checked": 16,
+      "n_dual_pass": 0,
+      "honest": "No strategy among 16 persisted s3 named results passes BOTH unified-3y gate and full-period gate under 20bps."
+    },
+    "n_gate_pass_both": 5
+  },
+  "strategies": [
+    {
+      "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
+      "symbol": "OP",
+      "timeframe": "4h",
+      "status": "現役",
+      "params": {
+        "symbol": "OP",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 1.5,
+        "trail_m": 1.5,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "btc_regime": false,
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 20567.55,
+      "ret_3y": 105.6755,
+      "cagr_3y": 27.1658,
+      "maxdd": -28.5979,
+      "n_trades": 68,
+      "bh_ret_3y": -90.3773,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 31.9873,
+      "bh_final": 962.27,
+      "oos_pass": "5/6",
+      "oos_wins": 5,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 24.2662,
+          "bh_ret": 190.6615,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 7.2261,
+          "bh_ret": -53.6625,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": -19.0455,
+          "bh_ret": -46.5762,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 46.3832,
+          "bh_ret": -21.0147,
+          "beats_bh": true
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 0.1066,
+          "bh_ret": -83.5827,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 31.8466,
+          "bh_ret": 7.6172,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 54.3147,
+      "score_breakdown": {
+        "cagr_norm": 0.3304,
+        "ret_1y_norm": 0.3302,
+        "maxdd_norm": 0.9673,
+        "oos_points": 8.3333,
+        "excess_norm": 1.0
+      },
+      "full_period": {
+        "start": "2022-06-04",
+        "end": "2026-09-24",
+        "ret": 130.2371,
+        "cagr": 21.3759,
+        "bh_ret": -91.1866,
+        "bh_final": null,
+        "final": 23023.71,
+        "maxdd": -37.4121,
+        "oos_pass": "5/6",
+        "oos_wins": 5,
+        "oos_total": 6,
+        "n_trades": 98,
+        "gate_pass_full": true,
+        "gate_fail_reasons": []
+      },
+      "gate_pass_both": true,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "ema12_26_atr_btcRegime__SOL__1d",
+      "symbol": "SOL",
+      "timeframe": "1d",
+      "status": "候選",
+      "params": {
+        "symbol": "SOL",
+        "tf": "1d",
+        "donch_n": 20,
+        "fast": 12,
+        "slow": 26,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 10000,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "reset_below_hi": false
+      },
+      "kind": "ema",
+      "initial": 10000.0,
+      "final": 64693.84,
+      "ret_3y": 546.9384,
+      "cagr_3y": 86.4115,
+      "maxdd": -37.8425,
+      "n_trades": 13,
+      "bh_ret_3y": 492.7687,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-23",
+      "years": 2.9979,
+      "ret_1y": 19.7597,
+      "bh_final": 59276.87,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-23",
+          "strat_ret": 275.4812,
+          "bh_ret": 791.7872,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-21",
+          "strat_ret": -7.1293,
+          "bh_ret": -18.7459,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-22",
+          "end": "2025-03-22",
+          "strat_ret": 7.1123,
+          "bh_ret": -11.1457,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-23",
+          "end": "2025-09-20",
+          "strat_ret": 60.2663,
+          "bh_ret": 80.277,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-21",
+          "end": "2026-03-21",
+          "strat_ret": -18.3022,
+          "bh_ret": -62.9234,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-22",
+          "end": "2026-09-23",
+          "strat_ret": 34.1426,
+          "bh_ret": 33.1323,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 53.4996,
+      "score_breakdown": {
+        "cagr_norm": 1.0,
+        "ret_1y_norm": 0.2146,
+        "maxdd_norm": 0.2756,
+        "oos_points": 6.6667,
+        "excess_norm": 0.1262
+      },
+      "full_period": {
+        "start": "2020-09-06",
+        "end": "2026-09-23",
+        "ret": 21332.4411,
+        "cagr": 143.0013,
+        "bh_ret": 3608.9952,
+        "bh_final": null,
+        "final": 2143244.11,
+        "maxdd": -45.4713,
+        "oos_pass": "3/6",
+        "oos_wins": 3,
+        "oos_total": 6,
+        "n_trades": 29,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "oos 3/6 < 4/6",
+          "maxdd -45.4713 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": false,
+      "family": "ema"
+    },
+    {
+      "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
+      "symbol": "ICP",
+      "timeframe": "4h",
+      "status": "衛星候補",
+      "params": {
+        "symbol": "ICP",
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 2.5,
+        "trail_m": 3.5,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 15275.35,
+      "ret_3y": 52.7535,
+      "cagr_3y": 15.1639,
+      "maxdd": -39.7865,
+      "n_trades": 30,
+      "bh_ret_3y": -1.0769,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 102.8024,
+      "bh_final": 9892.31,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": -20.7731,
+          "bh_ret": 386.7185,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 34.5233,
+          "bh_ret": -43.0737,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": -19.3619,
+          "bh_ret": -27.8632,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -12.1837,
+          "bh_ret": -27.0592,
+          "beats_bh": true
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 94.8162,
+          "bh_ret": -44.6175,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 4.0994,
+          "bh_ret": 20.956,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 46.6784,
+      "score_breakdown": {
+        "cagr_norm": 0.1948,
+        "ret_1y_norm": 1.0,
+        "maxdd_norm": 0.1302,
+        "oos_points": 6.6667,
+        "excess_norm": 0.1241
+      },
+      "full_period": {
+        "start": "2022-03-11",
+        "end": "2026-09-24",
+        "ret": 36.5319,
+        "cagr": 7.1042,
+        "bh_ret": -81.7054,
+        "bh_final": null,
+        "final": 13653.19,
+        "maxdd": -50.1641,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 44,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -50.1641 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
+      "symbol": "DOT",
+      "timeframe": "4h",
+      "status": "現役",
+      "params": {
+        "symbol": "DOT",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 1.5,
+        "trail_m": 1.5,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "btc_regime": false,
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 14249.87,
+      "ret_3y": 42.4987,
+      "cagr_3y": 12.5275,
+      "maxdd": -28.1604,
+      "n_trades": 71,
+      "bh_ret_3y": -72.4253,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 37.9151,
+      "bh_final": 2757.47,
+      "oos_pass": "5/6",
+      "oos_wins": 5,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": -9.2432,
+          "bh_ret": 129.1967,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -13.7077,
+          "bh_ret": -52.8567,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 13.1975,
+          "bh_ret": 5.6966,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 16.5496,
+          "bh_ret": -12.288,
+          "beats_bh": true
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 15.6493,
+          "bh_ret": -65.087,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 19.2529,
+          "bh_ret": -20.4036,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 45.701,
+      "score_breakdown": {
+        "cagr_norm": 0.165,
+        "ret_1y_norm": 0.3863,
+        "maxdd_norm": 1.0,
+        "oos_points": 8.3333,
+        "excess_norm": 0.5003
+      },
+      "full_period": {
+        "start": "2022-03-06",
+        "end": "2026-09-24",
+        "ret": -37.5518,
+        "cagr": -9.8243,
+        "bh_ret": -93.4624,
+        "bh_final": null,
+        "final": 6244.82,
+        "maxdd": -68.1595,
+        "oos_pass": "5/6",
+        "oos_wins": 5,
+        "oos_total": 6,
+        "n_trades": 108,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -68.1595 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
+      "symbol": "FET",
+      "timeframe": "4h",
+      "status": "衛星A候選（首選）",
+      "kind": "donchian",
+      "params": {
+        "symbol": "FET",
+        "atr_mode": "wilder",
+        "reset_below_hi": true,
+        "btc_regime": false,
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "btc_regime_tf": null,
+        "label": "4h_s2.0_t3.0"
+      },
+      "initial": 10000.0,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "final": 17798.05,
+      "ret_3y": 77.9805,
+      "cagr_3y": 21.1786,
+      "ret_1y": 22.6081,
+      "bh_ret_3y": -8.63,
+      "bh_final": 9137.0,
+      "maxdd": -36.0232,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 25.4857,
+          "bh_ret": 1012.1708,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 15.9772,
+          "bh_ret": -31.3018,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 15.1909,
+          "bh_ret": -66.5254,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -13.4099,
+          "bh_ret": 8.4249,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 20.033,
+          "bh_ret": -57.121,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 2.1454,
+          "bh_ret": -22.7058,
+          "beats_bh": true
+        }
+      ],
+      "n_trades": 30,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 32.5451,
+      "full_period": {
+        "start": "2022-03-12",
+        "end": "2026-09-24",
+        "ret": 78.2755,
+        "cagr": 13.5905,
+        "bh_ret": -41.2221,
+        "bh_final": null,
+        "final": 17827.55,
+        "maxdd": -40.4041,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 43,
+        "gate_pass_full": true,
+        "gate_fail_reasons": []
+      },
+      "gate_pass_both": true,
+      "label": "4h_s2.0_t3.0",
+      "source": "fet_lowdd",
+      "score_breakdown": {
+        "cagr_norm": 0.2628,
+        "ret_1y_norm": 0.2415,
+        "maxdd_norm": 0.4117,
+        "oos_points": 6.6667,
+        "excess_norm": 0.326
+      },
+      "slot": "satellite_A",
+      "review": "PENDING_EMILY",
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s2.0_t3.0_btcRegimeD__FET__4h",
+      "symbol": "FET",
+      "timeframe": "4h",
+      "status": "衛星A候選（備選）",
+      "kind": "donchian",
+      "params": {
+        "symbol": "FET",
+        "atr_mode": "wilder",
+        "reset_below_hi": true,
+        "btc_regime": true,
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "btc_regime_tf": "1d",
+        "label": "regime_4h_s2.0_t3.0"
+      },
+      "initial": 10000.0,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "final": 15329.1,
+      "ret_3y": 53.291,
+      "cagr_3y": 15.2963,
+      "ret_1y": 1.8464,
+      "bh_ret_3y": -8.63,
+      "bh_final": 9137.0,
+      "maxdd": -31.6736,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 26.8686,
+          "bh_ret": 1012.1708,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 2.0444,
+          "bh_ret": -31.3018,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 13.6001,
+          "bh_ret": -66.5254,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 2.3408,
+          "bh_ret": 8.4249,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -4.6555,
+          "bh_ret": -57.121,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 6.8193,
+          "bh_ret": -22.7058,
+          "beats_bh": true
+        }
+      ],
+      "n_trades": 23,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 27.6881,
+      "full_period": {
+        "start": "2022-03-12",
+        "end": "2026-09-24",
+        "ret": 62.1394,
+        "cagr": 11.2399,
+        "bh_ret": -41.2221,
+        "bh_final": null,
+        "final": 16213.94,
+        "maxdd": -31.6736,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 29,
+        "gate_pass_full": true,
+        "gate_fail_reasons": []
+      },
+      "gate_pass_both": true,
+      "label": "regime_4h_s2.0_t3.0",
+      "source": "fet_lowdd",
+      "score_breakdown": {
+        "cagr_norm": 0.1963,
+        "ret_1y_norm": 0.0451,
+        "maxdd_norm": 0.7372,
+        "oos_points": 6.6667,
+        "excess_norm": 0.1739
+      },
+      "slot": "satellite_A",
+      "review": "PENDING_EMILY",
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s2.0_t3.0__LSK__4h",
+      "symbol": "LSK",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "LSK",
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 9390.41,
+      "ret_3y": -6.0959,
+      "cagr_3y": -2.0743,
+      "maxdd": -33.4947,
+      "n_trades": 23,
+      "bh_ret_3y": -52.4811,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 22.5951,
+      "bh_final": 4751.89,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": -17.5385,
+          "bh_ret": 159.4524,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -6.9615,
+          "bh_ret": -55.1402,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 2.6461,
+          "bh_ret": -35.9697,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -1.9055,
+          "bh_ret": -45.0512,
+          "beats_bh": true
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 26.2206,
+          "bh_ret": -58.805,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": -2.8723,
+          "bh_ret": 178.2211,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 23.704,
+      "score_breakdown": {
+        "cagr_norm": 0.0,
+        "ret_1y_norm": 0.2414,
+        "maxdd_norm": 0.6009,
+        "oos_points": 6.6667,
+        "excess_norm": 0.0782
+      },
+      "full_period": {
+        "start": "2022-03-11",
+        "end": "2026-09-24",
+        "ret": -49.1794,
+        "cagr": -13.8591,
+        "bh_ret": -82.808,
+        "bh_final": null,
+        "final": 5082.06,
+        "maxdd": -68.0114,
+        "oos_pass": "3/6",
+        "oos_wins": 3,
+        "oos_total": 6,
+        "n_trades": 38,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "oos 3/6 < 4/6",
+          "maxdd -68.0114 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",
+      "symbol": "FET",
+      "timeframe": "4h",
+      "status": "候選",
+      "kind": "donchian",
+      "params": {
+        "symbol": "FET",
+        "atr_mode": "wilder",
+        "reset_below_hi": true,
+        "btc_regime": true,
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 3.0,
+        "trail_m": 4.0,
+        "max_hold": 36,
+        "btc_regime_tf": "1d",
+        "label": "regime_4h_s3.0_t4.0"
+      },
+      "initial": 10000.0,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "final": 12725.22,
+      "ret_3y": 27.2522,
+      "cagr_3y": 8.3615,
+      "ret_1y": 8.7054,
+      "bh_ret_3y": -8.63,
+      "bh_final": 9137.0,
+      "maxdd": -41.5263,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 17.2554,
+          "bh_ret": 1012.1708,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -5.5108,
+          "bh_ret": -31.3018,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 11.3345,
+          "bh_ret": -66.5254,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -5.0993,
+          "bh_ret": 8.4249,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -6.8832,
+          "bh_ret": -57.121,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 16.7409,
+          "bh_ret": -22.7058,
+          "beats_bh": true
+        }
+      ],
+      "n_trades": 23,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 14.2303,
+      "full_period": {
+        "start": "2022-03-12",
+        "end": "2026-09-24",
+        "ret": 20.1536,
+        "cagr": 4.1297,
+        "bh_ret": -41.2221,
+        "bh_final": null,
+        "final": 12015.36,
+        "maxdd": -43.8765,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 29,
+        "gate_pass_full": true,
+        "gate_fail_reasons": []
+      },
+      "gate_pass_both": true,
+      "label": "regime_4h_s3.0_t4.0",
+      "source": "fet_lowdd",
+      "score_breakdown": {
+        "cagr_norm": 0.1179,
+        "ret_1y_norm": 0.11,
+        "maxdd_norm": 0.0,
+        "oos_points": 6.6667,
+        "excess_norm": 0.0135
+      },
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s2.5_t3.5_btcRegimeD__FET__4h",
+      "symbol": "FET",
+      "timeframe": "4h",
+      "status": "候選",
+      "kind": "donchian",
+      "params": {
+        "symbol": "FET",
+        "atr_mode": "wilder",
+        "reset_below_hi": true,
+        "btc_regime": true,
+        "tf": "4h",
+        "donch_n": 55,
+        "stop_m": 2.5,
+        "trail_m": 3.5,
+        "max_hold": 36,
+        "btc_regime_tf": "1d",
+        "label": "regime_4h_s2.5_t3.5"
+      },
+      "initial": 10000.0,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "final": 12505.5,
+      "ret_3y": 25.055,
+      "cagr_3y": 7.7345,
+      "ret_1y": -2.9267,
+      "bh_ret_3y": -8.63,
+      "bh_final": 9137.0,
+      "maxdd": -39.6434,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 22.021,
+          "bh_ret": 1012.1708,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -6.2772,
+          "bh_ret": -31.3018,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 13.2593,
+          "bh_ret": -66.5254,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -0.5402,
+          "bh_ret": 8.4249,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -5.7693,
+          "bh_ret": -57.121,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 3.0167,
+          "bh_ret": -22.7058,
+          "beats_bh": true
+        }
+      ],
+      "n_trades": 23,
+      "gate_pass": true,
+      "gate_fail_reasons": [],
+      "score": 12.6596,
+      "full_period": {
+        "start": "2022-03-12",
+        "end": "2026-09-24",
+        "ret": 27.7736,
+        "cagr": 5.5505,
+        "bh_ret": -41.2221,
+        "bh_final": null,
+        "final": 12777.36,
+        "maxdd": -39.6434,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 29,
+        "gate_pass_full": true,
+        "gate_fail_reasons": []
+      },
+      "gate_pass_both": true,
+      "label": "regime_4h_s2.5_t3.5",
+      "source": "fet_lowdd",
+      "score_breakdown": {
+        "cagr_norm": 0.1109,
+        "ret_1y_norm": 0.0,
+        "maxdd_norm": 0.1409,
+        "oos_points": 6.6667,
+        "excess_norm": 0.0
+      },
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian_breakout_atr__NEAR__4h",
+      "symbol": "NEAR",
+      "timeframe": "4h",
+      "status": "對照",
+      "params": {
+        "symbol": "NEAR",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "atr_mode": "sma",
+        "btc_regime": false,
+        "reset_below_hi": false,
+        "note": "original s2 backtest ATR=SMA; no reset_below_hi"
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 175845.37,
+      "ret_3y": 1658.4537,
+      "cagr_3y": 159.9854,
+      "maxdd": -34.0037,
+      "n_trades": 74,
+      "bh_ret_3y": 293.1706,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 146.0474,
+      "bh_final": 39317.06,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 197.2231,
+          "bh_ret": 492.4256,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 95.7915,
+          "bh_ret": -26.8167,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 28.1832,
+          "bh_ret": -39.6986,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -4.1914,
+          "bh_ret": 4.7079,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 3.7943,
+          "bh_ret": -56.5839,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 137.0528,
+          "bh_ret": 233.3534,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2022-03-06",
+        "end": "2026-09-24",
+        "ret": 509.8923,
+        "cagr": 48.7537,
+        "bh_ret": -58.5132,
+        "bh_final": null,
+        "final": 60989.23,
+        "maxdd": -66.7161,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 110,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -66.7161 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian_breakout_wide__NEAR__4h",
+      "symbol": "NEAR",
+      "timeframe": "4h",
+      "status": "對照",
+      "params": {
+        "symbol": "NEAR",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 2.5,
+        "trail_m": 4.0,
+        "max_hold": 48,
+        "atr_mode": "sma",
+        "reset_below_hi": false
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 88644.84,
+      "ret_3y": 786.4484,
+      "cagr_3y": 106.9247,
+      "maxdd": -60.1375,
+      "n_trades": 74,
+      "bh_ret_3y": 293.1706,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 127.8893,
+      "bh_final": 39317.06,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 229.7305,
+          "bh_ret": 492.4256,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 61.4485,
+          "bh_ret": -26.8167,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": -2.5281,
+          "bh_ret": -39.6986,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -25.0353,
+          "bh_ret": 4.7079,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -4.3848,
+          "bh_ret": -56.5839,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 138.3402,
+          "bh_ret": 233.3534,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6",
+        "maxdd -60.1375 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2022-03-06",
+        "end": "2026-09-24",
+        "ret": 369.8462,
+        "cagr": 40.4701,
+        "bh_ret": -58.5132,
+        "bh_final": null,
+        "final": 46984.62,
+        "maxdd": -60.1375,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 110,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -60.1375 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_atr_btcRegime_lev1.5__SOL__1d",
+      "symbol": "SOL",
+      "timeframe": "1d",
+      "status": "候選",
+      "params": {
+        "symbol": "SOL",
+        "tf": "1d",
+        "donch_n": 55,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 10000,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "reset_below_hi": false,
+        "leverage": 1.5,
+        "funding_ann": 0.1,
+        "check_liq": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 62327.73,
+      "ret_3y": 523.2773,
+      "cagr_3y": 84.1091,
+      "maxdd": -58.3528,
+      "n_trades": 12,
+      "bh_ret_3y": 492.7687,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-23",
+      "years": 2.9979,
+      "ret_1y": 8.0625,
+      "bh_final": 59276.87,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-23",
+          "strat_ret": 391.8619,
+          "bh_ret": 791.7872,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-21",
+          "strat_ret": 15.8162,
+          "bh_ret": -18.7459,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-22",
+          "end": "2025-03-22",
+          "strat_ret": 29.551,
+          "bh_ret": -11.1457,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-23",
+          "end": "2025-09-20",
+          "strat_ret": -21.8456,
+          "bh_ret": 80.277,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-21",
+          "end": "2026-03-21",
+          "strat_ret": -27.7091,
+          "bh_ret": -62.9234,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-22",
+          "end": "2026-09-23",
+          "strat_ret": 49.4829,
+          "bh_ret": 33.1323,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "maxdd -58.3528 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2020-10-05",
+        "end": "2026-09-23",
+        "ret": 39316.7084,
+        "cagr": 172.3298,
+        "bh_ret": 4226.9746,
+        "bh_final": null,
+        "final": 3941670.84,
+        "maxdd": -58.3528,
+        "oos_pass": "3/6",
+        "oos_wins": 3,
+        "oos_total": 6,
+        "n_trades": 25,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "oos 3/6 < 4/6",
+          "maxdd -58.3528 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
+      "symbol": "SOL",
+      "timeframe": "1d",
+      "status": "現役",
+      "params": {
+        "symbol": "SOL",
+        "tf": "1d",
+        "donch_n": 20,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 10000,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "reset_below_hi": false,
+        "leverage": 1.0
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 53534.57,
+      "ret_3y": 435.3457,
+      "cagr_3y": 75.0026,
+      "maxdd": -40.8998,
+      "n_trades": 11,
+      "bh_ret_3y": 492.7687,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-23",
+      "years": 2.9979,
+      "ret_1y": 34.1426,
+      "bh_final": 59276.87,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-23",
+          "strat_ret": 257.0126,
+          "bh_ret": 791.7872,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-21",
+          "strat_ret": -7.1293,
+          "bh_ret": -18.7459,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-22",
+          "end": "2025-03-22",
+          "strat_ret": 7.1123,
+          "bh_ret": -11.1457,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-23",
+          "end": "2025-09-20",
+          "strat_ret": 12.374,
+          "bh_ret": 80.277,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-21",
+          "end": "2026-03-21",
+          "strat_ret": 0.0,
+          "bh_ret": -62.9234,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-22",
+          "end": "2026-09-23",
+          "strat_ret": 34.1426,
+          "bh_ret": 33.1323,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "ret_3y (435.3457) <= bh_ret_3y (492.7687)"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2020-08-31",
+        "end": "2026-09-23",
+        "ret": 36580.6438,
+        "cagr": 164.8882,
+        "bh_ret": 2319.3111,
+        "bh_final": null,
+        "final": 3668064.38,
+        "maxdd": -45.0127,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 23,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -45.0127 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "supertrend3__SOL__4h",
+      "symbol": "SOL",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "SOL",
+        "tf": "4h",
+        "donch_n": 20,
+        "st_mult": 3.0,
+        "stop_m": 0.0,
+        "trail_m": 0.0,
+        "max_hold": 10000,
+        "atr_mode": "sma",
+        "btc_regime": false,
+        "reset_below_hi": false,
+        "note": "trail still applied; stop_m=0 disables initial stop distance→ use wide; actually stop_m=0 makes stop=entry; set stop_m very large"
+      },
+      "kind": "supertrend",
+      "initial": 10000.0,
+      "final": 38003.89,
+      "ret_3y": 280.0389,
+      "cagr_3y": 56.0386,
+      "maxdd": -65.7891,
+      "n_trades": 80,
+      "bh_ret_3y": 484.929,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": -44.691,
+      "bh_final": 58492.9,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 259.396,
+          "bh_ret": 800.4088,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -10.7572,
+          "bh_ret": -17.3604,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 57.7722,
+          "bh_ret": -1.7831,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 40.0538,
+          "bh_ret": 58.2449,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -49.1876,
+          "bh_ret": -57.2021,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 7.4681,
+          "bh_ret": 23.0999,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "ret_3y (280.0389) <= bh_ret_3y (484.929)",
+        "oos_pass 3/6 < 4/6",
+        "maxdd -65.7891 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2021-04-06",
+        "end": "2026-09-24",
+        "ret": 612.7348,
+        "cagr": 43.2317,
+        "bh_ret": 373.1447,
+        "bh_final": null,
+        "final": 71273.48,
+        "maxdd": -80.83,
+        "oos_pass": "2/6",
+        "oos_wins": 2,
+        "oos_total": 6,
+        "n_trades": 142,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "oos 2/6 < 4/6",
+          "maxdd -80.83 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": false,
+      "family": "supertrend"
+    },
+    {
+      "strategy_id": "donchian_breakout_atr__SUI__4h",
+      "symbol": "SUI",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "SUI",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "atr_mode": "sma",
+        "reset_below_hi": false
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 36929.93,
+      "ret_3y": 269.2993,
+      "cagr_3y": 54.555,
+      "maxdd": -56.2064,
+      "n_trades": 69,
+      "bh_ret_3y": 117.8196,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": -6.4965,
+      "bh_final": 21781.96,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 80.3981,
+          "bh_ret": 280.3134,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 75.3133,
+          "bh_ret": -5.7339,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": -2.1281,
+          "bh_ret": 56.8223,
+          "beats_bh": false
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 27.5985,
+          "bh_ret": 44.2102,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -11.6136,
+          "bh_ret": -71.1398,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 5.7894,
+          "bh_ret": -0.8499,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6",
+        "maxdd -56.2064 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2023-05-06",
+        "end": "2026-09-24",
+        "ret": 192.2715,
+        "cagr": 37.2859,
+        "bh_ret": -27.8576,
+        "bh_final": null,
+        "final": 29227.15,
+        "maxdd": -56.2064,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 76,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -56.2064 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "rotation_lb120_top3_absMom__MULTI__1d",
+      "symbol": "MULTI",
+      "timeframe": "1d",
+      "status": "候選",
+      "params": {
+        "tf": "1d",
+        "lookback": 120,
+        "top_n": 3,
+        "abs_mom": true
+      },
+      "kind": "rotation",
+      "initial": 10000.0,
+      "final": 35788.46,
+      "ret_3y": 257.8846,
+      "cagr_3y": 53.0056,
+      "maxdd": -56.931,
+      "n_trades": 301,
+      "bh_ret_3y": 183.8945,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-23",
+      "years": 2.9979,
+      "ret_1y": -26.9831,
+      "bh_final": 28389.45,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-23",
+          "strat_ret": 283.2358,
+          "bh_ret": 215.2016,
+          "beats_bh": true
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-21",
+          "strat_ret": -33.5051,
+          "bh_ret": -24.1062,
+          "beats_bh": false
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-22",
+          "end": "2025-03-22",
+          "strat_ret": 58.9712,
+          "bh_ret": 42.4354,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-23",
+          "end": "2025-09-20",
+          "strat_ret": 23.4495,
+          "bh_ret": 61.7603,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-21",
+          "end": "2026-03-21",
+          "strat_ret": -36.8169,
+          "bh_ret": -58.1108,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-22",
+          "end": "2026-09-23",
+          "strat_ret": 9.7392,
+          "bh_ret": 20.4939,
+          "beats_bh": false
+        }
+      ],
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6",
+        "maxdd -56.931 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2017-08-17",
+        "end": "2026-09-23",
+        "ret": 21080.6104,
+        "cagr": 80.1276,
+        "bh_ret": 14677.0728,
+        "bh_final": null,
+        "final": 2118061.04,
+        "maxdd": -79.1567,
+        "oos_pass": "5/6",
+        "oos_wins": 5,
+        "oos_total": 6,
+        "n_trades": 903,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -79.1567 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": false,
+      "family": "rotation"
+    },
+    {
+      "strategy_id": "ema_trend_hold__DOGE__4h",
+      "symbol": "DOGE",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "DOGE",
+        "tf": "4h",
+        "donch_n": 20,
+        "fast": 9,
+        "slow": 21,
+        "stop_m": 4.0,
+        "trail_m": 99.0,
+        "max_hold": 60,
+        "atr_mode": "sma",
+        "reset_below_hi": false,
+        "note": "s1/s2 ema_trend_hold family: wide stop, no meaningful trail"
+      },
+      "kind": "ema",
+      "initial": 10000.0,
+      "final": 28005.04,
+      "ret_3y": 180.0504,
+      "cagr_3y": 40.9434,
+      "maxdd": -72.357,
+      "n_trades": 147,
+      "bh_ret_3y": 51.0373,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": -46.2511,
+      "bh_final": 15103.73,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 99.8369,
+          "bh_ret": 184.0344,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -12.9092,
+          "bh_ret": -38.3655,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 193.7732,
+          "bh_ret": 71.5893,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 3.5763,
+          "bh_ret": 32.2636,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -34.227,
+          "bh_ret": -59.3141,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": -18.4412,
+          "bh_ret": -4.1204,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6",
+        "maxdd -72.357 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2021-04-06",
+        "end": "2026-09-24",
+        "ret": 262.8653,
+        "cagr": 26.5935,
+        "bh_ret": 46.5124,
+        "bh_final": null,
+        "final": 36286.53,
+        "maxdd": -75.1688,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 264,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -75.1688 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": false,
+      "family": "ema"
+    },
+    {
+      "strategy_id": "donchian20_s2.5_t3.5__CAKE__4h",
+      "symbol": "CAKE",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "CAKE",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 2.5,
+        "trail_m": 3.5,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 25777.86,
+      "ret_3y": 157.7786,
+      "cagr_3y": 37.1043,
+      "maxdd": -50.8004,
+      "n_trades": 67,
+      "bh_ret_3y": 126.7072,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": -22.2477,
+      "bh_final": 22670.72,
+      "oos_pass": "2/6",
+      "oos_wins": 2,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 81.7335,
+          "bh_ret": 258.8646,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": 43.9395,
+          "bh_ret": -51.9006,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 24.9489,
+          "bh_ret": 32.1897,
+          "beats_bh": false
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 1.1482,
+          "bh_ret": 2.031,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -14.7633,
+          "bh_ret": -47.9212,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": -9.478,
+          "bh_ret": 80.389,
+          "beats_bh": false
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 2/6 < 4/6",
+        "maxdd -50.8004 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2022-03-06",
+        "end": "2026-09-24",
+        "ret": 81.5071,
+        "cagr": 13.9887,
+        "bh_ret": -57.6542,
+        "bh_final": null,
+        "final": 18150.71,
+        "maxdd": -50.8004,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 99,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -50.8004 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian20_s2.0_t3.0__ADA__4h",
+      "symbol": "ADA",
+      "timeframe": "4h",
+      "status": "候選",
+      "params": {
+        "symbol": "ADA",
+        "tf": "4h",
+        "donch_n": 20,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 36,
+        "atr_mode": "wilder",
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 25758.39,
+      "ret_3y": 157.5839,
+      "cagr_3y": 37.0698,
+      "maxdd": -44.5717,
+      "n_trades": 74,
+      "bh_ret_3y": -2.7663,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0007,
+      "ret_1y": 7.5045,
+      "bh_final": 9723.37,
+      "oos_pass": "3/6",
+      "oos_wins": 3,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 37.5165,
+          "bh_ret": 159.2245,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -12.6331,
+          "bh_ret": -44.2198,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-24",
+          "strat_ret": 90.241,
+          "bh_ret": 106.955,
+          "beats_bh": false
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": 5.9851,
+          "bh_ret": 13.7344,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": -15.3862,
+          "bh_ret": -66.6749,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": 25.3777,
+          "bh_ret": -12.739,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "oos_pass 3/6 < 4/6"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2021-04-06",
+        "end": "2026-09-24",
+        "ret": -34.6768,
+        "cagr": -7.4945,
+        "bh_ret": -80.8692,
+        "bh_final": null,
+        "final": 6532.32,
+        "maxdd": -78.019,
+        "oos_pass": "3/6",
+        "oos_wins": 3,
+        "oos_total": 6,
+        "n_trades": 135,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "oos 3/6 < 4/6",
+          "maxdd -78.019 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    },
+    {
+      "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
+      "symbol": "FET",
+      "timeframe": "1h",
+      "status": "待替換（未過門檻）",
+      "params": {
+        "symbol": "FET",
+        "tf": "1h",
+        "donch_n": 55,
+        "stop_m": 2.0,
+        "trail_m": 3.0,
+        "max_hold": 192,
+        "atr_mode": "wilder",
+        "btc_regime": false,
+        "reset_below_hi": true
+      },
+      "kind": "donchian",
+      "initial": 10000.0,
+      "final": 20804.62,
+      "ret_3y": 108.0462,
+      "cagr_3y": 27.6453,
+      "maxdd": -53.6757,
+      "n_trades": 122,
+      "bh_ret_3y": -9.2189,
+      "period_start": "2023-09-24",
+      "period_end": "2026-09-24",
+      "years": 3.0014,
+      "ret_1y": 87.3169,
+      "bh_final": 9078.11,
+      "oos_pass": "4/6",
+      "oos_wins": 4,
+      "oos_total": 6,
+      "oos_folds": [
+        {
+          "fold": 1,
+          "start": "2023-09-24",
+          "end": "2024-03-24",
+          "strat_ret": 52.8817,
+          "bh_ret": 1005.6139,
+          "beats_bh": false
+        },
+        {
+          "fold": 2,
+          "start": "2024-03-24",
+          "end": "2024-09-23",
+          "strat_ret": -2.9862,
+          "bh_ret": -30.9901,
+          "beats_bh": true
+        },
+        {
+          "fold": 3,
+          "start": "2024-09-23",
+          "end": "2025-03-25",
+          "strat_ret": 0.767,
+          "bh_ret": -67.0475,
+          "beats_bh": true
+        },
+        {
+          "fold": 4,
+          "start": "2025-03-25",
+          "end": "2025-09-23",
+          "strat_ret": -25.413,
+          "bh_ret": 7.5092,
+          "beats_bh": false
+        },
+        {
+          "fold": 5,
+          "start": "2025-09-23",
+          "end": "2026-03-25",
+          "strat_ret": 93.4311,
+          "bh_ret": -56.8136,
+          "beats_bh": true
+        },
+        {
+          "fold": 6,
+          "start": "2026-03-25",
+          "end": "2026-09-24",
+          "strat_ret": -2.0461,
+          "bh_ret": -21.0395,
+          "beats_bh": true
+        }
+      ],
+      "n_liquidations": 0,
+      "gate_pass": false,
+      "gate_fail_reasons": [
+        "maxdd -53.6757 worse than -45%"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2023-04-25",
+        "end": "2026-09-24",
+        "ret": 66.2906,
+        "cagr": 16.0541,
+        "bh_ret": -37.8821,
+        "bh_final": null,
+        "final": 16629.06,
+        "maxdd": -53.6757,
+        "oos_pass": "4/6",
+        "oos_wins": 4,
+        "oos_total": 6,
+        "n_trades": 134,
+        "gate_pass_full": false,
+        "gate_fail_reasons": [
+          "maxdd -53.6757 > 45% abs"
+        ]
+      },
+      "gate_pass_both": false,
+      "supported_by_runner": true,
+      "family": "donchian"
+    }
+  ],
+  "core_dual_gate_candidates": []
+}

@@ -20,6 +20,21 @@ from slots import MAX_NOTIONAL_USDT, SLOTS
 log = logging.getLogger("trader.strategy")
 TZ = ZoneInfo("Asia/Taipei")
 
+def btc_daily_regime_on(client) -> bool:
+    """BTC 1d close > SMA200 (reuse SOL regime definition)."""
+    try:
+        import numpy as np
+        kl = client.fetch_klines("BTCUSDT", "1d", limit=250, use_vision=True)
+        closes = kl["Close"].astype(float)
+        if len(closes) < 200:
+            return False
+        sma = closes.rolling(200).mean().iloc[-1]
+        return bool(float(closes.iloc[-1]) > float(sma))
+    except Exception as e:  # noqa: BLE001
+        log.warning("btc_regime_check_fail err=%s", e)
+        return False
+
+
 
 def now_iso_taipei() -> str:
     return datetime.now(TZ).isoformat(timespec="seconds")
@@ -33,7 +48,7 @@ def evaluate_slot(
 ) -> dict[str, Any]:
     tf = slot["tf"]
     closed, forming = split_closed(klines, tf)
-    ind = add_donch_atr(closed, int(slot["donch_n"])).dropna(
+    ind = add_donch_atr(closed, int(slot.get("donch_n") or slot.get("donch_n") or 20)).dropna(
         subset=["atr", "donch_hi", "donch_lo"]
     )
     if ind.empty:
@@ -140,6 +155,19 @@ def evaluate_slot(
         result.update(action="armed", reason="waiting_breakout")
         return result
 
+    if slot.get("btc_regime"):
+        # Caller may pass _btc_regime_on in slot_meta to avoid refetch
+        regime_on = slot_meta.get("_btc_regime_on")
+        if regime_on is None:
+            result.update(action="armed", reason="btc_regime_unchecked")
+            result["btc_regime_required"] = True
+            return result
+        if not regime_on:
+            result.update(action="armed", reason="btc_regime_off")
+            result["btc_regime_on"] = False
+            return result
+        result["btc_regime_on"] = True
+
     quote = min(float(slot["quote_usdt"]), MAX_NOTIONAL_USDT)
     suggested_stop = float(bar["Close"]) - float(slot["stop_atr_mult"]) * atr
     result.update(
@@ -156,11 +184,16 @@ def evaluate_all(client, state: dict) -> list[dict]:
     results: list[dict] = []
     positions = state.setdefault("positions", {})
     slots_meta = state.setdefault("slots", {})
+    need_btc = any(s.get("btc_regime") for s in SLOTS)
+    btc_on = btc_daily_regime_on(client) if need_btc else None
     for slot in SLOTS:
         meta = slots_meta.setdefault(slot["id"], {})
+        if slot.get("btc_regime"):
+            meta["_btc_regime_on"] = btc_on
         pos = positions.get(slot["id"])
         try:
-            limit = max(250, int(slot["donch_n"]) + 80)
+            donch_n = int(slot.get("donch_n") or slot.get("donch_n") or 20)
+            limit = max(250, donch_n + 80)
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
             results.append(evaluate_slot(slot, kl, pos, meta))
         except Exception as e:  # noqa: BLE001

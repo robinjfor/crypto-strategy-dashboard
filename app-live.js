@@ -3,6 +3,12 @@
   "use strict";
 
   const BOOK_URL = "./data/live_book.json";
+
+  const ALLOC_URL = "./data/book_allocation.json";
+  const SCORES_URL = "./data/unified-3y/scores.json";
+  let allocCfg = null;
+  let scoresById = {};
+
   const HEALTH_URL = "./state/health.json";
   const POSITIONS_URL = "./state/positions.json";
   const PAPER_URL = "./state/paper_trading.json";
@@ -405,8 +411,107 @@
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
+
+  function scoreFor(sid) {
+    var r = scoresById[sid];
+    return r && r.score != null ? r.score : null;
+  }
+
+  function slotSignalFromCloud(slotId, strategyId) {
+    var planned = (cloud && (cloud.planned_positions || cloud.planned)) || [];
+    for (var i = 0; i < planned.length; i++) {
+      var pl = planned[i];
+      if (pl.slot === slotId || pl.strategy_id === strategyId || pl.id === slotId) {
+        return pl.status_label || pl.label_zh || pl.status_zh || pl.status || pl.reason || "—";
+      }
+    }
+    var armed = (cloud && (cloud.armed_slots || cloud.slots || cloud.slot_status)) || [];
+    for (var j = 0; j < armed.length; j++) {
+      var a = armed[j];
+      if (a.slot === slotId || a.strategy_id === strategyId) {
+        return a.status_zh || a.label_zh || a.status || a.reason || "—";
+      }
+    }
+    return "—";
+  }
+
+  function approvalLabelFor(row) {
+    var sid = row.strategy_id;
+    if (row.default_status === "cash") return "現金";
+    var approvedList = (cloud && (cloud.approved_list || cloud.approved)) || [];
+    if (!Array.isArray(approvedList) && approvedList && typeof approvedList === "object") {
+      approvedList = Object.keys(approvedList).map(function (k) {
+        return Object.assign({ strategy_id: k }, approvedList[k]);
+      });
+    }
+    var signalOnly = (cloud && (cloud.signal_only_list || cloud.signal_only)) || [];
+    if (!Array.isArray(signalOnly) && signalOnly && typeof signalOnly === "object") {
+      signalOnly = Object.keys(signalOnly).map(function (k) {
+        return Object.assign({ strategy_id: k }, signalOnly[k]);
+      });
+    }
+    var ap = approvedList.find(function (x) { return x.strategy_id === sid; });
+    if (ap && ap.mode !== "signal_only" && ap.approved !== false) return "已核准";
+    var so = signalOnly.find(function (x) { return x.strategy_id === sid; });
+    if (so || (ap && ap.mode === "signal_only")) return "只算訊號（未核准）";
+    if (row.default_status === "pending_review") return "待審核";
+    if (row.default_status === "approved_live") return "已核准";
+    return "—";
+  }
+
+  function renderAllocation() {
+    var cfg = allocCfg || { book_usdt: 5000, rows: [], signal_only_watch: [] };
+    var rows = cfg.rows || [];
+    // pie parts from allocation plan
+    pieParts = rows.map(function (r) {
+      return { label: r.name || r.id, value: Number(r.notional_usdt) || 0 };
+    }).filter(function (p) { return p.value > 0; });
+
+    var body = rows.map(function (r) {
+      var sid = r.strategy_id;
+      var status = approvalLabelFor(r);
+      var badgeCls = status === "已核准" ? "ok" : (status === "待審核" ? "warn" : (status.indexOf("只算") >= 0 ? "muted" : "muted"));
+      var sc = sid ? scoreFor(sid) : null;
+      var sig = (r.default_status === "cash") ? "—" : slotSignalFromCloud(r.id, sid);
+      return "<tr>" +
+        "<td><strong>" + esc(r.name) + "</strong>" +
+        (sid ? '<div class="dim mono">' + esc(sid) + "</div>" : "") + "</td>" +
+        "<td>" + esc(r.symbol) + " / " + esc(r.timeframe) + "</td>" +
+        '<td class="num">' + esc(String(r.pct)) + "%</td>" +
+        '<td class="num">' + num(r.notional_usdt, 0) + "</td>" +
+        '<td class="num">' + (sc != null ? num(sc, 2) : "—") + "</td>" +
+        '<td><span class="badge ' + badgeCls + '">' + esc(status) + "</span></td>" +
+        "<td>" + esc(sig) + "</td>" +
+        "</tr>";
+    }).join("");
+
+    var watch = (cfg.signal_only_watch || []).map(function (w) {
+      var sig = slotSignalFromCloud(w.id, w.strategy_id);
+      var sc = scoreFor(w.strategy_id);
+      return "<tr>" +
+        "<td>" + esc(w.name) + '<div class="dim mono">' + esc(w.strategy_id) + "</div></td>" +
+        "<td>" + esc(w.symbol) + " / " + esc(w.timeframe) + "</td>" +
+        '<td class="num">' + (sc != null ? num(sc, 2) : "—") + "</td>" +
+        '<td><span class="badge warn">只算訊號（未核准）</span></td>' +
+        "<td>" + esc(sig) + "</td></tr>";
+    }).join("");
+
+    return '<section class="section" id="sec-alloc">' +
+      '<div class="section-head"><h2>目前配置</h2><span class="hint">基準 ' +
+      num(cfg.book_usdt || 5000, 0) + " USDT 帳本 · 核准狀態來自雲端</span></div>" +
+      '<div class="card"><div class="table-scroll"><table class="data alloc-book-table">' +
+      "<thead><tr><th>策略</th><th>幣別／週期</th><th class=\"num\">配置%</th><th class=\"num\">名義 USDT</th><th class=\"num\">分數</th><th>狀態</th><th>目前訊號</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table></div>" +
+      (watch
+        ? '<div class="alloc-signal-only"><h3>只算訊號（未核准）</h3><div class="table-scroll"><table class="data">' +
+          "<thead><tr><th>策略</th><th>幣別／週期</th><th class=\"num\">分數</th><th>狀態</th><th>目前訊號</th></tr></thead>" +
+          "<tbody>" + watch + "</tbody></table></div></div>"
+        : "") +
+      "</div></section>";
+  }
+
   function renderStrategies() {
-    var armed = (cloud && cloud.armed_slots) || [];
+    var armed = (cloud && (cloud.armed_slots || cloud.slots || cloud.slot_status)) || [];
     var sats = (book && book.satellite_strategies) || [];
     var core = (book && book.strategies) || [];
     var cards;
@@ -596,7 +701,7 @@
     }
     main.className = "";
     main.innerHTML = renderHealth() + renderAccount() + renderChanges() +
-      renderActual() + renderPlanned() + renderStrategies() + renderTrades();
+      renderAllocation() + renderActual() + renderPlanned() + renderStrategies() + renderTrades();
     mountPie(pieParts);
     bindControls();
   }
@@ -636,6 +741,13 @@
       showCloudBanner(!cloudOk);
       if (!cloudOk) {
         book = await getJSONOpt(BOOK_URL);
+        allocCfg = await getJSONOpt(ALLOC_URL);
+        try {
+          var sc = await getJSONOpt(SCORES_URL);
+          scoresById = {};
+          ((sc && sc.strategies) || []).forEach(function (r) { scoresById[r.strategy_id] = r; });
+        } catch (eSc) { scoresById = {}; }
+
         health = await getJSONOpt(HEALTH_URL);
         positions = await getJSONOpt(POSITIONS_URL);
         paper = await getJSONOpt(PAPER_URL);
