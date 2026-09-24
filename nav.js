@@ -89,10 +89,13 @@
   }
 
   function isApiUrl(url) {
-    if (!_apiBase) return false;
     try {
       var u = typeof url === "string" ? url : url && url.url;
-      return u && String(u).indexOf(_apiBase) === 0;
+      if (!u) return false;
+      u = String(u);
+      if (_apiBase && u.indexOf(_apiBase) === 0) return true;
+      // Fallback before cloud_api.json resolves — Cloud Run trader API host
+      return u.indexOf("crypto-trader-api") !== -1 && u.indexOf(".run.app") !== -1;
     } catch (e) {
       return false;
     }
