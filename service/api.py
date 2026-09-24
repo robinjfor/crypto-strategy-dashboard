@@ -657,9 +657,10 @@ def approve():
     family = (body.get("family") or (slot or {}).get("family") or "").lower()
     if body.get("passed_threshold") is False:
         return jsonify({"ok": False, "error": "未過門檻，無法核准"}), 400
-    # Emily 資金控管：雙過門檻（3年＋全期）才可核准
-    if body.get("gate_pass_both") is False:
-        return jsonify({"ok": False, "error": "未過雙門檻（3年＋全期），無法核准"}), 400
+    # Emily 資金控管：僅 3 年窗 gate_pass_3y（全期僅參考）
+    if body.get("gate_pass_3y") is False:
+        return jsonify({"ok": False, "error": "未過 3 年門檻，無法核准"}), 400
+    # Ignore legacy gate_pass_both from old clients — do not block
     supported = body.get("supported_by_runner")
     if supported is None:
         supported = family in SUPPORTED_FAMILIES or family.startswith("donchian")

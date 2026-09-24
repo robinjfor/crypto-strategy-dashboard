@@ -84,21 +84,28 @@
 
   /** Emily 資金控管: lock unless BOTH 3y + full-period gates pass. */
   function failReasons(row) {
-    return row.gate_fail_reasons || row.gate_fail_reasons || [];
+    var raw = row.gate_fail_reasons || row.gate_fail_reasons_3y || [];
+    if (!Array.isArray(raw)) raw = [];
+    // Drop full-period / 全期 reasons — 全期僅參考，不算門檻失敗
+    return raw.filter(function (s) {
+      var x = String(s || "");
+      if (/full[_ ]?period|gate_pass_full|全期|full-period|full period/i.test(x)) return false;
+      return true;
+    });
   }
+
   function fpFailReasons(fp) {
     fp = fp || {};
     return fp.gate_fail_reasons || fp.gate_fail_reasons || [];
   }
-  function bothGatesOk(row, meta) {
-    if (row.gate_pass_both != null) return !!row.gate_pass_both;
-    var fp = row.full_period || {};
-    if (fp.gate_pass_full != null && row.gate_pass != null) {
-      return !!row.gate_pass && !!fp.gate_pass_full;
-    }
-    // unclear meta → fall back to 3y gate_pass
-    return !!row.gate_pass;
+  function gatePass3y(row) {
+    if (row.gate_pass_3y != null) return !!row.gate_pass_3y;
+    if (row.gate_pass != null) return !!row.gate_pass;
+    return false;
   }
+  // Emily 資金控管：核准門檻＝僅 3 年窗（全期僅參考）
+  var bothGatesOk = gatePass3y; // legacy alias
+
 
   function describeRules(key, sample) {
     var p = (sample && sample.params) || {};
@@ -235,11 +242,11 @@
       return '<span class="badge ok">已核准</span> ' +
         '<button type="button" class="btn-revoke" data-sid="' + esc(sid) + '">退回</button>';
     }
-    var ok = bothGatesOk(row);
+    var ok = gatePass3y(row);
     var supported = runnerSupports(row, familyId || row._family_id);
     var locked = !ok || !supported;
     var title = !ok
-      ? "未過雙門檻（3年＋全期），無法核准"
+      ? "未過 3 年門檻，無法核准"
       : (!supported ? "雲端尚未支援此策略類型" : "核准上線待命");
     var notion = row.notional_usdt != null ? row.notional_usdt
       : (/FET/.test(sid) && /4h/.test(sid) ? 1250 : 1000);
@@ -277,7 +284,7 @@
     var oosMin = gate.oos_pass_min || "4/6";
     var maxdd = gate.maxdd_max_abs != null ? gate.maxdd_max_abs : 45;
     var nPass = meta.n_gate_pass_3y != null ? meta.n_gate_pass_3y : meta.n_gate_pass;
-    var nBoth = meta.n_gate_pass_both != null ? meta.n_gate_pass_both : "—";
+    var nPass3y = meta.n_gate_pass_3y != null ? meta.n_gate_pass_3y : (meta.n_gate_pass != null ? meta.n_gate_pass : "—");
     var nAll = meta.n_rows != null ? meta.n_rows : meta.n_strategies;
     var nFam = meta.n_strategies != null ? meta.n_strategies : "—";
     return '<section class="section" id="sec-meta">' +
@@ -286,8 +293,8 @@
       "<div><span class=\"lbl\">期間</span> 近 3 年 · " + esc(start) + " → " + esc(end) + "</div>" +
       "<div><span class=\"lbl\">起始資金</span> " + num(meta.initial, 0) + " USDT</div>" +
       "<div><span class=\"lbl\">成本</span> 單邊 " + esc(oneWay) + " bps（fee " + esc(fee) + " + slip " + esc(slip) + "）</div>" +
-      "<div><span class=\"lbl\">門檻</span> 勝 B&amp;H · OOS≥" + esc(oosMin) + " · |MaxDD|≤" + esc(maxdd) + "% · 雙過＝3年＋全期</div>" +
-      "<div><span class=\"lbl\">通過</span> 3年 " + esc(nPass) + " · 雙過 " + esc(nBoth) + " / " + esc(nAll) + " 列（" + esc(nFam) + " 族）</div>" +
+      "<div><span class=\"lbl\">門檻</span> 勝 B&amp;H · OOS≥" + esc(oosMin) + " · |MaxDD|≤" + esc(maxdd) + "% · 門檻＝近 3 年（全期僅參考）</div>" +
+      "<div><span class=\"lbl\">通過</span> 3年 " + esc(nPass) + " · 過關 " + esc(nPass3y) + " / " + esc(nAll) + " 列（" + esc(nFam) + " 族）</div>" +
       "<div class=\"meta-formula\"><span class=\"lbl\">計分</span> " + esc(JSON.stringify(scoring.weights || scoring)) + "</div>" +
       "</div>" +
       (srcHint ? '<p class="hint" style="margin:8px 0 0">資料來源：' + esc(srcHint) + " · 頁面分數為 catalog 重標（與 scores.json 不同）</p>" : "") +
@@ -333,17 +340,13 @@
     return !!RUNNER_FAMILIES[rf] || (rf && String(rf).indexOf("donchian") === 0);
   }
 
-  function bothGatesOk(row) {
-    if (row.gate_pass_both != null) return !!row.gate_pass_both;
-    var fp = row.full_period || {};
-    if (row.gate_pass_3y != null && fp.gate_pass_full != null) {
-      return !!row.gate_pass_3y && !!fp.gate_pass_full;
-    }
-    if (row.gate_pass != null && fp.gate_pass_full != null) {
-      return !!row.gate_pass && !!fp.gate_pass_full;
-    }
-    return !!(row.gate_pass_3y || row.gate_pass);
+  function gatePass3y(row) {
+    if (row.gate_pass_3y != null) return !!row.gate_pass_3y;
+    if (row.gate_pass != null) return !!row.gate_pass;
+    return false;
   }
+  var bothGatesOk = gatePass3y;
+
 
   function failReasons(row) {
     return row.gate_fail_reasons || row.gate_fail_reasons || [];
@@ -416,13 +419,10 @@
   }
 
   function dualBadge(row) {
-    if (row.gate_pass_both) return '<span class="badge ok">雙過</span>';
-    var bits = [];
-    bits.push((row.gate_pass_3y || row.gate_pass) ? "3年✓" : "3年✗");
-    var fp = row.full_period || {};
-    if (fp.gate_pass_full != null) bits.push(fp.gate_pass_full ? "全期✓" : "全期✗");
-    return '<span class="badge bad">' + esc(bits.join(" · ")) + "</span>";
+    if (gatePass3y(row)) return '<span class="badge ok">過關</span>';
+    return '<span class="badge bad">未過</span>';
   }
+
 
   function fpFailReasons(fp) {
     fp = fp || {};
@@ -432,33 +432,33 @@
   function expandHtml(r) {
     var fp = r.full_period || {};
     var reasons = (failReasons(r)).map(gateReasonZh).join("；");
-    var fpReasons = (fpFailReasons(fp)).map(gateReasonZh).join("；");
     return '<div class="equity-wrap">' +
       '<div class="fp-grid">' +
-      "<div><span class=\"lbl\">3 年</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) +
+      "<div><span class=\"lbl\">3 年（門檻）</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) +
       " · OOS " + esc(r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + r.oos_total) : "—")) +
-      " · 門檻 " + ((r.gate_pass_3y || r.gate_pass) ? "過" : "未過") + "</div>" +
-      "<div><span class=\"lbl\">全期</span> " + esc((fp.start || "").slice(0, 10)) + " → " + esc((fp.end || "").slice(0, 10)) +
+      " · 門檻 " + (gatePass3y(r) ? "過關" : "未過") + "</div>" +
+      "<div><span class=\"lbl\">全期（參考）</span> " + esc((fp.start || "").slice(0, 10)) + " → " + esc((fp.end || "").slice(0, 10)) +
       " · 報酬 " + pctPts(fp.ret) + " · B&amp;H " + pctPts(fp.bh_ret) +
       " · MaxDD " + pctPts(fp.maxdd) + " · OOS " + esc(fp.oos_pass || "—") +
-      " · 門檻 " + (fp.gate_pass_full ? "過" : "未過") + "</div>" +
+      (fp.gate_pass_full != null ? (" · 全期門檻 " + (fp.gate_pass_full ? "過" : "未過") + "（參考）") : "") +
+      "</div>" +
       (reasons ? '<div class="fail-reason">3年未過：' + esc(reasons) + "</div>" : "") +
-      (fpReasons ? '<div class="fail-reason">全期未過：' + esc(fpReasons) + "</div>" : "") +
       "</div>" +
       '<canvas id="eq-' + esc(r.strategy_id) + '" height="180"></canvas>' +
       '<div class="equity-status" id="eqst-' + esc(r.strategy_id) + '">展開列以載入權益曲線…</div></div>';
   }
+
 
   function renderGroupCard(g) {
     var familyId = g.family_id || g.key;
     var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
     var rows = g.rows || [];
     if (filterBothOnly) {
-      rows = rows.filter(function (r) { return bothGatesOk(r); });
+      rows = rows.filter(function (r) { return gatePass3y(r); });
     }
     if (filterBothOnly && !rows.length) return "";
 
-    var nBoth = (g.rows || []).filter(function (r) { return bothGatesOk(r); }).length;
+    var nBoth = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
     var best = g.best_score != null ? g.best_score : (g.rows[0] && g.rows[0].score) || 0;
     var desc = g.description_zh || "";
     if (desc.length > 90) desc = desc.slice(0, 90) + "…";
@@ -482,7 +482,7 @@
       : '<span class="badge muted">雲端尚未支援此策略類型</span>';
 
     var body = rows.map(function (r) {
-      var passBoth = bothGatesOk(r);
+      var passBoth = gatePass3y(r);
       var reasons = (failReasons(r)).map(gateReasonZh).join("；");
       var oos = r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + (r.oos_total || 6)) : "—");
       var fp = r.full_period || {};
@@ -515,7 +515,7 @@
       '<div class="ssc-head" data-toggle-key="' + esc(g.key) + '">' +
       "<h3>" + esc(g.name_zh || g.key) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
-      '<span class="ssc-params">' + (g.rows || []).length + " 列 · 雙過 " + nBoth +
+      '<span class="ssc-params">' + (g.rows || []).length + " 列 · 過關 " + nBoth +
       " · 最佳 " + num(best, 1) + "</span>" +
       '<span class="chevron">' + (open ? "▾" : "▸") + "</span>" +
       "</div>" +
@@ -527,7 +527,7 @@
       "<th>幣別／週期</th>" +
       '<th class="num">投入 10,000</th><th class="num">最終金額</th>' +
       '<th class="num">3 年報酬</th><th class="num">近 1 年</th><th class="num">B&amp;H</th>' +
-      '<th class="num">MaxDD</th><th>OOS</th><th>雙過門檻</th>' +
+      '<th class="num">MaxDD</th><th>OOS</th><th>過關</th>' +
       '<th class="num">分數</th><th>狀態</th><th>核准</th>' +
       "</tr></thead><tbody>" + (body || '<tr><td colspan="12" class="empty-row">此篩選下無列</td></tr>') +
       "</tbody></table></div></div></article>";
@@ -539,17 +539,17 @@
     groups.forEach(function (g) {
       (g.rows || []).forEach(function (r) {
         nRows += 1;
-        if (bothGatesOk(r)) nBoth += 1;
+        if (gatePass3y(r)) nBoth += 1;
       });
     });
     return '<div class="backtest-summary">' +
       '<span class="pill">家族 ' + nFam + "</span>" +
       '<span class="pill">列數 ' + nRows + "</span>" +
-      '<span class="pill">雙過門檻 ' + nBoth + "</span>" +
+      '<span class="pill">過關 ' + nBoth + "</span>" +
       "</div>" +
       '<div class="backtest-filters">' +
       '<label><input type="checkbox" id="filterBothOnly"' + (filterBothOnly ? " checked" : "") +
-      '> 只看雙過</label>' +
+      '> 只看過關</label>' +
       '<span class="hint">點家族標題展開／收合規則與表格</span>' +
       "</div>";
   }
@@ -611,7 +611,7 @@
 
 
   // Canonical name aliases (tolerate mixed spellings in call sites)
-  var bothGatesOk = bothGatesOk;
+  var bothGatesOk = gatePass3y;
   var runnerSupports = runnerSupports;
   var describeRules = describeRules;
   var pctPts = pctPts;
@@ -672,8 +672,8 @@
             postControl("/control/approve", pin, {
               strategy_id: sid,
               notional: n,
-              passed_threshold: bothGatesOk(row),
-              gate_pass_both: bothGatesOk(row),
+              passed_threshold: gatePass3y(row),
+              gate_pass_3y: gatePass3y(row),
               supported_by_runner: runnerSupports(row, famId),
               family: runnerFamilyForCatalog(famId, row) || familyOf(row),
               slot: row.slot || null,
