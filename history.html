@@ -44,11 +44,11 @@
           const st = await (await fetch(cfg.base.replace(/\/$/,"") + "/status?t="+Date.now(),{cache:"no-store",mode:"cors"})).json();
           cloudOk = !!(st && st.ok !== false);
           const closed = (st.closed_trades || []).map((t) => ({
-            ts: t.closed_at, kind: "CLOSE", symbol: t.symbol, side: "SELL",
+            ts: t.closed_at, kind: "CLOSE", symbol: t.symbol, code: t.code, side: "SELL",
             qty: t.qty, price: t.exit, realized_pnl_usdt: t.pnl_usdt, reason: t.reason, source: "cloud"
           }));
           const fills = (st.recent_fills || []).map((t) => ({
-            ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol, side: t.side,
+            ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol, code: t.code, side: t.side,
             qty: t.qty, price: t.price, fee: t.commission, reason: "myTrades", source: "cloud"
           }));
           rows = closed.concat(fills);
@@ -76,8 +76,9 @@
         const side = r.side || (String(kind).toUpperCase()==="OPEN"?"BUY":String(kind).toUpperCase()==="CLOSE"?"SELL":"—");
         const pnl = r.realized_pnl_usdt != null ? r.realized_pnl_usdt : r.pnl_usdt;
         const cls = pnl > 0 ? "pos" : pnl < 0 ? "neg" : "";
+        const displaySymbol = (r.code ? r.code + " " : "") + (r.symbol || "—");
         return `<tr>
-          <td>${esc(r.ts||r.time||"—")}</td><td>${esc(kind)}</td><td><strong>${esc(r.symbol||"—")}</strong></td>
+          <td>${esc(r.ts||r.time||"—")}</td><td>${esc(kind)}</td><td><strong>${esc(displaySymbol)}</strong></td>
           <td>${esc(side)}</td><td class="num">${num(r.qty,4)}</td><td class="num">${num(r.price,4)}</td>
           <td class="num">${r.fee==null?"—":num(r.fee,4)}</td>
           <td class="num ${cls}">${pnl==null?"—":num(pnl,2)}</td>

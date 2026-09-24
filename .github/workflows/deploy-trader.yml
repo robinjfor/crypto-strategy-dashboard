@@ -68,6 +68,7 @@ jobs:
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO_NAME}/${IMAGE_NAME}"
           TAG="${GITHUB_SHA::12}"
+          cp ../config/strategy_codes.json strategy_codes.json
           docker build -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" .
           docker push "${IMAGE}:${TAG}"
           docker push "${IMAGE}:latest"

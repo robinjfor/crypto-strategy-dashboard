@@ -1,0 +1,549 @@
+{
+  "version": 1,
+  "families": {
+    "ls_donch_btc_regime_perp": {
+      "code": "A",
+      "rows": {
+        "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS": {
+          "code": "A1",
+          "active": true
+        },
+        "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS": {
+          "code": "A2",
+          "active": true
+        },
+        "ls__ARB__4h__n20__s2.0__t3.0__LS": {
+          "code": "A3",
+          "active": true
+        },
+        "ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS": {
+          "code": "A4",
+          "active": true
+        },
+        "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS": {
+          "code": "A5",
+          "active": true
+        },
+        "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS": {
+          "code": "A6",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "ls_univ_portfolio_perp": {
+      "code": "B",
+      "rows": {
+        "port_ew_univ10_lev2.0_vtNone": {
+          "code": "B1",
+          "active": true
+        },
+        "port_ew_univ10_lev2.0_vt0.03": {
+          "code": "B2",
+          "active": true
+        },
+        "port_ew_univ10_lev1.5_vtNone": {
+          "code": "B3",
+          "active": true
+        },
+        "port_ew_univ10_lev1.5_vt0.03": {
+          "code": "B4",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_atr": {
+      "code": "C",
+      "rows": {
+        "donchian_breakout_atr__ARB__4h": {
+          "code": "C1",
+          "active": true
+        },
+        "donchian55_s1.5_t2.5__FIL__1h": {
+          "code": "C2",
+          "active": true
+        },
+        "donchian20_s1.5_t1.5__OP__4h": {
+          "code": "C3",
+          "active": true
+        },
+        "donchian55_s2.5_t3.5__ICP__4h": {
+          "code": "C4",
+          "active": true
+        },
+        "donchian20_s1.5_t1.5__DOT__4h": {
+          "code": "C5",
+          "active": true
+        },
+        "donchian55_s2.0_t3.0__FET__4h": {
+          "code": "C6",
+          "active": true
+        },
+        "donchian55_s2.0_t3.0__LSK__4h": {
+          "code": "C7",
+          "active": true
+        },
+        "donchian55_breakout_atr__APT__1h": {
+          "code": "C8",
+          "active": true
+        },
+        "donchian_breakout_atr__NEAR__4h": {
+          "code": "C9",
+          "active": true
+        },
+        "donchian_breakout_wide__NEAR__4h": {
+          "code": "C10",
+          "active": true
+        },
+        "donchian_breakout_atr__SUI__4h": {
+          "code": "C11",
+          "active": true
+        },
+        "donchian20_s2.5_t3.5__CAKE__4h": {
+          "code": "C12",
+          "active": true
+        },
+        "donchian20_s2.0_t3.0__ADA__4h": {
+          "code": "C13",
+          "active": true
+        },
+        "donchian55_s2.0_t3.0__FET__1h": {
+          "code": "C14",
+          "active": true
+        },
+        "donchian_breakout_atr__AAVE__4h": {
+          "code": "C15",
+          "active": true
+        },
+        "donchian55_breakout_atr__UNI__4h": {
+          "code": "C16",
+          "active": true
+        },
+        "donchian55_s2.5_t3.5__INJ__1h": {
+          "code": "C17",
+          "active": true
+        },
+        "donchian55_breakout_atr__WLD__4h": {
+          "code": "C18",
+          "active": true
+        },
+        "donchian55_breakout_atr__ONDO__4h": {
+          "code": "C19",
+          "active": true
+        },
+        "donchian20_s2.0_t3.0__AVAX__4h": {
+          "code": "C20",
+          "active": true
+        },
+        "donchian20_s2.0_t3.0__STRK__4h": {
+          "code": "C21",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_lev_vol": {
+      "code": "D",
+      "rows": {
+        "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5": {
+          "code": "D1",
+          "active": true
+        },
+        "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.03": {
+          "code": "D2",
+          "active": true
+        },
+        "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.04": {
+          "code": "D3",
+          "active": true
+        },
+        "lev_donch__FIL__1h__n55__s1.5__t2.5": {
+          "code": "D4",
+          "active": true
+        },
+        "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.02": {
+          "code": "D5",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.02": {
+          "code": "D6",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.02": {
+          "code": "D7",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5": {
+          "code": "D8",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03": {
+          "code": "D9",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03": {
+          "code": "D10",
+          "active": true
+        },
+        "lev_donch__DOT__4h__n20__s1.5__t1.5": {
+          "code": "D11",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.04": {
+          "code": "D12",
+          "active": true
+        },
+        "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5": {
+          "code": "D13",
+          "active": true
+        },
+        "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5": {
+          "code": "D14",
+          "active": true
+        },
+        "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.04": {
+          "code": "D15",
+          "active": true
+        },
+        "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03": {
+          "code": "D16",
+          "active": true
+        },
+        "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.02": {
+          "code": "D17",
+          "active": true
+        },
+        "lev_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.02": {
+          "code": "D18",
+          "active": true
+        },
+        "lev_donch__FET__4h__n55__s2.0__t3.0": {
+          "code": "D19",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_fear_greed": {
+      "code": "E",
+      "rows": {
+        "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75": {
+          "code": "E1",
+          "active": true
+        },
+        "fg_donch__OP__4h__n20__s1.5__t1.5__fglt75": {
+          "code": "E2",
+          "active": true
+        },
+        "fg_donch__OP__4h__n20__s1.5__t1.5__fgmid25_75": {
+          "code": "E3",
+          "active": true
+        },
+        "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fggt25": {
+          "code": "E4",
+          "active": true
+        },
+        "fg_donch__FET__4h__n55__s2.0__t3.0__fggt25": {
+          "code": "E5",
+          "active": true
+        },
+        "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fgmid25_75": {
+          "code": "E6",
+          "active": true
+        },
+        "fg_donch__DOT__4h__n20__s1.5__t1.5__fglt75": {
+          "code": "E7",
+          "active": true
+        },
+        "fg_donch__OP__4h__n20__s1.5__t1.5__fggt25": {
+          "code": "E8",
+          "active": true
+        },
+        "fg_donch__FET__4h__n55__s2.0__t3.0__fgmid25_75": {
+          "code": "E9",
+          "active": true
+        },
+        "fg_donch__FET__4h__n55__s2.0__t3.0__fglt75": {
+          "code": "E10",
+          "active": true
+        },
+        "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fgmid25_75": {
+          "code": "E11",
+          "active": true
+        },
+        "fg_donch__DOT__4h__n20__s1.5__t1.5__fggt25": {
+          "code": "E12",
+          "active": true
+        },
+        "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fggt25": {
+          "code": "E13",
+          "active": true
+        },
+        "fg_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75": {
+          "code": "E14",
+          "active": true
+        },
+        "fg_donch__DOT__4h__n20__s1.5__t1.5__fgmid25_75": {
+          "code": "E15",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "ema_cross_atr": {
+      "code": "F",
+      "rows": {
+        "ema12_26_atr_btcRegime__SOL__1d": {
+          "code": "F1",
+          "active": true
+        },
+        "ema12_26_s2.5_t3.5__AR__4h": {
+          "code": "F2",
+          "active": true
+        },
+        "ema9_21_s2.5_t3.5__HYPE__4h": {
+          "code": "F3",
+          "active": true
+        },
+        "ema12_26_s2.5_t3.5__ENA__4h": {
+          "code": "F4",
+          "active": true
+        },
+        "ema_cross_atr__RAY__1h": {
+          "code": "F5",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "news_filter_donchian": {
+      "code": "G",
+      "rows": {
+        "news_filter_donch__DOT__4h__k2.0_vol": {
+          "code": "G1",
+          "active": true
+        },
+        "news_filter_donch__FIL__1h__k2.0_vol": {
+          "code": "G2",
+          "active": true
+        },
+        "news_filter_donch__OP__4h__k1.5_vol": {
+          "code": "G3",
+          "active": true
+        },
+        "news_filter_donch__FIL__1h__k1.5_vol": {
+          "code": "G4",
+          "active": true
+        },
+        "news_filter_donch__DOT__4h__k1.5_vol": {
+          "code": "G5",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_long_short_btc_regime": {
+      "code": "H",
+      "rows": {
+        "ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS": {
+          "code": "H1",
+          "active": true
+        },
+        "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS": {
+          "code": "H2",
+          "active": true
+        },
+        "ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS": {
+          "code": "H3",
+          "active": true
+        },
+        "ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS": {
+          "code": "H4",
+          "active": true
+        },
+        "ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS": {
+          "code": "H5",
+          "active": true
+        },
+        "ls_donch__OP__4h__n20__s1.5__t1.5__btcReg__LS": {
+          "code": "H6",
+          "active": true
+        },
+        "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS": {
+          "code": "H7",
+          "active": true
+        },
+        "ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS": {
+          "code": "H8",
+          "active": true
+        },
+        "ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS": {
+          "code": "H9",
+          "active": true
+        },
+        "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS": {
+          "code": "H10",
+          "active": true
+        },
+        "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS": {
+          "code": "H11",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "news_burst_confirm": {
+      "code": "I",
+      "rows": {
+        "news_burst__DOT__4h__k1.5_ema_vol": {
+          "code": "I1",
+          "active": true
+        },
+        "news_burst__DOT__4h__k2.5_ema_vol": {
+          "code": "I2",
+          "active": true
+        },
+        "news_burst__DOT__4h__k2.0_ema_vol": {
+          "code": "I3",
+          "active": true
+        },
+        "news_burst__DOT__4h__k2.5_donchian_vol": {
+          "code": "I4",
+          "active": true
+        },
+        "news_burst__DOT__4h__k2.0_donchian_vol": {
+          "code": "I5",
+          "active": true
+        },
+        "news_burst__DOT__4h__k1.5_donchian_vol": {
+          "code": "I6",
+          "active": true
+        },
+        "news_burst__OP__4h__k1.5_donchian_vol": {
+          "code": "I7",
+          "active": true
+        },
+        "news_burst__OP__4h__k2.5_donchian_vol": {
+          "code": "I8",
+          "active": true
+        },
+        "news_burst__OP__4h__k2.5_ema_vol": {
+          "code": "I9",
+          "active": true
+        },
+        "news_burst__FIL__1h__k2.5_donchian_vol": {
+          "code": "I10",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_btc_regime": {
+      "code": "J",
+      "rows": {
+        "donchian55_s2.0_t3.0_btcRegimeD__FET__4h": {
+          "code": "J1",
+          "active": true
+        },
+        "donchian55_s3.0_t4.0_btcRegimeD__FET__4h": {
+          "code": "J2",
+          "active": true
+        },
+        "donchian55_s2.5_t3.5_btcRegimeD__FET__4h": {
+          "code": "J3",
+          "active": true
+        },
+        "donchian20_atr_btcRegime__SOL__1d": {
+          "code": "J4",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "donchian_lev": {
+      "code": "K",
+      "rows": {
+        "donchian55_atr_btcRegime_lev1.5__SOL__1d": {
+          "code": "K1",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "ema_trend_hold": {
+      "code": "L",
+      "rows": {
+        "ema_trend_hold__DOGE__4h": {
+          "code": "L1",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "supertrend": {
+      "code": "M",
+      "rows": {
+        "supertrend3__SOL__4h": {
+          "code": "M1",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "momentum_rotation": {
+      "code": "N",
+      "rows": {
+        "rotation_lb120_top3_absMom__MULTI__1d": {
+          "code": "N1",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "sma_regime_hold": {
+      "code": "O",
+      "rows": {
+        "sma200_confirm5__SMH__1d": {
+          "code": "O1",
+          "active": true
+        },
+        "sma200_confirm5__0050_TW__1d": {
+          "code": "O2",
+          "active": true
+        },
+        "sma200_confirm5__TQQQ__1d": {
+          "code": "O3",
+          "active": true
+        },
+        "sma200_confirm5__BTC__1d": {
+          "code": "O4",
+          "active": true
+        },
+        "sma200_confirm3__QQQ__1d": {
+          "code": "O5",
+          "active": true
+        },
+        "sma200_confirm5__SPY__1d": {
+          "code": "O6",
+          "active": true
+        },
+        "sma200_confirm5__ETH__1d": {
+          "code": "O7",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "dual_ma_rsi": {
+      "code": "P",
+      "rows": {
+        "dual_ma_rsi_atr_trail__SPY__1d": {
+          "code": "P1",
+          "active": true
+        }
+      },
+      "active": true
+    }
+  }
+}

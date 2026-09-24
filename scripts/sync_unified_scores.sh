@@ -43,11 +43,21 @@ if scores.exists():
     (dst_dir / "scores.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2) + "\n")
     print(f"synced scores {len(raw['strategies'])} -> {dst_dir/'scores.json'}")
 
+catalog_src = None
 for cand in (src_dir / "catalog.json", src_dir / "catalog" / "catalog.json"):
     if cand.exists():
         shutil.copy2(cand, dst_dir / "catalog.json")
+        catalog_src = cand
         print(f"copied catalog from {cand}")
         break
+if catalog_src is not None:
+    import subprocess
+    subprocess.run([
+        sys.executable, str(dst_dir.parent.parent / "scripts" / "assign_codes.py"),
+        "--catalog", str(dst_dir / "catalog.json"),
+        "--mirror", str(catalog_src),
+        "--codes", str(dst_dir.parent.parent / "config" / "strategy_codes.json"),
+    ], check=True)
 for name in ("CATALOG.md",):
     for cand in (src_dir / name, src_dir / "catalog" / name):
         if cand.exists():

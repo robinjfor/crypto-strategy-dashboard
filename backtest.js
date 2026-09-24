@@ -499,6 +499,7 @@
         var sid = r.strategy_id || r.id || "";
         return Object.assign({}, r, {
           strategy_id: sid,
+          code: r.code || "",
           symbol: r.symbol,
           timeframe: r.timeframe || (r.params && (r.params.tf || r.params.timeframe)) || "",
           initial: r.initial != null ? r.initial : 10000,
@@ -531,6 +532,7 @@
       out.push({
         key: familyId,
         family_id: familyId,
+        code: g.code || "",
         name_zh: g.name_zh || g.name || familyId,
         description_zh: g.description_zh || "",
         entry_zh: g.entry_zh || "",
@@ -670,10 +672,11 @@
       var oos = r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + (r.oos_total || 6)) : "—");
       var fp = r.full_period || {};
       var sym = (r.symbol || "").replace(/USDT$/, "");
+      var rowTitle = (r.code ? r.code + " " : "") + sym;
       var rowCls = passBoth ? " pass" : " fail";
       if (r.data_short) rowCls += " data-short";
       return '<tr class="score-row' + rowCls + '" data-sid="' + esc(r.strategy_id) + '">' +
-        "<td><strong>" + esc(sym) + "</strong> / " + esc(r.timeframe || "") +
+        "<td><strong>" + esc(rowTitle) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
         '<td class="num">' + num(r.initial, 0) + "</td>" +
@@ -695,7 +698,7 @@
     return '<article class="strategy-score-card' + (open ? "" : " collapsed") +
       (supported ? "" : " unsupported") + '" data-key="' + esc(g.key) + '">' +
       '<div class="ssc-head" data-toggle-key="' + esc(g.key) + '">' +
-      "<h3>" + esc(g.name_zh || g.key) + "</h3>" +
+      "<h3>" + esc((g.code ? g.code + " " : "") + (g.name_zh || g.key)) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
       familyControls(g) +
       '<span class="ssc-params">' + (g.rows || []).length + " 列 · 過關 " + nBoth +

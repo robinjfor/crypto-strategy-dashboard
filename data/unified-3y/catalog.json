@@ -383,7 +383,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 35.3361,
-          "data_short": false
+          "data_short": false,
+          "code": "C1"
         },
         {
           "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
@@ -432,7 +433,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 32.0557,
-          "data_short": false
+          "data_short": false,
+          "code": "C2"
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
@@ -480,7 +482,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 24.7159,
-          "data_short": false
+          "data_short": false,
+          "code": "C3"
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
@@ -529,7 +532,8 @@
           "gate_pass_both": false,
           "gate_fail_reasons": [],
           "score": 23.3012,
-          "data_short": false
+          "data_short": false,
+          "code": "C4"
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
@@ -579,7 +583,8 @@
           "gate_pass_both": false,
           "gate_fail_reasons": [],
           "score": 23.3005,
-          "data_short": false
+          "data_short": false,
+          "code": "C5"
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
@@ -629,7 +634,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 18.4799,
-          "data_short": false
+          "data_short": false,
+          "code": "C6"
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__LSK__4h",
@@ -679,7 +685,8 @@
           "gate_pass_both": false,
           "gate_fail_reasons": [],
           "score": 16.2745,
-          "data_short": false
+          "data_short": false,
+          "code": "C7"
         },
         {
           "strategy_id": "donchian55_breakout_atr__APT__1h",
@@ -728,7 +735,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 12.2226,
-          "data_short": false
+          "data_short": false,
+          "code": "C8"
         },
         {
           "strategy_id": "donchian_breakout_atr__NEAR__4h",
@@ -781,7 +789,8 @@
             "oos_pass 3/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C9"
         },
         {
           "strategy_id": "donchian_breakout_wide__NEAR__4h",
@@ -833,7 +842,8 @@
             "maxdd -60.1375 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C10"
         },
         {
           "strategy_id": "donchian_breakout_atr__SUI__4h",
@@ -885,7 +895,8 @@
             "maxdd -56.2064 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C11"
         },
         {
           "strategy_id": "donchian20_s2.5_t3.5__CAKE__4h",
@@ -937,7 +948,8 @@
             "maxdd -50.8004 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C12"
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__ADA__4h",
@@ -989,7 +1001,8 @@
             "oos_pass 3/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C13"
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
@@ -1041,7 +1054,8 @@
             "maxdd -53.6757 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C14"
         },
         {
           "strategy_id": "donchian_breakout_atr__AAVE__4h",
@@ -1096,7 +1110,8 @@
             "maxdd -58.3134 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C15"
         },
         {
           "strategy_id": "donchian55_breakout_atr__UNI__4h",
@@ -1148,7 +1163,8 @@
             "oos 2/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C16"
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__INJ__1h",
@@ -1204,7 +1220,8 @@
             "maxdd -49.1876 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C17"
         },
         {
           "strategy_id": "donchian55_breakout_atr__WLD__4h",
@@ -1259,7 +1276,8 @@
             "maxdd -48.4468 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C18"
         },
         {
           "strategy_id": "donchian55_breakout_atr__ONDO__4h",
@@ -1312,7 +1330,8 @@
             "oos 3/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": true
+          "data_short": true,
+          "code": "C19"
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__AVAX__4h",
@@ -1368,7 +1387,8 @@
             "maxdd -78.2317 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "C20"
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__STRK__4h",
@@ -1423,10 +1443,12 @@
             "maxdd -85.3225 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": true
+          "data_short": true,
+          "code": "C21"
         }
       ],
-      "n_gate_pass_3y": 8
+      "n_gate_pass_3y": 8,
+      "code": "C"
     },
     {
       "strategy_family_id": "donchian_btc_regime",
@@ -1496,7 +1518,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 17.4173,
-          "data_short": false
+          "data_short": false,
+          "code": "J1"
         },
         {
           "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",
@@ -1546,7 +1569,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 13.4574,
-          "data_short": false
+          "data_short": false,
+          "code": "J2"
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5_btcRegimeD__FET__4h",
@@ -1596,7 +1620,8 @@
           "gate_pass_both": true,
           "gate_fail_reasons": [],
           "score": 13.0348,
-          "data_short": false
+          "data_short": false,
+          "code": "J3"
         },
         {
           "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
@@ -1649,10 +1674,12 @@
             "ret_3y (435.3457) <= bh_ret_3y (492.7687)"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "J4"
         }
       ],
-      "n_gate_pass_3y": 3
+      "n_gate_pass_3y": 3,
+      "code": "J"
     },
     {
       "strategy_family_id": "donchian_lev",
@@ -1726,11 +1753,13 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "cloud_supported": false
+          "cloud_supported": false,
+          "code": "K1"
         }
       ],
       "n_gate_pass_3y": 0,
-      "cloud_supported": false
+      "cloud_supported": false,
+      "code": "K"
     },
     {
       "strategy_family_id": "ema_cross_atr",
@@ -1803,7 +1832,8 @@
           "gate_pass_both": false,
           "gate_fail_reasons": [],
           "score": 26.0068,
-          "data_short": false
+          "data_short": false,
+          "code": "F1"
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__AR__4h",
@@ -1858,7 +1888,8 @@
             "maxdd -61.9949 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "F2"
         },
         {
           "strategy_id": "ema9_21_s2.5_t3.5__HYPE__4h",
@@ -1915,7 +1946,8 @@
             "oos 2/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": true
+          "data_short": true,
+          "code": "F3"
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__ENA__4h",
@@ -1970,7 +2002,8 @@
             "maxdd -85.1476 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": true
+          "data_short": true,
+          "code": "F4"
         },
         {
           "strategy_id": "ema_cross_atr__RAY__1h",
@@ -2029,10 +2062,12 @@
             "maxdd -90.5014 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "F5"
         }
       ],
-      "n_gate_pass_3y": 1
+      "n_gate_pass_3y": 1,
+      "code": "F"
     },
     {
       "strategy_family_id": "ema_trend_hold",
@@ -2105,10 +2140,12 @@
             "maxdd -72.357 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "L1"
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 0,
+      "code": "L"
     },
     {
       "strategy_family_id": "supertrend",
@@ -2180,10 +2217,12 @@
             "maxdd -65.7891 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "M1"
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 0,
+      "code": "M"
     },
     {
       "strategy_family_id": "momentum_rotation",
@@ -2248,10 +2287,12 @@
             "maxdd -56.931 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "N1"
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 0,
+      "code": "N"
     },
     {
       "strategy_family_id": "sma_regime_hold",
@@ -2319,7 +2360,8 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O1"
         },
         {
           "strategy_id": "sma200_confirm5__0050_TW__1d",
@@ -2369,7 +2411,8 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O2"
         },
         {
           "strategy_id": "sma200_confirm5__TQQQ__1d",
@@ -2420,7 +2463,8 @@
             "oos 2/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O3"
         },
         {
           "strategy_id": "sma200_confirm5__BTC__1d",
@@ -2471,7 +2515,8 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O4"
         },
         {
           "strategy_id": "sma200_confirm3__QQQ__1d",
@@ -2521,7 +2566,8 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O5"
         },
         {
           "strategy_id": "sma200_confirm5__SPY__1d",
@@ -2571,7 +2617,8 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O6"
         },
         {
           "strategy_id": "sma200_confirm5__ETH__1d",
@@ -2622,10 +2669,12 @@
             "maxdd -57.0174 > 45% abs"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "O7"
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 0,
+      "code": "O"
     },
     {
       "strategy_family_id": "dual_ma_rsi",
@@ -2695,10 +2744,12 @@
             "oos 1/6 < 4/6"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "code": "P1"
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 0,
+      "code": "P"
     },
     {
       "strategy_family_id": "donchian_lev_vol",
@@ -2767,7 +2818,8 @@
           "score": 22.4975,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D13"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -2812,7 +2864,8 @@
           "score": 26.9767,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D6"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -2857,7 +2910,8 @@
           "score": 24.6449,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D9"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -2902,7 +2956,8 @@
           "score": 23.0297,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D12"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.02",
@@ -2947,7 +3002,8 @@
           "score": 26.5425,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D7"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03",
@@ -2992,7 +3048,8 @@
           "score": 23.5442,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D10"
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5",
@@ -3037,7 +3094,8 @@
           "score": 24.7159,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D8"
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5",
@@ -3082,7 +3140,8 @@
           "score": 20.747,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D14"
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -3127,7 +3186,8 @@
           "score": 20.3093,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D17"
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -3172,7 +3232,8 @@
           "score": 20.7281,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D16"
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -3217,7 +3278,8 @@
           "score": 20.747,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D15"
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5",
@@ -3262,7 +3324,8 @@
           "score": 23.3005,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D11"
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.02",
@@ -3307,7 +3370,8 @@
           "score": 19.1517,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D18"
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0",
@@ -3352,7 +3416,8 @@
           "score": 18.4799,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D19"
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5",
@@ -3397,7 +3462,8 @@
           "score": 33.4284,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D1"
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.02",
@@ -3442,7 +3508,8 @@
           "score": 29.9281,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D5"
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.03",
@@ -3487,7 +3554,8 @@
           "score": 33.4284,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D2"
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.04",
@@ -3532,7 +3600,8 @@
           "score": 33.4284,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D3"
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5",
@@ -3577,10 +3646,12 @@
           "score": 32.0557,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "D4"
         }
       ],
-      "n_gate_pass_3y": 19
+      "n_gate_pass_3y": 19,
+      "code": "D"
     },
     {
       "strategy_family_id": "donchian_long_short_btc_regime",
@@ -3645,7 +3716,8 @@
           "score": 21.9047,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H6"
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -3688,7 +3760,8 @@
           "score": 24.6721,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H1"
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -3737,7 +3810,8 @@
             "fragile": false,
             "cagr_3y_median": 40.337
           },
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H7"
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -3786,7 +3860,8 @@
             "fragile": false,
             "cagr_3y_median": 46.5247
           },
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H2"
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS",
@@ -3829,7 +3904,8 @@
           "score": 19.9796,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H8"
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -3872,7 +3948,8 @@
           "score": 19.884,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H9"
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -3915,7 +3992,8 @@
           "score": 16.579,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H10"
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -3958,7 +4036,8 @@
           "score": 16.4246,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H11"
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS",
@@ -4001,7 +4080,8 @@
           "score": 23.0274,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H5"
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS",
@@ -4044,7 +4124,8 @@
           "score": 23.1698,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H4"
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS",
@@ -4087,10 +4168,12 @@
           "score": 23.4998,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "H3"
         }
       ],
-      "n_gate_pass_3y": 11
+      "n_gate_pass_3y": 11,
+      "code": "H"
     },
     {
       "strategy_family_id": "donchian_fear_greed",
@@ -4155,7 +4238,8 @@
           "score": 17.6211,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E8"
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fggt25",
@@ -4200,7 +4284,8 @@
           "score": 14.9479,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E13"
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fglt75",
@@ -4245,7 +4330,8 @@
           "score": 28.3794,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E2"
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -4296,7 +4382,8 @@
             "fragile": true,
             "cagr_3y_median": 6.5168
           },
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E1"
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -4341,7 +4428,8 @@
           "score": 21.5949,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E3"
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fgmid25_75",
@@ -4386,7 +4474,8 @@
           "score": 19.0697,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E6"
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fggt25",
@@ -4431,7 +4520,8 @@
           "score": 15.3623,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E12"
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fglt75",
@@ -4476,7 +4566,8 @@
           "score": 17.8934,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E7"
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -4521,7 +4612,8 @@
           "score": 14.4155,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E14"
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -4566,7 +4658,8 @@
           "score": 11.3386,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E15"
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fggt25",
@@ -4611,7 +4704,8 @@
           "score": 19.9188,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E5"
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fggt25",
@@ -4656,7 +4750,8 @@
           "score": 20.3011,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E4"
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fglt75",
@@ -4701,7 +4796,8 @@
           "score": 16.7926,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E10"
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fgmid25_75",
@@ -4746,7 +4842,8 @@
           "score": 17.2922,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E9"
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fgmid25_75",
@@ -4791,10 +4888,12 @@
           "score": 16.7118,
           "data_short": false,
           "robust": null,
-          "source": "high_return"
+          "source": "high_return",
+          "code": "E11"
         }
       ],
-      "n_gate_pass_3y": 15
+      "n_gate_pass_3y": 15,
+      "code": "E"
     },
     {
       "strategy_family_id": "news_burst_confirm",
@@ -4858,7 +4957,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I7"
         },
         {
           "strategy_id": "news_burst__OP__4h__k2.5_donchian_vol",
@@ -4903,7 +5003,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I8"
         },
         {
           "strategy_id": "news_burst__OP__4h__k2.5_ema_vol",
@@ -4948,7 +5049,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I9"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k1.5_donchian_vol",
@@ -4993,7 +5095,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I6"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k1.5_ema_vol",
@@ -5038,7 +5141,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I1"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k2.0_donchian_vol",
@@ -5083,7 +5187,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I5"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k2.0_ema_vol",
@@ -5128,7 +5233,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I3"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k2.5_donchian_vol",
@@ -5173,7 +5279,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I4"
         },
         {
           "strategy_id": "news_burst__DOT__4h__k2.5_ema_vol",
@@ -5218,7 +5325,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I2"
         },
         {
           "strategy_id": "news_burst__FIL__1h__k2.5_donchian_vol",
@@ -5263,11 +5371,13 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "I10"
         }
       ],
       "n_gate_pass_3y": 10,
-      "cloud_supported": false
+      "cloud_supported": false,
+      "code": "I"
     },
     {
       "strategy_family_id": "news_filter_donchian",
@@ -5329,7 +5439,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "G3"
         },
         {
           "strategy_id": "news_filter_donch__DOT__4h__k1.5_vol",
@@ -5375,7 +5486,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "G5"
         },
         {
           "strategy_id": "news_filter_donch__DOT__4h__k2.0_vol",
@@ -5421,7 +5533,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "G1"
         },
         {
           "strategy_id": "news_filter_donch__FIL__1h__k1.5_vol",
@@ -5467,7 +5580,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "G4"
         },
         {
           "strategy_id": "news_filter_donch__FIL__1h__k2.0_vol",
@@ -5513,11 +5627,13 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "data_short": false,
-          "bh_final": null
+          "bh_final": null,
+          "code": "G2"
         }
       ],
       "n_gate_pass_3y": 5,
-      "cloud_supported": false
+      "cloud_supported": false,
+      "code": "G"
     },
     {
       "strategy_family_id": "ls_donch_btc_regime_perp",
@@ -5597,7 +5713,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A3"
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -5655,7 +5772,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A4"
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
@@ -5713,7 +5831,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A1"
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS",
@@ -5771,7 +5890,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A2"
         },
         {
           "strategy_id": "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -5829,7 +5949,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A6"
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS",
@@ -5887,11 +6008,13 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": 0
+          "n_liquidations": 0,
+          "code": "A5"
         }
       ],
       "n_gate_pass_3y": 6,
-      "cloud_supported": false
+      "cloud_supported": false,
+      "code": "A"
     },
     {
       "strategy_family_id": "ls_univ_portfolio_perp",
@@ -5969,7 +6092,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": null
+          "n_liquidations": null,
+          "code": "B3"
         },
         {
           "strategy_id": "port_ew_univ10_lev1.5_vt0.03",
@@ -6030,7 +6154,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": null
+          "n_liquidations": null,
+          "code": "B4"
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vtNone",
@@ -6091,7 +6216,8 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": null
+          "n_liquidations": null,
+          "code": "B1"
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vt0.03",
@@ -6152,11 +6278,13 @@
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
-          "n_liquidations": null
+          "n_liquidations": null,
+          "code": "B2"
         }
       ],
       "n_gate_pass_3y": 4,
-      "cloud_supported": false
+      "cloud_supported": false,
+      "code": "B"
     }
   ]
 }

@@ -242,6 +242,7 @@
           ts: t.closed_at || t.time,
           kind: "CLOSE",
           symbol: t.symbol,
+          code: t.code,
           side: "SELL",
           qty: t.qty,
           price: t.exit,
@@ -386,6 +387,7 @@
       var unrealizedPct = unrealized != null && entryCost > 0 ? (unrealized / entryCost) * 100 : null;
       rows.push({
         slot: p.slot || "",
+        code: p.code || "",
         symbol: sym,
         asset: asset,
         tf: p.tf || p.timeframe || "",
@@ -477,6 +479,8 @@
     var ts = r.ts || r.time || r.closed_at || "—";
     var kind = r.kind || (r.side === "BUY" ? "OPEN" : "CLOSE");
     var sym = r.symbol || "—";
+    var code = r.code || "";
+    var displaySym = code ? String(code) + " " + String(sym) : String(sym);
     var side = r.side || "—";
     var qty = r.qty;
     var px = r.price != null ? r.price : r.avg_price != null ? r.avg_price : r.exit;
@@ -485,7 +489,7 @@
     return "<tr>" +
       "<td>" + esc(String(ts)) + "</td>" +
       "<td>" + esc(String(kind)) + "</td>" +
-      "<td><strong>" + esc(String(sym)) + "</strong></td>" +
+      "<td><strong>" + esc(displaySym) + "</strong></td>" +
       "<td>" + esc(String(side)) + "</td>" +
       '<td class="num">' + num(qty, 4) + "</td>" +
       '<td class="num">' + num(px, 4) + "</td>" +
@@ -513,7 +517,7 @@
     } else {
       body = open.map(function (p) {
         return '<tr class="pos-row" data-symbol="' + esc(p.symbol) + '" data-asset="' + esc(p.asset) + '">' +
-          "<td><strong>" + esc(p.symbol || p.asset || "—") + '</strong><div class="kpi-sub">' + esc(p.slot) + "</div></td>" +
+          "<td><strong>" + esc((p.code ? p.code + " " : "") + (p.symbol || p.asset || "—")) + '</strong><div class="kpi-sub">' + esc(p.slot) + "</div></td>" +
           "<td>" + esc(p.tf || "—") + "</td>" +
           '<td class="num">' + num(p.qty, 4) + "</td>" +
           '<td class="num">' + num(p.entry, 4) + "</td>" +
@@ -595,6 +599,7 @@
       out.push({
         slot: s.slot,
         strategy_id: s.strategy_id,
+        code: s.code || src.code || "",
         symbol: sym,
         asset: sym.replace(/USDT$/i, ""),
         tf: s.timeframe || s.tf || src.tf,
@@ -629,7 +634,7 @@
         }
         var badge = pl.order_mode === "live" ? "ok" : "muted";
         return '<tr data-slot="' + esc(pl.slot) + '">' +
-          "<td><strong>" + esc(pl.asset) + '</strong><div class="kpi-sub">' +
+          "<td><strong>" + esc((pl.code ? pl.code + " " : "") + pl.asset) + '</strong><div class="kpi-sub">' +
           esc(pl.slot) + " · " + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n)) + "</div></td>" +
           '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
           '<td><span class="badge ' + badge + '">' + esc(pl.status_label) + "</span></td>" +
@@ -720,12 +725,13 @@
       }
       var src = slot || {};
       var title = String(src.symbol || a.symbol || a.slot || "").replace(/USDT$/i, "") || (a.strategy_id || "—");
+      var code = a.code || src.code || "";
       var stZh = src.status_zh || a.label_zh || "已核准 · 上線待命";
       var tf = src.tf || "";
       var notion = a.notional_usdt || src.quote_usdt || "";
       return '<article class="strategy-card active">' +
         '<div class="sc-top"><strong class="sc-title" title="' + esc(a.strategy_id || "") + '">' +
-        esc(title) + (tf ? " · " + esc(tf) : "") + "</strong>" +
+        esc((code ? code + " " : "") + title) + (tf ? " · " + esc(tf) : "") + "</strong>" +
         '<span class="badge ok">' + esc(stZh) + "</span></div>" +
         '<p class="sc-sum">' + esc(a.strategy_id || "") + "</p>" +
         '<div class="sc-meta">進場計畫見「預計持倉」</div>' +
@@ -752,7 +758,7 @@
     if (fills.length) {
       rows = fills.map(function (t) {
         return {
-          ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol,
+          ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol, code: t.code,
           side: t.side, qty: t.qty, price: t.price, fee: t.commission, reason: "myTrades"
         };
       });

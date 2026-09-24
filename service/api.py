@@ -23,6 +23,7 @@ from allocation import (
     normalize_family, RUNNER_FAMILIES, slot_to_runtime,
 )
 from strategy import now_iso_taipei
+from strategy_codes import add_code, code_for, code_for_symbol
 
 
 
@@ -357,6 +358,8 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
         out.append(
             {
                 "slot": slot_id,
+                "strategy_id": pos.get("strategy_id") or strategy_id_for_slot(slot_id),
+                "code": pos.get("code") or code_for(pos.get("strategy_id") or strategy_id_for_slot(slot_id), pos.get("family")),
                 "symbol": display,
                 "raw_symbol": symbol,
                 "asset": f"{symbol.replace('USDT', '')} {'多' if side == 'LONG' else '空'}×{lev}" if venue == "futures" else symbol.replace("USDT", ""),
@@ -384,7 +387,7 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
         for fr in list_open_futures_positions(FuturesDemoClient()):
             if fr.get("raw_symbol") in known:
                 continue
-            out.append(fr)
+            out.append(add_code(fr, fr.get("strategy_id"), fr.get("family")))
     except Exception as e:  # noqa: BLE001
         log.warning("futures_positions_merge_fail err=%s", e)
     return out
@@ -429,6 +432,7 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "suggested_stop": sig.get("suggested_stop") or sig.get("stop"),
                 "status_zh": status_zh(sig.get("status") or sig.get("reason") or sig.get("action") or (meta.get("last_signal") or {}).get("status")),
                 "strategy_id": slot.get("strategy_id"),
+                "code": code_for(slot.get("strategy_id"), slot.get("family")),
                 "approved": is_approved_live(state, slot.get("strategy_id") or ""),
                 "order_mode": approval_mode(state, slot.get("strategy_id") or ""),
                 "label_zh": (
@@ -493,6 +497,7 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
             "slot": "core_sol",
             "symbol": "SOLUSDT",
             "strategy_id": SOL_SLOT.get("strategy_id"),
+            "code": code_for(SOL_SLOT.get("strategy_id"), SOL_SLOT.get("family")),
             "approved": False,
             "order_mode": "signal_only",
             "mode": "signal_only",
@@ -533,6 +538,8 @@ def _planned_from_armed(armed: list) -> list:
                 "symbol": a.get("symbol"),
                 "slot": a.get("slot"),
                 "strategy_name": a.get("variant"),
+                "strategy_id": a.get("strategy_id"),
+                "code": a.get("code") or code_for(a.get("strategy_id"), a.get("family")),
                 "tf": a.get("tf"),
                 "donch_n": 55 if "fet" in str(a.get("slot")) else 20,
                 "target_notional_usdt": a.get("quote_usdt"),
@@ -644,6 +651,7 @@ def _approved_public(state: dict | None = None) -> dict:
         slot = slot_by_strategy_id(sid) or {}
         out.append({
             "strategy_id": sid,
+            "code": code_for(sid, slot.get("family") or meta.get("family")),
             "slot": meta.get("slot") or slot.get("id"),
             "symbol": slot.get("symbol"),
             "family": slot.get("family") or meta.get("family"),
@@ -661,6 +669,7 @@ def _approved_public(state: dict | None = None) -> dict:
         slot = slot_by_strategy_id(sid) or {}
         sig_only.append({
             "strategy_id": sid,
+            "code": code_for(sid, slot.get("family") or meta.get("family")),
             "slot": meta.get("slot") or slot.get("id"),
             "symbol": slot.get("symbol"),
             "family": slot.get("family") or meta.get("family"),
@@ -691,6 +700,7 @@ def build_status() -> dict:
                 recent_fills.append(
                     {
                         "symbol": sym,
+                        "code": code_for_symbol(sym, SLOTS + [SOL_SLOT]),
                         "id": t.get("id"),
                         "time": datetime.fromtimestamp(int(t["time"]) / 1000, tz=timezone.utc)
                         .astimezone()
@@ -719,6 +729,9 @@ def build_status() -> dict:
     meta = state.get("meta") or {}
     mode = os.environ.get("TRADER_MODE") or meta.get("last_mode") or "dry-run"
     armed = _slot_status(state, feed.get("slots"))
+    live_allocation = (state.get("allocation_public") or _allocation_public(state)).get("live_slots") or []
+    last_decisions = [add_code(d, d.get("strategy_id"), d.get("family")) for d in (meta.get("last_decisions") or []) if isinstance(d, dict)]
+    closed_norm = [add_code(t, t.get("strategy_id"), t.get("family")) for t in closed_norm]
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -739,7 +752,7 @@ def build_status() -> dict:
         "futures_order_probe": (state.get("meta") or {}).get("futures_order_probe"),
         "last_job_ok": meta.get("last_ok"),
         "last_mode": meta.get("last_mode"),
-        "last_decisions": meta.get("last_decisions") or [],
+        "last_decisions": last_decisions,
         "last_decisions_at": meta.get("last_decisions_at"),
         "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
         "sol_expectation_latest": (state.get("expectation_log") or [None])[-1],
@@ -752,7 +765,7 @@ def build_status() -> dict:
         "approved_families": ensure_approved_families(state),
         "allocation": (state.get("allocation_public") or _allocation_public(state)),
         "allocation_alert": state.get("allocation_alert"),
-        "live_slots": (state.get("allocation_public") or _allocation_public(state)).get("live_slots") or [],
+        "live_slots": [add_code(x, x.get("strategy_id"), x.get("family")) for x in live_allocation if isinstance(x, dict)],
         "satellite_strategies": [],
         "strategies": [],
     }
