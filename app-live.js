@@ -15,6 +15,7 @@
   const SETTLEMENT_URL = "./data/strategy-crypto-s2/settlement.json";
   const SETTLEMENT_JSONL = "./state/settlement.jsonl";
   const CLOUD_CFG = "./data/cloud_api.json";
+  const CODES_URL = "./config/strategy_codes.json";
 
   let book = null;
   let health = null;
@@ -24,6 +25,7 @@
   let cloud = null;
   let cloudOk = false;
   let cloudErr = "";
+  let strategyCodes = null;
   let apiBase = "";
   let loading = false;
   let autoOn = true;
@@ -235,6 +237,28 @@
     return "";
   }
 
+  function codeForTrade(t) {
+    if (t && t.code) return t.code;
+    var sid = t && (t.strategy_id || t.variant_id);
+    var fams = (strategyCodes && strategyCodes.families) || {};
+    for (var fid in fams) {
+      var f = fams[fid] || {};
+      var rows = f.rows || {};
+      if (sid && rows[sid] && rows[sid].code) return rows[sid].code;
+    }
+    var sym = String((t && t.symbol) || "").toUpperCase().replace(/USDT/g, "");
+    if (sym) {
+      var token = "__" + sym + "__";
+      for (var fid2 in fams) {
+        var rows2 = (fams[fid2] || {}).rows || {};
+        for (var rid in rows2) {
+          if (rid.toUpperCase().indexOf(token) >= 0 && rows2[rid].code) return rows2[rid].code;
+        }
+      }
+    }
+    return "";
+  }
+
   async function loadSettlements() {
     if (cloud && Array.isArray(cloud.closed_trades) && cloud.closed_trades.length) {
       return cloud.closed_trades.map(function (t) {
@@ -242,7 +266,7 @@
           ts: t.closed_at || t.time,
           kind: "CLOSE",
           symbol: t.symbol,
-          code: t.code,
+          code: codeForTrade(t),
           side: "SELL",
           qty: t.qty,
           price: t.exit,
@@ -253,7 +277,9 @@
     }
     try {
       var arr = await getJSON(SETTLEMENT_URL);
-      if (Array.isArray(arr)) return arr;
+      if (Array.isArray(arr)) return arr.map(function (t) {
+        return Object.assign({}, t, { code: codeForTrade(t) });
+      });
     } catch (e) {}
     try {
       var res = await fetch(SETTLEMENT_JSONL + "?t=" + Date.now(), { cache: "no-store" });
@@ -1120,6 +1146,7 @@
       showCloudBanner(!cloudOk);
       // ALWAYS_LOAD_SCORES
       allocCfg = await getJSONOpt(ALLOC_URL);
+      strategyCodes = await getJSONOpt(CODES_URL);
       try {
         var sc = await getJSONOpt(SCORES_URL);
         scoresById = {};
