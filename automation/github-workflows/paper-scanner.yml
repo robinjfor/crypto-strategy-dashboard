@@ -1,0 +1,49 @@
+name: paper-scanner
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: paper-trading-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install deps
+        run: pip install -r scripts/requirements.txt
+      - name: Ensure state scaffold
+        run: |
+          mkdir -p state
+          test -f state/news_light.json || echo '{"light":"GREEN","updated_by":"bootstrap"}' > state/news_light.json
+          test -f state/commands.json || echo '{"commands":[]}' > state/commands.json
+          test -f state/alerts.json || echo '{"alerts":[]}' > state/alerts.json
+          if [ ! -f state/positions.json ] && [ -f bootstrap/paper_trading.seed.json ]; then
+            python scripts/runner.py --state-dir state --seed-from bootstrap/paper_trading.seed.json --seed-only
+          fi
+      - name: Scanner
+        run: python scripts/scanner.py --state-dir state --top 60
+      - name: Commit watchlist
+        run: |
+          git config user.name "paper-bot"
+          git config user.email "paper-bot@users.noreply.github.com"
+          git add state/
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "paper: scanner $(date -u +%Y-%m-%dT%H:%MZ)"
+            git pull --rebase --autostash origin main || git pull --rebase origin main
+            git push
+          fi
