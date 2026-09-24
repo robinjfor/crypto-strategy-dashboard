@@ -4799,7 +4799,7 @@
     {
       "strategy_family_id": "news_burst_confirm",
       "name_zh": "新聞量／語氣暴增＋技術確認",
-      "description_zh": "GDELT 日新聞量或語氣 z-score 超過閾值後，以 Donchian 突破或收盤站上 EMA20 確認進場；ATR 止損與移動止損。日級新聞延後至隔日／下一根 K 線，避免前視。cloud_supported=false。",
+      "description_zh": "GDELT 日新聞量或語氣 z-score 超過閾值後，以 Donchian 突破或收盤站上 EMA20 確認進場；ATR 止損與移動止損。日級新聞延後至隔日／下一根 K 線，避免前視。cloud_supported=true。",
       "entry_zh": "新聞 z>k 且價格突破確認。",
       "exit_zh": "技術出場（Donchian／跌破 EMA）或 ATR 停損停利／max_hold。",
       "stop_zh": "ATR 倍數停損與移動停利。",
@@ -4846,7 +4846,7 @@
           "gate_pass_3y": true,
           "score": 13.2774,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 88.89,
@@ -4891,7 +4891,7 @@
           "gate_pass_3y": true,
           "score": 10.644,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 88.89,
@@ -4936,7 +4936,7 @@
           "gate_pass_3y": true,
           "score": 9.4165,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 66.67,
@@ -4981,7 +4981,7 @@
           "gate_pass_3y": true,
           "score": 14.011,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5026,7 +5026,7 @@
           "gate_pass_3y": true,
           "score": 18.451,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5071,7 +5071,7 @@
           "gate_pass_3y": true,
           "score": 14.2512,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5116,7 +5116,7 @@
           "gate_pass_3y": true,
           "score": 17.1146,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5161,7 +5161,7 @@
           "gate_pass_3y": true,
           "score": 14.9454,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5206,7 +5206,7 @@
           "gate_pass_3y": true,
           "score": 17.2868,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5251,7 +5251,7 @@
           "gate_pass_3y": true,
           "score": 8.7992,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 66.67,
@@ -5272,7 +5272,7 @@
     {
       "strategy_family_id": "news_filter_donchian",
       "name_zh": "新聞濾網疊加 Donchian",
-      "description_zh": "現役 Donchian＋ATR 僅在新聞 z>k 時允許新開倉。用於檢驗消息濾網是否改善。cloud_supported=false。",
+      "description_zh": "現役 Donchian＋ATR 僅在新聞 z>k 時允許新開倉。用於檢驗消息濾網是否改善。cloud_supported=true。",
       "entry_zh": "Donchian 突破且新聞暴增條件成立。",
       "exit_zh": "同 Donchian／ATR。",
       "stop_zh": "同 ATR。",
@@ -5317,7 +5317,7 @@
           "gate_pass_3y": true,
           "score": 22.6167,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 66.67,
@@ -5363,7 +5363,7 @@
           "gate_pass_3y": true,
           "score": 20.4461,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5409,7 +5409,7 @@
           "gate_pass_3y": true,
           "score": 25.4486,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5455,7 +5455,7 @@
           "gate_pass_3y": true,
           "score": 21.8678,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,
@@ -5501,7 +5501,7 @@
           "gate_pass_3y": true,
           "score": 22.7591,
           "data_source": "GDELT DOC timeline (+BTC proxy if missing) and/or Binance CMS",
-          "cloud_supported": false,
+          "cloud_supported": true,
           "robust": {
             "n_neighbors": 9,
             "gate_pass_3y_rate_pct": 100.0,

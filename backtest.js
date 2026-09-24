@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, news_burst_confirm: true, news_filter_donchian: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -25,8 +25,8 @@
     momentum_rotation: null,
     sma_regime_hold: null,
     dual_ma_rsi: null,
-    news_burst_confirm: null,
-    news_filter_donchian: null
+    news_burst_confirm: "news_burst_confirm",
+    news_filter_donchian: "news_filter_donchian"
   };
   var LOCK_PREP = "準備中";
   var LOCK_NO_PASS = "未過關，不開放批准";

@@ -22,6 +22,8 @@ RUNNER_FAMILIES = frozenset({
     # CAGR70 long-short / 10-coin portfolio (signal parity + liq monitor)
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
+    "news_burst_confirm",
+    "news_filter_donchian",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
@@ -43,6 +45,8 @@ FAMILY_ALIASES = {
     "donchian_lev": "donchian_lev",
     "ls_donch_btc_regime_perp": "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
+    "news_burst_confirm": "news_burst_confirm",
+    "news_filter_donchian": "news_filter_donchian",
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
@@ -167,6 +171,22 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         mode = str(p.get("mode") or "ew").strip().lower()
         if mode not in ("ew", "inv_vol", "invvol", "inverse_vol"):
             errors.append(f"slots[{idx}].params.mode 必須是 ew 或 inv_vol，收到：{p.get('mode')!r}")
+    elif family in ("news_burst_confirm", "news_filter_donchian"):
+        if "donch_n" not in p:
+            errors.append(f"slots[{idx}].params.donch_n 必填（{family}）")
+        stop, trail = _stop_trail_keys(p)
+        if stop is None or trail is None:
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（{family}）")
+        if p.get("k") is None and p.get("news_k") is None:
+            errors.append(f"slots[{idx}].params.k 必填（{family}）")
+        field = str(p.get("field") or p.get("news_field") or "vol").strip().lower()
+        if field not in ("vol", "tone", "vol_or_tone"):
+            errors.append(f"slots[{idx}].params.field 必須是 vol|tone|vol_or_tone")
+        if family == "news_burst_confirm":
+            confirm = str(p.get("confirm") or p.get("news_confirm") or "donchian").strip().lower()
+            if confirm not in ("donchian", "ema"):
+                errors.append(f"slots[{idx}].params.confirm 必須是 donchian|ema")
+        _check_atr_mode(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -407,6 +427,12 @@ def slot_to_runtime(slot: dict) -> dict:
         "universe": params.get("universe") or params.get("symbols"),
         "port_mode": params.get("mode") or "ew",
         "kind": params.get("kind") or "long",
+        "k": params.get("k", params.get("news_k")),
+        "field": params.get("field", params.get("news_field")) or "vol",
+        "confirm": params.get("confirm", params.get("news_confirm")) or "donchian",
+        "news_k": params.get("k", params.get("news_k")),
+        "news_field": params.get("field", params.get("news_field")) or "vol",
+        "news_confirm": params.get("confirm", params.get("news_confirm")) or "donchian",
         "armed": True,
         "mode": slot.get("order_mode") or ("live" if slot.get("enabled") else "signal_only"),
         "note": slot.get("note"),
