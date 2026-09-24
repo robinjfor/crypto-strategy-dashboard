@@ -33,7 +33,7 @@ def _base_slot(**over):
 
 def test_ema_in_runner():
     assert "ema_cross_atr" in RUNNER_FAMILIES
-    assert "donchian_fear_greed" not in RUNNER_FAMILIES
+    assert "donchian_fear_greed" in RUNNER_FAMILIES
     assert "donchian_lev_vol" in RUNNER_FAMILIES
     assert "donchian_long_short_btc_regime" in RUNNER_FAMILIES
 
@@ -44,7 +44,7 @@ def test_ema_params_ok():
     assert errs == []
 
 
-def test_fg_lev_rejected():
+def test_fg_lev_ok_under_cap():
     errs: list[str] = []
     validate_params(
         "donchian_fear_greed",
@@ -58,7 +58,23 @@ def test_fg_lev_rejected():
         errs,
         0,
     )
-    assert any("leverage" in e for e in errs)
+    assert errs == [], errs
+
+def test_fg_lev_over_cap_rejected():
+    errs: list[str] = []
+    validate_params(
+        "donchian_fear_greed",
+        {
+            "donch_n": 20,
+            "stop_m": 1.5,
+            "trail_m": 1.5,
+            "fg_mode": "gt25",
+            "leverage": 4.0,
+        },
+        errs,
+        0,
+    )
+    assert any("leverage" in e or "硬頂" in e for e in errs)
 
 
 def test_allocation_accepts_ema_candidate():

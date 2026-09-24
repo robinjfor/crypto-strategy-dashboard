@@ -93,6 +93,14 @@ class FuturesDemoClient:
     def new_order(self, **params) -> dict:
         return self._signed("POST", "/fapi/v1/order", params)
 
+    def test_order(self, **params) -> dict:
+        """POST /fapi/v1/order/test — validates order, does not execute."""
+        return self._signed("POST", "/fapi/v1/order/test", params)
+
+    def mark_price(self, symbol: str) -> float:
+        data = self._public("/fapi/v1/ticker/price", {"symbol": symbol})
+        return float(data["price"])
+
     def cancel_all(self, symbol: str) -> dict:
         return self._signed("DELETE", "/fapi/v1/allOpenOrders", {"symbol": symbol})
 
@@ -205,4 +213,110 @@ def round_price_futures(info: dict, symbol: str, price: float) -> float:
 
 
 # Alias used by main.py
-probe_futures = probe_futures  # main.py alias
+
+def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
+    """E2E validate futures order path without placing: leverage/margin + order/test.
+
+    Steps (all Demo FAPI):
+      1) ping + account (reuse connectivity)
+      2) set_margin_type ISOLATED (ok if already set)
+      3) set_leverage 2 (hard-capped)
+      4) order/test MARKET BUY (long entry)
+      5) order/test STOP_MARKET SELL reduceOnly (long stop)
+      6) order/test MARKET SELL (short entry for long-short)
+      7) order/test STOP_MARKET BUY reduceOnly (short stop)
+    Never calls POST /fapi/v1/order (live). Returns ok + steps; no secrets.
+    """
+    out: dict[str, Any] = {
+        "base": FUTURES_DEMO_BASE,
+        "symbol": symbol,
+        "ok": False,
+        "steps": [],
+        "needs_emily": [],
+    }
+    # Connectivity first
+    base = probe_futures()
+    out["steps"].extend({"step": f"conn_{s.get('step')}", **{k: v for k, v in s.items() if k != "step"}} for s in base.get("steps") or [])
+    if not base.get("ok"):
+        out["needs_emily"] = list(base.get("needs_emily") or [])
+        out["needs_emily"].append("futures connectivity/auth failed — order/test skipped")
+        return out
+
+    c = FuturesDemoClient()
+    try:
+        info = c.exchange_info()
+        px = c.mark_price(symbol)
+        # ~12 USDT notional → small qty
+        raw_qty = 12.0 / px if px else 0.0
+        qty = round_qty_futures(info, symbol, raw_qty)
+        if qty <= 0:
+            out["steps"].append({"step": "qty", "ok": False, "error": f"qty rounded to 0 (px={px})"})
+            out["needs_emily"].append(f"{symbol} LOT_SIZE too coarse for ~12 USDT smoke qty")
+            return out
+        out["steps"].append({"step": "qty", "ok": True, "mark": px, "qty": qty})
+    except Exception as e:  # noqa: BLE001
+        out["steps"].append({"step": "prep_qty", "ok": False, "error": str(e)[:200]})
+        out["needs_emily"].append(f"mark/qty prep failed: {e}")
+        return out
+
+    # Margin + leverage (account settings only; no positions required)
+    try:
+        m = c.set_margin_type(symbol, "ISOLATED")
+        out["steps"].append({"step": "margin_isolated", "ok": True, "resp": str(m)[:120]})
+    except Exception as e:  # noqa: BLE001
+        err = str(e)[:200]
+        # Soft-fail: continue if position mode conflict; Emily may need one-way mode
+        out["steps"].append({"step": "margin_isolated", "ok": False, "error": err})
+        out["needs_emily"].append(f"set_margin_type failed (continuing order/test): {err}")
+
+    try:
+        lev = c.set_leverage(symbol, 2)
+        out["steps"].append({"step": "leverage_2", "ok": True, "resp": str(lev)[:120]})
+    except Exception as e:  # noqa: BLE001
+        err = str(e)[:200]
+        out["steps"].append({"step": "leverage_2", "ok": False, "error": err})
+        out["needs_emily"].append(f"set_leverage failed (continuing order/test): {err}")
+
+    def _test(name: str, **params) -> bool:
+        try:
+            r = c.test_order(**params)
+            # Binance returns {} on success for order/test
+            out["steps"].append({"step": name, "ok": True, "resp": r if r else {}})
+            return True
+        except Exception as e:  # noqa: BLE001
+            err = str(e)[:300]
+            out["steps"].append({"step": name, "ok": False, "error": err})
+            out["needs_emily"].append(f"{name} failed: {err}")
+            return False
+
+    stop_long = round_price_futures(info, symbol, px * 0.95)
+    stop_short = round_price_futures(info, symbol, px * 1.05)
+
+    ok_long = _test(
+        "test_market_long",
+        symbol=symbol, side="BUY", type="MARKET", quantity=qty,
+    )
+    ok_stop_l = _test(
+        "test_stop_long_reduce",
+        symbol=symbol, side="SELL", type="STOP_MARKET",
+        stopPrice=stop_long, quantity=qty, reduceOnly="true",
+        workingType="MARK_PRICE",
+    )
+    ok_short = _test(
+        "test_market_short",
+        symbol=symbol, side="SELL", type="MARKET", quantity=qty,
+    )
+    ok_stop_s = _test(
+        "test_stop_short_reduce",
+        symbol=symbol, side="BUY", type="STOP_MARKET",
+        stopPrice=stop_short, quantity=qty, reduceOnly="true",
+        workingType="MARK_PRICE",
+    )
+
+    out["ok"] = bool(ok_long and ok_stop_l and ok_short and ok_stop_s)
+    if not out["ok"]:
+        out["needs_emily"].append(
+            "Demo FAPI order/test 未全過。請確認金鑰有 Futures 交易權限、符號可用，"
+            "並檢查 One-way mode（非 Hedge）。失敗家族將維持「準備中」。"
+        )
+    return out

@@ -322,12 +322,15 @@ def evaluate_fear_greed_slot(slot: dict, klines: pd.DataFrame, position: dict | 
     mark = float(forming["Close"]) if forming is not None else float(bar["Close"])
     donch_hi = float(bar["donch_hi"])
     donch_lo = float(bar["donch_lo"])
+    lev = float(slot.get("leverage") or 1.0)
+    venue = "futures" if lev > 1.0 + 1e-9 else "spot"
     result = {
         "slot": slot["id"], "symbol": slot["symbol"], "tf": tf,
         "family": "donchian_fear_greed", "atr_mode": atr_mode, "fg_mode": fg_mode,
         "fg_available": fg_ok, "bar_ts": bar_ts, "mark": mark, "close": float(bar["Close"]),
         "donch_hi": donch_hi, "donch_lo": donch_lo, "atr": round(atr, 8),
         "signal": int(sig.iloc[-1]), "raw_signal": int(raw.iloc[-1]),
+        "leverage": lev, "venue": venue, "side": "LONG",
         "checked_at": now_iso_taipei(), "action": "hold", "reason": None,
         "require_reset_below_hi": bool(slot.get("require_reset_below_hi")),
     }
@@ -336,7 +339,8 @@ def evaluate_fear_greed_slot(slot: dict, klines: pd.DataFrame, position: dict | 
     if position and position.get("status") == "FILLED":
         # Delegate to donchian manage path
         return evaluate_donchian_slot(slot, klines, position, slot_meta) | {
-            "family": "donchian_fear_greed", "fg_mode": fg_mode, "fg_available": fg_ok
+            "family": "donchian_fear_greed", "fg_mode": fg_mode, "fg_available": fg_ok,
+            "leverage": lev, "venue": venue, "side": position.get("side") or "LONG",
         }
 
     if not slot.get("armed", True):
@@ -360,6 +364,7 @@ def evaluate_fear_greed_slot(slot: dict, klines: pd.DataFrame, position: dict | 
     result.update(
         action="enter", reason="donchian_breakout_fg",
         quote_usdt=quote, suggested_stop=round(suggested_stop, 8),
+        side="LONG", leverage=lev, venue=venue,
         client_order_id=f"{slot['id']}-{bar_ts[:16].replace(':', '').replace('+', '')}"[:36],
     )
     return result
@@ -372,14 +377,7 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
     if fam == "ema_cross_atr":
         return evaluate_ema_slot(slot, klines, position, slot_meta)
     if fam == "donchian_fear_greed":
-        # Spot path only for leverage<=1; futures path handled separately
-        lev = float(slot.get("leverage") or 1.0)
-        if lev > 1.0:
-            return {
-                "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
-                "action": "skip", "reason": "futures_required", "leverage": lev,
-                "checked_at": now_iso_taipei(),
-            }
+        # Spot when lev<=1; futures venue when lev>1 (same signal path)
         return evaluate_fear_greed_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev_vol":
         return evaluate_lev_vol_slot(slot, klines, position, slot_meta)

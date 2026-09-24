@@ -13,6 +13,10 @@ on:
         description: "After deploy, execute job once in futures-probe mode (Demo USD-M)"
         type: boolean
         default: false
+      run_futures_order_probe:
+        description: "After deploy, execute job once in futures-order-probe (order/test, no fills)"
+        type: boolean
+        default: false
       run_once:
         description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
@@ -206,6 +210,16 @@ jobs:
             --project="${PROJECT}" --region="${REGION}" \
             --args=main.py,probe --wait
 
+
+      - name: Execute futures-order-probe once
+        if: ${{ inputs.run_futures_order_probe }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs execute "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --args=main.py,futures-order-probe --wait
+          echo "--- futures-order-probe: check Cloud Run execution logs for JSON ok=true/false ---"
 
       - name: Execute futures-probe once
         if: ${{ inputs.run_futures_probe }}

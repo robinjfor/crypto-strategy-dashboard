@@ -4,6 +4,7 @@
 Modes:
   probe         — ping / time / signed account (nonzero balances only; never print keys)
   futures-probe — Demo USD-M futures auth/connectivity (no orders)
+  futures-order-probe — leverage/margin + /fapi/v1/order/test (no fills)
   dry-run       — compute signals & intended orders; place nothing
   run           — reconcile + place when TRADER_MODE=live AND TRADER_ENABLED=true
 
@@ -596,7 +597,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode",
         nargs="?",
         default=os.environ.get("JOB_MODE") or "run",
-        choices=["probe", "futures-probe", "run", "dry-run"],
+        choices=["probe", "futures-probe", "futures-order-probe", "run", "dry-run"],
     )
     args = ap.parse_args(argv)
     client = BinanceClient()
@@ -604,6 +605,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "futures-probe":
             from futures_client import probe_futures
             result = probe_futures()
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
+        if args.mode == "futures-order-probe":
+            from futures_client import probe_futures_orders
+            result = probe_futures_orders(symbol="OPUSDT")
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0 if result.get("ok") else 2
         if args.mode == "probe":

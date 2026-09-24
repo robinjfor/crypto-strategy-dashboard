@@ -18,7 +18,7 @@ RUNNER_FAMILIES = frozenset({
     # Futures (Demo FAPI probe OK 2026-09-24)
     "donchian_lev_vol",
     "donchian_long_short_btc_regime",
-    # donchian_fear_greed stays locked until futures FG (lev>1) path is complete
+    "donchian_fear_greed",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
@@ -122,10 +122,8 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         if fg not in ("none", "gt25", "lt75", "mid25_75", "fggt25", "fglt75", "fgmid25_75", "mid"):
             errors.append(f"slots[{idx}].params.fg_mode 不支援：{p.get('fg_mode')!r}")
         lev = float(p.get("leverage") or 1.0)
-        if lev > 1.0 + 1e-9:
-            errors.append(
-                f"slots[{idx}].params.leverage={lev} 需要合約 runner（目前僅支援 leverage<=1 現貨 fear_greed）"
-            )
+        if lev > 3 + 1e-9:
+            errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
         _check_atr_mode(p, errors, idx)
         if "require_reset_below_hi" in p and p.get("require_reset_below_hi") is not None:
             if not isinstance(p.get("require_reset_below_hi"), bool):
