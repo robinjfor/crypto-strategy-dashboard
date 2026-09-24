@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-09-24T16:55:00+08:00",
+  "updated_at": "2026-09-24T17:00:00+08:00",
   "slots": [
     {
       "slot": "sat_op_4h",
@@ -60,13 +60,31 @@
       "note": "live（衛星 A）：3y 過關 +78%／DD -36%／OOS 4/6；取代 FET 1h"
     },
     {
+      "slot": "sat_fil_1h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
+      "symbol": "FILUSDT",
+      "timeframe": "1h",
+      "notional_usdt": 1000,
+      "enabled": true,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 2.5,
+        "max_hold_bars": 192,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "live（衛星 D）：3y 過關 +71.8%／DD -27.2%／OOS 5/6／62 分"
+    },
+    {
       "slot": "sat_icp_4h",
       "family": "donchian_atr",
       "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
       "symbol": "ICPUSDT",
       "timeframe": "4h",
       "notional_usdt": 1000,
-      "enabled": true,
+      "enabled": false,
       "params": {
         "donch_n": 55,
         "stop_atr_mult": 2.5,
@@ -75,7 +93,7 @@
         "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "live（衛星 D）：3y 過關 +52.8%／近1年 +103%／DD -39.8%／OOS 4/6"
+      "note": "候補（停用）：3y 過關 +52.8%／DD -39.8%／44 分；由 FIL 1h 取代"
     },
     {
       "slot": "sat_fet_1h",
