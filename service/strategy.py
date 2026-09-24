@@ -381,10 +381,14 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
                 "checked_at": now_iso_taipei(),
             }
         return evaluate_fear_greed_slot(slot, klines, position, slot_meta)
-    if fam in ("donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_lev"):
+    if fam == "donchian_lev_vol":
+        return evaluate_lev_vol_slot(slot, klines, position, slot_meta)
+    if fam == "donchian_long_short_btc_regime":
+        return evaluate_long_short_slot(slot, klines, position, slot_meta)
+    if fam == "donchian_lev":
         return {
             "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
-            "action": "skip", "reason": "futures_required",
+            "action": "skip", "reason": "family_has_no_gate_pass",
             "checked_at": now_iso_taipei(),
         }
     return {
@@ -395,6 +399,125 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
 
 
 # Back-compat alias
+
+
+def evaluate_lev_vol_slot(slot: dict, klines: pd.DataFrame, position: dict | None, slot_meta: dict) -> dict:
+    """Long Donchian on futures venue; leverage metadata only (sizing at full notional)."""
+    out = evaluate_donchian_slot(slot, klines, position, slot_meta)
+    out["family"] = "donchian_lev_vol"
+    out["venue"] = "futures"
+    out["leverage"] = float(slot.get("leverage") or 1.0)
+    out["side"] = "LONG"
+    out["vol_target"] = slot.get("vol_target")
+    return out
+
+
+def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | None, slot_meta: dict) -> dict:
+    """Donchian long/short with BTC regime gate — matches ext_engine.signal_donchian_ls + apply_btc_regime_ls."""
+    from indicators import (
+        add_donch_atr, signal_donchian_ls, split_closed, bar_ts_iso, replay_stop_path, resolve_atr,
+    )
+
+    tf = slot["tf"]
+    closed, forming = split_closed(klines, tf)
+    atr_mode = str(slot.get("atr_mode") or "wilder").strip().lower()
+    donch_n = int(slot.get("donch_n") or 20)
+    ind = add_donch_atr(closed, donch_n, atr_mode=atr_mode).dropna(subset=["atr", "donch_hi", "donch_lo"])
+    if ind.empty:
+        return {"slot": slot["id"], "symbol": slot["symbol"], "error": "no_closed_bars",
+                "family": "donchian_long_short_btc_regime", "venue": "futures"}
+
+    sig = signal_donchian_ls(ind)
+    # BTC regime: long only when bull, short only when bear
+    regime_on = slot_meta.get("_btc_regime_on")
+    if regime_on is True:
+        sig = sig.where(sig > 0, 0)  # block shorts in bull? wait: long only in bull
+        # long kept, short zeroed
+        sig = sig.clip(lower=0)
+    elif regime_on is False:
+        sig = sig.where(sig < 0, 0)  # short only in bear
+        sig = sig.clip(upper=0)
+    # if regime_on is None, leave both (caller should set)
+
+    bar = ind.iloc[-1]
+    bar_ts = bar_ts_iso(bar.name)
+    atr = float(bar["atr"])
+    mark = float(forming["Close"]) if forming is not None else float(bar["Close"])
+    cur = int(sig.iloc[-1])
+    prev = int(sig.iloc[-2]) if len(sig) > 1 else 0
+    result = {
+        "slot": slot["id"], "symbol": slot["symbol"], "tf": tf,
+        "family": "donchian_long_short_btc_regime", "venue": "futures",
+        "atr_mode": atr_mode, "bar_ts": bar_ts, "mark": mark, "close": float(bar["Close"]),
+        "atr": round(atr, 8), "signal": cur, "leverage": float(slot.get("leverage") or 1.0),
+        "btc_regime_on": regime_on, "checked_at": now_iso_taipei(),
+        "action": "hold", "reason": None,
+    }
+
+    pos = position if position and position.get("status") == "FILLED" else None
+    if pos:
+        is_long = (pos.get("side") or "LONG").upper() == "LONG"
+        # exit when signal flips away from position side
+        want = 1 if is_long else -1
+        if cur != want:
+            result.update(action="exit", reason="signal_flip", exit_ref=float(bar["Close"]),
+                          exit_bar_ts=bar_ts, side=pos.get("side"))
+            return result
+        # stop/trail (long: below; short: above) — reuse replay for long; short mirrored lightly
+        stop_m = float(slot.get("stop_atr_mult") or slot.get("stop_m") or 1.5)
+        trail_m = float(slot.get("trail_atr_mult") or slot.get("trail_m") or 1.5)
+        if is_long:
+            ind2 = ind.copy()
+            replay = replay_stop_path(
+                ind2, entry=float(pos["entry"]), entry_bar_ts=pos.get("entry_bar_ts"),
+                stop_atr_mult=stop_m, trail_atr_mult=trail_m,
+            )
+            if replay.get("exit"):
+                result.update(action="exit", reason="stop", exit_ref=replay["exit"]["exit_ref"],
+                              exit_bar_ts=replay["exit"]["bar_ts"], side="LONG")
+                return result
+            result.update(action="manage", reason="trail_update", stop=round(float(replay["stop"]), 8),
+                          side="LONG", qty=pos.get("qty"), entry=pos.get("entry"))
+        else:
+            # short stop above entry
+            entry = float(pos["entry"])
+            stop = entry + stop_m * atr
+            if float(bar["High"]) >= stop:
+                result.update(action="exit", reason="stop", exit_ref=stop, exit_bar_ts=bar_ts, side="SHORT")
+                return result
+            trail = float(bar["Close"]) + trail_m * atr
+            if trail < float(pos.get("stop") or stop):
+                stop = trail
+            result.update(action="manage", reason="trail_update", stop=round(stop, 8),
+                          side="SHORT", qty=pos.get("qty"), entry=pos.get("entry"),
+                          unrealized_pct=round((entry / mark - 1.0) * 100.0, 4))
+        return result
+
+    if not slot.get("armed", True):
+        result.update(action="skip", reason="not_armed")
+        return result
+    if slot_meta.get("last_acted_bar_ts") == bar_ts:
+        result.update(action="skip", reason="idempotent_same_bar")
+        return result
+    # entry on edge into +/-1
+    if cur == prev or cur == 0:
+        result.update(action="armed", reason="waiting_ls_breakout")
+        return result
+    from slots import MAX_NOTIONAL_USDT
+    quote = min(float(slot["quote_usdt"]), MAX_NOTIONAL_USDT)
+    if cur > 0:
+        suggested_stop = float(bar["Close"]) - float(slot.get("stop_atr_mult") or 1.5) * atr
+        result.update(action="enter", reason="donchian_long", side="LONG",
+                      quote_usdt=quote, suggested_stop=round(suggested_stop, 8),
+                      client_order_id=f"{slot['id']}-L-{bar_ts[:16].replace(':','').replace('+','')}"[:36])
+    else:
+        suggested_stop = float(bar["Close"]) + float(slot.get("stop_atr_mult") or 1.5) * atr
+        result.update(action="enter", reason="donchian_short", side="SHORT",
+                      quote_usdt=quote, suggested_stop=round(suggested_stop, 8),
+                      client_order_id=f"{slot['id']}-S-{bar_ts[:16].replace(':','').replace('+','')}"[:36])
+    return result
+
+
 evaluate_slot = evaluate_slot_dispatch
 
 
@@ -402,16 +525,21 @@ def evaluate_all(client, state: dict) -> list[dict]:
     results: list[dict] = []
     positions = state.setdefault("positions", {})
     slots_meta = state.setdefault("slots", {})
-    need_btc = any(s.get("btc_regime") for s in SLOTS)
+    slots = state.get("runtime_eval_slots") or SLOTS
+    need_btc = any(
+        s.get("btc_regime") or s.get("family") == "donchian_long_short_btc_regime"
+        for s in slots
+    )
     btc_on = btc_daily_regime_on(client) if need_btc else None
-    for slot in SLOTS:
+    for slot in slots:
         meta = slots_meta.setdefault(slot["id"], {})
-        if slot.get("btc_regime"):
+        if slot.get("btc_regime") or slot.get("family") == "donchian_long_short_btc_regime":
             meta["_btc_regime_on"] = btc_on
         pos = positions.get(slot["id"])
         try:
-            donch_n = int(slot.get("donch_n") or slot.get("donch_n") or 20)
-            limit = max(250, donch_n + 80)
+            donch_n = int(slot.get("donch_n") or 20)
+            ema_slow = int(slot.get("ema_slow") or slot.get("slow") or 0)
+            limit = max(250, donch_n + 80, ema_slow + 80)
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
             results.append(evaluate_slot_dispatch(slot, kl, pos, meta))
         except Exception as e:  # noqa: BLE001

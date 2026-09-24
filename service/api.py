@@ -204,15 +204,29 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
         entry = float(pos.get("entry") or 0)
         qty = float(pos.get("qty") or 0)
         mark = float(pos.get("mark") or 0)
+        venue = pos.get("venue") or "spot"
+        side = str(pos.get("side") or "LONG").upper()
+        lev = int(float(pos.get("leverage") or 1))
         try:
-            mark = client.ticker_price(symbol)
+            if venue == "futures":
+                from futures_client import FuturesDemoClient
+                from futures_execution import mark_price as fut_mark
+                mark = fut_mark(FuturesDemoClient(), symbol)
+            else:
+                mark = client.ticker_price(symbol)
         except Exception:  # noqa: BLE001
             pass
-        upnl = (mark - entry) * qty if entry and mark else None
+        if side == "SHORT":
+            upnl = (entry - mark) * qty if entry and mark else None
+        else:
+            upnl = (mark - entry) * qty if entry and mark else None
+        display = f"{symbol} {'多' if side == 'LONG' else '空'}×{lev}" if venue == "futures" else symbol
         out.append(
             {
                 "slot": slot_id,
-                "symbol": symbol,
+                "symbol": display,
+                "raw_symbol": symbol,
+                "asset": f"{symbol.replace('USDT', '')} {'多' if side == 'LONG' else '空'}×{lev}" if venue == "futures" else symbol.replace("USDT", ""),
                 "qty": qty,
                 "entry": entry,
                 "mark": mark,
@@ -220,12 +234,28 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
                 "stop": pos.get("stop"),
                 "donch_lo": pos.get("donch_lo"),
                 "unrealized_pnl": round(upnl, 4) if upnl is not None else None,
+                "market_value": abs(qty) * mark if mark else None,  # full notional
                 "status": pos.get("status") or "FILLED",
                 "filled_at": pos.get("filled_at"),
-                "tf": "1d" if slot_id == "core_sol" else None,
+                "tf": "1d" if slot_id == "core_sol" else pos.get("tf"),
+                "side": side if venue == "futures" else None,
+                "leverage": lev if venue == "futures" else None,
+                "venue": venue,
             }
         )
+    # Also surface any Demo futures positions not yet mirrored into state
+    try:
+        from futures_client import FuturesDemoClient
+        from futures_execution import list_open_futures_positions
+        known = {r.get("raw_symbol") for r in out if r.get("venue") == "futures"}
+        for fr in list_open_futures_positions(FuturesDemoClient()):
+            if fr.get("raw_symbol") in known:
+                continue
+            out.append(fr)
+    except Exception as e:  # noqa: BLE001
+        log.warning("futures_positions_merge_fail err=%s", e)
     return out
+
 
 
 def _slot_status(state: dict, feed_slots: list | None) -> list:

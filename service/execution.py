@@ -67,6 +67,26 @@ def market_close_slot(
         return {"ok": False, "error": "此槽位目前沒有持倉", "slot": slot_id}
 
     symbol = pos["symbol"]
+    if pos.get("venue") == "futures":
+        from futures_client import FuturesDemoClient
+        from futures_execution import close_position_market
+        fc = FuturesDemoClient()
+        is_long = str(pos.get("side") or "LONG").upper() == "LONG"
+        qty = float(pos["qty"])
+        coid = client_order_id(slot_id, "mclose")
+        order = close_position_market(fc, symbol=symbol, qty=qty, is_long=is_long, client_order_id=coid)
+        entry = float(pos.get("entry") or 0)
+        fill_px = entry
+        pnl = None
+        closed = {
+            "slot": slot_id, "symbol": symbol, "qty": qty, "entry": entry, "exit": fill_px,
+            "pnl_usdt": pnl, "reason": reason, "side": pos.get("side"), "venue": "futures",
+            "closed_at": now_iso_taipei(), "order_id": order.get("orderId"),
+        }
+        state.setdefault("closed_trades", []).append(closed)
+        state["closed_trades"] = state["closed_trades"][-200:]
+        positions.pop(slot_id, None)
+        return {"ok": True, "closed": closed}
     # Prefer exchange free balance for base asset
     base = symbol.replace("USDT", "")
     qty = float(pos["qty"])

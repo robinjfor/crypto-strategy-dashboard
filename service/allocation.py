@@ -15,14 +15,16 @@ RUNNER_FAMILIES = frozenset({
     "donchian_atr",
     "donchian_btc_regime",
     "ema_cross_atr",
-    # donchian_fear_greed: spot path coded, but family stays locked until futures
-    # covers leverage>1 catalog passers (Emily: whole family must be supported).
+    # Futures (Demo FAPI probe OK 2026-09-24)
+    "donchian_lev_vol",
+    "donchian_long_short_btc_regime",
+    # donchian_fear_greed stays locked until futures FG (lev>1) path is complete
 })
-# Futures families — added to whitelist only after Demo FAPI probe + tests pass
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
     "donchian_long_short_btc_regime",
     "donchian_lev",
+    "donchian_fear_greed",  # lev>1 rows need futures; family not in RUNNER yet
 })
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
@@ -128,6 +130,26 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         if "require_reset_below_hi" in p and p.get("require_reset_below_hi") is not None:
             if not isinstance(p.get("require_reset_below_hi"), bool):
                 errors.append(f"slots[{idx}].params.require_reset_below_hi 必須是 boolean")
+    elif family == "donchian_lev_vol":
+        if "donch_n" not in p:
+            errors.append(f"slots[{idx}].params.donch_n 必填（donchian_lev_vol）")
+        stop, trail = _stop_trail_keys(p)
+        if stop is None or trail is None:
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（donchian_lev_vol）")
+        lev = float(p.get("leverage") or 1.0)
+        if lev > 3 + 1e-9:
+            errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
+        _check_atr_mode(p, errors, idx)
+    elif family == "donchian_long_short_btc_regime":
+        if "donch_n" not in p:
+            errors.append(f"slots[{idx}].params.donch_n 必填（donchian_long_short_btc_regime）")
+        stop, trail = _stop_trail_keys(p)
+        if stop is None or trail is None:
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（donchian_long_short_btc_regime）")
+        lev = float(p.get("leverage") or 1.0)
+        if lev > 3 + 1e-9:
+            errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
+        _check_atr_mode(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:

@@ -169,6 +169,13 @@ def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[b
     return True, ""
 
 
+
+def slot_meta_venue(sig: dict) -> str:
+    fam = str(sig.get("family") or "")
+    if fam in ("donchian_lev_vol", "donchian_long_short_btc_regime") or sig.get("venue") == "futures":
+        return "futures"
+    return "spot"
+
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
     """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
@@ -196,11 +203,15 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             "intent_enter symbol=%s quote=%s coid=%s live=%s stop=%s",
             sig["symbol"], quote, coid, live, sig.get("suggested_stop"),
         )
+        venue = str(sig.get("venue") or slot_meta_venue(sig) or "spot")
+        side = str(sig.get("side") or "LONG").upper()
         if not live:
             out["intended_order"] = {
-                "side": "BUY",
+                "venue": venue,
+                "side": "BUY" if side == "LONG" else "SELL",
                 "type": "MARKET",
                 "quoteOrderQty": quote,
+                "leverage": sig.get("leverage") or 1,
                 "clientOrderId": coid,
             }
             return out
@@ -208,6 +219,44 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             out["reason"] = "already_filled"
             return out
         try:
+            if venue == "futures":
+                from futures_client import FuturesDemoClient
+                from futures_execution import open_market, place_stop_reduce_only
+                fc = FuturesDemoClient()
+                opened = open_market(
+                    fc, symbol=sig["symbol"], side=("BUY" if side == "LONG" else "SELL"),
+                    notional_usdt=quote, leverage=sig.get("leverage") or 1,
+                    client_order_id=coid,
+                )
+                qty = float(opened["qty"])
+                px = float(opened["mark"])
+                order = opened["order"]
+                stop = float(sig.get("suggested_stop") or 0)
+                positions[slot_id] = {
+                    "status": "FILLED", "symbol": sig["symbol"], "qty": qty, "entry": px,
+                    "entry_bar_ts": sig.get("bar_ts"), "stop": stop, "side": side,
+                    "venue": "futures", "leverage": opened["leverage"],
+                    "client_order_id": coid, "order_id": order.get("orderId"),
+                    "filled_at": now_iso_taipei(),
+                    "notional_usdt": opened["notional_usdt"],
+                }
+                if stop:
+                    try:
+                        stop_ord = place_stop_reduce_only(
+                            fc, symbol=sig["symbol"], is_long=(side == "LONG"),
+                            stop_price=stop, qty=qty,
+                            client_order_id=client_order_id(slot_id, "stop", bar_ts),
+                        )
+                        positions[slot_id]["stop_order_id"] = stop_ord.get("orderId")
+                    except Exception as e:  # noqa: BLE001
+                        log.error("futures_stop_fail slot=%s err=%s", slot_id, e)
+                        positions[slot_id]["stop_error"] = str(e)
+                meta["last_acted_bar_ts"] = sig.get("bar_ts")
+                out["executed"] = True
+                out["fill"] = {"qty": qty, "price": px, "orderId": order.get("orderId"), "venue": "futures"}
+                log.info("filled_enter_futures symbol=%s side=%s qty=%s px=%s lev=%s",
+                         sig["symbol"], side, qty, px, opened["leverage"])
+                return out
             order = client.market_buy(sig["symbol"], quote, coid)
             fills = order.get("fills") or []
             qty = float(order.get("executedQty") or 0)
@@ -269,6 +318,36 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             out["reason"] = "no_qty"
             return out
         try:
+            pos_venue = str(pos.get("venue") or sig.get("venue") or "spot")
+            if pos_venue == "futures":
+                from futures_client import FuturesDemoClient
+                from futures_execution import close_position_market
+                fc = FuturesDemoClient()
+                is_long = str(pos.get("side") or "LONG").upper() == "LONG"
+                order = close_position_market(
+                    fc, symbol=sig["symbol"], qty=qty, is_long=is_long, client_order_id=coid,
+                )
+                entry = float(pos.get("entry") or 0)
+                fill_px = float(sig.get("mark") or sig.get("close") or entry)
+                pnl = None
+                if entry:
+                    pnl = round(((fill_px - entry) if is_long else (entry - fill_px)) * qty, 4)
+                closed = {
+                    "slot": slot_id, "symbol": sig["symbol"], "qty": qty, "entry": entry,
+                    "exit": fill_px, "pnl_usdt": pnl, "reason": sig.get("reason") or "exit",
+                    "side": pos.get("side"), "venue": "futures",
+                    "closed_at": now_iso_taipei(), "order_id": order.get("orderId"),
+                }
+                state.setdefault("closed_trades", []).append(closed)
+                state["closed_trades"] = state["closed_trades"][-200:]
+                positions.pop(slot_id, None)
+                meta["last_acted_bar_ts"] = sig.get("exit_bar_ts") or sig.get("bar_ts")
+                meta["last_exit_bar_ts"] = meta["last_acted_bar_ts"]
+                meta["last_exit_reason"] = closed["reason"]
+                out["executed"] = True
+                out["fill"] = {"orderId": order.get("orderId"), "venue": "futures"}
+                log.info("filled_exit_futures symbol=%s side=%s", sig["symbol"], pos.get("side"))
+                return out
             try:
                 client.cancel_open_orders(sig["symbol"])
             except Exception as e:  # noqa: BLE001
@@ -387,6 +466,14 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     log.info("signal_only_ids=%s", sorted(DEFAULT_SIGNAL_ONLY.keys()))
 
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
+    # Evaluate allocation-enabled slots (approved → live; others signal-only via apply gate)
+    try:
+        doc, _src = resolve_allocation()
+        eval_slots = [slot_to_runtime(s) for s in (doc.get("slots") or []) if s.get("enabled")]
+        if eval_slots:
+            state["runtime_eval_slots"] = eval_slots
+    except Exception as e:  # noqa: BLE001
+        log.warning("runtime_eval_slots_fail err=%s", e)
     signals = evaluate_all(client, state)
     applied = [
         apply_signal(client, state, sig, live=live, allow_entries=allow_entries)

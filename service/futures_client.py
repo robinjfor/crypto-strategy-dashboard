@@ -157,3 +157,52 @@ def probe_futures() -> dict:
         else:
             out["needs_emily"].append(f"Futures account 呼叫失敗：{err}")
     return out
+
+
+def clamp_leverage(requested: float | int | None) -> int:
+    """Integer leverage for Binance; floor so exchange lev never exceeds catalog; hard cap 3."""
+    try:
+        v = int(float(requested or 1))  # floor toward 0
+    except (TypeError, ValueError):
+        v = 1
+    return max(1, min(v, LEVERAGE_HARD_CAP))
+
+
+def _filters(info: dict, symbol: str) -> dict:
+    for s in info.get("symbols") or []:
+        if s.get("symbol") == symbol:
+            out = {"status": s.get("status")}
+            for f in s.get("filters") or []:
+                out[f.get("filterType")] = f
+            return out
+    return {}
+
+
+def round_qty_futures(info: dict, symbol: str, qty: float) -> float:
+    import math
+    f = _filters(info, symbol).get("LOT_SIZE") or {}
+    step = float(f.get("stepSize") or 0.001)
+    mn = float(f.get("minQty") or 0)
+    if step <= 0:
+        return qty
+    precision = max(0, int(round(-math.log10(step))) if step < 1 else 0)
+    q = math.floor(qty / step) * step
+    q = float(f"{q:.{precision}f}")
+    if q < mn:
+        return 0.0
+    return q
+
+
+def round_price_futures(info: dict, symbol: str, price: float) -> float:
+    import math
+    f = _filters(info, symbol).get("PRICE_FILTER") or {}
+    tick = float(f.get("tickSize") or 0.01)
+    if tick <= 0:
+        return price
+    precision = max(0, int(round(-math.log10(tick))) if tick < 1 else 0)
+    p = math.floor(price / tick) * tick
+    return float(f"{p:.{precision}f}")
+
+
+# Alias used by main.py
+probe_futures = probe_futures  # main.py alias
