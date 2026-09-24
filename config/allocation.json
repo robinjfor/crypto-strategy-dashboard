@@ -2,8 +2,8 @@
   "version": 1,
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500,
-  "updated_by": "seed",
-  "updated_at": "2026-09-24T16:40:00+08:00",
+  "updated_by": "strategy-analyst",
+  "updated_at": "2026-09-24T16:55:00+08:00",
   "slots": [
     {
       "slot": "sat_op_4h",
@@ -36,10 +36,10 @@
         "stop_atr_mult": 1.5,
         "trail_atr_mult": 1.5,
         "max_hold_bars": 36,
-        "require_reset_below_hi": false,
+        "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "現行 live（衛星 B）"
+      "note": "現行 live（衛星 C）；reset 對齊回測"
     },
     {
       "slot": "sat_fet_4h",
@@ -48,16 +48,34 @@
       "symbol": "FETUSDT",
       "timeframe": "4h",
       "notional_usdt": 1250,
-      "enabled": false,
+      "enabled": true,
       "params": {
         "donch_n": 55,
         "stop_atr_mult": 2.0,
         "trail_atr_mult": 3.0,
-        "max_hold_bars": 96,
+        "max_hold_bars": 36,
         "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "候選：分析師啟用後才會因 donchian_atr 已批准而上線（勿誤開）"
+      "note": "live（衛星 A）：3y 過關 +78%／DD -36%／OOS 4/6；取代 FET 1h"
+    },
+    {
+      "slot": "sat_icp_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
+      "symbol": "ICPUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1000,
+      "enabled": true,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.5,
+        "trail_atr_mult": 3.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "live（衛星 D）：3y 過關 +52.8%／近1年 +103%／DD -39.8%／OOS 4/6"
     },
     {
       "slot": "sat_fet_1h",
@@ -75,7 +93,7 @@
         "require_reset_below_hi": false,
         "btc_regime": false
       },
-      "note": "候選：未啟用（與 FET 4h 同標的，啟用時勿重複）"
+      "note": "停用：3y MaxDD -53.7% 未過；已由 FET 4h 取代"
     },
     {
       "slot": "core_sol",
