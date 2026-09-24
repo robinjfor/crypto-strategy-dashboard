@@ -7,42 +7,20 @@
     "USDT": 5736.7457054603055
   },
   "open_positions": [],
-  "last_action": "flat_after_exits",
-  "updated_at_taipei": "2026-09-24 14:37:29 CST",
+  "last_action": "runner_ok",
+  "updated_at_taipei": "2026-09-24 14:45:04 CST",
   "light": "GREEN",
   "armed": {
     "FETUSDT": {
       "variant": "donchian55_s2.0_t3.0__FET__1h",
-      "quote": 1250,
+      "quote": 1250.0,
       "status": "WAIT_BREAKOUT",
-      "mark": 0.1996,
-      "donch_hi": 0.216,
-      "donch_lo": 0.1905,
-      "last_check_at": "2026-09-24 14:37:28 CST"
-    },
-    "OPUSDT": {
-      "variant": "donchian20_s1.5_t1.5__OP__4h",
-      "quote": 1000,
-      "status": "EXITED_TRAIL_STOP",
-      "tf": "4h",
-      "donch_n": 20,
-      "stop_atr_mult": 1.5,
-      "trail_atr_mult": 1.5
-    },
-    "NEARUSDT": {
-      "variant": "donchian_breakout_atr__NEAR__4h",
-      "status": "EXITED_MAX_HOLD",
-      "tf": "4h",
-      "donch_n": 20,
+      "mark": 0.1998,
+      "tf": "1h",
+      "donch_n": 55,
       "stop_atr_mult": 2.0,
-      "trail_atr_mult": 3.0,
-      "max_hold_bars": 36,
-      "exited_at": "2026-09-24 00:00:00 CST",
-      "exit_price": 4.405,
-      "exit_reason": "max_hold",
-      "pending": "re_arm",
-      "note": "No auto re-entry; analyst reviewing re-arm + max_hold"
+      "trail_atr_mult": 3.0
     }
   },
-  "source": "state_mirror_1437"
+  "source": "state_mirror"
 }

@@ -1,0 +1,16 @@
+{
+  "cmd_log": [],
+  "positions": [],
+  "orders": [
+    {
+      "symbol": "FETUSDT",
+      "status": "ARMED",
+      "triggered": false,
+      "dist_atr": -5.0832,
+      "mark": 0.1998,
+      "donch_hi": 0.216
+    }
+  ],
+  "light": "GREEN",
+  "checked_at": "2026-09-24 14:45:04 CST"
+}
