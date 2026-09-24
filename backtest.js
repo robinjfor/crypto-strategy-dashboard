@@ -23,6 +23,8 @@
 
   var scores = null;
   var catalog = null;
+  var filterBothOnly = false;
+  var expandedKeys = {};
   var approvedMap = {};
   var signalOnlyMap = {};
   var apiBase = "";
@@ -448,9 +450,20 @@
   }
 
   function renderGroupCard(g) {
-    var sample = g.rows[0] || { strategy_id: g.key, params: g.params };
     var familyId = g.family_id || g.key;
-    var supported = g.supported != null ? g.supported : runnerSupports(sample, familyId);
+    var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
+    var rows = g.rows || [];
+    if (filterBothOnly) {
+      rows = rows.filter(function (r) { return bothGatesOk(r); });
+    }
+    if (filterBothOnly && !rows.length) return "";
+
+    var nBoth = (g.rows || []).filter(function (r) { return bothGatesOk(r); }).length;
+    var best = g.best_score != null ? g.best_score : (g.rows[0] && g.rows[0].score) || 0;
+    var desc = g.description_zh || "";
+    if (desc.length > 90) desc = desc.slice(0, 90) + "…";
+    var open = !!expandedKeys[g.key];
+
     var rulesHtml = "";
     if (g.description_zh || g.entry_zh || g.exit_zh || g.stop_zh) {
       rulesHtml =
@@ -461,14 +474,14 @@
     } else {
       var rules = g.rules_zh
         ? (Array.isArray(g.rules_zh) ? g.rules_zh : [g.rules_zh])
-        : describeRules(g.key, sample);
+        : describeRules(g.key, g.rows[0] || {});
       rulesHtml = rules.map(function (line) { return "<li>" + esc(line) + "</li>"; }).join("");
     }
     var supportNote = supported
       ? '<span class="badge ok">雲端可執行</span>'
       : '<span class="badge muted">雲端尚未支援此策略類型</span>';
 
-    var body = g.rows.map(function (r) {
+    var body = rows.map(function (r) {
       var passBoth = bothGatesOk(r);
       var reasons = (failReasons(r)).map(gateReasonZh).join("；");
       var oos = r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + (r.oos_total || 6)) : "—");
@@ -476,7 +489,7 @@
       var sym = (r.symbol || "").replace(/USDT$/, "");
       var rowCls = passBoth ? " pass" : " fail";
       if (r.data_short) rowCls += " data-short";
-      return '<tr class="score-row" data-sid="' + esc(r.strategy_id) + '">' +
+      return '<tr class="score-row' + rowCls + '" data-sid="' + esc(r.strategy_id) + '">' +
         "<td><strong>" + esc(sym) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
@@ -493,15 +506,21 @@
         "<td>" + statusBadge(r.status) + "</td>" +
         "<td>" + approveControls(r, familyId) + "</td>" +
         "</tr>" +
-        '<tr class="expand-row' + esc(r.strategy_id) + '"><td colspan="12">' +
+        '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="12">' +
         expandHtml(r) + "</td></tr>";
     }).join("");
 
-    return '<article class="strategy-score-card' + (supported ? "" : " unsupported") + '" data-key="' + esc(g.key) + '">' +
-      '<div class="ssc-head">' +
+    return '<article class="strategy-score-card' + (open ? "" : " collapsed") +
+      (supported ? "" : " unsupported") + '" data-key="' + esc(g.key) + '">' +
+      '<div class="ssc-head" data-toggle-key="' + esc(g.key) + '">' +
       "<h3>" + esc(g.name_zh || g.key) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
+      '<span class="ssc-params">' + (g.rows || []).length + " 列 · 雙過 " + nBoth +
+      " · 最佳 " + num(best, 1) + "</span>" +
+      '<span class="chevron">' + (open ? "▾" : "▸") + "</span>" +
       "</div>" +
+      (desc ? '<p class="ssc-one-liner dim">' + esc(desc) + "</p>" : "") +
+      '<div class="ssc-body">' +
       '<div class="ssc-rules"><div class="lbl">規則說明</div><ul>' + rulesHtml + "</ul></div>" +
       '<div class="table-scroll"><table class="data scores">' +
       "<thead><tr>" +
@@ -510,17 +529,41 @@
       '<th class="num">3 年報酬</th><th class="num">近 1 年</th><th class="num">B&amp;H</th>' +
       '<th class="num">MaxDD</th><th>OOS</th><th>雙過門檻</th>' +
       '<th class="num">分數</th><th>狀態</th><th>核准</th>' +
-      "</tr></thead><tbody>" + body + "</tbody></table></div></article>";
+      "</tr></thead><tbody>" + (body || '<tr><td colspan="12" class="empty-row">此篩選下無列</td></tr>') +
+      "</tbody></table></div></div></article>";
+  }
+
+  function summarizeGroups(groups) {
+    var nFam = groups.length;
+    var nRows = 0, nBoth = 0;
+    groups.forEach(function (g) {
+      (g.rows || []).forEach(function (r) {
+        nRows += 1;
+        if (bothGatesOk(r)) nBoth += 1;
+      });
+    });
+    return '<div class="backtest-summary">' +
+      '<span class="pill">家族 ' + nFam + "</span>" +
+      '<span class="pill">列數 ' + nRows + "</span>" +
+      '<span class="pill">雙過門檻 ' + nBoth + "</span>" +
+      "</div>" +
+      '<div class="backtest-filters">' +
+      '<label><input type="checkbox" id="filterBothOnly"' + (filterBothOnly ? " checked" : "") +
+      '> 只看雙過</label>' +
+      '<span class="hint">點家族標題展開／收合規則與表格</span>' +
+      "</div>";
   }
 
   function renderGroups(groups) {
     if (!groups || !groups.length) {
       return '<div class="empty-state">尚無策略資料</div>';
     }
+    var cards = groups.map(renderGroupCard).filter(Boolean).join("");
     return '<section class="section" id="sec-scores">' +
       '<div class="section-head"><h2>策略評分（依策略家族）</h2>' +
-      '<span class="hint">' + groups.length + " 族 · 點列展開權益曲線與全期數字 · 綠＝雙過門檻</span></div>" +
-      '<div class="strategy-score-list">' + groups.map(renderGroupCard).join("") + "</div></section>";
+      '<span class="hint">預設收合 · 點標題展開</span></div>' +
+      summarizeGroups(groups) +
+      '<div class="strategy-score-list">' + cards + "</div></section>";
   }
 
   async function loadEquity(sid) {
@@ -669,21 +712,23 @@
     });
   }
 
-  async function refresh() {
+  async function refresh(keepUi) {
     var err = $("errBanner");
     var metaBox = $("metaBox");
     var main = $("main");
     err.classList.add("hidden");
     try {
-      apiBase = await resolveApiBase();
-      await loadApproved();
-      scores = await getJSON(SCORES_URL);
-      catalog = null;
-      try { catalog = await getJSON(CATALOG_URL); } catch (e) { catalog = null; }
+      if (!keepUi || !catalog && !scores) {
+        apiBase = await resolveApiBase();
+        await loadApproved();
+        scores = await getJSON(SCORES_URL);
+        catalog = null;
+        try { catalog = await getJSON(CATALOG_URL); } catch (e) { catalog = null; }
+      }
       var groups = groupsFromCatalog(catalog) || groupsFromScores(scores);
       var srcHint = catalog ? "catalog.json（家族×幣別）" : "scores.json（依策略分組）";
       var meta = (catalog && catalog.meta) || (scores && scores.meta) || {};
-      metaBox.innerHTML = renderMeta(meta, srcHint);
+      if (!keepUi) metaBox.innerHTML = renderMeta(meta, srcHint);
       main.innerHTML = renderGroups(groups);
       main.classList.remove("loading");
       metaBox.classList.remove("loading");

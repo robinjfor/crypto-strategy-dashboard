@@ -585,3 +585,23 @@ tr.score-row.fail td { background: rgba(239,68,68,0.10); }
 tr.score-row.data-short td { box-shadow: inset 3px 0 0 #f59e0b; }
 .strategy-score-card.unsupported { opacity: 0.92; }
 .strategy-score-card .ssc-rules { margin-bottom: 12px; }
+
+/* Strategy cards: prevent title/badge overflow */
+.strategy-card .sc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.strategy-card .sc-title {
+  font-size: 0.95rem; line-height: 1.3; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; max-width: 70%;
+}
+.strategy-card .sc-sum {
+  font-size: 0.72rem; color: var(--text-muted, #8b9bb0);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.strategy-card .badge { flex-shrink: 0; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Backtest family cards collapsed */
+.strategy-score-card.collapsed .ssc-body { display: none; }
+.strategy-score-card .ssc-head { cursor: pointer; user-select: none; }
+.strategy-score-card .ssc-head .chevron { margin-left: auto; color: #8b9bb0; }
+.backtest-summary { display:flex; flex-wrap:wrap; gap:12px; margin: 8px 0 16px; }
+.backtest-summary .pill { background:#1e293b; border:1px solid #334155; border-radius:999px; padding:6px 12px; font-size:0.85rem; }
+.backtest-filters { margin: 0 0 14px; display:flex; gap:10px; align-items:center; }

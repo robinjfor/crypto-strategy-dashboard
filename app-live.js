@@ -117,6 +117,32 @@
     try { return await getJSON(url); } catch (e) { return null; }
   }
 
+  function fetchWithTimeout(url, opts, ms) {
+    opts = opts || {};
+    ms = ms || 8000;
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, ms);
+    return fetch(url, Object.assign({}, opts, { signal: ctrl.signal }))
+      .finally(function () { clearTimeout(timer); });
+  }
+
+  async function fetchJSONRetry(url, opts, ms, retries) {
+    ms = ms || 8000;
+    retries = retries == null ? 1 : retries;
+    var lastErr = null;
+    for (var i = 0; i <= retries; i++) {
+      try {
+        var res = await fetchWithTimeout(url, opts, ms);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+        if (i < retries) await new Promise(function (r) { setTimeout(r, 400); });
+      }
+    }
+    throw lastErr || new Error("fetch failed");
+  }
+
   async function resolveApiBase() {
     try {
       var c = await getJSON(CLOUD_CFG);
@@ -220,8 +246,8 @@
 
   function renderHealth() {
     var h = (cloud && cloud.health) || health || {};
-    var color = h.color || "idle";
-    var label = h.label || h.automation_label || "自動執行：尚未啟用（等待雲端主機）";
+    var color = (cloud && cloud.health && cloud.health.color) || h.color || (cloudOk && !(cloud && cloud.paused) ? "green" : (cloudOk ? "yellow" : "idle"));
+    var label = (cloud && cloud.health && cloud.health.label) || h.label || h.automation_label || (cloudOk ? "自動交易中" : "雲端連線失敗");
     var paused = cloud ? !!cloud.paused : !!h.paused;
     var cls = color === "green" ? "ok" : color === "yellow" ? "warn" : color === "red" ? "bad" : "idle";
     var toggleLabel = paused ? "恢復自動交易" : "暫停自動交易";
@@ -327,52 +353,66 @@
   }
 
   function plannedList() {
+    // Only APPROVED live slots waiting for entry (signal_only → 只算訊號 section)
+    function attachStrategyId(pl) {
+      if (pl.strategy_id) return pl;
+      var armed = (cloud && (cloud.armed_slots || cloud.slots)) || [];
+      for (var i = 0; i < armed.length; i++) {
+        if (armed[i].slot === pl.slot || armed[i].id === pl.slot) {
+          pl.strategy_id = armed[i].strategy_id;
+          if (pl.donch_n == null && armed[i].donch_n != null) pl.donch_n = armed[i].donch_n;
+          break;
+        }
+      }
+      return pl;
+    }
     if (cloud && Array.isArray(cloud.planned_positions)) {
-      return cloud.planned_positions.map(function (pl) {
+      return cloud.planned_positions.filter(function (pl) {
+        var om = pl.order_mode || pl.mode || "";
+        if (om === "signal_only" || pl.approved === false) return false;
+        return pl.approved === true || om === "live";
+      }).map(function (pl) {
         var copy = Object.assign({}, pl);
-        copy.status_code = pl.status_code || pl.ui_status || pl.status_label;
-        // If API already sent Chinese status_label, keep it; else map
-        var raw = pl.status_code || pl.ui_status || "";
-        if (pl.status_label && /[\u4e00-\u9fff]/.test(String(pl.status_label))) {
+        attachStrategyId(copy);
+        if (pl.status_zh && /[\u4e00-\u9fff]/.test(String(pl.status_zh))) {
+          copy.status_label = pl.status_zh;
+        } else if (pl.status_label && /[\u4e00-\u9fff]/.test(String(pl.status_label))) {
           copy.status_label = pl.status_label;
+        } else if (pl.label_zh && /[\u4e00-\u9fff]/.test(String(pl.label_zh))) {
+          copy.status_label = pl.label_zh;
         } else {
-          copy.status_label = statusZh(pl.status_label || pl.ui_status || pl.status_code);
+          copy.status_label = statusZh(pl.status_label || pl.ui_status || pl.status_code || pl.status);
         }
         if (copy.target_pct == null) copy.target_pct = targetPctFor(copy);
+        if (!copy.asset) copy.asset = String(pl.symbol || pl.slot || "").replace(/USDT$/i, "");
         return copy;
       });
     }
     if (cloud && Array.isArray(cloud.armed_slots)) {
-      return cloud.armed_slots.map(function (a) {
+      return cloud.armed_slots.filter(function (a) {
+        return a.approved === true && a.order_mode !== "signal_only" && a.mode !== "signal_only";
+      }).map(function (a) {
         return {
-          asset: String(a.symbol || "").replace("USDT", ""),
+          asset: String(a.symbol || "").replace(/USDT$/i, ""),
           symbol: a.symbol,
           slot: a.slot,
-          strategy_name: a.variant,
+          strategy_id: a.strategy_id,
+          strategy_name: a.variant || a.strategy_id,
           tf: a.tf,
           target_notional_usdt: a.quote_usdt,
-          ui_status: a.status || a.action || "ARMED",
-          status_label: a.mode === "signal_only" ? (a.label_zh || "只算訊號（未核准）") : (a.status_zh || statusZh(a.status || a.reason || a.action)),
-          mode: a.mode,
-          label_zh: a.label_zh,
-          status_code: a.status || a.reason || a.action,
+          status_label: a.status_zh || statusZh(a.status || a.reason || a.action),
+          mode: a.mode || a.order_mode,
           entry_rule: a.entry_condition,
           mark: a.mark,
           trigger: a.trigger,
           target_pct: a.target_pct,
-          target_notional_usdt: a.quote_usdt || a.target_notional_usdt,
           stop_note: a.suggested_stop != null ? ("建議止損 " + a.suggested_stop) : "—",
           stop_mode: "pending",
-          donch_n: a.slot === "sat_fet_1h" ? 55 : 20
+          donch_n: a.donch_n || 20
         };
       });
     }
-    var planned = (book && Array.isArray(book.planned_positions) ? book.planned_positions : []).slice();
-    return planned.filter(function (p) {
-      var st = String(p.ui_status || p.status || "").toUpperCase();
-      return st.indexOf("WAIT_BREAKOUT") >= 0 || st.indexOf("WAIT_RESET") >= 0 ||
-        st.indexOf("REARM") >= 0 || st.indexOf("PENDING") >= 0 || st.indexOf("ARMED") >= 0;
-    });
+    return [];
   }
 
   function renderPlanned() {
@@ -405,7 +445,7 @@
       }).join("");
     }
     return '<section class="section" id="sec-planned">' +
-      '<div class="section-head"><h2>預計持倉</h2><span class="hint">雲端訊號槽 · FET / OP / DOT / SOL</span></div>' +
+      '<div class="section-head"><h2>預計持倉</h2><span class="hint">僅已核准待進場 · 來自 /status</span></div>' +
       '<div class="card"><div class="table-scroll"><table class="data">' +
       "<thead><tr><th>標的</th><th class=\"num\">目標%</th><th class=\"num\">名義 USDT</th><th>狀態</th><th>週期</th><th>進場條件</th><th>止損／出場</th><th class=\"num\">現價／觸發</th></tr></thead>" +
       "<tbody>" + body + "</tbody></table></div></div></section>";
@@ -413,8 +453,15 @@
 
 
   function scoreFor(sid) {
+    if (!sid) return null;
     var r = scoresById[sid];
-    return r && r.score != null ? r.score : null;
+    if (!r) return null;
+    var sc = r.score;
+    // Formula sets failed rows to 0 — show dash, not a fake 0.00
+    if (sc == null || sc === "") return null;
+    if (Number(sc) === 0 && r.gate_pass === false) return null;
+    if (Number(sc) === 0 && r.gate_pass_both === false && r.gate_pass !== true) return null;
+    return sc;
   }
 
   function slotSignalFromCloud(slotId, strategyId) {
@@ -511,38 +558,51 @@
   }
 
   function renderStrategies() {
-    var armed = (cloud && (cloud.armed_slots || cloud.slots || cloud.slot_status)) || [];
-    var sats = (book && book.satellite_strategies) || [];
-    var core = (book && book.strategies) || [];
-    var cards;
-    if (armed.length) {
-      cards = armed.map(function (s) {
-        var active = true;
-        return '<article class="strategy-card ' + (active ? "active" : "") + '">' +
-          '<div class="sc-top"><strong>' + esc(s.symbol || s.slot) + '</strong>' +
-          '<span class="badge ok">' + esc(s.status_zh || statusZh(s.status || s.reason || s.action || "armed")) + "</span></div>" +
-          '<p class="sc-sum">' + esc(s.entry_condition || s.variant || "") + "</p>" +
-          '<div class="sc-meta">' + esc(s.tf || "") + " · " + esc(s.symbol || "") + " · 1x · 名義 " +
-          esc(String(s.quote_usdt || "")) + "</div>" +
-          '<div class="sc-rules">' +
-          '<div><span class="lbl">進場</span> ' + esc(s.entry_condition || "—") + "</div>" +
-          '<div><span class="lbl">觸發</span> ' + (s.trigger != null ? num(s.trigger, 4) : "—") +
-          " · 現價 " + (s.mark != null ? num(s.mark, 4) : "—") + "</div>" +
-          '<div><span class="lbl">狀態</span> ' + esc(s.status_zh || statusZh(s.status || s.reason) || "—") + "</div>" +
-          "</div></article>";
-      }).join("");
-    } else {
-      cards = core.concat(sats).map(function (s) {
-        var active = s.status === "active" || s.status === "armed_wait_breakout" || s.status === "wait_reset";
-        return '<article class="strategy-card ' + (active ? "active" : "") + '">' +
-          '<div class="sc-top"><strong>' + esc(s.name || s.id || "—") + '</strong>' +
-          '<span class="badge ' + (active ? "ok" : "muted") + '">' + esc(statusZh(s.status) || "—") + "</span></div>" +
-          '<p class="sc-sum">' + esc(s.summary || "") + "</p></article>";
-      }).join("");
+    var approved = [];
+    if (cloud) {
+      var list = cloud.approved || [];
+      if (!Array.isArray(list) && list && typeof list === "object") {
+        list = Object.keys(list).map(function (k) { return Object.assign({ strategy_id: k }, list[k]); });
+      }
+      approved = (list || []).filter(function (a) {
+        return a && a.mode !== "signal_only" && a.approved !== false;
+      });
     }
+    var armed = (cloud && (cloud.armed_slots || cloud.slots)) || [];
+    function enrich(a) {
+      var slot = null;
+      for (var i = 0; i < armed.length; i++) {
+        if (armed[i].strategy_id === a.strategy_id || armed[i].slot === a.slot) {
+          slot = armed[i];
+          break;
+        }
+      }
+      var src = slot || {};
+      var title = String(src.symbol || a.symbol || a.slot || "").replace(/USDT$/i, "") || (a.strategy_id || "—");
+      var stZh = src.status_zh || a.label_zh || "已核准 · 上線待命";
+      var tf = src.tf || "";
+      var notion = a.notional_usdt || src.quote_usdt || "";
+      return '<article class="strategy-card active">' +
+        '<div class="sc-top"><strong class="sc-title" title="' + esc(a.strategy_id || "") + '">' +
+        esc(title) + (tf ? " · " + esc(tf) : "") + "</strong>" +
+        '<span class="badge ok">' + esc(stZh) + "</span></div>" +
+        '<p class="sc-sum">' + esc(a.strategy_id || "") + "</p>" +
+        '<div class="sc-meta">名義 ' + esc(String(notion || "—")) + " USDT</div>" +
+        '<div class="sc-rules">' +
+        '<div><span class="lbl">進場</span> ' + esc(src.entry_condition || "—") + "</div>" +
+        '<div><span class="lbl">觸發</span> ' + (src.trigger != null ? num(src.trigger, 4) : "—") +
+        " · 現價 " + (src.mark != null ? num(src.mark, 4) : "—") +
+        (src.trigger != null && src.mark != null ? " · 距 " + num(Number(src.trigger) - Number(src.mark), 4) : "") +
+        "</div>" +
+        '<div><span class="lbl">狀態</span> ' + esc(stZh) + "</div>" +
+        "</div></article>";
+    }
+    var cards = approved.length
+      ? approved.map(enrich).join("")
+      : '<div class="empty-state">尚無已核准策略</div>';
     return '<section class="section" id="sec-strategies">' +
-      '<div class="section-head"><h2>策略列表</h2><span class="hint">使用中訊號槽 ' + plannedList().length + "</span></div>" +
-      '<div class="strategy-grid">' + (cards || '<div class="empty-state">無策略</div>') + "</div></section>";
+      '<div class="section-head"><h2>策略列表</h2><span class="hint">已核准／上線 ' + approved.length + "</span></div>" +
+      '<div class="strategy-grid">' + cards + "</div></section>";
   }
 
   function renderTrades() {
@@ -714,23 +774,23 @@
       return null;
     }
     try {
-      var res = await fetch(apiBase + "/status?t=" + Date.now(), {
-        cache: "no-store",
-        mode: "cors",
-        headers: { "Accept": "application/json" }
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      cloud = await res.json();
+      cloud = await fetchJSONRetry(
+        apiBase + "/status?t=" + Date.now(),
+        { cache: "no-store", mode: "cors", headers: { Accept: "application/json" } },
+        8000,
+        1
+      );
       cloudOk = !!(cloud && cloud.ok !== false);
       cloudErr = "";
       return cloud;
     } catch (e) {
       cloudOk = false;
-      cloudErr = e.message || String(e);
+      cloudErr = (e && e.name === "AbortError") ? "逾時" : ((e && e.message) || String(e));
       cloud = null;
       return null;
     }
   }
+
 
   async function loadAll() {
     if (loading) return;
@@ -739,14 +799,15 @@
     try {
       await loadCloud();
       showCloudBanner(!cloudOk);
+      // ALWAYS_LOAD_SCORES
+      allocCfg = await getJSONOpt(ALLOC_URL);
+      try {
+        var sc = await getJSONOpt(SCORES_URL);
+        scoresById = {};
+        ((sc && sc.strategies) || []).forEach(function (r) { scoresById[r.strategy_id] = r; });
+      } catch (eSc) { scoresById = {}; }
       if (!cloudOk) {
         book = await getJSONOpt(BOOK_URL);
-        allocCfg = await getJSONOpt(ALLOC_URL);
-        try {
-          var sc = await getJSONOpt(SCORES_URL);
-          scoresById = {};
-          ((sc && sc.strategies) || []).forEach(function (r) { scoresById[r.strategy_id] = r; });
-        } catch (eSc) { scoresById = {}; }
 
         health = await getJSONOpt(HEALTH_URL);
         positions = await getJSONOpt(POSITIONS_URL);
