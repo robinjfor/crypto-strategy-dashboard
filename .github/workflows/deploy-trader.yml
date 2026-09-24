@@ -73,6 +73,7 @@ jobs:
         id: mode
         env:
           TRADER_CONTROL_PIN: ${{ secrets.TRADER_CONTROL_PIN }}
+          SESSION_HMAC_SECRET: ${{ secrets.SESSION_HMAC_SECRET }}
           PIN_SALT: crypto-trader-v1
         run: |
           set -euo pipefail
@@ -94,7 +95,12 @@ jobs:
           HASH=$(python3 -c "import hashlib,os; salt=os.environ['PIN_SALT']; raw=os.environ.get('TRADER_CONTROL_PIN') or ''; s=raw.strip(); pin=''.join(chr(ord(c)-0xFF10+ord('0')) if 0xFF10<=ord(c)<=0xFF19 else c for c in s); print(hashlib.sha256((salt+pin).encode()).hexdigest())")
           echo "pin_hash=$HASH" >> "$GITHUB_OUTPUT"
           echo "pin_hash_len=${#HASH}"
-          SESS=$(HASH="$HASH" PIN_SALT="$PIN_SALT" python3 -c "import hashlib,os; print(hashlib.sha256(('session-v1|'+os.environ['PIN_SALT']+'|'+os.environ['HASH']).encode()).hexdigest())")
+          # Prefer explicit SESSION_HMAC_SECRET (rotated independently); else derive from pin hash
+          if [ -n "${SESSION_HMAC_SECRET:-}" ]; then
+            SESS="$SESSION_HMAC_SECRET"
+          else
+            SESS=$(HASH="$HASH" PIN_SALT="$PIN_SALT" python3 -c "import hashlib,os; print(hashlib.sha256(('session-v1|'+os.environ['PIN_SALT']+'|'+os.environ['HASH']).encode()).hexdigest())")
+          fi
           echo "session_secret=$SESS" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Cloud Run Job
