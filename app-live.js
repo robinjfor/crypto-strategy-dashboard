@@ -285,8 +285,8 @@
   }
 
   function bals() {
-    if (cloud && cloud.balances_map) {
-      var m = cloud.balances_map;
+    if (cloud && (cloud.balances_map || cloud.balances_map)) {
+      var m = cloud.balances_map || cloud.balances_map;
       return { USDT: m.USDT != null ? Number(m.USDT) : null, USDC: m.USDC != null ? Number(m.USDC) : null, NEAR: m.NEAR != null ? Number(m.NEAR) : 0 };
     }
     if (cloud && Array.isArray(cloud.balances)) {
@@ -344,6 +344,56 @@
       '</div>';
   }
 
+
+  var DUST_USDT = 1;
+
+  function actualHoldings() {
+    var rows = [];
+    var balMap = (cloud && (cloud.balances_map || cloud.balances_map)) || {};
+    openPositions().forEach(function (p) {
+      if (p.status && p.status !== "FILLED" && p.status !== "OPEN") return;
+      var sym = String(p.symbol || "").toUpperCase();
+      var asset = String(p.asset || sym.replace(/USDT$/i, "")).toUpperCase();
+      var qty = Number(p.qty != null ? p.qty : p.quantity) || 0;
+      var px = Number(
+        p.mark_price != null ? p.mark_price : (p.mark != null ? p.mark : p.price)
+      ) || 0;
+      var mv = qty * px;
+      if (!(mv >= DUST_USDT)) return;
+      rows.push({
+        slot: p.slot || "",
+        symbol: sym,
+        asset: asset,
+        tf: p.tf || p.timeframe || "",
+        qty: qty,
+        entry: p.entry != null ? p.entry : p.entry_price,
+        mark: px,
+        stop: p.stop,
+        donch_lo: p.donch_lo,
+        market_value: mv,
+        unrealized: p.unrealized_pnl != null ? p.unrealized_pnl : p.unrealized_usdt,
+        bal_qty: balMap[asset] != null ? Number(balMap[asset]) : null
+      });
+    });
+    return rows;
+  }
+
+  /** Pie: filled position MVs + USDT cash. Exclude USDC. Dust < 1 USDT ignored. */
+  function actualPieParts() {
+    var holds = actualHoldings();
+    var parts = holds.map(function (h) {
+      return { label: h.asset, value: h.market_value, symbol: h.symbol, kind: "pos" };
+    });
+    var usdt = Number((bals().USDT != null ? bals().USDT : 0)) || 0;
+    if (!holds.length) {
+      return [{ label: "現金", value: Math.max(usdt, 1), symbol: "USDT", kind: "cash" }];
+    }
+    if (usdt >= DUST_USDT) {
+      parts.push({ label: "現金", value: usdt, symbol: "USDT", kind: "cash" });
+    }
+    return parts.filter(function (p) { return p.value >= DUST_USDT; });
+  }
+
   function renderAccount() {
     var b = bals();
     var usdt = b.USDT, usdc = b.USDC;
@@ -352,21 +402,32 @@
     var equity = cloud && cloud.equity_usdt != null ? Number(cloud.equity_usdt)
       : (positions && positions.virtual_equity != null) ? Number(positions.virtual_equity)
       : (book && book.equity_usdt != null ? Number(book.equity_usdt) : usdt);
-    var openN = openPositions().filter(function (p) {
-      return !p.status || p.status === "FILLED" || p.status === "OPEN";
-    }).length;
-    // pieParts filled by renderAllocation (live-approved notionals + cash)
+    var holds = actualHoldings();
+    var openN = holds.length;
+    pieParts = actualPieParts();
+    var sum = pieParts.reduce(function (s, p) { return s + p.value; }, 0) || 1;
+    var legend = pieParts.map(function (p) {
+      var pct = (p.value / sum) * 100;
+      return '<div class="pie-legend-row" data-pie-label="' + esc(p.label) + '">' +
+        "<strong>" + esc(p.label) + "</strong> " +
+        num(pct, 1) + "% · " + num(p.value, 2) + " USDT</div>";
+    }).join("");
     return '<section class="section" id="sec-account">' +
       '<div class="section-head"><h2>帳戶總覽</h2><span class="hint">' +
-      esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") + '</span></div>' +
+      esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") + "</span></div>" +
       '<div class="overview-row"><div class="kpi-grid kpi-grid-demo">' +
       '<div class="kpi"><div class="label">USDT</div><div class="value">' + num(usdt, 2) + '</div><div class="sublabel">可用餘額</div></div>' +
-      '<div class="kpi"><div class="label">USDC</div><div class="value">' + num(usdc, 2) + '</div><div class="sublabel">可用餘額</div></div>' +
+      '<div class="kpi"><div class="label">USDC</div><div class="value">' + num(usdc, 2) + '</div><div class="sublabel">不計入圓餅</div></div>' +
       '<div class="kpi kpi-emphasis"><div class="label">穩定幣合計</div><div class="value">' + num(total, 2) + '</div><div class="sublabel">USDT + USDC</div></div>' +
       '<div class="kpi"><div class="label">USDT 側權益</div><div class="value">' + num(equity, 2) + '</div><div class="sublabel">雲端即時</div></div>' +
       '<div class="kpi"><div class="label">實際持倉數</div><div class="value">' + num(openN, 0) + '</div><div class="sublabel">' +
-      (openN === 0 ? "目前空倉（全現金）" : "幣種倉") + '</div></div>' +
-      '</div><div class="kpi kpi-pie"><div class="label">目前配置</div><div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div></div></div></section>';
+      (openN === 0 ? "目前空倉（全現金）" : "已成交部位") + "</div></div></div></div>" +
+      '<div class="holdings-pie-panel">' +
+      '<div class="section-head"><h2>實際持倉分布</h2>' +
+      '<span class="hint">以 USDT 帳戶計；不含 USDC · 與下方實際持倉同一資料</span></div>' +
+      '<div class="pie-panel-body">' +
+      '<div class="alloc-pie-wrap"><canvas id="allocPie" width="180" height="180"></canvas></div>' +
+      '<div class="pie-legend" id="pieLegend">' + legend + "</div></div></div></section>";
   }
 
   function tradeRow(r) {
@@ -402,133 +463,144 @@
   }
 
   function renderActual() {
-    var open = openPositions().filter(function (p) {
-      return !p.status || p.status === "FILLED" || p.status === "OPEN";
-    });
+    var open = actualHoldings();
     var body;
     if (!open.length) {
       body = '<tr><td colspan="10" class="empty-row">目前空倉（全現金）</td></tr>';
     } else {
       body = open.map(function (p) {
-        var upnl = p.unrealized_pnl != null ? p.unrealized_pnl : p.unrealized_usdt;
-        var slot = p.slot || "";
-        return "<tr>" +
-          "<td><strong>" + esc(p.symbol || p.asset || "—") + '</strong><div class="kpi-sub">' + esc(slot) + "</div></td>" +
+        return '<tr class="pos-row" data-symbol="' + esc(p.symbol) + '" data-asset="' + esc(p.asset) + '">' +
+          "<td><strong>" + esc(p.symbol || p.asset || "—") + '</strong><div class="kpi-sub">' + esc(p.slot) + "</div></td>" +
           "<td>" + esc(p.tf || "—") + "</td>" +
           '<td class="num">' + num(p.qty, 4) + "</td>" +
-          '<td class="num">' + num(p.entry != null ? p.entry : p.entry_price, 4) + "</td>" +
-          '<td class="num">' + (p.mark_price != null || p.mark != null ? num(p.mark_price != null ? p.mark_price : p.mark, 4) : "—") + "</td>" +
+          '<td class="num">' + num(p.entry, 4) + "</td>" +
+          '<td class="num">' + num(p.mark, 4) + "</td>" +
           '<td class="num">' + (p.stop != null ? num(p.stop, 4) : "—") + '<div class="kpi-sub">移動止損</div></td>' +
           '<td class="num">' + (p.donch_lo != null ? num(p.donch_lo, 4) : "—") + '<div class="kpi-sub">出場下軌</div></td>' +
-          '<td class="num">' + num((p.entry || p.entry_price || 0) * (p.qty || 0), 2) + "</td>" +
-          '<td class="num ' + signedCls(upnl) + '">' + (upnl == null ? "—" : num(upnl, 2)) + "</td>" +
-          '<td><button type="button" class="btn-close-pos" data-slot="' + esc(slot) + '" data-sym="' + esc(p.symbol || "") + '">手動平倉</button></td></tr>';
+          '<td class="num">' + num(p.market_value, 2) + "</td>" +
+          '<td class="num ' + signedCls(p.unrealized) + '">' + (p.unrealized == null ? "—" : num(p.unrealized, 2)) + "</td>" +
+          '<td><button type="button" class="btn-close-pos" data-slot="' + esc(p.slot) + '" data-sym="' + esc(p.symbol || "") + '">手動平倉</button></td></tr>';
       }).join("");
     }
     return '<section class="section" id="sec-actual">' +
-      '<div class="section-head"><h2>實際持倉</h2><span class="hint">雲端即時 · Demo 真實部位</span></div>' +
-      '<div class="card"><div class="table-scroll"><table class="data">' +
+      '<div class="section-head"><h2>實際持倉</h2><span class="hint">僅已成交部位 · 與圓餅同一資料源</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data" id="actualTable">' +
       "<thead><tr><th>標的／策略</th><th>週期</th><th class=\"num\">數量</th><th class=\"num\">進場價</th><th class=\"num\">現價</th><th class=\"num\">移動止損</th><th class=\"num\">出場下軌</th><th class=\"num\">市值</th><th class=\"num\">未實現損益</th><th>操作</th></tr></thead>" +
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
   function plannedList() {
-    // Only APPROVED live slots waiting for entry (signal_only → 只算訊號 section)
-    function attachStrategyId(pl) {
-      if (pl.strategy_id) return pl;
-      var armed = (cloud && (cloud.armed_slots || cloud.slots)) || [];
-      for (var i = 0; i < armed.length; i++) {
-        if (armed[i].slot === pl.slot || armed[i].id === pl.slot) {
-          pl.strategy_id = armed[i].strategy_id;
-          if (pl.donch_n == null && armed[i].donch_n != null) pl.donch_n = armed[i].donch_n;
-          break;
-        }
+    // ONLY from /status.live_slots. Label from order_mode only (no stale planned_positions labels).
+    if (!cloud) return [];
+    var fams = cloud.approved_families || [];
+    var live = Array.isArray(cloud.live_slots) ? cloud.live_slots : [];
+    var armed = Array.isArray(cloud.armed_slots) ? cloud.armed_slots : [];
+    var plannedRaw = Array.isArray(cloud.planned_positions) ? cloud.planned_positions : [];
+    var cache = (cloud && cloud._market_cache) || {};
+    var openSyms = {};
+    openPositions().forEach(function (p) {
+      if (p.status && p.status !== "FILLED" && p.status !== "OPEN") return;
+      var sym = String(p.symbol || p.asset || "").toUpperCase();
+      if (sym && sym.indexOf("USDT") < 0) sym += "USDT";
+      if (sym) openSyms[sym] = true;
+      if (p.slot) openSyms["slot:" + p.slot] = true;
+    });
+
+    function enrich(slotId) {
+      var i;
+      for (i = 0; i < armed.length; i++) {
+        if (armed[i].slot === slotId || armed[i].id === slotId) return armed[i];
       }
-      return pl;
+      for (i = 0; i < plannedRaw.length; i++) {
+        if (plannedRaw[i].slot === slotId) return plannedRaw[i];
+      }
+      if (cache[slotId]) return cache[slotId];
+      return {};
     }
-    if (cloud && Array.isArray(cloud.planned_positions)) {
-      return cloud.planned_positions.filter(function (pl) {
-        var om = pl.order_mode || pl.mode || "";
-        if (om !== "live" || pl.approved === false) return false;
-        return pl.approved === true || om === "live";
-      }).map(function (pl) {
-        var copy = Object.assign({}, pl);
-        attachStrategyId(copy);
-        if (pl.status_zh && /[\u4e00-\u9fff]/.test(String(pl.status_zh))) {
-          copy.status_label = pl.status_zh;
-        } else if (pl.status_label && /[\u4e00-\u9fff]/.test(String(pl.status_label))) {
-          copy.status_label = pl.status_label;
-        } else if (pl.label_zh && /[\u4e00-\u9fff]/.test(String(pl.label_zh))) {
-          copy.status_label = pl.label_zh;
-        } else {
-          copy.status_label = statusZh(pl.status_label || pl.ui_status || pl.status_code || pl.status);
-        }
-        if (copy.target_pct == null) copy.target_pct = targetPctFor(copy);
-        if (!copy.asset) copy.asset = String(pl.symbol || pl.slot || "").replace(/USDT$/i, "");
-        return copy;
+
+    function modeLabel(om) {
+      return String(om || "").toLowerCase() === "live" ? "等突破進場" : "只算訊號";
+    }
+
+    var out = [];
+    live.forEach(function (s) {
+      if (!s || s.enabled === false) return;
+      var fam = s.family;
+      if (fams.length && fam && fams.indexOf(fam) < 0) return;
+      var om = String(s.order_mode || s.mode || "live").toLowerCase();
+      var sym = String(s.symbol || "").toUpperCase();
+      if (openSyms[sym] || openSyms["slot:" + s.slot]) return;
+
+      var src = enrich(s.slot);
+      var mark = src.mark != null ? Number(src.mark) : null;
+      var trigger = src.trigger != null ? Number(src.trigger)
+        : (src.donch_hi != null ? Number(src.donch_hi) : null);
+      var atr = src.atr != null ? Number(src.atr) : (src.atr14 != null ? Number(src.atr14) : null);
+      var pms = s.params || {};
+      var donchN = Number(pms.donch_n != null ? pms.donch_n : (src.donch_n || 20));
+      var atrMode = String(pms.atr_mode || "wilder").toLowerCase();
+      var notion = Number(s.notional_usdt != null ? s.notional_usdt : src.quote_usdt);
+      if (!(notion > 0)) notion = 0;
+
+      var distPct = null, distAtr = null;
+      if (trigger != null && mark != null && mark > 0) {
+        var distAbs = trigger - mark;
+        distPct = (distAbs / mark) * 100;
+        if (atr != null && atr > 0) distAtr = distAbs / atr;
+      }
+
+      out.push({
+        slot: s.slot,
+        strategy_id: s.strategy_id,
+        symbol: sym,
+        asset: sym.replace(/USDT$/i, ""),
+        tf: s.timeframe || s.tf || src.tf,
+        order_mode: om,
+        status_label: modeLabel(om),
+        target_notional_usdt: notion,
+        mark: mark,
+        trigger: trigger,
+        atr: atr,
+        atr_mode: atrMode,
+        dist_pct: distPct,
+        dist_atr: distAtr,
+        donch_n: donchN,
+        entry_rule: src.entry_condition || src.entry_rule || ("Donchian" + donchN + " 突破上軌"),
+        _needs_market: (mark == null || trigger == null || atr == null)
       });
-    }
-    if (cloud && Array.isArray(cloud.armed_slots)) {
-      return cloud.armed_slots.filter(function (a) {
-        var om = a.order_mode || a.mode || "";
-        return a.approved === true && om === "live";
-      }).map(function (a) {
-        return {
-          asset: String(a.symbol || "").replace(/USDT$/i, ""),
-          symbol: a.symbol,
-          slot: a.slot,
-          strategy_id: a.strategy_id,
-          strategy_name: a.variant || a.strategy_id,
-          tf: a.tf,
-          target_notional_usdt: a.quote_usdt,
-          status_label: a.status_zh || statusZh(a.status || a.reason || a.action),
-          mode: a.mode || a.order_mode,
-          entry_rule: a.entry_condition,
-          mark: a.mark,
-          trigger: a.trigger,
-          target_pct: a.target_pct,
-          stop_note: a.suggested_stop != null ? ("建議止損 " + a.suggested_stop) : "—",
-          stop_mode: "pending",
-          donch_n: a.donch_n || 20
-        };
-      });
-    }
-    return [];
+    });
+    return out;
   }
 
   function renderPlanned() {
     var planned = plannedList();
     var body;
     if (!planned.length) {
-      body = '<tr><td colspan="8" class="empty-row">目前沒有預計持倉</td></tr>';
+      body = '<tr><td colspan="7" class="empty-row">目前沒有預計持倉</td></tr>';
     } else {
       body = planned.map(function (pl) {
-        var stopNote = pl.stop_mode === "pending"
-          ? (pl.stop_note || "未開倉 → 無有效移動止損／出場下軌")
-          : (pl.stop_note || "—");
-        var safe = String(stopNote).replace(/目標價/g, "止損參考");
-        return "<tr>" +
-          "<td><strong>" + esc(pl.asset) + '</strong><div class="kpi-sub">' + esc(pl.strategy_name || "") + "</div></td>" +
-          '<td class="num">' + (targetPctFor(pl) != null ? num(targetPctFor(pl), 0) + "%" : "—") + "</td>" +
+        var distTxt = "—";
+        if (pl.dist_pct != null) {
+          distTxt = num(pl.dist_pct, 2) + "%";
+          if (pl.dist_atr != null) distTxt += " · " + num(pl.dist_atr, 2) + " ATR";
+        }
+        var badge = pl.order_mode === "live" ? "ok" : "muted";
+        return '<tr data-slot="' + esc(pl.slot) + '">' +
+          "<td><strong>" + esc(pl.asset) + '</strong><div class="kpi-sub">' +
+          esc(pl.slot) + " · " + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n)) + "</div></td>" +
           '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
-          "<td>" + esc(
-            (pl.mode === "signal_only" || pl.label_zh && String(pl.label_zh).indexOf("監看") >= 0)
-              ? (pl.label_zh || "只算訊號（未核准）")
-              : (pl.status_label || statusZh(pl.status_code || pl.ui_status) || "—")
-          ) + "</td>" +
-          "<td>" + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n || "—")) + "</td>" +
-          "<td>" + esc(pl.entry_rule || "—") + "</td>" +
-          "<td>" + esc(safe) + "</td>" +
-          '<td class="num">' + (pl.mark != null ? num(pl.mark, 4) : "—") +
-          '<div class="kpi-sub">觸發 ' + (pl.trigger != null ? num(pl.trigger, 4) : "—") +
-          (pl.trigger != null && pl.mark != null ? " · 距 " + num(Number(pl.trigger) - Number(pl.mark), 4) : "") +
-          "</div></td></tr>";
+          '<td><span class="badge ' + badge + '">' + esc(pl.status_label) + "</span></td>" +
+          '<td class="num">' + (pl.trigger != null ? num(pl.trigger, 4) : "—") + "</td>" +
+          '<td class="num">' + (pl.mark != null ? num(pl.mark, 4) : "—") + "</td>" +
+          '<td class="num">' + distTxt + "</td>" +
+          "<td>" + esc(pl.entry_rule || "—") + "</td></tr>";
       }).join("");
     }
     return '<section class="section" id="sec-planned">' +
-      '<div class="section-head"><h2>預計持倉</h2><span class="hint">僅已核准待進場 · 來自 /status</span></div>' +
-      '<div class="card"><div class="table-scroll"><table class="data">' +
-      "<thead><tr><th>標的</th><th class=\"num\">目標%</th><th class=\"num\">名義 USDT</th><th>狀態</th><th>週期</th><th>進場條件</th><th>止損／出場</th><th class=\"num\">現價／觸發</th></tr></thead>" +
+      '<div class="section-head"><h2>預計持倉</h2><span class="hint">已核准家族 · live 槽尚未成交 · 狀態只依 live_slots.order_mode</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data" id="plannedTable">' +
+      "<thead><tr><th>標的</th><th class=\"num\">計畫名義</th><th>狀態</th>" +
+      "<th class=\"num\">上軌價</th><th class=\"num\">現價</th><th class=\"num\">距突破</th><th>進場條件</th></tr></thead>" +
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
@@ -588,85 +660,8 @@
   }
 
   function renderAllocation() {
-    var book = bookUsdt();
-    var live = approvedLiveSlots();
-    var rows = live.map(function (a) {
-      var src = armedFor(a.slot, a.strategy_id) || {};
-      var notion = Number(a.notional_usdt != null ? a.notional_usdt : src.quote_usdt);
-      if (!(notion > 0)) notion = 0;
-      var pct = book > 0 ? (notion / book) * 100 : 0;
-      var sym = String(a.symbol || src.symbol || "").replace(/USDT$/i, "") || "—";
-      var tf = a.tf || src.tf || "—";
-      var name = a.name || a.label_zh || a.label || null;
-      if (!name || name.indexOf("已核准") >= 0 || name.indexOf("上線") >= 0) {
-        name = sym + (tf && tf !== "—" ? (" · " + tf) : "");
-      }
-      // Optional friendly name from static book rows (label only; pct comes from /status)
-      if (allocCfg && Array.isArray(allocCfg.rows)) {
-        for (var bi = 0; bi < allocCfg.rows.length; bi++) {
-          var br = allocCfg.rows[bi];
-          if (br.strategy_id && br.strategy_id === a.strategy_id && br.name) { name = br.name; break; }
-          if (br.id && br.id === a.slot && br.name) { name = br.name; break; }
-        }
-      }
-      return {
-        strategy_id: a.strategy_id,
-        slot: a.slot || src.slot,
-        name: name,
-        symbol: sym,
-        timeframe: tf,
-        pct: pct,
-        notional_usdt: notion,
-        signal: slotSignalFromCloud(a.slot || src.slot, a.strategy_id),
-        score: scoreFor(a.strategy_id)
-      };
-    });
-    var allocated = rows.reduce(function (s, r) { return s + (Number(r.notional_usdt) || 0); }, 0);
-    var cashNotion = Math.max(0, book - allocated);
-    var cashPct = book > 0 ? (cashNotion / book) * 100 : 100;
-
-    pieParts = rows.map(function (r) {
-      return { label: r.symbol || r.name, value: Number(r.notional_usdt) || 0 };
-    }).filter(function (p) { return p.value > 0; });
-    if (cashNotion > 0) pieParts.push({ label: "現金", value: cashNotion });
-
-    var body = rows.map(function (r) {
-      return "<tr>" +
-        "<td><strong>" + esc(r.name) + "</strong>" +
-        (r.strategy_id ? '<div class="dim mono">' + esc(r.strategy_id) + "</div>" : "") + "</td>" +
-        "<td>" + esc(r.symbol) + " / " + esc(r.timeframe) + "</td>" +
-        '<td class="num">' + num(r.pct, 0) + "%</td>" +
-        '<td class="num">' + num(r.notional_usdt, 0) + "</td>" +
-        '<td class="num">' + (r.score != null ? num(r.score, 2) : "—") + "</td>" +
-        '<td><span class="badge ok">已核准 · 上線</span></td>' +
-        "<td>" + esc(r.signal) + "</td>" +
-        "</tr>";
-    }).join("");
-    body += "<tr>" +
-      "<td><strong>現金</strong><div class=\"dim\">未配置餘額</div></td>" +
-      "<td>USDT / —</td>" +
-      '<td class="num">' + num(cashPct, 0) + "%</td>" +
-      '<td class="num">' + num(cashNotion, 0) + "</td>" +
-      '<td class="num">—</td>' +
-      '<td><span class="badge muted">現金</span></td>' +
-      "<td>—</td></tr>";
-
-    if (!rows.length) {
-      body = '<tr><td colspan="7" class="empty-row">尚無已上線核准策略（請至策略評分核准）</td></tr>' +
-        "<tr>" +
-        "<td><strong>現金</strong></td><td>USDT / —</td>" +
-        '<td class="num">100%</td>' +
-        '<td class="num">' + num(book, 0) + "</td>" +
-        '<td class="num">—</td><td><span class="badge muted">現金</span></td><td>—</td></tr>';
-      pieParts = [{ label: "現金", value: book }];
-    }
-
-    return '<section class="section" id="sec-alloc">' +
-      '<div class="section-head"><h2>目前配置</h2><span class="hint">基準 ' +
-      num(book, 0) + " USDT · 僅已核准且 order_mode=live（核准／撤銷後自動更新）</span></div>" +
-      '<div class="card"><div class="table-scroll"><table class="data alloc-book-table">' +
-      "<thead><tr><th>策略</th><th>幣別／週期</th><th class=\"num\">配置%</th><th class=\"num\">名義 USDT</th><th class=\"num\">分數</th><th>狀態</th><th>目前訊號</th></tr></thead>" +
-      "<tbody>" + body + "</tbody></table></div></div></section>";
+    // Removed per Emily: do not present planned notional as「目前配置」.
+    return "";
   }
 
   function renderStrategies() {
@@ -690,7 +685,7 @@
         esc(title) + (tf ? " · " + esc(tf) : "") + "</strong>" +
         '<span class="badge ok">' + esc(stZh) + "</span></div>" +
         '<p class="sc-sum">' + esc(a.strategy_id || "") + "</p>" +
-        '<div class="sc-meta">名義 ' + esc(String(notion || "—")) + " USDT</div>" +
+        '<div class="sc-meta">進場計畫見「預計持倉」</div>' +
         '<div class="sc-rules">' +
         '<div><span class="lbl">進場</span> ' + esc(src.entry_condition || "—") + "</div>" +
         '<div><span class="lbl">觸發</span> ' + (src.trigger != null ? num(src.trigger, 4) : "—") +
@@ -734,19 +729,42 @@
     var canvas = $("allocPie");
     if (!canvas || typeof Chart === "undefined") return;
     var data = (parts || []).filter(function (p) { return p.value > 0; });
-    if (!data.length) return;
+    if (!data.length) data = [{ label: "現金", value: 1 }];
+    var sum = data.reduce(function (s, p) { return s + p.value; }, 0) || 1;
     if (canvas._chart) canvas._chart.destroy();
+    var colors = ["#3b82f6", "#22d3ee", "#22c55e", "#f59e0b", "#a78bfa", "#94a3b8"];
     canvas._chart = new Chart(canvas, {
       type: "doughnut",
       data: {
-        labels: data.map(function (d) { return d.label; }),
-        datasets: [{ data: data.map(function (d) { return d.value; }),
-          backgroundColor: ["#3b82f6", "#22d3ee", "#22c55e", "#f59e0b"], borderWidth: 0 }]
+        labels: data.map(function (d) {
+          var pct = (d.value / sum) * 100;
+          return d.label + "  " + pct.toFixed(1) + "%  ·  " + Number(d.value).toFixed(2) + " USDT";
+        }),
+        datasets: [{
+          data: data.map(function (d) { return d.value; }),
+          backgroundColor: data.map(function (_d, i) { return colors[i % colors.length]; }),
+          borderWidth: 0
+        }]
       },
       options: {
-        plugins: { legend: { display: true, position: "bottom",
-          labels: { color: "#8b9bb0", boxWidth: 10, font: { size: 10 } } } },
-        cutout: "62%"
+        plugins: {
+          legend: {
+            display: true,
+            position: "right",
+            labels: { color: "#8b9bb0", boxWidth: 12, font: { size: 11 } }
+          }
+        },
+        cutout: "58%",
+        onHover: function (_evt, els) {
+          var rows = document.querySelectorAll("#actualTable tr.pos-row");
+          rows.forEach(function (r) { r.classList.remove("pie-hover"); });
+          if (!els || !els.length) return;
+          var lab = data[els[0].index] && data[els[0].index].label;
+          if (!lab || lab === "現金") return;
+          rows.forEach(function (r) {
+            if (r.getAttribute("data-asset") === lab) r.classList.add("pie-hover");
+          });
+        }
       }
     });
   }
@@ -898,6 +916,59 @@
     if (backdrop) backdrop.onclick = closeModal;
   }
 
+  async function enrichPlannedMarkets(list) {
+    var need = (list || []).filter(function (pl) { return pl._needs_market; });
+    if (!need.length) return list;
+    await Promise.all(need.map(async function (pl) {
+      try {
+        var interval = String(pl.tf || "1h").toLowerCase();
+        var limit = Math.max(80, Number(pl.donch_n || 20) + 25);
+        var url = "https://data-api.binance.vision/api/v3/klines?symbol=" +
+          encodeURIComponent(pl.symbol) + "&interval=" + encodeURIComponent(interval) +
+          "&limit=" + limit;
+        var res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return;
+        var kl = await res.json();
+        if (!Array.isArray(kl) || kl.length < 20) return;
+        var bars = kl.slice(0, -1);
+        var n = Number(pl.donch_n || 20);
+        var i, hi = -Infinity, trs = [];
+        for (i = Math.max(0, bars.length - n); i < bars.length; i++) {
+          var h = Number(bars[i][2]);
+          if (h > hi) hi = h;
+        }
+        for (i = 1; i < bars.length; i++) {
+          var hh = Number(bars[i][2]), ll = Number(bars[i][3]), cprev = Number(bars[i - 1][4]);
+          trs.push(Math.max(hh - ll, Math.abs(hh - cprev), Math.abs(ll - cprev)));
+        }
+        var atrN = 14, atr = null, j;
+        if (trs.length >= atrN) {
+          if (pl.atr_mode === "sma") {
+            var sum = 0;
+            for (j = trs.length - atrN; j < trs.length; j++) sum += trs[j];
+            atr = sum / atrN;
+          } else {
+            var seed = 0;
+            for (j = 0; j < atrN; j++) seed += trs[j];
+            atr = seed / atrN;
+            for (j = atrN; j < trs.length; j++) atr = (atr * (atrN - 1) + trs[j]) / atrN;
+          }
+        }
+        var last = bars[bars.length - 1];
+        pl.mark = Number(last[4]);
+        pl.trigger = hi;
+        pl.atr = atr;
+        if (pl.trigger != null && pl.mark > 0) {
+          var d = pl.trigger - pl.mark;
+          pl.dist_pct = (d / pl.mark) * 100;
+          if (pl.atr > 0) pl.dist_atr = d / pl.atr;
+        }
+        pl._needs_market = false;
+      } catch (e) { /* ignore */ }
+    }));
+    return list;
+  }
+
   function renderAll() {
     var main = $("main");
     if (!main) return;
@@ -907,10 +978,27 @@
       return;
     }
     main.className = "";
+    pieParts = actualPieParts();
     main.innerHTML = renderHealth() + renderAccount() + renderChanges() +
-      renderAllocation() + renderActual() + renderPlanned() + renderStrategies() + renderTrades();
+      renderActual() + renderPlanned() + renderStrategies() + renderTrades();
     mountPie(pieParts);
     bindControls();
+    var pending = plannedList();
+    enrichPlannedMarkets(pending).then(function () {
+      if (!cloud) return;
+      cloud._market_cache = cloud._market_cache || {};
+      pending.forEach(function (pl) {
+        cloud._market_cache[pl.slot] = {
+          mark: pl.mark, trigger: pl.trigger, atr: pl.atr, donch_hi: pl.trigger
+        };
+      });
+      var el = document.getElementById("sec-planned");
+      if (el) {
+        var tmp = document.createElement("div");
+        tmp.innerHTML = renderPlanned();
+        if (tmp.firstChild) el.replaceWith(tmp.firstChild);
+      }
+    });
   }
 
   async function loadCloud() {

@@ -732,3 +732,27 @@ table.scores tr.fail:hover td.col-approve {
 .btn-fam-revoke { border-color: #ef444488; color: #fca5a5; }
 .btn-fam-approve:disabled { opacity: 0.45; cursor: not-allowed; }
 .ssc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+
+/* ---- Actual holdings pie (homepage) ---- */
+.holdings-pie-panel {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #2a3544;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+.pie-panel-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+.alloc-pie-wrap { flex: 0 0 auto; }
+.pie-legend { flex: 1 1 200px; font-size: 13px; color: #c5d0dc; }
+.pie-legend-row { padding: 4px 0; border-bottom: 1px solid #1f2a37; }
+.pie-legend-row strong { margin-right: 8px; color: #e8eef6; }
+#actualTable tr.pos-row.pie-hover td {
+  background: rgba(59, 130, 246, 0.18);
+}
+.badge.muted { background: #334155; color: #cbd5e1; }
