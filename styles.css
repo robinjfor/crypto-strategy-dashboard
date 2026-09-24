@@ -468,3 +468,49 @@ button.linkish {
 .neg { color: var(--red); }
 .empty-row, .empty-state { text-align: center; color: var(--text-muted); padding: 18px; }
 .hidden { display: none !important; }
+
+/* Cloud control + health */
+.cloud-banner {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-weight: 600;
+  text-align: center;
+}
+.health-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.health-bar.ok { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+.health-bar.warn { border-color: #f59e0b; background: rgba(245,158,11,0.1); }
+.health-bar.bad { border-color: #ef4444; background: rgba(239,68,68,0.1); }
+.health-light.ok { color: #22c55e; }
+.health-light.warn { color: #f59e0b; }
+.health-light.bad { color: #ef4444; }
+.btn-toggle, .btn-close-pos {
+  border: 1px solid #3a4556;
+  background: #1a2332;
+  color: #e8eef7;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-toggle.pause { border-color: #f59e0b; color: #fbbf24; }
+.btn-toggle.resume { border-color: #22c55e; color: #4ade80; }
+.btn-close-pos { border-color: #ef4444; color: #fca5a5; white-space: nowrap; }
+.btn-toggle:hover, .btn-close-pos:hover { filter: brightness(1.15); }
+.pin-label { display: block; margin: 12px 0 8px; color: #c5d0e0; }
+.pin-input {
+  display: block; width: 100%; margin-top: 6px; padding: 10px 12px;
+  border-radius: 8px; border: 1px solid #3a4556; background: #0f1621; color: #e8eef7;
+}
+.pin-remember { display: flex; gap: 8px; align-items: center; color: #8b9bb0; font-size: 13px; margin: 8px 0 14px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-confirm { color: #fbbf24; margin: 8px 0 12px; }
+.modal-result { margin-top: 12px; color: #93c5fd; min-height: 1.2em; }

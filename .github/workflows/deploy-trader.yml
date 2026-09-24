@@ -1,4 +1,5 @@
 # Manual deploy only — does NOT run on push.
+# Deploys Cloud Run Job + HTTP Service (status/control API) via WIF.
 name: deploy-trader
 
 on:
@@ -6,6 +7,10 @@ on:
     inputs:
       run_probe:
         description: "After deploy, execute job once in probe mode"
+        type: boolean
+        default: false
+      run_once:
+        description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
         default: true
 
@@ -16,10 +21,13 @@ permissions:
 env:
   REGION: asia-east1
   JOB_NAME: crypto-trader
+  SERVICE_NAME: crypto-trader-api
   SCHEDULER_HOURLY: crypto-trader-hourly
   SCHEDULER_DAILY_SOL: crypto-trader-daily-sol
   REPO_NAME: trader
   IMAGE_NAME: crypto-trader
+  CORS_ORIGIN: https://robinjfor.github.io
+  PIN_SALT: crypto-trader-v1
 
 jobs:
   deploy:
@@ -53,18 +61,31 @@ jobs:
           docker push "${IMAGE}:latest"
           echo "IMAGE_URI=${IMAGE}:${TAG}" >> "$GITHUB_ENV"
 
-      - name: Resolve trader mode
+      - name: Resolve trader mode + PIN hash
         id: mode
+        env:
+          TRADER_CONTROL_PIN: ${{ secrets.TRADER_CONTROL_PIN }}
+          PIN_SALT: crypto-trader-v1
         run: |
+          set -euo pipefail
           MODE="${{ vars.TRADER_MODE }}"
           MODE="${MODE:-dry-run}"
           if [ "$MODE" = "live" ]; then
-            JOB_ARGS='["run"]'
+            echo "job_arg1=main.py" >> "$GITHUB_OUTPUT"
+            echo "job_arg2=run" >> "$GITHUB_OUTPUT"
           else
-            JOB_ARGS='["dry-run"]'
+            echo "job_arg1=main.py" >> "$GITHUB_OUTPUT"
+            echo "job_arg2=dry-run" >> "$GITHUB_OUTPUT"
           fi
           echo "trader_mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "job_args=$JOB_ARGS" >> "$GITHUB_OUTPUT"
+          if [ -z "${TRADER_CONTROL_PIN:-}" ]; then
+            echo "CONTROL_PIN_HASH missing — set GitHub secret TRADER_CONTROL_PIN" >&2
+            exit 1
+          fi
+          # Salted SHA-256; never echo the PIN
+          HASH=$(python3 -c "import hashlib,os; print(hashlib.sha256((os.environ['PIN_SALT']+os.environ['TRADER_CONTROL_PIN']).encode()).hexdigest())")
+          echo "pin_hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "pin_hash_len=${#HASH}"
 
       - name: Deploy Cloud Run Job
         run: |
@@ -85,9 +106,46 @@ jobs:
             --max-retries=1 \
             --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,VISION_BASE_URL=https://data-api.binance.vision" \
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
-            --args='${{ steps.mode.outputs.job_args }}' \
+            --command=python \
+            --args=-u,${{ steps.mode.outputs.job_arg1 }},${{ steps.mode.outputs.job_arg2 }} \
             --memory=512Mi \
             --cpu=1
+
+      - name: Deploy Cloud Run Service (status/control API)
+        id: svc
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          ENABLED="${{ vars.TRADER_ENABLED }}"
+          ENABLED="${ENABLED:-true}"
+          MODE="${{ steps.mode.outputs.trader_mode }}"
+          PIN_HASH="${{ steps.mode.outputs.pin_hash }}"
+
+          gcloud run deploy "${SERVICE_NAME}" \
+            --project="${PROJECT}" \
+            --region="${REGION}" \
+            --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" \
+            --allow-unauthenticated \
+            --port=8080 \
+            --command=python \
+            --args=-u,api.py \
+            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,VISION_BASE_URL=https://data-api.binance.vision,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH}" \
+            --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=2 \
+            --timeout=60
+
+          URL=$(gcloud run services describe "${SERVICE_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --format='value(status.url)')
+          echo "service_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "SERVICE_URL=$URL" >> "$GITHUB_ENV"
+          echo "Deployed API at $URL"
 
       - name: Ensure hourly Cloud Scheduler (satellites + windowed SOL check)
         run: |
@@ -121,8 +179,6 @@ jobs:
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
           URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${JOB_NAME}:run"
-          # Same job; SOL core only acts on would_order inside UTC 00:05–00:15.
-          # Dedicated daily trigger guarantees a run inside that window.
           if gcloud scheduler jobs describe "${SCHEDULER_DAILY_SOL}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
             gcloud scheduler jobs update http "${SCHEDULER_DAILY_SOL}" \
               --project="${PROJECT}" --location="${REGION}" \
@@ -144,8 +200,25 @@ jobs:
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
-            --args=probe --wait
+            --args=main.py,probe --wait
+
+      - name: Execute job once (live/dry-run per TRADER_MODE)
+        if: ${{ inputs.run_once }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs execute "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --wait
+          echo "--- recent job logs ---"
           gcloud logging read \
             "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME}" \
-            --project="${PROJECT}" --limit=50 \
+            --project="${PROJECT}" --limit=40 \
             --format='value(textPayload)' || true
+
+      - name: Summary
+        run: |
+          echo "### Deploy summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: \`${{ steps.mode.outputs.trader_mode }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: ${{ steps.svc.outputs.service_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image: \`${IMAGE_URI}\`" >> "$GITHUB_STEP_SUMMARY"

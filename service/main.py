@@ -6,7 +6,7 @@ Modes:
   dry-run  — compute signals & intended orders; place nothing
   run      — reconcile + place when TRADER_MODE=live AND TRADER_ENABLED=true
 
-Env (match service/GCP_SETUP_zh.md):
+Env:
   BINANCE_DEMO_API_KEY / BINANCE_DEMO_API_SECRET
   BINANCE_BASE_URL   default https://demo-api.binance.com
   VISION_BASE_URL    default https://data-api.binance.vision
@@ -24,6 +24,7 @@ import sys
 from datetime import datetime, timezone
 
 from binance_client import BinanceClient
+from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
 from slots import MAX_NOTIONAL_USDT, SLOTS
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei
@@ -59,6 +60,10 @@ def build_feed(client: BinanceClient | None, state: dict, signals: list[dict], m
                     trades[sym] = client.my_trades(sym, limit=20)
                 except Exception as e:  # noqa: BLE001
                     trades[sym] = [{"error": str(e)}]
+            try:
+                trades["SOLUSDT"] = client.my_trades("SOLUSDT", limit=20)
+            except Exception as e:  # noqa: BLE001
+                trades["SOLUSDT"] = [{"error": str(e)}]
         except Exception as e:  # noqa: BLE001
             log.warning("feed_account_skip err=%s", e)
     return {
@@ -66,13 +71,16 @@ def build_feed(client: BinanceClient | None, state: dict, signals: list[dict], m
         "updated_at_utc": datetime.now(timezone.utc).isoformat(),
         "engine": "binance_demo_cloudrun",
         "mode": mode,
+        "paused": bool(state.get("paused")),
         "trader_enabled": env_bool("TRADER_ENABLED", True),
         "region_hint": "asia-east1",
         "balances": balances,
         "myTrades": trades,
         "slots": signals,
         "positions": state.get("positions", {}),
+        "closed_trades": state.get("closed_trades", [])[-50:],
         "meta": state.get("meta", {}),
+        "sol_expectation_log": state.get("expectation_log", [])[-20:],
     }
 
 
@@ -91,7 +99,8 @@ def cmd_probe(client: BinanceClient) -> int:
     return 0
 
 
-def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> dict:
+def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
+    """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
     action = sig.get("action")
     out = dict(sig)
@@ -104,8 +113,13 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> d
     meta = slots_meta.setdefault(slot_id, {})
 
     if action == "enter":
+        if not allow_entries:
+            out["reason"] = "paused_no_new_entries"
+            log.info("skip_enter_paused slot=%s", slot_id)
+            return out
         quote = min(float(sig.get("quote_usdt") or 0), MAX_NOTIONAL_USDT)
-        coid = sig.get("client_order_id") or f"{slot_id}-enter"
+        bar_ts = str(sig.get("bar_ts") or "")
+        coid = sig.get("client_order_id") or client_order_id(slot_id, "enter", bar_ts)
         log.info(
             "intent_enter symbol=%s quote=%s coid=%s live=%s stop=%s",
             sig["symbol"], quote, coid, live, sig.get("suggested_stop"),
@@ -139,16 +153,25 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> d
                 "symbol": sig["symbol"],
                 "qty": qty,
                 "entry": px,
-                "entry_bar_ts": sig["bar_ts"],
+                "entry_bar_ts": sig.get("bar_ts"),
                 "stop": stop,
+                "donch_lo": sig.get("donch_lo"),
                 "client_order_id": coid,
                 "order_id": order.get("orderId"),
                 "filled_at": now_iso_taipei(),
             }
-            meta["last_acted_bar_ts"] = sig["bar_ts"]
+            # Hard exchange stop immediately after fill (spot STOP_LOSS_LIMIT)
+            try:
+                stop_ord = place_hard_stop(client, sig["symbol"], qty, stop, slot_id)
+                positions[slot_id]["stop_order_id"] = stop_ord.get("orderId")
+                positions[slot_id]["stop_client_order_id"] = stop_ord.get("clientOrderId")
+            except Exception as e:  # noqa: BLE001
+                log.error("hard_stop_fail_after_fill slot=%s err=%s", slot_id, e)
+                positions[slot_id]["stop_error"] = str(e)
+            meta["last_acted_bar_ts"] = sig.get("bar_ts")
             out["executed"] = True
             out["fill"] = {"qty": qty, "price": px, "orderId": order.get("orderId")}
-            log.info("filled_enter symbol=%s qty=%s px=%s", sig["symbol"], qty, px)
+            log.info("filled_enter symbol=%s qty=%s px=%s stop=%s", sig["symbol"], qty, px, stop)
         except Exception as e:  # noqa: BLE001
             log.error("enter_fail symbol=%s err=%s", sig["symbol"], e)
             out["error"] = str(e)
@@ -157,7 +180,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> d
     if action == "exit":
         pos = positions.get(slot_id) or {}
         qty = float(pos.get("qty") or 0)
-        coid = f"{slot_id}-x-{str(sig.get('exit_bar_ts') or '')[:13]}".replace(":", "")[:36]
+        coid = client_order_id(slot_id, "exit", str(sig.get("exit_bar_ts") or sig.get("bar_ts") or ""))
         log.info(
             "intent_exit symbol=%s qty=%s reason=%s ref=%s live=%s",
             sig["symbol"], qty, sig.get("reason"), sig.get("exit_ref"), live,
@@ -174,10 +197,37 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> d
             out["reason"] = "no_qty"
             return out
         try:
+            try:
+                client.cancel_open_orders(sig["symbol"])
+            except Exception as e:  # noqa: BLE001
+                log.warning("cancel_before_exit_skip err=%s", e)
             order = client.market_sell(sig["symbol"], qty, coid)
+            entry = float(pos.get("entry") or 0)
+            fill_px = float(sig.get("mark") or sig.get("close") or entry)
+            fills = order.get("fills") or []
+            if fills:
+                notional = sum(float(f["price"]) * float(f["qty"]) for f in fills)
+                qty2 = sum(float(f["qty"]) for f in fills)
+                fill_px = notional / qty2 if qty2 else fill_px
+            closed = {
+                "slot": slot_id,
+                "symbol": sig["symbol"],
+                "qty": qty,
+                "entry": entry,
+                "exit": fill_px,
+                "pnl_usdt": round((fill_px - entry) * qty, 4) if entry else None,
+                "reason": sig.get("reason") or "exit",
+                "closed_at": now_iso_taipei(),
+                "order_id": order.get("orderId"),
+            }
+            state.setdefault("closed_trades", []).append(closed)
+            state["closed_trades"] = state["closed_trades"][-200:]
             positions.pop(slot_id, None)
             meta["last_acted_bar_ts"] = sig.get("exit_bar_ts") or sig.get("bar_ts")
             meta["last_exit_bar_ts"] = sig.get("exit_bar_ts") or sig.get("bar_ts")
+            meta["last_exit_reason"] = closed["reason"]
+            if slot_id == "core_sol":
+                meta["needs_reset_latch"] = True
             out["executed"] = True
             out["fill"] = {"orderId": order.get("orderId"), "executedQty": order.get("executedQty")}
             log.info("filled_exit symbol=%s", sig["symbol"])
@@ -189,13 +239,57 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool) -> d
     if action == "manage":
         pos = positions.get(slot_id)
         if pos and sig.get("stop") is not None:
-            pos["stop"] = sig["stop"]
+            new_stop = float(sig["stop"])
             pos["mark"] = sig.get("mark")
+            pos["donch_lo"] = sig.get("donch_lo")
             pos["last_manage_bar_ts"] = sig.get("bar_ts")
             pos["updated_at"] = now_iso_taipei()
+            if live and new_stop > float(pos.get("stop") or 0):
+                try:
+                    replace_trail_stop(client, pos, new_stop, slot_id)
+                except Exception as e:  # noqa: BLE001
+                    log.error("trail_replace_fail slot=%s err=%s", slot_id, e)
+                    pos["stop"] = new_stop  # still update state stop target
+            else:
+                pos["stop"] = new_stop
         return out
 
     return out
+
+
+def apply_sol_entry(client: BinanceClient, state: dict, sol_sig: dict, live: bool, allow_entries: bool) -> dict:
+    """Map SOL core would_order into apply_signal enter shape."""
+    if not sol_sig.get("would_order"):
+        return sol_sig
+    if not allow_entries:
+        sol_sig = dict(sol_sig)
+        sol_sig["reason"] = "paused_no_new_entries"
+        sol_sig["would_order"] = False
+        return sol_sig
+    plan = sol_sig.get("order_plan_if_enter_at_last_close") or {}
+    atr = float((sol_sig.get("signal") or {}).get("atr14_sma") or plan.get("atr") or 0)
+    close = float(sol_sig.get("sol_close") or plan.get("entry_px") or 0)
+    stop_mult = float(plan.get("stop_atr_mult") or 2.0)
+    stop = float(plan.get("stop_px") or (close - stop_mult * atr if close and atr else 0))
+    enter_sig = {
+        "slot": "core_sol",
+        "symbol": "SOLUSDT",
+        "action": "enter",
+        "quote_usdt": min(float(plan.get("quote_usdt") or sol_sig.get("quote_usdt") or 1500), MAX_NOTIONAL_USDT),
+        "bar_ts": sol_sig.get("bar") or (sol_sig.get("signal") or {}).get("bar_open_time_utc"),
+        "close": close,
+        "atr": atr,
+        "suggested_stop": stop,
+        "donch_lo": (sol_sig.get("signal") or {}).get("donch20_lo"),
+        "client_order_id": client_order_id("core_sol", "enter", str(sol_sig.get("bar") or "")),
+    }
+    result = apply_signal(client, state, enter_sig, live=live, allow_entries=allow_entries)
+    merged = dict(sol_sig)
+    merged["executed"] = result.get("executed")
+    merged["fill"] = result.get("fill")
+    merged["error"] = result.get("error")
+    merged["enter_result"] = {k: result.get(k) for k in ("executed", "fill", "error", "reason", "intended_order")}
+    return merged
 
 
 def cmd_run(client: BinanceClient, dry_run: bool) -> int:
@@ -213,14 +307,20 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
 
     store = StateStore()
     state = store.load()
+    paused = bool(state.get("paused"))
+    allow_entries = not paused
+    if paused:
+        log.info("paused=True — managing exits/stops only; no new entries")
 
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
     signals = evaluate_all(client, state)
-    applied = [apply_signal(client, state, sig, live=live) for sig in signals]
+    applied = [
+        apply_signal(client, state, sig, live=live, allow_entries=allow_entries)
+        for sig in signals
+    ]
 
-    # --- SOL core (1d Donchian + SMA ATR + BTC regime); separate module ---
+    # --- SOL core ---
     sol_meta = state.setdefault("slots", {}).setdefault("core_sol", {})
-    # Persist needs_reset: once True while sig=1 mid-channel, clear only when sig returns to 0
     try:
         sol_sig = sol_compute_signal()
         if sol_meta.get("needs_reset_latch"):
@@ -245,13 +345,30 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             "regime_on": sol_sig["btc_regime"]["regime_on"],
         }
         sol_sig["in_daily_window"] = in_daily_window()
-        # Live SOL entries only in daily window (UTC 00:05-00:15); dry-run always evaluates
-        if live and sol_sig["would_order"] and not sol_sig["in_daily_window"]:
+        if live and sol_sig.get("would_order") and not sol_sig["in_daily_window"]:
             sol_sig["would_order"] = False
             sol_sig["action"] = "defer_until_daily_window"
             sol_sig["reason"] = "outside_utc_0005_0015"
+        # Manage existing SOL position trail if any
+        sol_pos = state.get("positions", {}).get("core_sol")
+        if sol_pos and sol_sig.get("signal"):
+            atr = float(sol_sig["signal"].get("atr14_sma") or 0)
+            mark = float(sol_sig.get("sol_close") or 0)
+            trail_mult = 2.0
+            if atr and mark:
+                new_stop = mark - trail_mult * atr
+                manage_sig = {
+                    "slot": "core_sol",
+                    "symbol": "SOLUSDT",
+                    "action": "manage",
+                    "stop": new_stop,
+                    "mark": mark,
+                    "donch_lo": sol_sig["signal"].get("donch20_lo"),
+                    "bar_ts": sol_sig.get("bar"),
+                }
+                apply_signal(client, state, manage_sig, live=live, allow_entries=False)
+        sol_sig = apply_sol_entry(client, state, sol_sig, live=live, allow_entries=allow_entries)
         applied.append(sol_sig)
-        # Expectation log heartbeat (append to state + feed)
         hb = expectation_heartbeat(sol_sig)
         state.setdefault("expectation_log", [])
         state["expectation_log"].append(hb)
@@ -261,18 +378,25 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         applied.append({"slot": "core_sol", "symbol": "SOLUSDT", "error": str(e)})
 
     state.setdefault("meta", {})["last_run_at"] = now_iso_taipei()
+    state["meta"]["last_run_at_utc"] = datetime.now(timezone.utc).isoformat()
     state["meta"]["last_mode"] = "dry-run" if (dry_run or not live) else "live"
-    store.save(state)
+    state["meta"]["last_live"] = live
+    state["meta"]["last_ok"] = True
+    state["meta"]["last_paused"] = paused
+    # Use generation lock so API pause/close doesn't race
+    try:
+        store.save(state, if_generation_match=store._generation)
+    except Exception as e:  # noqa: BLE001
+        log.warning("state_save_gen_conflict retry_plain err=%s", e)
+        store.save(state)
 
     feed = build_feed(
         client if client.api_key else None, state, applied, state["meta"]["last_mode"]
     )
-    # Attach latest SOL expectation heartbeat for dashboard
     if state.get("expectation_log"):
         feed["sol_expectation_latest"] = state["expectation_log"][-1]
         feed["sol_core"] = next((x for x in applied if x.get("slot") == "core_sol"), None)
     url = store.save_feed(feed)
-    # Also persist expectation log object for 14-day review
     try:
         store.save_feed(
             {"updated_at": now_iso_taipei(), "events": state.get("expectation_log", [])},
@@ -281,16 +405,15 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     except Exception as e:  # noqa: BLE001
         log.warning("expectation_log_save_skip err=%s", e)
 
-    log.info("run_done signals=%s feed=%s", len(applied), url)
+    log.info("run_done signals=%s live=%s paused=%s feed=%s", len(applied), live, paused, url)
     print(
         json.dumps(
-            {"ok": True, "live": live, "signals": applied, "feed": url},
+            {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url},
             indent=2,
             ensure_ascii=False,
         )
     )
     return 0
-
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -311,6 +434,15 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(client, dry_run=(trader_mode() != "live"))
     except Exception as e:  # noqa: BLE001
         log.exception("fatal err=%s", e)
+        try:
+            store = StateStore()
+            st = store.load()
+            st.setdefault("meta", {})["last_ok"] = False
+            st["meta"]["last_error"] = str(e)
+            st["meta"]["last_run_at"] = now_iso_taipei()
+            store.save(st)
+        except Exception:  # noqa: BLE001
+            pass
         return 1
 
 

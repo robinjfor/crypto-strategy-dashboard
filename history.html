@@ -13,7 +13,7 @@
         <div class="brand-mark">⚡</div>
         <div>
           <h1>成交歷史</h1>
-          <div class="sub">Binance Demo 帳戶（真實成交）· 僅顯示 Demo 來源</div>
+          <div class="sub">Binance Demo 帳戶（真實成交）· 雲端優先</div>
         </div>
       </div>
       <nav class="nav-links" aria-label="主選單">
@@ -23,6 +23,7 @@
         <a class="nav-link" href="./backtest.html">回測績效</a>
       </nav>
     </header>
+    <div class="cloud-banner hidden" id="cloudBanner">雲端連線失敗，顯示快取</div>
     <div class="err-banner hidden" id="errBanner"></div>
     <main id="main" class="loading">載入中…</main>
   </div>
@@ -35,34 +36,58 @@
     const reason = (c) => (typeof window.reasonZh === "function" ? window.reasonZh(c) : (c || "—"));
     try {
       let rows = [];
+      let sourceHint = "靜態快取";
+      let cloudOk = false;
       try {
-        const arr = await (await fetch("./data/strategy-crypto-s2/settlement.json?t="+Date.now(),{cache:"no-store"})).json();
-        if (Array.isArray(arr)) rows = arr;
-      } catch (_) {
-        const text = await (await fetch("./state/settlement.jsonl?t="+Date.now(),{cache:"no-store"})).text();
-        rows = text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+        const cfg = await (await fetch("./data/cloud_api.json?t="+Date.now(),{cache:"no-store"})).json();
+        if (cfg && cfg.base) {
+          const st = await (await fetch(cfg.base.replace(/\/$/,"") + "/status?t="+Date.now(),{cache:"no-store",mode:"cors"})).json();
+          cloudOk = !!(st && st.ok !== false);
+          const closed = (st.closed_trades || []).map((t) => ({
+            ts: t.closed_at, kind: "CLOSE", symbol: t.symbol, side: "SELL",
+            qty: t.qty, price: t.exit, realized_pnl_usdt: t.pnl_usdt, reason: t.reason, source: "cloud"
+          }));
+          const fills = (st.recent_fills || []).map((t) => ({
+            ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol, side: t.side,
+            qty: t.qty, price: t.price, fee: t.commission, reason: "myTrades", source: "cloud"
+          }));
+          rows = closed.concat(fills);
+          if (cloudOk) sourceHint = "雲端";
+        }
+      } catch (_) { cloudOk = false; }
+      if (!cloudOk) $("cloudBanner").classList.remove("hidden");
+      if (!rows.length) {
+        try {
+          const arr = await (await fetch("./data/strategy-crypto-s2/settlement.json?t="+Date.now(),{cache:"no-store"})).json();
+          if (Array.isArray(arr)) rows = arr;
+        } catch (_) {
+          try {
+            const text = await (await fetch("./state/settlement.jsonl?t="+Date.now(),{cache:"no-store"})).text();
+            rows = text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+          } catch (_2) { rows = []; }
+        }
       }
       rows = rows.filter((r) => {
         const s = String(r.symbol || "").toUpperCase();
-        return !s.includes("OPUSDT") && !s.includes("FILUSDT") && s !== "OP" && s !== "FIL";
-      }).sort((a,b) => String(b.ts||"").localeCompare(String(a.ts||"")));
+        return !s.includes("FILUSDT") && s !== "FIL";
+      }).sort((a,b) => String(b.ts||b.time||"").localeCompare(String(a.ts||a.time||"")));
       const body = rows.length ? rows.map((r) => {
         const kind = r.kind || "—";
         const side = r.side || (String(kind).toUpperCase()==="OPEN"?"BUY":String(kind).toUpperCase()==="CLOSE"?"SELL":"—");
         const pnl = r.realized_pnl_usdt != null ? r.realized_pnl_usdt : r.pnl_usdt;
         const cls = pnl > 0 ? "pos" : pnl < 0 ? "neg" : "";
         return `<tr>
-          <td>${esc(r.ts||"—")}</td><td>${esc(kind)}</td><td><strong>${esc(r.symbol||"—")}</strong></td>
+          <td>${esc(r.ts||r.time||"—")}</td><td>${esc(kind)}</td><td><strong>${esc(r.symbol||"—")}</strong></td>
           <td>${esc(side)}</td><td class="num">${num(r.qty,4)}</td><td class="num">${num(r.price,4)}</td>
           <td class="num">${r.fee==null?"—":num(r.fee,4)}</td>
           <td class="num ${cls}">${pnl==null?"—":num(pnl,2)}</td>
           <td>${esc(reason(r.reason||kind))}</td>
-          <td>${esc(r.source||"—")}</td>
+          <td>${esc(r.source||sourceHint)}</td>
         </tr>`;
       }).join("") : `<tr><td colspan="10" class="empty-row">尚無成交</td></tr>`;
       $("main").className = "";
       $("main").innerHTML = `<section class="section">
-        <div class="section-head"><h2>完整成交歷史</h2><span class="hint">${rows.length} 筆 · Binance Demo</span></div>
+        <div class="section-head"><h2>完整成交歷史</h2><span class="hint">${rows.length} 筆 · ${sourceHint}</span></div>
         <div class="card"><div class="table-scroll"><table class="data">
           <thead><tr><th>時間</th><th>類型</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">價格</th><th class="num">手續費</th><th class="num">已實現損益</th><th>原因</th><th>來源</th></tr></thead>
           <tbody>${body}</tbody>

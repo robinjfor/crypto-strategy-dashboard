@@ -1,0 +1,438 @@
+#!/usr/bin/env python3
+"""Cloud Run HTTP API: public GET /status + PIN-gated control writes."""
+from __future__ import annotations
+
+import hashlib
+import hmac
+import logging
+import os
+import time
+from datetime import datetime, timezone
+from typing import Any
+
+from flask import Flask, jsonify, request
+
+from binance_client import BinanceClient
+from execution import market_close_slot
+from slots import SLOTS
+from state_store import StateStore
+from strategy import now_iso_taipei
+
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+log = logging.getLogger("trader.api")
+
+app = Flask(__name__)
+
+CORS_ORIGIN = os.environ.get("CORS_ORIGIN") or "https://robinjfor.github.io"
+PIN_SALT = os.environ.get("CONTROL_PIN_SALT") or "crypto-trader-v1"
+PIN_HASH = (os.environ.get("CONTROL_PIN_HASH") or "").strip().lower()
+PIN_HEADER = "X-Trader-Pin"
+
+_fail_buckets: dict[str, list[float]] = {}
+RATE_MAX = 5
+RATE_WINDOW = 600.0
+_bal_cache: dict[str, Any] = {"ts": 0.0, "data": None}
+BAL_TTL = 15.0
+
+
+def _cors(resp):
+    resp.headers["Access-Control-Allow-Origin"] = CORS_ORIGIN
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = f"Content-Type, {PIN_HEADER}"
+    resp.headers["Access-Control-Max-Age"] = "3600"
+    return resp
+
+
+@app.after_request
+def after(resp):
+    return _cors(resp)
+
+
+@app.route("/", methods=["GET"])
+def root():
+    return jsonify({"service": "crypto-trader-api", "ok": True})
+
+
+@app.route("/status", methods=["OPTIONS"])
+@app.route("/control/pause", methods=["OPTIONS"])
+@app.route("/control/resume", methods=["OPTIONS"])
+@app.route("/control/close", methods=["OPTIONS"])
+def options_ok():
+    return _cors(app.make_response(("", 204)))
+
+
+def _client_ip() -> str:
+    xff = request.headers.get("X-Forwarded-For") or ""
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _rate_limited(ip: str) -> bool:
+    now = time.time()
+    bucket = [t for t in _fail_buckets.get(ip, []) if now - t < RATE_WINDOW]
+    _fail_buckets[ip] = bucket
+    return len(bucket) >= RATE_MAX
+
+
+def _record_fail(ip: str) -> None:
+    _fail_buckets.setdefault(ip, []).append(time.time())
+
+
+def _check_pin() -> tuple[bool, str, int]:
+    if not PIN_HASH:
+        return False, "伺服器未設定控制 PIN 雜湊", 503
+    ip = _client_ip()
+    if _rate_limited(ip):
+        return False, "嘗試次數過多，請稍後再試", 429
+    proto = (request.headers.get("X-Forwarded-Proto") or request.scheme or "").lower()
+    if proto and proto != "https" and os.environ.get("ALLOW_HTTP_PIN") != "1":
+        return False, "僅接受 HTTPS", 403
+    pin = request.headers.get(PIN_HEADER) or ""
+    if not pin:
+        _record_fail(ip)
+        return False, "缺少操作密碼", 401
+    digest = hashlib.sha256((PIN_SALT + pin).encode("utf-8")).hexdigest()
+    if not hmac.compare_digest(digest, PIN_HASH):
+        _record_fail(ip)
+        return False, "操作密碼錯誤", 401
+    return True, "", 200
+
+
+def _balances(client: BinanceClient) -> list:
+    now = time.time()
+    if _bal_cache["data"] is not None and now - float(_bal_cache["ts"]) < BAL_TTL:
+        return _bal_cache["data"]
+    try:
+        data = client.nonzero_balances()
+        _bal_cache["ts"] = now
+        _bal_cache["data"] = data
+        return data
+    except Exception as e:  # noqa: BLE001
+        log.warning("balances_fail err=%s", e)
+        return _bal_cache["data"] or []
+
+
+def _health(meta: dict, paused: bool) -> dict:
+    last_ok = meta.get("last_ok")
+    last_utc = meta.get("last_run_at_utc") or ""
+    age_min = None
+    stale = False
+    if last_utc:
+        try:
+            ts = datetime.fromisoformat(last_utc.replace("Z", "+00:00"))
+            age_min = (datetime.now(timezone.utc) - ts.astimezone(timezone.utc)).total_seconds() / 60.0
+            stale = age_min > 90
+        except Exception:  # noqa: BLE001
+            stale = True
+    else:
+        stale = True
+    if stale or last_ok is False:
+        color = "red"
+        label = "警告：超過 90 分鐘無成功執行" if stale else "警告：上次執行失敗"
+    elif paused:
+        color = "yellow"
+        label = "已暫停（不開新倉）"
+    else:
+        color = "green"
+        label = "自動交易中"
+    return {
+        "color": color,
+        "label": label,
+        "stale": stale,
+        "age_minutes": round(age_min, 1) if age_min is not None else None,
+        "paused": paused,
+    }
+
+
+def _open_positions(client: BinanceClient, state: dict) -> list:
+    out = []
+    for slot_id, pos in (state.get("positions") or {}).items():
+        if not pos or float(pos.get("qty") or 0) <= 0:
+            continue
+        symbol = pos.get("symbol") or ""
+        entry = float(pos.get("entry") or 0)
+        qty = float(pos.get("qty") or 0)
+        mark = float(pos.get("mark") or 0)
+        try:
+            mark = client.ticker_price(symbol)
+        except Exception:  # noqa: BLE001
+            pass
+        upnl = (mark - entry) * qty if entry and mark else None
+        out.append(
+            {
+                "slot": slot_id,
+                "symbol": symbol,
+                "qty": qty,
+                "entry": entry,
+                "mark": mark,
+                "mark_price": mark,
+                "stop": pos.get("stop"),
+                "donch_lo": pos.get("donch_lo"),
+                "unrealized_pnl": round(upnl, 4) if upnl is not None else None,
+                "status": pos.get("status") or "FILLED",
+                "filled_at": pos.get("filled_at"),
+                "tf": "1d" if slot_id == "core_sol" else None,
+            }
+        )
+    return out
+
+
+def _slot_status(state: dict, feed_slots: list | None) -> list:
+    by_id = {s.get("slot") or s.get("id"): s for s in (feed_slots or []) if isinstance(s, dict)}
+    rows = []
+    for slot in SLOTS:
+        sid = slot["id"]
+        sig = by_id.get(sid) or {}
+        meta = (state.get("slots") or {}).get(sid) or {}
+        trigger = sig.get("donch_hi") or sig.get("trigger")
+        mark = sig.get("mark") or sig.get("close")
+        dist = None
+        try:
+            if trigger is not None and mark is not None:
+                dist = float(trigger) - float(mark)
+        except Exception:  # noqa: BLE001
+            pass
+        rows.append(
+            {
+                "slot": sid,
+                "symbol": slot["symbol"],
+                "tf": slot["tf"],
+                "armed": slot.get("armed", True),
+                "variant": slot.get("variant"),
+                "quote_usdt": slot.get("quote_usdt"),
+                "require_reset_below_hi": slot.get("require_reset_below_hi"),
+                "action": sig.get("action"),
+                "reason": sig.get("reason"),
+                "status": sig.get("status") or (meta.get("last_signal") or {}).get("status"),
+                "entry_condition": (
+                    f"Donchian{slot['donch_n']} 突破上軌"
+                    + ("（需先回落重置）" if slot.get("require_reset_below_hi") else "")
+                ),
+                "trigger": trigger,
+                "mark": mark,
+                "distance": dist,
+                "suggested_stop": sig.get("suggested_stop") or sig.get("stop"),
+            }
+        )
+    sol = by_id.get("core_sol") or {}
+    sol_meta = (state.get("slots") or {}).get("core_sol") or {}
+    sol_sig = sol.get("signal") or {}
+    trigger = sol_sig.get("donch20_hi") or (sol.get("order_plan_if_enter_at_last_close") or {}).get("donch_hi")
+    mark = sol.get("sol_close")
+    dist = None
+    try:
+        if trigger is not None and mark is not None:
+            dist = float(trigger) - float(mark)
+    except Exception:  # noqa: BLE001
+        pass
+    rows.append(
+        {
+            "slot": "core_sol",
+            "symbol": "SOLUSDT",
+            "tf": "1d",
+            "armed": True,
+            "variant": "donchian20_atr_btcRegime",
+            "quote_usdt": 1500,
+            "require_reset_below_hi": True,
+            "action": sol.get("action"),
+            "reason": sol.get("reason") or sol.get("conclusion"),
+            "status": sol.get("status") or (sol_meta.get("last_signal") or {}).get("status"),
+            "entry_condition": "BTC>SMA200 且 Donchian20 上升沿 0→1（需先重置）· UTC 00:05–00:15",
+            "trigger": trigger,
+            "mark": mark,
+            "distance": dist,
+            "needs_reset": sol_sig.get("needs_reset_before_entry")
+            or (sol_meta.get("last_signal") or {}).get("needs_reset"),
+            "in_daily_window": sol.get("in_daily_window"),
+        }
+    )
+    return rows
+
+
+def _planned_from_armed(armed: list) -> list:
+    out = []
+    for a in armed:
+        status = str(a.get("status") or a.get("action") or "ARMED").upper()
+        if "DISARM" in status:
+            continue
+        asset = (a.get("symbol") or "").replace("USDT", "")
+        out.append(
+            {
+                "asset": asset,
+                "symbol": a.get("symbol"),
+                "slot": a.get("slot"),
+                "strategy_name": a.get("variant"),
+                "tf": a.get("tf"),
+                "donch_n": 55 if "fet" in str(a.get("slot")) else 20,
+                "target_notional_usdt": a.get("quote_usdt"),
+                "ui_status": status,
+                "status_label": a.get("reason") or status,
+                "entry_rule": a.get("entry_condition"),
+                "mark": a.get("mark"),
+                "trigger": a.get("trigger"),
+                "stop_note": f"建議止損 {a.get('suggested_stop')}" if a.get("suggested_stop") else "—",
+                "stop_mode": "pending",
+            }
+        )
+    return out
+
+
+def build_status() -> dict:
+    store = StateStore()
+    state = store.load()
+    feed = store.load_feed() or {}
+    client = BinanceClient()
+    bals = _balances(client) if client.api_key else []
+    bals_map = {b["asset"]: float(b["free"]) + float(b.get("locked") or 0) for b in bals}
+    positions = _open_positions(client, state)
+    recent_fills: list[dict] = []
+    for sym in ["FETUSDT", "OPUSDT", "DOTUSDT", "SOLUSDT"]:
+        try:
+            for t in client.my_trades(sym, limit=10):
+                recent_fills.append(
+                    {
+                        "symbol": sym,
+                        "id": t.get("id"),
+                        "time": datetime.fromtimestamp(int(t["time"]) / 1000, tz=timezone.utc)
+                        .astimezone()
+                        .isoformat(timespec="seconds"),
+                        "side": "BUY" if t.get("isBuyer") else "SELL",
+                        "qty": float(t.get("qty") or 0),
+                        "price": float(t.get("price") or 0),
+                        "quoteQty": float(t.get("quoteQty") or 0),
+                        "commission": t.get("commission"),
+                    }
+                )
+        except Exception as e:  # noqa: BLE001
+            log.warning("mytrades_skip %s err=%s", sym, e)
+    recent_fills.sort(key=lambda x: x.get("time") or "", reverse=True)
+    closed_norm = []
+    for trow in (state.get("closed_trades") or [])[-50:]:
+        closed_norm.append(
+            {
+                **trow,
+                "closed_at": trow.get("closed_at") or trow.get("time"),
+                "exit": trow.get("exit") or trow.get("price"),
+                "pnl_usdt": trow.get("pnl_usdt"),
+            }
+        )
+    paused = bool(state.get("paused"))
+    meta = state.get("meta") or {}
+    mode = os.environ.get("TRADER_MODE") or meta.get("last_mode") or "dry-run"
+    armed = _slot_status(state, feed.get("slots"))
+    return {
+        "ok": True,
+        "updated_at": now_iso_taipei(),
+        "source": "cloud",
+        "mode": mode,
+        "paused": paused,
+        "health": _health(meta, paused),
+        "balances": bals,
+        "balances_map": bals_map,
+        "equity_usdt": bals_map.get("USDT"),
+        "positions": positions,
+        "open_positions": positions,
+        "armed_slots": armed,
+        "recent_fills": recent_fills[:30],
+        "closed_trades": closed_norm,
+        "last_job_run_at": meta.get("last_run_at"),
+        "last_job_run_at_utc": meta.get("last_run_at_utc"),
+        "last_job_ok": meta.get("last_ok"),
+        "last_mode": meta.get("last_mode"),
+        "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
+        "sol_expectation_latest": (state.get("expectation_log") or [None])[-1],
+        "feed_updated_at": feed.get("updated_at"),
+        "title": "Binance Demo 帳戶（真實成交）",
+        "source_label": "Binance Demo · Cloud Run",
+        "planned_positions": _planned_from_armed(armed),
+        "satellite_strategies": [],
+        "strategies": [],
+    }
+
+
+@app.route("/status", methods=["GET"])
+def status():
+    try:
+        return jsonify(build_status())
+    except Exception as e:  # noqa: BLE001
+        log.exception("status_fail")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/pause", methods=["POST"])
+def pause():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+
+    def mut(st):
+        st["paused"] = True
+        st.setdefault("meta", {})["paused_at"] = now_iso_taipei()
+        st["meta"]["paused_by"] = "api"
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        return jsonify({"ok": True, "paused": True, "message": "已暫停自動開倉（既有持倉續管止損／出場）"})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/resume", methods=["POST"])
+def resume():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+
+    def mut(st):
+        st["paused"] = False
+        st.setdefault("meta", {})["resumed_at"] = now_iso_taipei()
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        return jsonify({"ok": True, "paused": False, "message": "已恢復自動交易"})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/close", methods=["POST"])
+def close_slot():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    slot = (body.get("slot") or "").strip()
+    if not slot:
+        return jsonify({"ok": False, "error": "缺少 slot"}), 400
+
+    store = StateStore()
+    result_holder: dict = {}
+
+    def mut(st):
+        client = BinanceClient()
+        result_holder["r"] = market_close_slot(client, st, slot, reason="manual")
+        return st
+
+    try:
+        store.mutate(mut)
+        r = result_holder.get("r") or {}
+        if not r.get("ok"):
+            return jsonify({"ok": False, "error": r.get("error") or "平倉失敗", "slot": slot}), 400
+        return jsonify({"ok": True, "message": f"已手動市價平倉 {slot}", "closed": r.get("closed")})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def main():
+    port = int(os.environ.get("PORT") or 8080)
+    log.info("api_listen port=%s cors=%s pin_hash_set=%s", port, CORS_ORIGIN, bool(PIN_HASH))
+    app.run(host="0.0.0.0", port=port)
+
+
+if __name__ == "__main__":
+    main()
