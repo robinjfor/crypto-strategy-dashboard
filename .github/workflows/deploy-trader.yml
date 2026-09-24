@@ -213,13 +213,23 @@ jobs:
 
       - name: Execute futures-order-probe once
         if: ${{ inputs.run_futures_order_probe }}
+        id: fut_order_probe
+        continue-on-error: true
         run: |
-          set -euo pipefail
+          set -uo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          set +e
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
             --args=main.py,futures-order-probe --wait
-          echo "--- futures-order-probe: check Cloud Run execution logs for JSON ok=true/false ---"
+          EC=$?
+          set -e
+          echo "exit_code=$EC" >> "$GITHUB_OUTPUT"
+          echo "--- futures-order-probe exit=$EC (non-zero means order/test failed; families stay 準備中) ---"
+          # Best-effort: pull last execution status
+          gcloud run jobs executions list --job="${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" --limit=1 \
+            --format='table(name,status.completionTime,status.succeededCount,status.failedCount)' || true
+          exit $EC
 
       - name: Execute futures-probe once
         if: ${{ inputs.run_futures_probe }}

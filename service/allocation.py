@@ -15,10 +15,8 @@ RUNNER_FAMILIES = frozenset({
     "donchian_atr",
     "donchian_btc_regime",
     "ema_cross_atr",
-    # Futures (Demo FAPI probe OK 2026-09-24)
-    "donchian_lev_vol",
-    "donchian_long_short_btc_regime",
-    "donchian_fear_greed",
+    # Futures families re-locked until futures-order-probe passes
+    # "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",

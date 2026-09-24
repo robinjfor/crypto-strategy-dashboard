@@ -122,7 +122,7 @@ SOL_SLOT = {
 }
 
 # Families the Cloud Run job can actually execute today
-SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr", "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed"})
+SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr"})
 
 # Live-approved (may place Demo orders). OP + DOT only per 資金控管 ruling.
 DEFAULT_APPROVED: dict[str, dict] = {

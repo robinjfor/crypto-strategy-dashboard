@@ -33,9 +33,10 @@ def _base_slot(**over):
 
 def test_ema_in_runner():
     assert "ema_cross_atr" in RUNNER_FAMILIES
-    assert "donchian_fear_greed" in RUNNER_FAMILIES
-    assert "donchian_lev_vol" in RUNNER_FAMILIES
-    assert "donchian_long_short_btc_regime" in RUNNER_FAMILIES
+    # Futures families re-locked until order/test probe passes
+    assert "donchian_fear_greed" not in RUNNER_FAMILIES
+    assert "donchian_lev_vol" not in RUNNER_FAMILIES
+    assert "donchian_long_short_btc_regime" not in RUNNER_FAMILIES
 
 
 def test_ema_params_ok():
@@ -87,7 +88,7 @@ def test_allocation_accepts_ema_candidate():
     assert errs == []
 
 
-def test_allocation_accepts_lev_vol():
+def test_allocation_rejects_lev_vol_while_relocked():
     doc = {
         "book_usdt": 5000,
         "max_notional_per_order_usdt": 1500,
@@ -106,7 +107,7 @@ def test_allocation_accepts_lev_vol():
         ],
     }
     errs = validate_allocation(doc, check_binance=False)
-    assert errs == [], errs
+    assert errs, "lev_vol must stay blocked while order-probe failing"
 
 
 def test_allocation_rejects_donchian_lev_no_pass_family():
