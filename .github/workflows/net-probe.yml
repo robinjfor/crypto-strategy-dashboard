@@ -1,0 +1,46 @@
+name: net-probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Egress identity
+        run: |
+          set -euo pipefail
+          echo "=== egress IP / country (ipinfo.io) ==="
+          curl -sS -m 20 https://ipinfo.io/json || echo "ipinfo failed"
+          echo
+          echo "=== dig A for demo-api.binance.com ==="
+          dig +short demo-api.binance.com A || true
+          echo "=== dig A for api.binance.com ==="
+          dig +short api.binance.com A || true
+
+      - name: Public endpoint probe (no keys)
+        run: |
+          set -euo pipefail
+          probe() {
+            local url="$1"
+            echo
+            echo "======== $url ========"
+            # Write body to temp; capture http_code and time_total
+            local tmp
+            tmp="$(mktemp)"
+            local meta
+            meta="$(curl -sS -L -m 30 -o "$tmp" -w 'http_code=%{http_code} time_total=%{time_total} size=%{size_download} remote_ip=%{remote_ip}\n' "$url" || true)"
+            echo "$meta"
+            echo "--- body snippet (first 240 bytes) ---"
+            head -c 240 "$tmp" | tr '\n' ' ' || true
+            echo
+            echo "--- end ---"
+            rm -f "$tmp"
+          }
+          probe "https://demo-api.binance.com/api/v3/ping"
+          probe "https://demo-api.binance.com/api/v3/time"
+          probe "https://demo-api.binance.com/api/v3/ticker/price?symbol=DOTUSDT"
+          probe "https://testnet.binance.vision/api/v3/ping"
+          probe "https://api.binance.com/api/v3/ping"
+          probe "https://data-api.binance.vision/api/v3/ping"

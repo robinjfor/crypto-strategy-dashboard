@@ -1,8 +1,9 @@
 name: paper-scanner
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
+  # DISABLED 2026-09-24: pause virtual paper engine (Demo account pivot).
+  # schedule:
+  #   - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
