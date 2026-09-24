@@ -111,13 +111,13 @@
     return null;
   }
 
-  /** True only for cloud-supported spot long families (no leverage/short). */
+  /** True when catalog family maps onto a cloud-runner whitelist entry (spot or futures). */
   function runnerSupports(row, familyId) {
     row = row || {};
     if (row.supported_by_runner === false) return false;
     familyId = familyId || row._family_id || row.family || "";
-    if (needsDerivatives(row, familyId)) return false;
     var rf = runnerFamilyId(familyId, row);
+    // Emily: futures/lev/long-short OK once family is on RUNNER_FAMILIES (tested + deployed).
     return !!(rf && RUNNER_FAMILIES[rf]);
   }
 
