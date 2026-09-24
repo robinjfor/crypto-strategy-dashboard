@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 
 from binance_client import BinanceClient
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
-from slots import MAX_NOTIONAL_USDT, SLOTS
+from slots import MAX_NOTIONAL_USDT, SLOTS, strategy_id_for_slot, DEFAULT_APPROVED, approval_mode
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei
 from sol_core.signal import compute_signal as sol_compute_signal, expectation_heartbeat, in_daily_window
@@ -99,6 +99,29 @@ def cmd_probe(client: BinanceClient) -> int:
     return 0
 
 
+
+def _approved_ids(state: dict) -> set[str]:
+    approved = state.get("approved")
+    if not isinstance(approved, dict) or not approved:
+        # Seed in-memory (API persists on first /approved hit)
+        return set(DEFAULT_APPROVED.keys())
+    return set(approved.keys())
+
+
+def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[bool, str]:
+    if paused:
+        return False, "paused_no_new_entries"
+    sid = strategy_id_for_slot(slot_id)
+    if not sid:
+        return False, "unknown_slot_strategy"
+    if sid not in _approved_ids(state):
+        return False, "not_approved"
+    mode = approval_mode(state, sid)
+    if mode == "signal_only":
+        return False, "signal_only"
+    return True, ""
+
+
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
     """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
@@ -113,9 +136,11 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
     meta = slots_meta.setdefault(slot_id, {})
 
     if action == "enter":
-        if not allow_entries:
-            out["reason"] = "paused_no_new_entries"
-            log.info("skip_enter_paused slot=%s", slot_id)
+        ok_entry, why = _allow_entry_for_slot(state, slot_id, paused=not allow_entries)
+        # allow_entries already False when globally paused; also block unapproved
+        if not allow_entries or not ok_entry:
+            out["reason"] = why if not ok_entry else "paused_no_new_entries"
+            log.info("skip_enter slot=%s reason=%s", slot_id, out["reason"])
             return out
         quote = min(float(sig.get("quote_usdt") or 0), MAX_NOTIONAL_USDT)
         bar_ts = str(sig.get("bar_ts") or "")
@@ -311,6 +336,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     allow_entries = not paused
     if paused:
         log.info("paused=True — managing exits/stops only; no new entries")
+    log.info("approved_ids=%s", sorted(_approved_ids(state)))
 
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
     signals = evaluate_all(client, state)
@@ -367,7 +393,19 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
                     "bar_ts": sol_sig.get("bar"),
                 }
                 apply_signal(client, state, manage_sig, live=live, allow_entries=False)
-        sol_sig = apply_sol_entry(client, state, sol_sig, live=live, allow_entries=allow_entries)
+        sol_mode = approval_mode(state, strategy_id_for_slot("core_sol") or "")
+        if sol_mode == "signal_only":
+            # Compute + log only; never place Demo orders
+            sol_sig["mode"] = "signal_only"
+            sol_sig["label_zh"] = "訊號監看（未核准下單）"
+            if sol_sig.get("would_order"):
+                log.info("sol_signal_only_suppress_order would_order=True status=%s", sol_sig.get("status"))
+            sol_sig["would_order"] = False
+            sol_sig = apply_sol_entry(client, state, sol_sig, live=live, allow_entries=False)
+            sol_sig["mode"] = "signal_only"
+        else:
+            sol_sig = apply_sol_entry(client, state, sol_sig, live=live, allow_entries=allow_entries)
+
         applied.append(sol_sig)
         hb = expectation_heartbeat(sol_sig)
         state.setdefault("expectation_log", [])

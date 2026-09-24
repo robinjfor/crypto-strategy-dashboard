@@ -14,7 +14,7 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode
 from state_store import StateStore
 from strategy import now_iso_taipei
 
@@ -97,6 +97,9 @@ def root():
 @app.route("/control/pause", methods=["OPTIONS"])
 @app.route("/control/resume", methods=["OPTIONS"])
 @app.route("/control/close", methods=["OPTIONS"])
+@app.route("/control/approve", methods=["OPTIONS"])
+@app.route("/control/revoke", methods=["OPTIONS"])
+@app.route("/approved", methods=["OPTIONS"])
 def options_ok():
     return _cors(app.make_response(("", 204)))
 
@@ -241,7 +244,7 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "armed": slot.get("armed", True),
                 "variant": slot.get("variant"),
                 "quote_usdt": slot.get("quote_usdt"),
-                "target_pct": slot.get("target_pct"),
+                "target_pct": slot.get("target_pct") or slot.get("target_pct"),
                 "require_reset_below_hi": slot.get("require_reset_below_hi"),
                 "action": sig.get("action"),
                 "reason": sig.get("reason"),
@@ -311,11 +314,13 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
         {
             "slot": "core_sol",
             "symbol": "SOLUSDT",
+            "mode": approval_mode(state, SOL_SLOT.get("strategy_id") or ""),
+            "label_zh": "訊號監看（未核准下單）" if approval_mode(state, SOL_SLOT.get("strategy_id") or "") == "signal_only" else "已核准",
             "tf": "1d",
             "armed": True,
             "variant": SOL_SLOT.get("variant") or "donchian20_atr_btcRegime",
             "quote_usdt": SOL_SLOT.get("quote_usdt") or 1500,
-            "target_pct": SOL_SLOT.get("target_pct") or 30.0,
+            "target_pct": SOL_SLOT.get("target_pct") or SOL_SLOT.get("target_pct") or 30.0,
             "require_reset_below_hi": True,
             "action": sol.get("action"),
             "reason": reason,
@@ -362,6 +367,85 @@ def _planned_from_armed(armed: list) -> list:
             }
         )
     return out
+
+
+
+
+def _ensure_approved(state: dict) -> dict:
+    """Seed approved map; always enforce SOL signal_only until 資金控管 lifts it."""
+    approved = state.get("approved")
+    if not isinstance(approved, dict) or not approved:
+        approved = {}
+        for sid, meta in DEFAULT_APPROVED.items():
+            approved[sid] = {**meta, "approved_at": now_iso_taipei()}
+        state["approved"] = approved
+        state["_seeded_approved_dirty"] = True
+    # Enforce SOL signal_only on every load (idempotent migration)
+    sol_id = SOL_SLOT.get("strategy_id") or "donchian20_atr_btcRegime__SOL__1d"
+    seed = DEFAULT_APPROVED.get(sol_id) or {}
+    cur = approved.get(sol_id) or {}
+    if cur.get("mode") != "signal_only" or not cur:
+        approved[sol_id] = {
+            **seed,
+            **cur,
+            "mode": "signal_only",
+            "label_zh": "訊號監看（未核准下單）",
+            "slot": "core_sol",
+            "notional_usdt": cur.get("notional_usdt") or seed.get("notional_usdt") or 1500,
+            "approved_at": cur.get("approved_at") or now_iso_taipei(),
+        }
+        state["approved"] = approved
+        state["_seeded_approved_dirty"] = True
+    # Ensure FET gate_fail flags present (still live)
+    fet_id = next((k for k in DEFAULT_APPROVED if "FET" in k), "donchian55_s2.0_t3.0__FET__1h")
+    if fet_id in approved:
+        fet_seed = DEFAULT_APPROVED.get(fet_id) or {}
+        if approved[fet_id].get("gate_pass") is None:
+            approved[fet_id] = {**fet_seed, **approved[fet_id], "mode": approved[fet_id].get("mode") or "live"}
+            state["approved"] = approved
+            state["_seeded_approved_dirty"] = True
+    return state["approved"]
+
+
+def _approved_public(state: dict | None = None) -> dict:
+    store = StateStore()
+    st = state if state is not None else store.load()
+    approved = _ensure_approved(st)
+    # Persist seed if we just created it
+    if state is None and st.get("_seeded_approved_dirty"):
+        pass
+    # Save seed if newly created (generation-safe mutate)
+    if not state:
+        def mut(s):
+            _ensure_approved(s)
+            return s
+        try:
+            # Only write if missing
+            cur = store.load()
+            if not isinstance(cur.get("approved"), dict) or not cur.get("approved"):
+                store.mutate(mut)
+                st = store.load()
+                approved = st.get("approved") or approved
+        except Exception as e:  # noqa: BLE001
+            log.warning("approved_seed_save_skip err=%s", e)
+    out = []
+    for sid, meta in (approved or {}).items():
+        slot = slot_by_strategy_id(sid) or {}
+        out.append({
+            "strategy_id": sid,
+            "slot": meta.get("slot") or slot.get("id"),
+            "symbol": slot.get("symbol"),
+            "family": slot.get("family"),
+            "notional_usdt": meta.get("notional_usdt") or slot.get("quote_usdt") or 1000,
+            "approved_at": meta.get("approved_at"),
+            "mode": meta.get("mode") or "live",
+            "gate_pass": meta.get("gate_pass"),
+            "gate_fail_reasons": meta.get("gate_fail_reasons") or [],
+            "label_zh": meta.get("label_zh") or ("訊號監看（未核准下單）" if meta.get("mode") == "signal_only" else "已核准 · 上線待命"),
+            "status": meta.get("status") or "live_standby",
+            "label_zh": "已核准 · 上線待命",
+        })
+    return {"ok": True, "approved": out, "count": len(out)}
 
 
 def build_status() -> dict:
@@ -432,6 +516,7 @@ def build_status() -> dict:
         "title": "Binance Demo 帳戶（真實成交）",
         "source_label": "Binance Demo · Cloud Run",
         "planned_positions": _planned_from_armed(armed),
+        "approved": _approved_public(state).get("approved"),
         "satellite_strategies": [],
         "strategies": [],
     }
@@ -509,6 +594,116 @@ def close_slot():
         return jsonify({"ok": True, "message": f"已手動市價平倉 {slot}", "closed": r.get("closed")})
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+
+@app.route("/approved", methods=["GET"])
+def approved_list():
+    try:
+        return jsonify(_approved_public())
+    except Exception as e:  # noqa: BLE001
+        log.exception("approved_list_fail")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/approve", methods=["POST"])
+def approve():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    strategy_id = (body.get("strategy_id") or "").strip()
+    if not strategy_id:
+        return jsonify({"ok": False, "error": "缺少 strategy_id"}), 400
+    slot = slot_by_strategy_id(strategy_id)
+    family = (body.get("family") or (slot or {}).get("family") or "").lower()
+    if body.get("passed_threshold") is False:
+        return jsonify({"ok": False, "error": "未過門檻，無法核准"}), 400
+    supported = body.get("supported_by_runner")
+    if supported is None:
+        supported = family in SUPPORTED_FAMILIES or family.startswith("donchian")
+    if supported is False:
+        return jsonify({"ok": False, "error": "雲端尚未支援此策略類型"}), 400
+    try:
+        notional = float(
+            body.get("notional")
+            or body.get("notional_usdt")
+            or (slot or {}).get("quote_usdt")
+            or 1000
+        )
+    except Exception:  # noqa: BLE001
+        notional = 1000.0
+    notional = min(max(notional, 10.0), float(MAX_NOTIONAL_USDT))
+
+    def mut(st):
+        approved = _ensure_approved(st)
+        approved[strategy_id] = {
+            "slot": (slot or {}).get("id"),
+            "notional_usdt": notional,
+            "approved_at": now_iso_taipei(),
+            "status": "live_standby",
+            "family": family or (slot or {}).get("family"),
+            "label_zh": "已核准 · 上線待命",
+        }
+        st["approved"] = approved
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        return jsonify({
+            "ok": True,
+            "message": f"已核准 {strategy_id}（上線待命）",
+            "strategy_id": strategy_id,
+            "notional_usdt": notional,
+            "status": "live_standby",
+        })
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/revoke", methods=["POST"])
+def revoke():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    strategy_id = (body.get("strategy_id") or "").strip()
+    if not strategy_id:
+        return jsonify({"ok": False, "error": "缺少 strategy_id"}), 400
+    result = {"had_position": False}
+
+    def mut(st):
+        approved = _ensure_approved(st)
+        meta = approved.pop(strategy_id, None)
+        st["approved"] = approved
+        slot_id = (meta or {}).get("slot") or (slot_by_strategy_id(strategy_id) or {}).get("id")
+        pos = (st.get("positions") or {}).get(slot_id) if slot_id else None
+        if pos and float(pos.get("qty") or 0) > 0:
+            result["had_position"] = True
+            pos["revoked_no_new_entries"] = True
+            pos["revoked_at"] = now_iso_taipei()
+            st.setdefault("positions", {})[slot_id] = pos
+        st.setdefault("meta", {})["last_revoke"] = {
+            "strategy_id": strategy_id,
+            "at": now_iso_taipei(),
+            "had_position": result["had_position"],
+        }
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        msg = f"已撤銷 {strategy_id}"
+        if result["had_position"]:
+            msg += "（仍有持倉：續管止損／出場，不再新開倉）"
+        return jsonify({
+            "ok": True,
+            "message": msg,
+            "strategy_id": strategy_id,
+            "had_position": result["had_position"],
+        })
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 
 def main():
