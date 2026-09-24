@@ -544,17 +544,16 @@
   function familyControls(g) {
     var familyId = g.family_id || g.key;
     var sample = (g.rows && g.rows[0]) || {};
-    var famLock = approveLockReason(sample, familyId);
-    // Family-level: unsupported if family not on runner OR any/typical row needs derivatives
-    if (!famLock && (g.rows || []).some(function (r) { return needsDerivatives(r, familyId); })) {
-      // still allow family approve only if runner supports AND we don't classify whole family as deriv-only
-      // For lev/ls families CATALOG_FAMILY_RUNNER is null → already locked.
-    }
-    if (!runnerFamilyId(familyId, sample) || !RUNNER_FAMILIES[runnerFamilyId(familyId, sample)]) {
-      famLock = famLock || LOCK_UNSUPPORTED;
-    }
-    if ((g.rows || []).length && (g.rows || []).every(function (r) { return needsDerivatives(r, familyId); })) {
-      famLock = LOCK_DERIV;
+    var rf = runnerFamilyId(familyId, sample);
+    var onRunner = !!(rf && RUNNER_FAMILIES[rf]);
+    var allDeriv = (g.rows || []).length > 0 && (g.rows || []).every(function (r) {
+      return needsDerivatives(r, familyId);
+    });
+    var famLock = null;
+    if (!onRunner) {
+      famLock = allDeriv ? LOCK_DERIV : LOCK_UNSUPPORTED;
+    } else {
+      famLock = approveLockReason(sample, familyId);
     }
     var supported = !famLock;
     var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
@@ -605,13 +604,14 @@
       rulesHtml = rules.map(function (line) { return "<li>" + esc(line) + "</li>"; }).join("");
     }
     var sample0 = (g.rows && g.rows[0]) || {};
-    var cardLock = approveLockReason(sample0, familyId);
-    if (!runnerFamilyId(familyId, sample0) || !RUNNER_FAMILIES[runnerFamilyId(familyId, sample0)]) {
-      cardLock = cardLock || LOCK_UNSUPPORTED;
-    }
-    if ((g.rows || []).length && (g.rows || []).every(function (r) { return needsDerivatives(r, familyId); })) {
-      cardLock = LOCK_DERIV;
-    }
+    var rf0 = runnerFamilyId(familyId, sample0);
+    var onRunner0 = !!(rf0 && RUNNER_FAMILIES[rf0]);
+    var allDeriv0 = (g.rows || []).length > 0 && (g.rows || []).every(function (r) {
+      return needsDerivatives(r, familyId);
+    });
+    var cardLock = null;
+    if (!onRunner0) cardLock = allDeriv0 ? LOCK_DERIV : LOCK_UNSUPPORTED;
+    else cardLock = approveLockReason(sample0, familyId);
     supported = !cardLock;
     var supportNote = supported
       ? '<span class="badge ok">雲端可執行</span>'
