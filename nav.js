@@ -103,13 +103,18 @@
       init = init ? Object.assign({}, init) : {};
       var headers = new Headers(init.headers || (input && input.headers) || {});
       var tok = getToken();
+      var sentBearer = false;
       if (tok && isApiUrl(input) && !headers.has("Authorization")) {
         headers.set("Authorization", "Bearer " + tok);
+        sentBearer = true;
+      } else if (headers.has("Authorization")) {
+        sentBearer = String(headers.get("Authorization") || "").toLowerCase().indexOf("bearer ") === 0;
       }
       init.headers = headers;
       return _origFetch(input, init).then(function (res) {
-        if (res.status === 401 && isApiUrl(input) && getToken()) {
-          // Session expired — force re-login
+        // Only drop the session if a Bearer request was rejected (avoid race
+        // where an early unauthenticated /status 401 clears a fresh login).
+        if (res.status === 401 && sentBearer && getToken()) {
           clearToken();
           showLogin("登入已過期，請重新登入");
         }
