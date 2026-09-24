@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "book_usdt": 5000,
+  "max_notional_per_order_usdt": 1500,
+  "updated_by": "seed",
+  "updated_at": "2026-09-24T16:40:00+08:00",
+  "slots": [
+    {
+      "slot": "sat_op_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
+      "symbol": "OPUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1000,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "現行 live（衛星 B）"
+    },
+    {
+      "slot": "sat_dot_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
+      "symbol": "DOTUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1000,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": false,
+        "btc_regime": false
+      },
+      "note": "現行 live（衛星 B）"
+    },
+    {
+      "slot": "sat_fet_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
+      "symbol": "FETUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1250,
+      "enabled": false,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 96,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "候選：分析師啟用後才會因 donchian_atr 已批准而上線（勿誤開）"
+    },
+    {
+      "slot": "sat_fet_1h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
+      "symbol": "FETUSDT",
+      "timeframe": "1h",
+      "notional_usdt": 1250,
+      "enabled": false,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 192,
+        "require_reset_below_hi": false,
+        "btc_regime": false
+      },
+      "note": "候選：未啟用（與 FET 4h 同標的，啟用時勿重複）"
+    },
+    {
+      "slot": "core_sol",
+      "family": "donchian_btc_regime",
+      "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "notional_usdt": 1500,
+      "enabled": false,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": null,
+        "trail_atr_mult": null,
+        "max_hold_bars": null,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "候選：家族 donchian_btc_regime 預設未批准 → 只算訊號"
+    }
+  ]
+}

@@ -25,7 +25,9 @@ from datetime import datetime, timezone
 
 from binance_client import BinanceClient
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
-from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live
+from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
+from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
+from slots import ensure_approved_families
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei
 from sol_core.signal import compute_signal as sol_compute_signal, expectation_heartbeat, in_daily_window
@@ -100,20 +102,55 @@ def cmd_probe(client: BinanceClient) -> int:
 
 
 
+
+def _iter_trade_slots(state: dict) -> list[dict]:
+    """Yield runtime slots allowed to open new entries (allocation ∩ approved_families)."""
+    fams = ensure_approved_families(state)
+    try:
+        doc, src = resolve_allocation()
+        errs = validate_allocation(doc, check_binance=False)
+        if errs:
+            log.warning("allocation_invalid_using_last_good errs=%s src=%s", errs, src)
+            doc = state.get("allocation_last_good") or doc
+            if errs and not state.get("allocation_last_good"):
+                # no last good — trade nothing new
+                state["allocation_alert"] = {"errors": errs}
+                return []
+        else:
+            state["allocation_last_good"] = doc
+            state["allocation_alert"] = None
+        live = alloc_live_slots(doc, fams)
+        return [slot_to_runtime(s) for s in live]
+    except Exception as e:  # noqa: BLE001
+        log.warning("allocation_resolve_fail fallback_defaults err=%s", e)
+        # Fallback: legacy DEFAULT_APPROVED live slots
+        out = []
+        for s in SLOTS:
+            if approval_mode(state, s.get("strategy_id") or "") == "live":
+                out.append(s)
+        return out
+
+
 def _approved_ids(state: dict) -> set[str]:
-    """Strategy IDs allowed to place Demo orders (mode=live only)."""
-    approved = state.get("approved")
-    if not isinstance(approved, dict) or not approved:
-        return set(DEFAULT_APPROVED.keys())
+    """Strategy IDs allowed to place Demo orders (family approved ∩ allocation enabled)."""
     out = set()
-    for sid, meta in approved.items():
-        if not isinstance(meta, dict):
-            continue
-        if meta.get("approved") is False:
-            continue
-        if str(meta.get("mode") or "live") == "signal_only":
-            continue
-        out.add(sid)
+    try:
+        for slot in _iter_trade_slots(state):
+            sid = slot.get("strategy_id")
+            if sid:
+                out.add(sid)
+        if out:
+            return out
+    except Exception as e:  # noqa: BLE001
+        log.warning("approved_ids_alloc_fail err=%s", e)
+    # Fallback: approval_mode live
+    for s in SLOTS + ([SOL_SLOT] if SOL_SLOT else []):
+        sid = s.get("strategy_id")
+        if sid and approval_mode(state, sid) == "live":
+            out.add(sid)
+    if not out:
+        # last resort seed
+        out = set(DEFAULT_APPROVED.keys())
     return out
 
 
@@ -462,6 +499,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         )
     )
     return 0
+
 
 
 def main(argv: list[str] | None = None) -> int:

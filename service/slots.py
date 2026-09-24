@@ -8,7 +8,7 @@ SLOTS: list[dict] = [
     {
         "id": "sat_fet_1h",
         "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
-        "family": "donchian",
+        "family": "donchian_atr",
         "symbol": "FETUSDT",
         "tf": "1h",
         "donch_n": 55,
@@ -29,7 +29,7 @@ SLOTS: list[dict] = [
     {
         "id": "sat_fet_4h",
         "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
-        "family": "donchian",
+        "family": "donchian_atr",
         "symbol": "FETUSDT",
         "tf": "4h",
         "donch_n": 55,
@@ -51,7 +51,7 @@ SLOTS: list[dict] = [
     {
         "id": "sat_fet_4h_btc",
         "strategy_id": "donchian55_s2.0_t3.0_btcRegimeD__FET__4h",
-        "family": "donchian",
+        "family": "donchian_atr",
         "symbol": "FETUSDT",
         "tf": "4h",
         "donch_n": 55,
@@ -73,7 +73,7 @@ SLOTS: list[dict] = [
     {
         "id": "sat_op_4h",
         "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
-        "family": "donchian",
+        "family": "donchian_atr",
         "symbol": "OPUSDT",
         "tf": "4h",
         "donch_n": 20,
@@ -90,7 +90,7 @@ SLOTS: list[dict] = [
     {
         "id": "sat_dot_4h",
         "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
-        "family": "donchian",
+        "family": "donchian_atr",
         "symbol": "DOTUSDT",
         "tf": "4h",
         "donch_n": 20,
@@ -122,7 +122,7 @@ SOL_SLOT = {
 }
 
 # Families the Cloud Run job can actually execute today
-SUPPORTED_FAMILIES = frozenset({"donchian", "donchian_btc_regime"})
+SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime"})
 
 # Live-approved (may place Demo orders). OP + DOT only per 資金控管 ruling.
 DEFAULT_APPROVED: dict[str, dict] = {
@@ -215,23 +215,48 @@ def strategy_id_for_slot(slot_id: str) -> str | None:
 
 
 def approval_mode(state: dict | None, strategy_id: str) -> str:
-    """Return live | signal_only | none."""
+    """Return live | signal_only | none.
+
+    Family-level model: live only if strategy's family is in approved_families
+    AND (when allocation is present) the matching slot is enabled.
+    """
     if not strategy_id:
         return "none"
+    slot = slot_by_strategy_id(strategy_id)
+    family = (slot or {}).get("family") or ""
+    if family == "donchian":
+        family = "donchian_atr"
+    # Prefer family approval list
+    try:
+        fams = ensure_approved_families(state or {})
+    except Exception:
+        fams = list(DEFAULT_APPROVED_FAMILIES)
+    if family and family not in fams:
+        # still monitored as signal_only if known
+        if strategy_id in DEFAULT_SIGNAL_ONLY or strategy_id in DEFAULT_APPROVED or slot:
+            return "signal_only"
+        return "none"
+    # Family approved — check per-strategy overrides / allocation enablement
     approved = (state or {}).get("approved") if state else None
-    if not isinstance(approved, dict):
-        approved = {}
-    if strategy_id in approved:
+    if isinstance(approved, dict) and strategy_id in approved:
         meta = approved[strategy_id] or {}
         mode = str(meta.get("mode") or "live")
         if mode == "signal_only" or meta.get("approved") is False:
             return "signal_only"
-        return "live"
-    # Defaults
+    # Allocation gate (optional): if allocation lists this strategy disabled → signal_only
+    alloc = (state or {}).get("allocation") if state else None
+    if isinstance(alloc, dict):
+        for s in alloc.get("slots") or []:
+            if s.get("strategy_id") == strategy_id:
+                if not s.get("enabled"):
+                    return "signal_only"
+                return "live"
     if strategy_id in DEFAULT_APPROVED:
         return "live"
     if strategy_id in DEFAULT_SIGNAL_ONLY:
         return "signal_only"
+    if slot and family in fams:
+        return "live"
     return "none"
 
 
@@ -307,3 +332,88 @@ def apply_satellite_slot_approval(
         "demoted": demoted,
         "notional_usdt": float(notional),
     }
+
+
+# --- Family-level approval (Emily approves families; analyst picks symbols) ---
+DEFAULT_APPROVED_FAMILIES = ["donchian_atr"]
+
+
+def ensure_approved_families(state: dict) -> list[str]:
+    """Migrate / seed approved_families. Returns normalized list."""
+    fams = state.get("approved_families")
+    if not isinstance(fams, list):
+        # Migrate from per-strategy approved if present
+        fams = []
+        approved = state.get("approved")
+        if isinstance(approved, dict) and approved:
+            for sid, meta in approved.items():
+                if not isinstance(meta, dict):
+                    continue
+                if meta.get("approved") is False:
+                    continue
+                if str(meta.get("mode") or "live") == "signal_only":
+                    continue
+                fam = (meta.get("family") or "").strip()
+                if fam == "donchian":
+                    fam = "donchian_atr"
+                if fam == "donchian_btc_regime":
+                    fam = "donchian_btc_regime"
+                if not fam:
+                    # infer from strategy id
+                    if "btcRegime" in sid or "btc_regime" in sid:
+                        fam = "donchian_btc_regime"
+                    else:
+                        fam = "donchian_atr"
+                if fam and fam not in fams:
+                    fams.append(fam)
+        if not fams:
+            fams = list(DEFAULT_APPROVED_FAMILIES)
+        state["approved_families"] = fams
+    # Always ensure donchian_atr stays if OP/DOT were live historically and list empty
+    if not fams:
+        fams = list(DEFAULT_APPROVED_FAMILIES)
+        state["approved_families"] = fams
+    # Normalize aliases
+    norm = []
+    for f in fams:
+        if f == "donchian":
+            f = "donchian_atr"
+        if f == "donchian_btc_regime":
+            f = "donchian_btc_regime"
+        if f and f not in norm:
+            norm.append(f)
+    state["approved_families"] = norm
+    return norm
+
+
+def is_family_approved(state: dict | None, family: str) -> bool:
+    fams = ensure_approved_families(state or {})
+    f = family
+    if f == "donchian":
+        f = "donchian_atr"
+    return f in fams
+
+
+def approve_family(state: dict, family: str, *, at: str, by: str = "api") -> dict:
+    fams = ensure_approved_families(state)
+    f = "donchian_atr" if family == "donchian" else family
+    if f == "donchian_btc_regime":
+        f = "donchian_btc_regime"
+    if f not in SUPPORTED_FAMILIES:
+        raise ValueError(f"雲端尚未支援此策略類型：{f}")
+    if f not in fams:
+        fams.append(f)
+    state["approved_families"] = fams
+    state.setdefault("meta", {})["last_family_approve"] = {"family": f, "at": at, "by": by}
+    return {"approved_families": fams, "family": f}
+
+
+def revoke_family(state: dict, family: str, *, at: str, by: str = "api") -> dict:
+    fams = ensure_approved_families(state)
+    f = "donchian_atr" if family == "donchian" else family
+    if f == "donchian_btc_regime":
+        f = "donchian_btc_regime"
+    fams = [x for x in fams if x != f]
+    state["approved_families"] = fams
+    state.setdefault("meta", {})["last_family_revoke"] = {"family": f, "at": at, "by": by}
+    return {"approved_families": fams, "family": f}

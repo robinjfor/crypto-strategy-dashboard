@@ -486,6 +486,41 @@
   }
 
 
+  
+  var approvedFamilies = {}; // family_id -> true
+
+  function refreshApprovedFamilies(status) {
+    approvedFamilies = {};
+    var list = (status && status.approved_families) || [];
+    (list || []).forEach(function (f) { approvedFamilies[f] = true; });
+  }
+
+  function familyApproved(familyId) {
+    return !!approvedFamilies[familyId];
+  }
+
+  function familyControls(g) {
+    var familyId = g.family_id || g.key;
+    var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
+    var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
+    var nAll = (g.rows || []).length;
+    var approved = familyApproved(familyId);
+    var statusHtml = approved
+      ? '<span class="badge ok">已批准</span>'
+      : '<span class="badge muted">未批准</span>';
+    var info = '<span class="fam-pass-info">過關 ' + nPass + " / " + nAll + "</span>";
+    var btn;
+    if (!supported) {
+      btn = '<button type="button" class="btn-fam-approve" disabled title="雲端尚未支援此策略類型">批准家族</button>';
+    } else if (approved) {
+      btn = '<button type="button" class="btn-fam-revoke" data-family="' + esc(familyId) + '">撤銷家族</button>';
+    } else {
+      btn = '<button type="button" class="btn-fam-approve" data-family="' + esc(familyId) + '">批准家族</button>';
+    }
+    return '<div class="fam-approve-bar" onclick="event.stopPropagation()">' +
+      statusHtml + " " + info + " " + btn + "</div>";
+  }
+
   function renderGroupCard(g) {
     var familyId = g.family_id || g.key;
     var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
@@ -541,9 +576,8 @@
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(r.score, 2) + "</td>" +
         "<td>" + statusBadge(r.status) + "</td>" +
-        '<td class="col-approve">' + approveControls(r, familyId) + "</td>" +
         "</tr>" +
-        '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="12">' +
+        '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="11">' +
         expandHtml(r) + "</td></tr>";
     }).join("");
 
@@ -552,6 +586,7 @@
       '<div class="ssc-head" data-toggle-key="' + esc(g.key) + '">' +
       "<h3>" + esc(g.name_zh || g.key) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
+      familyControls(g) +
       '<span class="ssc-params">' + (g.rows || []).length + " 列 · 過關 " + nBoth +
       " · 最佳 " + num(best, 1) + "</span>" +
       '<span class="chevron">' + (open ? "▾" : "▸") + "</span>" +
@@ -565,8 +600,8 @@
       '<th class="num">投入</th><th class="num">最終</th>' +
       '<th class="num">3y 報酬</th><th class="num">近1年</th><th class="num">B&amp;H</th>' +
       '<th class="num">MaxDD</th><th>OOS</th><th>過關</th>' +
-      '<th class="num">分數</th><th>狀態</th><th class="col-approve">核准</th>' +
-      "</tr></thead><tbody>" + (body || '<tr><td colspan="12" class="empty-row">此篩選下無列</td></tr>') +
+      '<th class="num">分數</th><th>狀態</th>' +
+      "</tr></thead><tbody>" + (body || '<tr><td colspan="11" class="empty-row">此篩選下無列</td></tr>') +
       "</tbody></table></div></div></article>";
   }
 
@@ -675,6 +710,59 @@
   }
 
   function bindRows() {
+
+
+
+    document.querySelectorAll(".btn-fam-approve").forEach(function (btn) {
+      if (btn.disabled) return;
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var fam = btn.getAttribute("data-family") || "";
+        openPinModal({
+          title: "批准策略家族",
+          confirmText: "確定批准家族「" + fam + "」？配置檔中該家族且 enabled 的槽位將可實盤開倉。",
+          onSubmit: function (pin, resultEl) {
+            resultEl.textContent = "處理中…";
+            postControl("/control/approve_family", pin, { family: fam })
+              .then(function (r) {
+                resultEl.textContent = r.message || "已批准";
+                refreshApprovedFamilies({ approved_families: r.approved_families });
+                setTimeout(function () { closeModal(); refresh(true); }, 700);
+              })
+              .catch(function (e) {
+                resultEl.textContent = "失敗：" + ((e && e.message) || e);
+              });
+          }
+        });
+      });
+    });
+    document.querySelectorAll(".btn-fam-revoke").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var fam = btn.getAttribute("data-family") || "";
+        openPinModal({
+          title: "撤銷策略家族",
+          confirmText: "確定撤銷家族「" + fam + "」？將停止開新倉；既有持倉仍依止損／出場管理。",
+          onSubmit: function (pin, resultEl) {
+            resultEl.textContent = "處理中…";
+            postControl("/control/revoke_family", pin, { family: fam })
+              .then(function (r) {
+                resultEl.textContent = r.message || "已撤銷";
+                refreshApprovedFamilies({ approved_families: r.approved_families });
+                setTimeout(function () { closeModal(); refresh(true); }, 700);
+              })
+              .catch(function (e) {
+                resultEl.textContent = "失敗：" + ((e && e.message) || e);
+              });
+          }
+        });
+      });
+    });
+
+
+
     // Family card expand/collapse — was missing (cards did nothing on click)
     document.querySelectorAll(".ssc-head[data-toggle-key]").forEach(function (head) {
       head.onclick = function (ev) {
@@ -706,7 +794,7 @@
         }
       };
     });
-    document.querySelectorAll(".btn-approve").forEach(function (btn) {
+    document.querySelectorAll(".btn-approve-REMOVED").forEach(function (btn) {
       if (btn.disabled) return;
       btn.onclick = function (ev) {
         ev.stopPropagation();
@@ -774,6 +862,12 @@
     try {
       if (!keepUi || (!catalog && !scores)) {
         apiBase = await resolveApiBase();
+      try {
+        if (apiBase) {
+          var stFam = await getJSON(apiBase + "/status");
+          refreshApprovedFamilies(stFam || {});
+        }
+      } catch (eFam) { /* ignore */ }
         await loadApproved();
         scores = await getJSON(SCORES_URL);
         catalog = null;

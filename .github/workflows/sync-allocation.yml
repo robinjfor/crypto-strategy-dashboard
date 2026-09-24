@@ -1,0 +1,62 @@
+# Validate config/allocation.json and upload to GCS on push.
+# Invalid files are rejected; previous GCS object is left unchanged.
+name: sync-allocation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "config/allocation.json"
+      - "config/ALLOCATION_SCHEMA.md"
+      - "service/allocation.py"
+      - ".github/workflows/sync-allocation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: asia-east1
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate allocation.json
+        id: validate
+        working-directory: service
+        run: |
+          set -euo pipefail
+          pip install -q google-cloud-storage
+          python allocation.py ../config/allocation.json
+
+      - id: auth
+        name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Upload to GCS
+        env:
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GCS_BUCKET}" ]; then
+            echo "GCS_BUCKET var missing" >&2
+            exit 1
+          fi
+          # Upload only after validation passed
+          gcloud storage cp config/allocation.json "gs://${GCS_BUCKET}/trader/allocation.json" \
+            --cache-control="no-cache"
+          echo "Uploaded gs://${GCS_BUCKET}/trader/allocation.json"
+          gcloud storage cat "gs://${GCS_BUCKET}/trader/allocation.json" | head -c 200
+          echo

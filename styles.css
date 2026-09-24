@@ -707,3 +707,28 @@ table.scores tr.fail:hover td.col-approve {
   overflow-x: auto;
   max-width: 100%;
 }
+
+
+/* Family-level approval controls on backtest cards */
+.fam-approve-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px;
+  flex-wrap: wrap;
+  vertical-align: middle;
+}
+.fam-pass-info { color: var(--text-dim); font-size: 12px; }
+.btn-fam-approve, .btn-fam-revoke {
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #3a4556;
+  background: #1a2332;
+  color: #e8eef7;
+}
+.btn-fam-approve { border-color: #22c55e88; color: #86efac; }
+.btn-fam-revoke { border-color: #ef444488; color: #fca5a5; }
+.btn-fam-approve:disabled { opacity: 0.45; cursor: not-allowed; }
+.ssc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }

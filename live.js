@@ -91,17 +91,37 @@
   /** Approved slots that are actually deployed (order_mode=live). Homepage source of truth. */
   function approvedLiveSlots() {
     if (!cloud) return [];
+    // Prefer allocation ∩ approved_families from /status.live_slots
+    if (Array.isArray(cloud.live_slots) && cloud.live_slots.length) {
+      return cloud.live_slots.map(function (s) {
+        return {
+          strategy_id: s.strategy_id,
+          slot: s.slot,
+          symbol: s.symbol,
+          tf: s.timeframe || s.tf,
+          family: s.family,
+          notional_usdt: s.notional_usdt,
+          order_mode: "live",
+          mode: "live",
+          approved: true,
+          label_zh: "已核准 · 上線待命"
+        };
+      });
+    }
     var list = cloud.approved || cloud.approved_list || [];
     if (!Array.isArray(list) && list && typeof list === "object") {
       list = Object.keys(list).map(function (k) {
         return Object.assign({ strategy_id: k }, list[k]);
       });
     }
+    var fams = cloud.approved_families || [];
     return (list || []).filter(function (a) {
       if (!a) return false;
       if (a.approved === false) return false;
       var mode = a.order_mode || a.mode || "live";
-      return mode === "live";
+      if (mode !== "live") return false;
+      if (fams.length && a.family && fams.indexOf(a.family) < 0) return false;
+      return true;
     });
   }
 

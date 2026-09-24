@@ -14,8 +14,12 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval, ensure_approved_families, approve_family, revoke_family, DEFAULT_APPROVED_FAMILIES, is_family_approved
 from state_store import StateStore
+from allocation import (
+    resolve_allocation, validate_allocation, live_slots as alloc_live_slots,
+    normalize_family, RUNNER_FAMILIES, slot_to_runtime,
+)
 from strategy import now_iso_taipei
 
 
@@ -100,6 +104,8 @@ def root():
 @app.route("/control/close_all", methods=["OPTIONS"])
 @app.route("/control/approve", methods=["OPTIONS"])
 @app.route("/control/revoke", methods=["OPTIONS"])
+@app.route("/control/approve_family", methods=["OPTIONS"])
+@app.route("/control/revoke_family", methods=["OPTIONS"])
 @app.route("/approved", methods=["OPTIONS"])
 def options_ok():
     return _cors(app.make_response(("", 204)))
@@ -556,6 +562,10 @@ def build_status() -> dict:
         "planned_positions": _planned_from_armed(armed),
         "approved": _approved_public(state).get("approved"),
         "signal_only": _approved_public(state).get("signal_only"),
+        "approved_families": ensure_approved_families(state),
+        "allocation": (state.get("allocation_public") or _allocation_public(state)),
+        "allocation_alert": state.get("allocation_alert"),
+        "live_slots": (state.get("allocation_public") or _allocation_public(state)).get("live_slots") or [],
         "satellite_strategies": [],
         "strategies": [],
     }
@@ -702,6 +712,153 @@ def approved_list():
         log.exception("approved_list_fail")
         return jsonify({"ok": False, "error": str(e)}), 500
 
+
+
+
+def _allocation_public(state: dict) -> dict:
+    """Load allocation (GCS→repo), validate, expose live/signal views."""
+    try:
+        doc, source = resolve_allocation()
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": str(e), "source": None, "live_slots": [], "slots": []}
+    # Prefer last-good cached on state if current invalid
+    errs = validate_allocation(doc, check_binance=False)
+    alert = None
+    if errs:
+        alert = {"ok": False, "errors": errs, "message": "配置檔驗證失敗，沿用上一份有效配置"}
+        cached = state.get("allocation_last_good")
+        if isinstance(cached, dict):
+            doc = cached
+            source = "last_good"
+        else:
+            # still expose invalid doc for debugging but no live slots
+            return {
+                "ok": False,
+                "source": source,
+                "updated_at": doc.get("updated_at"),
+                "updated_by": doc.get("updated_by"),
+                "slots": doc.get("slots") or [],
+                "live_slots": [],
+                "errors": errs,
+            }
+    else:
+        # cache last good on state object (caller may persist)
+        state["allocation_last_good"] = doc
+        state["allocation_alert"] = None
+    fams = ensure_approved_families(state)
+    live = alloc_live_slots(doc, fams)
+    return {
+        "ok": True,
+        "source": source,
+        "updated_at": doc.get("updated_at"),
+        "updated_by": doc.get("updated_by"),
+        "book_usdt": doc.get("book_usdt"),
+        "slots": doc.get("slots") or [],
+        "live_slots": live,
+        "approved_families": fams,
+        "errors": None,
+        "alert": alert,
+    }
+
+
+@app.route("/control/approve_family", methods=["POST"])
+def approve_family_ep():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    family = normalize_family((body.get("family") or "").strip())
+    if not family:
+        return jsonify({"ok": False, "error": "缺少 family"}), 400
+    if family not in RUNNER_FAMILIES and family not in SUPPORTED_FAMILIES:
+        return jsonify({"ok": False, "error": f"雲端尚未支援此策略類型：{family}"}), 400
+
+    holder: dict = {}
+
+    def mut(st):
+        holder["r"] = approve_family(st, family, at=now_iso_taipei(), by="api")
+        # Keep derived per-strategy approved in sync for older clients
+        _sync_approved_from_families(st)
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        r = holder.get("r") or {}
+        return jsonify({
+            "ok": True,
+            "message": f"已批准策略家族 {family}",
+            "family": family,
+            "approved_families": r.get("approved_families"),
+        })
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/revoke_family", methods=["POST"])
+def revoke_family_ep():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    family = normalize_family((body.get("family") or "").strip())
+    if not family:
+        return jsonify({"ok": False, "error": "缺少 family"}), 400
+
+    holder: dict = {}
+
+    def mut(st):
+        holder["r"] = revoke_family(st, family, at=now_iso_taipei(), by="api")
+        _sync_approved_from_families(st)
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        r = holder.get("r") or {}
+        return jsonify({
+            "ok": True,
+            "message": f"已撤銷策略家族 {family}（停止開新倉；既有持倉續管）",
+            "family": family,
+            "approved_families": r.get("approved_families"),
+        })
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _sync_approved_from_families(st: dict) -> None:
+    """Derive legacy per-strategy approved dict from approved_families + allocation."""
+    fams = ensure_approved_families(st)
+    pub = _allocation_public(st)
+    live_ids = {s.get("strategy_id") for s in (pub.get("live_slots") or [])}
+    approved = {}
+    for sid in live_ids:
+        if not sid:
+            continue
+        slot = slot_by_strategy_id(sid) or {}
+        approved[sid] = {
+            "slot": slot.get("id"),
+            "notional_usdt": slot.get("quote_usdt"),
+            "approved": True,
+            "mode": "live",
+            "family": slot.get("family"),
+            "label_zh": "已核准 · 上線待命",
+            "approved_at": now_iso_taipei(),
+        }
+    # Also mark DEFAULT_APPROVED if family approved and no allocation hit
+    for sid, meta in DEFAULT_APPROVED.items():
+        slot = slot_by_strategy_id(sid) or {}
+        fam = slot.get("family") or meta.get("family") or "donchian_atr"
+        if fam in fams and sid not in approved:
+            # only if allocation doesn't explicitly disable
+            disabled = False
+            for s in (pub.get("slots") or []):
+                if s.get("strategy_id") == sid and not s.get("enabled"):
+                    disabled = True
+                    break
+            if not disabled:
+                approved[sid] = {**meta, "approved": True, "mode": "live", "family": fam}
+    st["approved"] = approved
 
 @app.route("/control/approve", methods=["POST"])
 def approve():
