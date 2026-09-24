@@ -51,6 +51,14 @@ for cand in (src_dir / "catalog.json", src_dir / "catalog" / "catalog.json"):
         print(f"copied catalog from {cand}")
         break
 if catalog_src is not None:
+    # Emily 2026-09-25: news families retired — drop on every sync
+    cat_path = dst_dir / "catalog.json"
+    cat = json.loads(cat_path.read_text())
+    hidden = {"news_burst_confirm", "news_filter_donchian"}
+    if isinstance(cat, dict) and isinstance(cat.get("strategies"), list):
+        cat["strategies"] = [s for s in cat["strategies"] if s.get("strategy_family_id") not in hidden]
+        cat_path.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n")
+        print(f"filtered hidden families {sorted(hidden)} -> {len(cat['strategies'])} remain")
     import subprocess
     subprocess.run([
         sys.executable, str(dst_dir.parent.parent / "scripts" / "assign_codes.py"),

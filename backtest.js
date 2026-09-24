@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, news_burst_confirm: true, news_filter_donchian: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -25,9 +25,9 @@
     momentum_rotation: null,
     sma_regime_hold: null,
     dual_ma_rsi: null,
-    news_burst_confirm: "news_burst_confirm",
-    news_filter_donchian: "news_filter_donchian"
   };
+  // Emily 2026-09-25: news families retired — never render on backtest page
+  var HIDDEN_FAMILIES = { news_burst_confirm: true, news_filter_donchian: true };
   var LOCK_PREP = "準備中";
   var LOCK_NO_PASS = "未過關，不開放批准";
 
@@ -494,6 +494,7 @@
     var out = [];
     list.forEach(function (g) {
       var familyId = g.strategy_family_id || g.family_id || g.id || g.key || "";
+      if (HIDDEN_FAMILIES[familyId]) return;
       var rowsRaw = g.rows || g.variants || g.symbols || g.results || [];
       var rows = rowsRaw.map(function (r) {
         var sid = r.strategy_id || r.id || "";
@@ -812,6 +813,8 @@
   function findRowById(sid) {
     if (catalog && catalog.strategies) {
       for (var i = 0; i < catalog.strategies.length; i++) {
+        var _fidHide = catalog.strategies[i].strategy_family_id || catalog.strategies[i].family_id || "";
+        if (HIDDEN_FAMILIES[_fidHide]) continue;
         var rows = catalog.strategies[i].rows || [];
         for (var j = 0; j < rows.length; j++) {
           if (rows[j].strategy_id === sid) {

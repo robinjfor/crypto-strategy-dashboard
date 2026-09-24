@@ -322,26 +322,28 @@
       "rows": {
         "news_filter_donch__DOT__4h__k2.0_vol": {
           "code": "G1",
-          "active": true
+          "active": false
         },
         "news_filter_donch__FIL__1h__k2.0_vol": {
           "code": "G2",
-          "active": true
+          "active": false
         },
         "news_filter_donch__OP__4h__k1.5_vol": {
           "code": "G3",
-          "active": true
+          "active": false
         },
         "news_filter_donch__FIL__1h__k1.5_vol": {
           "code": "G4",
-          "active": true
+          "active": false
         },
         "news_filter_donch__DOT__4h__k1.5_vol": {
           "code": "G5",
-          "active": true
+          "active": false
         }
       },
-      "active": true
+      "active": false,
+      "retired": true,
+      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI"
     },
     "donchian_long_short_btc_regime": {
       "code": "H",
@@ -398,46 +400,48 @@
       "rows": {
         "news_burst__DOT__4h__k1.5_ema_vol": {
           "code": "I1",
-          "active": true
+          "active": false
         },
         "news_burst__DOT__4h__k2.5_ema_vol": {
           "code": "I2",
-          "active": true
+          "active": false
         },
         "news_burst__DOT__4h__k2.0_ema_vol": {
           "code": "I3",
-          "active": true
+          "active": false
         },
         "news_burst__DOT__4h__k2.5_donchian_vol": {
           "code": "I4",
-          "active": true
+          "active": false
         },
         "news_burst__DOT__4h__k2.0_donchian_vol": {
           "code": "I5",
-          "active": true
+          "active": false
         },
         "news_burst__DOT__4h__k1.5_donchian_vol": {
           "code": "I6",
-          "active": true
+          "active": false
         },
         "news_burst__OP__4h__k1.5_donchian_vol": {
           "code": "I7",
-          "active": true
+          "active": false
         },
         "news_burst__OP__4h__k2.5_donchian_vol": {
           "code": "I8",
-          "active": true
+          "active": false
         },
         "news_burst__OP__4h__k2.5_ema_vol": {
           "code": "I9",
-          "active": true
+          "active": false
         },
         "news_burst__FIL__1h__k2.5_donchian_vol": {
           "code": "I10",
-          "active": true
+          "active": false
         }
       },
-      "active": true
+      "active": false,
+      "retired": true,
+      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI"
     },
     "donchian_btc_regime": {
       "code": "J",

@@ -32,7 +32,6 @@ from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_
 from slots import ensure_approved_families
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei, check_position_liquidation
-from news_ingest import maybe_refresh_news
 from sol_core.signal import compute_signal as sol_compute_signal, expectation_heartbeat, in_daily_window
 
 logging.basicConfig(
@@ -489,12 +488,6 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         log.warning("TRADER_ENABLED=false — kill switch; signals only")
         live = False
 
-    try:
-        news_meta = maybe_refresh_news()
-        log.info("news_ingest ok=%s sources=%s", news_meta.get("ok"), news_meta.get("sources"))
-    except Exception as e:  # noqa: BLE001
-        log.warning("news_ingest_hook_fail err=%s", e)
-
     store = StateStore()
     state = store.load()
     paused = bool(state.get("paused"))
@@ -714,7 +707,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode",
         nargs="?",
         default=os.environ.get("JOB_MODE") or "run",
-        choices=["probe", "futures-probe", "futures-order-probe", "run", "dry-run", "news-ingest"],
+        choices=["probe", "futures-probe", "futures-order-probe", "run", "dry-run"],
     )
     ap.add_argument(
         "--backfill-slot",
@@ -730,11 +723,6 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     client = BinanceClient()
     try:
-        if args.mode == "news-ingest":
-            from news_ingest import refresh_news
-            meta = refresh_news(force=True)
-            print(json.dumps(meta, ensure_ascii=False, indent=2))
-            return 0 if meta.get("ok") else 2
         if args.mode == "futures-probe":
             from futures_client import probe_futures
             result = probe_futures()
