@@ -24,8 +24,8 @@
     sma_regime_hold: null,
     dual_ma_rsi: null
   };
-  var LOCK_UNSUPPORTED = "雲端尚未支援此策略類型";
-  var LOCK_DERIV = "雲端尚未支援（需合約／槓桿／做空）";
+  var LOCK_PREP = "準備中";
+  var LOCK_NO_PASS = "未過關，不開放批准";
 
   var scores = null;
   var catalog = null;
@@ -121,11 +121,13 @@
     return !!(rf && RUNNER_FAMILIES[rf]);
   }
 
-  function approveLockReason(row, familyId) {
+  function approveLockReason(row, familyId, familyPass3y) {
     row = row || {};
     familyId = familyId || row._family_id || "";
-    if (needsDerivatives(row, familyId)) return LOCK_DERIV;
-    if (!runnerSupports(row, familyId)) return LOCK_UNSUPPORTED;
+    // Emily: no 3y-pass rows in family → never approvable
+    if (familyPass3y === false) return LOCK_NO_PASS;
+    if (!runnerSupports(row, familyId)) return LOCK_PREP;
+    if (needsDerivatives(row, familyId) && !runnerSupports(row, familyId)) return LOCK_PREP;
     return null;
   }
 
@@ -152,6 +154,12 @@
   }
   // Emily 資金控管：核准門檻＝僅 3 年窗（全期僅參考）
   var bothGatesOk = gatePass3y; // legacy alias
+
+  function familyHasPass3y(gOrRows) {
+    var rows = Array.isArray(gOrRows) ? gOrRows : ((gOrRows && gOrRows.rows) || []);
+    return rows.some(function (r) { return gatePass3y(r); });
+  }
+
 
 
   function describeRules(key, sample) {
@@ -300,7 +308,7 @@
         '<button type="button" class="btn-revoke" data-sid="' + esc(sid) + '">退回</button>';
     }
     var ok = gatePass3y(row);
-    var lockReason = approveLockReason(row, familyId || row._family_id);
+    var lockReason = approveLockReason(row, familyId || row._family_id, row._family_pass_3y);
     var supported = !lockReason;
     var locked = !ok || !supported;
     var title = !ok
@@ -412,6 +420,8 @@
     return Object.keys(map).map(function (k) {
       var g = map[k];
       g.rows.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+      var famPass = rows.some(function (r) { return gatePass3y(r); });
+      rows.forEach(function (r) { r._family_pass_3y = famPass; });
       g.best_score = g.rows.length ? (g.rows[0].score || 0) : 0;
       return g;
     }).sort(function (a, b) { return b.best_score - a.best_score; });
@@ -544,17 +554,13 @@
   function familyControls(g) {
     var familyId = g.family_id || g.key;
     var sample = (g.rows && g.rows[0]) || {};
+    var hasPass = familyHasPass3y(g);
     var rf = runnerFamilyId(familyId, sample);
     var onRunner = !!(rf && RUNNER_FAMILIES[rf]);
-    var allDeriv = (g.rows || []).length > 0 && (g.rows || []).every(function (r) {
-      return needsDerivatives(r, familyId);
-    });
     var famLock = null;
-    if (!onRunner) {
-      famLock = allDeriv ? LOCK_DERIV : LOCK_UNSUPPORTED;
-    } else {
-      famLock = approveLockReason(sample, familyId);
-    }
+    if (!hasPass) famLock = LOCK_NO_PASS;
+    else if (!onRunner) famLock = LOCK_PREP;
+    else famLock = approveLockReason(sample, familyId, true);
     var supported = !famLock;
     var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
     var nAll = (g.rows || []).length;
@@ -604,18 +610,17 @@
       rulesHtml = rules.map(function (line) { return "<li>" + esc(line) + "</li>"; }).join("");
     }
     var sample0 = (g.rows && g.rows[0]) || {};
+    var hasPass0 = familyHasPass3y(g);
     var rf0 = runnerFamilyId(familyId, sample0);
     var onRunner0 = !!(rf0 && RUNNER_FAMILIES[rf0]);
-    var allDeriv0 = (g.rows || []).length > 0 && (g.rows || []).every(function (r) {
-      return needsDerivatives(r, familyId);
-    });
     var cardLock = null;
-    if (!onRunner0) cardLock = allDeriv0 ? LOCK_DERIV : LOCK_UNSUPPORTED;
-    else cardLock = approveLockReason(sample0, familyId);
+    if (!hasPass0) cardLock = LOCK_NO_PASS;
+    else if (!onRunner0) cardLock = LOCK_PREP;
+    else cardLock = approveLockReason(sample0, familyId, true);
     supported = !cardLock;
     var supportNote = supported
       ? '<span class="badge ok">雲端可執行</span>'
-      : '<span class="badge muted">' + esc(cardLock || LOCK_UNSUPPORTED) + "</span>";
+      : '<span class="badge muted">' + esc(cardLock || LOCK_PREP) + "</span>";
 
     var body = rows.map(function (r) {
       var passBoth = gatePass3y(r);
