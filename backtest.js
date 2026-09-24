@@ -270,6 +270,43 @@
   }
 
 
+
+  var SCORE_WEIGHT_LABELS = {
+    cagr_3y: "CAGR 3y",
+    ret_1y: "近 1 年",
+    maxdd: "MaxDD",
+    oos_pass: "OOS",
+    excess_vs_bh: "超越 B&H",
+    cagr: "CAGR 3y",
+    ret1y: "近 1 年",
+    oos: "OOS",
+    excess_bh: "超越 B&H"
+  };
+
+  function scoreFormulaZh(scoring) {
+    scoring = scoring || {};
+    var w = scoring.weights || scoring.weight || null;
+    if (!w || typeof w !== "object" || Array.isArray(w)) {
+      // flat numeric map?
+      var keys = Object.keys(scoring).filter(function (k) { return typeof scoring[k] === "number"; });
+      if (keys.length) w = scoring;
+      else return "—";
+    }
+    var order = ["cagr_3y", "cagr", "ret_1y", "ret1y", "maxdd", "oos_pass", "oos", "excess_vs_bh", "excess_bh"];
+    var seen = {};
+    var parts = [];
+    function pushKey(k) {
+      if (seen[k] || typeof w[k] !== "number") return;
+      seen[k] = true;
+      var label = SCORE_WEIGHT_LABELS[k] || k;
+      parts.push(label + " " + w[k] + "%");
+    }
+    order.forEach(pushKey);
+    Object.keys(w).forEach(pushKey);
+    if (!parts.length) return "—";
+    return "評分 = " + parts.join(" + ");
+  }
+
   function renderMeta(meta, srcHint) {
     if (!meta) return "";
     var period = meta.period_3y || meta.period || {};
@@ -295,7 +332,7 @@
       "<div><span class=\"lbl\">成本</span> 單邊 " + esc(oneWay) + " bps（fee " + esc(fee) + " + slip " + esc(slip) + "）</div>" +
       "<div><span class=\"lbl\">門檻</span> 勝 B&amp;H · OOS≥" + esc(oosMin) + " · |MaxDD|≤" + esc(maxdd) + "% · 門檻＝近 3 年（全期僅參考）</div>" +
       "<div><span class=\"lbl\">通過</span> 3年 " + esc(nPass) + " · 過關 " + esc(nPass3y) + " / " + esc(nAll) + " 列（" + esc(nFam) + " 族）</div>" +
-      "<div class=\"meta-formula\"><span class=\"lbl\">計分</span> " + esc(JSON.stringify(scoring.weights || scoring)) + "</div>" +
+      "<div class=\"meta-formula\"><span class=\"lbl\">計分</span> " + esc(scoreFormulaZh(scoring)) + "</div>" +
       "</div>" +
       (srcHint ? '<p class="hint" style="margin:8px 0 0">資料來源：' + esc(srcHint) + " · 頁面分數為 catalog 重標（與 scores.json 不同）</p>" : "") +
       "</section>";
@@ -504,7 +541,7 @@
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(r.score, 2) + "</td>" +
         "<td>" + statusBadge(r.status) + "</td>" +
-        "<td>" + approveControls(r, familyId) + "</td>" +
+        '<td class="col-approve">' + approveControls(r, familyId) + "</td>" +
         "</tr>" +
         '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="12">' +
         expandHtml(r) + "</td></tr>";
@@ -525,10 +562,10 @@
       '<div class="table-scroll"><table class="data scores">' +
       "<thead><tr>" +
       "<th>幣別／週期</th>" +
-      '<th class="num">投入 10,000</th><th class="num">最終金額</th>' +
-      '<th class="num">3 年報酬</th><th class="num">近 1 年</th><th class="num">B&amp;H</th>' +
+      '<th class="num">投入</th><th class="num">最終</th>' +
+      '<th class="num">3y 報酬</th><th class="num">近1年</th><th class="num">B&amp;H</th>' +
       '<th class="num">MaxDD</th><th>OOS</th><th>過關</th>' +
-      '<th class="num">分數</th><th>狀態</th><th>核准</th>' +
+      '<th class="num">分數</th><th>狀態</th><th class="col-approve">核准</th>' +
       "</tr></thead><tbody>" + (body || '<tr><td colspan="12" class="empty-row">此篩選下無列</td></tr>') +
       "</tbody></table></div></div></article>";
   }

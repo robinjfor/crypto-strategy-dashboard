@@ -660,3 +660,50 @@ tr.score-row.data-short td { box-shadow: inset 3px 0 0 #f59e0b; }
 }
 .ops-result.hidden { display: none; }
 .modal-confirm { color: #fbbf24; font-size: 13px; line-height: 1.45; }
+
+
+/* Sticky approve column + compact scores table */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.scores {
+  font-size: 0.78rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+table.scores th,
+table.scores td {
+  padding: 6px 8px;
+}
+table.scores th.col-approve,
+table.scores td.col-approve {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: #151c26;
+  box-shadow: -8px 0 12px -6px rgba(0, 0, 0, 0.7);
+  min-width: 4.75rem;
+  text-align: center;
+  white-space: nowrap;
+}
+table.scores thead th.col-approve {
+  z-index: 3;
+  background: #121a24;
+}
+table.scores tbody tr:hover td.col-approve {
+  background: #1a2330;
+}
+table.scores tr.fail td.col-approve {
+  background: #1a1218;
+}
+table.scores tr.fail:hover td.col-approve {
+  background: #24151c;
+}
+.meta-formula { word-break: normal; white-space: normal; }
+.btn-approve, .btn-revoke {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.ssc-body .table-scroll, .strategy-score-card .table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
