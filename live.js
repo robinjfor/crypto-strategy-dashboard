@@ -6,6 +6,11 @@
   const BOOK_URL = "./data/live_book.json";
   const BINANCE_TICKER = "https://data-api.binance.vision/api/v3/ticker/price?symbol=";
   const BINANCE_KLINES = "https://data-api.binance.vision/api/v3/klines";
+  const STATE_HEALTH_URL = "./state/health.json";
+  const STATE_ORDERS_URL = "./state/orders.json";
+  const STATE_POSITIONS_URL = "./state/positions.json";
+  const STATE_ALERTS_URL = "./state/alerts.json";
+  const STATE_PAPER_URL = "./state/paper_trading.json";
 
   let book = null;
   let strategyPayloads = []; // [{ meta, paper, settlement, error }]
@@ -19,6 +24,10 @@
   let allocChart = null;
   let pendingPieParts = [];
   let modalProfile = null;
+  let stateHealth = null;
+  let stateOrders = null;
+  let statePositions = null;
+  let stateAlerts = null;
 
   function fmtPct(v, digits = 2) {
     if (v == null || Number.isNaN(Number(v))) return "—";
@@ -66,6 +75,22 @@
     const r = await fetch(url, { cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status} · ${url}`);
     return r.json();
+  }
+
+  async function fetchJSONOptional(url) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function parseTs(s) {
+    if (!s) return null;
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
 
   function loadSettlements(raw) {
@@ -873,6 +898,116 @@
     }
   }
 
+
+  function renderHealth() {
+    const h = stateHealth || {};
+    const last = parseTs(h.last_success_at || h.last_runner_at);
+    const ageMs = last ? Date.now() - last.getTime() : null;
+    const stale = ageMs == null || ageMs > 60 * 60 * 1000;
+    const lightCls = stale ? "bad" : "ok";
+    const lightText = stale
+      ? "自動化逾時（>1 小時無成功 runner）"
+      : "自動化正常";
+    const lastLabel = h.last_success_at || h.last_runner_at || "—";
+    const scanLabel = h.last_scanner_at || "—";
+    const alerts = ((stateAlerts && stateAlerts.alerts) || []).slice(-5).reverse();
+    const alertHtml = alerts.length
+      ? `<ul class="alert-list">${alerts
+          .map((a) => {
+            const lv = String(a.level || "").toLowerCase();
+            const cls = lv === "error" ? "err" : "warn";
+            return `<li class="${cls}">[${escapeHtml(a.level || "")}] ${escapeHtml(
+              a.code || ""
+            )} · ${escapeHtml(a.msg || "")}${
+              a.symbol ? " (" + escapeHtml(a.symbol) + ")" : ""
+            }</li>`;
+          })
+          .join("")}</ul>`
+      : `<span class="health-meta">無近期告警</span>`;
+    return `<div class="health-bar" id="systemHealth">
+      <span class="health-light ${lightCls}">● ${escapeHtml(lightText)}</span>
+      <span class="health-meta">runner 成功：${escapeHtml(String(lastLabel))}</span>
+      <span class="health-meta">scanner：${escapeHtml(String(scanLabel))}</span>
+      <span class="health-meta">紅燈僅禁新倉＋告警，不自動平倉</span>
+      <div style="flex-basis:100%">${alertHtml}</div>
+    </div>`;
+  }
+
+  function renderPendingOrders() {
+    const all = stateOrders && Array.isArray(stateOrders.orders) ? stateOrders.orders : [];
+    const active = all.filter((o) =>
+      ["ARMED", "SIGNAL", "PENDING", "PAUSED", "FILLED"].includes(o.status)
+    );
+    const exited = all.filter((o) => o.status === "EXITED").slice(-3);
+    const list = active.concat(exited);
+    const rows = list.length
+      ? list
+          .map((o) => {
+            const st = o.status || "—";
+            const pillCls =
+              st === "ARMED" || st === "SIGNAL" || st === "PENDING"
+                ? "armed"
+                : st === "FILLED"
+                  ? "filled"
+                  : "";
+            let qty = o.qty;
+            let entry = o.entry;
+            let mark = o.mark;
+            let stop = o.stop;
+            let upnlPct = o.unrealized_pct;
+            let upnlUsdt = o.unrealized_usdt;
+            if (st === "FILLED" && statePositions && Array.isArray(statePositions.positions)) {
+              const pos = statePositions.positions.find(
+                (p) => p.symbol === o.symbol && p.status === "FILLED"
+              );
+              if (pos) {
+                qty = pos.qty;
+                entry = pos.entry;
+                mark = pos.mark;
+                stop = pos.stop;
+                upnlPct = pos.unrealized_pct;
+                upnlUsdt = pos.unrealized_usdt;
+              }
+            }
+            const trailGap =
+              mark != null && stop != null && Number(mark) !== 0
+                ? fmtPct(((Number(mark) - Number(stop)) / Number(mark)) * 100)
+                : "—";
+            const unreal =
+              upnlPct != null
+                ? fmtPct(upnlPct) + (upnlUsdt != null ? ` · ${fmtNum(upnlUsdt, 2)} U` : "")
+                : upnlUsdt != null
+                  ? fmtNum(upnlUsdt, 2) + " U"
+                  : "—";
+            return `<tr>
+              <td><span class="status-pill ${pillCls}">${escapeHtml(st)}</span></td>
+              <td><strong>${escapeHtml(o.symbol || "—")}</strong><div class="kpi-sub">${escapeHtml(
+                o.slot || ""
+              )}</div></td>
+              <td class="num">${entry != null ? fmtNum(entry, 4) : "—"}<div class="kpi-sub">qty ${
+                qty != null ? fmtNum(qty, 3) : "—"
+              } · quote ${fmtNum(o.quote_usdt, 0)}</div></td>
+              <td class="num">${mark != null ? fmtNum(mark, 4) : "—"}</td>
+              <td class="num">${stop != null ? fmtNum(stop, 4) : "—"}<div class="kpi-sub">trail gap ${trailGap}</div></td>
+              <td class="num">${unreal}</td>
+              <td>${escapeHtml(o.last_check_at || "—")}<div class="kpi-sub">下次約 +15m</div></td>
+              <td class="mono">${escapeHtml(o.variant || "—")}</td>
+            </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="8" class="empty-row">尚無掛單／持倉狀態（等待 runner）</td></tr>`;
+    return `
+      <section class="section">
+        <div class="section-head"><h2>掛單追蹤</h2><span class="hint">ARMED → SIGNAL → PENDING → FILLED · v1 手動操作請改 commands.json（唯讀）</span></div>
+        <div class="card"><div class="table-scroll"><table class="data">
+          <thead><tr>
+            <th>狀態</th><th>標的</th><th class="num">進場</th><th class="num">現價</th><th class="num">stop／trail</th><th class="num">損益</th><th>最後檢查</th><th>變體</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div></div>
+      </section>`;
+  }
+
   function renderAll() {
     const main = $("main");
     if (!book) {
@@ -890,7 +1025,9 @@
 
     main.className = "";
     main.innerHTML =
+      renderHealth() +
       renderKpis(alloc) +
+      renderPendingOrders() +
       renderAllocation(alloc) +
       renderStrategyCards(strategyPayloads) +
       renderDetail(selected);
@@ -911,6 +1048,11 @@
     showErr("");
     try {
       book = await fetchJSON(BOOK_URL);
+      stateHealth = await fetchJSONOptional(STATE_HEALTH_URL);
+      stateOrders = await fetchJSONOptional(STATE_ORDERS_URL);
+      statePositions = await fetchJSONOptional(STATE_POSITIONS_URL);
+      stateAlerts = await fetchJSONOptional(STATE_ALERTS_URL);
+      const statePaper = await fetchJSONOptional(STATE_PAPER_URL);
       refreshSec = Number(book.auto_refresh_sec) || 15;
       if ($("pageTitle")) {
         $("pageTitle").textContent =
@@ -945,6 +1087,48 @@
           }
         })
       );
+      // Prefer automation state when present (fallback keeps legacy paper_path)
+      if (statePositions && Array.isArray(statePositions.positions) && payloads.length && payloads[0].paper) {
+        const paper = Object.assign({}, payloads[0].paper);
+        if (statePositions.virtual_equity != null) paper.virtual_equity = statePositions.virtual_equity;
+        if (statePositions.balances) paper.balances = statePositions.balances;
+        paper.open_positions = statePositions.positions
+          .filter((x) => x.status === "FILLED")
+          .map((x) => ({
+            symbol: x.symbol,
+            side: x.side || "LONG",
+            qty: x.qty,
+            entry: x.entry,
+            entry_price: x.entry,
+            stop: x.stop,
+            mark_price: x.mark,
+            unrealized_pct: x.unrealized_pct,
+            unrealized_pnl: x.unrealized_usdt,
+            variant: x.variant,
+            donch_lo: x.donch_lo,
+          }));
+        paper.updated_at_taipei = statePositions.updated_at || paper.updated_at_taipei;
+        paper.light = statePositions.light || paper.light;
+        if (stateOrders && Array.isArray(stateOrders.orders)) {
+          const armed = {};
+          for (const o of stateOrders.orders) {
+            if (["ARMED", "SIGNAL", "PENDING", "PAUSED", "FILLED"].includes(o.status)) {
+              armed[o.symbol] = {
+                variant: o.variant,
+                quote: o.quote_usdt,
+                status: o.status === "ARMED" ? "WAIT_BREAKOUT" : o.status,
+                mark: o.mark,
+                tf: o.tf,
+                donch_n: o.donch_n,
+              };
+            }
+          }
+          paper.armed = armed;
+        }
+        payloads[0] = Object.assign({}, payloads[0], { paper });
+      } else if (statePaper && payloads.length) {
+        payloads[0] = Object.assign({}, payloads[0], { paper: statePaper });
+      }
       strategyPayloads = payloads;
       if (!selectedId && payloads.length) selectedId = payloads[0].meta.id;
 

@@ -1,0 +1,46 @@
+{
+  "updated_at": "2026-09-24T14:34:36+08:00",
+  "orders": [
+    {
+      "id": "ord_near",
+      "slot": "core",
+      "symbol": "NEARUSDT",
+      "status": "FILLED",
+      "position_id": "pos_near_0",
+      "variant": "donchian_breakout_atr__NEAR__4h",
+      "quote_usdt": 1499.85,
+      "tf": "4h",
+      "donch_n": 20,
+      "stop_atr_mult": 2.0,
+      "trail_atr_mult": 3.0
+    },
+    {
+      "id": "ord_op",
+      "slot": "satellite_B",
+      "symbol": "OPUSDT",
+      "status": "FILLED",
+      "position_id": "pos_op_1",
+      "variant": "donchian20_s1.5_t1.5__OP__4h",
+      "quote_usdt": 1000.0,
+      "tf": "4h",
+      "donch_n": 20,
+      "stop_atr_mult": 1.5,
+      "trail_atr_mult": 1.5
+    },
+    {
+      "id": "ord_fet",
+      "slot": "satellite_A",
+      "symbol": "FETUSDT",
+      "status": "ARMED",
+      "variant": "donchian55_s2.0_t3.0__FET__1h",
+      "quote_usdt": 1250.0,
+      "mark": 0.1805,
+      "last_signal_bar_ts": null,
+      "last_acted_bar_ts": null,
+      "tf": "1h",
+      "donch_n": 55,
+      "stop_atr_mult": 2.0,
+      "trail_atr_mult": 3.0
+    }
+  ]
+}
