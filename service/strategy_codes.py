@@ -53,6 +53,15 @@ def code_for_symbol(symbol: str | None, slots: list[dict[str, Any]]) -> str | No
         ss = str(slot.get("symbol") or "").upper().replace("USDT", "")
         if ss == sym:
             return code_for(slot.get("strategy_id"), slot.get("family"))
+    # Closed trades may predate strategy_id; use the unique symbol token in
+    # the variant id as a deterministic fallback (e.g. ls__NEAR__...).
+    token = f"__{sym}__"
+    for entry in (mapping().get("families") or {}).values():
+        if not isinstance(entry, dict):
+            continue
+        for rid, row in (entry.get("rows") or {}).items():
+            if token in str(rid).upper() and isinstance(row, dict):
+                return row.get("code")
     return None
 
 
