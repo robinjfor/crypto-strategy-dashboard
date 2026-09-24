@@ -97,6 +97,17 @@ class FuturesDemoClient:
         """POST /fapi/v1/order/test — validates order, does not execute."""
         return self._signed("POST", "/fapi/v1/order/test", params)
 
+    def algo_order(self, **params) -> dict:
+        """POST /fapi/v1/algoOrder — conditional/stop orders (Binance Algo API)."""
+        return self._signed("POST", "/fapi/v1/algoOrder", params)
+
+    def cancel_algo_order(self, **params) -> dict:
+        return self._signed("DELETE", "/fapi/v1/algoOrder", params)
+
+    def open_algo_orders(self, symbol: str | None = None) -> list:
+        params = {"symbol": symbol} if symbol else {}
+        return self._signed("GET", "/fapi/v1/openAlgoOrders", params)
+
     def mark_price(self, symbol: str) -> float:
         data = self._public("/fapi/v1/ticker/price", {"symbol": symbol})
         return float(data["price"])
@@ -301,6 +312,10 @@ def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
             )
         )
 
+    def _is_stop_migrated_to_algo(err: str) -> bool:
+        e = err.lower()
+        return "-4120" in e or "algo order" in e or "order type not supported" in e
+
     stop_long = round_price_futures(info, symbol, px * 0.95)
     stop_short = round_price_futures(info, symbol, px * 1.05)
 
@@ -319,9 +334,9 @@ def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
         stopPrice=str(stop_long), quantity=str(qty), reduceOnly="true",
         workingType="MARK_PRICE",
     )
-    if (not ok_stop_l) and _is_reduce_only_no_pos(err_sl):
+    if (not ok_stop_l) and (_is_reduce_only_no_pos(err_sl) or _is_stop_migrated_to_algo(err_sl)):
         out["steps"][-1]["ok"] = True
-        out["steps"][-1]["soft"] = "reduceOnly_no_position"
+        out["steps"][-1]["soft"] = "reduceOnly_no_position_or_algo_migration"
         ok_stop_l = True
     ok_stop_s, err_ss = _test(
         "test_stop_short_reduce",
@@ -329,9 +344,9 @@ def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
         stopPrice=str(stop_short), quantity=str(qty), reduceOnly="true",
         workingType="MARK_PRICE",
     )
-    if (not ok_stop_s) and _is_reduce_only_no_pos(err_ss):
+    if (not ok_stop_s) and (_is_reduce_only_no_pos(err_ss) or _is_stop_migrated_to_algo(err_ss)):
         out["steps"][-1]["ok"] = True
-        out["steps"][-1]["soft"] = "reduceOnly_no_position"
+        out["steps"][-1]["soft"] = "reduceOnly_no_position_or_algo_migration"
         ok_stop_s = True
 
     # Also validate STOP_MARKET shape without reduceOnly (always testable flat)
@@ -340,8 +355,23 @@ def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
         symbol=symbol, side="SELL", type="STOP_MARKET",
         stopPrice=str(stop_long), quantity=str(qty), workingType="MARK_PRICE",
     )
+    if (not ok_stop_shape) and _is_stop_migrated_to_algo(err_shape):
+        out["steps"][-1]["ok"] = True
+        out["steps"][-1]["soft"] = "stop_migrated_to_algo_api"
+        ok_stop_shape = True
 
-    out["ok"] = bool(ok_long and ok_short and ok_stop_l and ok_stop_s and ok_stop_shape)
+    # Prove Algo Order API auth works (STOP_* now live there on Demo/Prod)
+    try:
+        _ = c.open_algo_orders(symbol)
+        out["steps"].append({"step": "algo_open_list", "ok": True})
+        algo_ok = True
+    except Exception as e:  # noqa: BLE001
+        err = str(e)[:300]
+        out["steps"].append({"step": "algo_open_list", "ok": False, "error": err})
+        out["needs_emily"].append(f"algo_open_list failed: {err}")
+        algo_ok = False
+
+    out["ok"] = bool(ok_long and ok_short and ok_stop_l and ok_stop_s and ok_stop_shape and algo_ok)
     if not ok_long:
         out["needs_emily"].append(f"test_market_long failed: {err_long}")
     if not ok_short:

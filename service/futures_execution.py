@@ -71,21 +71,24 @@ def place_stop_reduce_only(
     qty: float,
     client_order_id: str | None = None,
 ) -> dict:
+    """Conditional STOP via Algo Order API (classic STOP_MARKET retired from /order)."""
     info = client.exchange_info()
     stop = round_price_futures(info, symbol, stop_price)
     q = round_qty_futures(info, symbol, abs(qty))
-    params: dict[str, Any] = {
+    params: dict = {
+        "algoType": "CONDITIONAL",
         "symbol": symbol,
         "side": "SELL" if is_long else "BUY",
         "type": "STOP_MARKET",
-        "stopPrice": stop,
-        "quantity": q,
+        "triggerPrice": str(stop),
+        "quantity": str(q),
         "reduceOnly": "true",
         "workingType": "MARK_PRICE",
     }
     if client_order_id:
-        params["newClientOrderId"] = str(client_order_id)[:36]
-    return client.new_order(**params)
+        params["clientAlgoId"] = str(client_order_id)[:36]
+    return client.algo_order(**params)
+
 
 
 def close_position_market(
