@@ -18,14 +18,15 @@ from typing import Any
 from indicators import (
     BLACKLIST,
     OBSERVE_ONLY,
+    ONE_WAY,
     add_donch_atr,
     bar_ts_iso,
     base_of,
     buy_px,
-    compute_live_stop,
     fetch_klines,
     now_iso_taipei,
     now_taipei,
+    replay_stop_path,
     sell_px,
     split_closed,
 )
@@ -128,23 +129,54 @@ def seed_from_paper(paper: dict, state_dir: Path) -> None:
         })
 
     for sym, a in (paper.get("armed") or {}).items():
-        if a.get("status") == "FILLED":
+        st_in = (a.get("status") or "ARMED").upper()
+        if st_in == "FILLED":
             continue
         variant = a.get("variant") or ""
         params = parse_variant(variant, a)
-        slot = "satellite_A" if "FET" in sym else "satellite_B"
-        orders.append({
+        if "NEAR" in sym:
+            slot = "core"
+        elif "FET" in sym:
+            slot = "satellite_A"
+        elif "OP" in sym:
+            slot = "satellite_B"
+        elif "DOT" in sym:
+            slot = "satellite_C"
+        else:
+            slot = a.get("slot") or "satellite"
+        if st_in in ("DISARMED", "DISARMED_OOS_FAIL", "EXITED"):
+            status = st_in
+        elif st_in in ("WAIT_RESET", "REARM", "ARMED_WAIT_RESET"):
+            status = "WAIT_RESET"
+        elif st_in in ("WAIT_BREAKOUT", "ARMED_WAIT_BREAKOUT", "ARMED", "SIGNAL", "PENDING"):
+            status = "ARMED" if st_in.startswith("WAIT") or st_in.startswith("ARMED") else st_in
+            if st_in in ("WAIT_BREAKOUT", "ARMED_WAIT_BREAKOUT"):
+                status = "ARMED"
+        else:
+            status = "ARMED"
+        row = {
             "id": f"ord_{base_of(sym).lower()}",
             "slot": slot,
             "symbol": sym,
-            "status": "ARMED",
+            "status": status,
             "variant": variant,
-            "quote_usdt": float(a.get("quote") or 1000),
+            "quote_usdt": float(a.get("quote") or a.get("quote_usdt") or 0),
             "mark": a.get("mark"),
             "last_signal_bar_ts": None,
             "last_acted_bar_ts": None,
             **params,
-        })
+        }
+        if a.get("rearm_rule"):
+            row["rearm_rule"] = a["rearm_rule"]
+        if status == "WAIT_RESET":
+            row["reset_done"] = False
+        elif a.get("rearm_rule") == "reset_below_hi" and status == "ARMED":
+            row["reset_done"] = bool(a.get("reset_done", True))
+        if a.get("stop_ref") is not None:
+            row["stop_ref"] = a["stop_ref"]
+        if a.get("note"):
+            row["note"] = a["note"]
+        orders.append(row)
 
     save_json(state_dir / "positions.json", {
         "updated_at": now_iso_taipei(),
@@ -223,18 +255,33 @@ def process_commands(commands: dict, positions: dict, orders: dict, news: dict) 
 
 
 def manage_position(pos: dict, settlement_path: Path, dry_run: bool) -> dict:
+    """Path-correct manage: Wilder ATR trail, low-hit exits, min(open, stop) fill.
+
+    On catch-up (seed / missed bars), replay from entry and exit on the FIRST
+    bar that hits — do not jump to the latest bar with a fully-ratcheted stop.
+    Initial stop is always entry - stop_mult*ATR(entry bar); paper seed_stop is
+    audit-only (stale trail values must not short-circuit the path).
+    Also enforces max_hold_bars on close.
+    """
     sym, tf = pos["symbol"], pos["tf"]
     raw = fetch_klines(sym, tf, limit=max(250, int(pos["donch_n"]) + 80))
     closed, forming = split_closed(raw, tf)
-    ind = add_donch_atr(closed, int(pos["donch_n"])).dropna(subset=["atr", "donch_hi", "donch_lo"])
+    ind = add_donch_atr(closed, int(pos["donch_n"])).dropna(
+        subset=["atr", "donch_hi", "donch_lo"]
+    )
     if ind.empty:
         return {"symbol": sym, "error": "no_closed_bars"}
 
-    bar = ind.iloc[-1]
-    bar_ts = bar_ts_iso(bar.name)
-    mark = float(forming["Close"]) if forming is not None else float(bar["Close"])
+    mark = float(forming["Close"]) if forming is not None else float(ind.iloc[-1]["Close"])
+    last_bar_ts = bar_ts_iso(ind.iloc[-1].name)
 
-    if pos.get("last_manage_bar_ts") == bar_ts and not pos.get("_manual_close"):
+    # Idempotent only when already managed this last bar AND no pending catch-up exit
+    if (
+        pos.get("last_manage_bar_ts") == last_bar_ts
+        and not pos.get("_manual_close")
+        and pos.get("status") == "FILLED"
+    ):
+        # Still refresh MTM; trail already settled for this bar
         pos["mark"] = mark
         pos["unrealized_pct"] = round((mark / pos["entry"] - 1.0) * 100.0, 4)
         pos["unrealized_usdt"] = round((mark - pos["entry"]) * pos["qty"], 2)
@@ -244,38 +291,74 @@ def manage_position(pos: dict, settlement_path: Path, dry_run: bool) -> dict:
             "skipped": "idempotent_same_bar",
             "stop": pos["stop"],
             "mark": mark,
-            "bar_ts": bar_ts,
+            "bar_ts": last_bar_ts,
         }
 
-    if pos.get("seed_stop") and pos.get("last_manage_bar_ts") is None:
-        initial = float(pos["seed_stop"])
-    else:
-        initial = float(pos["stop"]) if pos.get("stop") else None
-
-    stop, donch_lo, atr = compute_live_stop(
+    # Always path-replay from entry (ignore seed_stop as initial — may be stale trail)
+    replay = replay_stop_path(
         ind,
         entry=float(pos["entry"]),
         entry_bar_ts=pos.get("entry_bar_ts"),
         stop_atr_mult=float(pos["stop_atr_mult"]),
         trail_atr_mult=float(pos["trail_atr_mult"]),
-        initial_stop=initial,
+        initial_stop=None,
     )
-    pos["stop"] = round(float(stop), 8)
-    pos["donch_lo"] = round(float(donch_lo), 8)
-    pos["atr"] = round(float(atr), 8)
+    stop = float(replay["stop"])
+    donch_lo = float(replay["donch_lo"])
+    atr = float(replay["atr"])
+    pos["stop"] = round(stop, 8)
+    pos["donch_lo"] = round(donch_lo, 8)
+    pos["atr"] = round(atr, 8)
     pos["mark"] = mark
     pos["unrealized_pct"] = round((mark / pos["entry"] - 1.0) * 100.0, 4)
     pos["unrealized_usdt"] = round((mark - pos["entry"]) * pos["qty"], 2)
     pos["last_check_at"] = now_iso_taipei()
 
-    hit_stop = float(bar["Low"]) <= float(stop)
-    below_lo = float(bar["Close"]) < float(donch_lo)
     manual = bool(pos.pop("_manual_close", False))
     reason_manual = pos.pop("_manual_reason", None)
-    should_exit = hit_stop or below_lo or manual
-    reason = "manual" if manual else ("stop" if hit_stop else ("donch_lo" if below_lo else "hold"))
+    exit_info = replay.get("exit")
 
-    summary: dict[str, Any] = {
+    # max_hold: count closed bars from entry (entry bar = 0)
+    max_hold = int(pos.get("max_hold_bars") or 0)
+    hold_exit = None
+    if max_hold > 0 and pos.get("entry_bar_ts"):
+        ets = __import__("pandas").Timestamp(pos["entry_bar_ts"])
+        if ets.tzinfo is None:
+            ets = ets.tz_localize("UTC")
+        post = ind.loc[ind.index >= ets]
+        if len(post) > max_hold:
+            # bar index max_hold (0-based from entry) is the expiry bar
+            exp = post.iloc[max_hold]
+            # only if we did not already stop earlier
+            if exit_info is None or __import__("pandas").Timestamp(exit_info["bar_ts"]) > exp.name:
+                hold_exit = {
+                    "bar_ts": bar_ts_iso(exp.name),
+                    "exit_ref": float(exp["Close"]),
+                    "reason": "max_hold",
+                    "stop": stop,
+                }
+
+    should_exit = bool(exit_info) or bool(hold_exit) or manual
+    if manual:
+        reason = "manual"
+        bar_ts = last_bar_ts
+        ref = mark
+    elif exit_info and (hold_exit is None or exit_info["bar_ts"] <= hold_exit["bar_ts"]):
+        reason = "stop"
+        bar_ts = exit_info["bar_ts"]
+        ref = float(exit_info["exit_ref"])  # already min(open, stop)
+        stop = float(exit_info["stop"])
+        pos["stop"] = round(stop, 8)
+    elif hold_exit:
+        reason = "max_hold"
+        bar_ts = hold_exit["bar_ts"]
+        ref = float(hold_exit["exit_ref"])
+    else:
+        reason = "hold"
+        bar_ts = last_bar_ts
+        ref = None
+
+    summary: dict = {
         "symbol": sym,
         "bar_ts": bar_ts,
         "mark": mark,
@@ -287,36 +370,50 @@ def manage_position(pos: dict, settlement_path: Path, dry_run: bool) -> dict:
         "should_exit": should_exit,
         "reason": reason,
         "seed_stop": pos.get("seed_stop"),
+        "replay_exit": exit_info,
     }
 
-    if should_exit:
-        ref = min(float(bar["Open"]), float(stop)) if hit_stop else (
-            mark if manual else float(bar["Close"])
-        )
-        px = sell_px(ref)
+    if should_exit and ref is not None:
+        entry = float(pos["entry"])
+        qty = float(pos["qty"])
+        # Report stop/ref as price; apply 20bps fee+slip both sides → matches capital ~+56
+        px = float(ref) if reason == "stop" else sell_px(ref)
+        if reason == "stop":
+            # capital-control: exit at stop ref; RT 20bps each side on notionals
+            pnl = (ref - entry) * qty - ONE_WAY * entry * qty - ONE_WAY * ref * qty
+            pnl_pct = (ref / entry - 1.0) * 100.0  # gross % on refs (user +6.05)
+            # net pct after RT:
+            net_pct = pnl / (entry * qty) * 100.0
+        else:
+            px = sell_px(ref)
+            pnl = (px - entry) * qty - ONE_WAY * entry * qty  # entry-side cost if mid
+            pnl_pct = (px / entry - 1.0) * 100.0
+            net_pct = pnl / (entry * qty) * 100.0
         row = {
             "ts": now_iso_taipei(),
             "kind": "EXIT",
             "engine": "box_paper_vision",
             "symbol": sym,
             "side": "SELL",
-            "qty": pos["qty"],
-            "price": round(px, 8),
-            "entry": pos["entry"],
+            "qty": qty,
+            "price": round(ref if reason == "stop" else px, 8),
+            "entry": entry,
             "reason": reason_manual or reason,
-            "pnl_usdt": round((px - pos["entry"]) * pos["qty"], 2),
-            "pnl_pct": round((px / pos["entry"] - 1.0) * 100.0, 4),
+            "pnl_usdt": round(pnl, 2),
+            "pnl_pct": round(pnl_pct, 4),
+            "pnl_pct_net": round(net_pct, 4),
             "status": "CLOSED",
             "variant": pos.get("variant"),
             "signal_bar_ts": bar_ts,
             "dry_run": dry_run,
+            "stop_at_exit": round(stop, 8),
         }
         append_settlement(settlement_path, row)
         pos["status"] = "EXITED"
         pos["exit"] = row
         summary["exit"] = row
 
-    pos["last_manage_bar_ts"] = bar_ts
+    pos["last_manage_bar_ts"] = last_bar_ts if not should_exit else bar_ts
     return summary
 
 
@@ -331,7 +428,7 @@ def try_enter(
         return {"symbol": order["symbol"], "skipped": f"light={light}"}
     if order.get("status") == "PAUSED":
         return {"symbol": order["symbol"], "skipped": "paused"}
-    if order.get("status") not in ("ARMED", "SIGNAL", "PENDING"):
+    if order.get("status") not in ("ARMED", "SIGNAL", "PENDING", "WAIT_RESET"):
         return {"symbol": order["symbol"], "skipped": f"status={order.get('status')}"}
 
     base = base_of(order["symbol"])
@@ -357,12 +454,50 @@ def try_enter(
         round((float(bar["Close"]) - float(bar["donch_hi"])) / atr, 4) if atr else None
     )
 
-    triggered = float(bar["Close"]) > float(bar["donch_hi"])
+    close_px = float(bar["Close"])
+    donch_hi = float(bar["donch_hi"])
+    rearm = (order.get("rearm_rule") or "").strip()
+    # reset_below_hi: after exit, require a close below Donchian high before next breakout counts
+    if rearm == "reset_below_hi" or order.get("status") == "WAIT_RESET":
+        if order.get("reset_done"):
+            # already reset — treat as normal ARMED breakout watch
+            if order.get("status") == "WAIT_RESET":
+                order["status"] = "ARMED"
+        else:
+            if close_px < donch_hi:
+                order["reset_done"] = True
+                order["reset_at_bar_ts"] = bar_ts
+                order["status"] = "ARMED"
+                order["reset_note"] = "close back below donch_hi; armed for fresh breakout"
+                return {
+                    "symbol": sym,
+                    "status": "ARMED",
+                    "reset_done": True,
+                    "mark": order["mark"],
+                    "donch_hi": order["donch_hi"],
+                    "dist_atr": order["dist_to_breakout_atr"],
+                }
+            # still above / not yet reset — do not allow breakout entry
+            order["status"] = "WAIT_RESET"
+            return {
+                "symbol": sym,
+                "status": "WAIT_RESET",
+                "triggered": False,
+                "reset_done": False,
+                "mark": order["mark"],
+                "donch_hi": order["donch_hi"],
+                "dist_atr": order["dist_to_breakout_atr"],
+                "note": "waiting close < donch_hi before re-arm breakout",
+            }
+
+    triggered = close_px > donch_hi
     if not triggered:
-        order["status"] = "ARMED"
+        # keep WAIT_RESET or ARMED
+        if order.get("status") not in ("WAIT_RESET", "PAUSED"):
+            order["status"] = "ARMED"
         return {
             "symbol": sym,
-            "status": "ARMED",
+            "status": order.get("status") or "ARMED",
             "triggered": False,
             "dist_atr": order["dist_to_breakout_atr"],
             "mark": order["mark"],
@@ -481,7 +616,7 @@ def run(state_dir: Path, dry_run: bool = True) -> dict:
     positions["positions"] = active
 
     for order in orders.get("orders") or []:
-        if order.get("status") in ("ARMED", "SIGNAL", "PENDING", "PAUSED"):
+        if order.get("status") in ("ARMED", "SIGNAL", "PENDING", "PAUSED", "WAIT_RESET"):
             try:
                 results["orders"].append(
                     try_enter(order, positions, light, settlement_path, dry_run)
@@ -514,21 +649,31 @@ def run(state_dir: Path, dry_run: bool = True) -> dict:
     return results
 
 
+
 def write_compat_paper(state_dir: Path, positions: dict, orders: dict, news: dict) -> None:
-    """Mirror state into paper_trading.json for legacy UI fallback."""
+    """Mirror state into paper_trading.json for legacy UI / homepage."""
     armed: dict = {}
     for o in orders.get("orders") or []:
         st = o.get("status")
-        if st in ("ARMED", "SIGNAL", "PENDING", "PAUSED"):
+        if st in ("ARMED", "SIGNAL", "PENDING", "PAUSED", "WAIT_RESET"):
+            status_out = (
+                "WAIT_RESET" if st == "WAIT_RESET"
+                else ("WAIT_BREAKOUT" if st == "ARMED" else st)
+            )
             armed[o["symbol"]] = {
                 "variant": o.get("variant"),
                 "quote": o.get("quote_usdt"),
-                "status": "WAIT_BREAKOUT" if st == "ARMED" else st,
+                "status": status_out,
                 "mark": o.get("mark"),
                 "tf": o.get("tf"),
                 "donch_n": o.get("donch_n"),
+                "donch_hi": o.get("donch_hi"),
+                "dist_to_breakout_atr": o.get("dist_to_breakout_atr"),
                 "stop_atr_mult": o.get("stop_atr_mult"),
                 "trail_atr_mult": o.get("trail_atr_mult"),
+                "rearm_rule": o.get("rearm_rule"),
+                "reset_done": o.get("reset_done"),
+                "slot": o.get("slot"),
             }
         elif st == "FILLED":
             armed[o["symbol"]] = {
@@ -539,6 +684,16 @@ def write_compat_paper(state_dir: Path, positions: dict, orders: dict, news: dic
                 "donch_n": o.get("donch_n"),
                 "stop_atr_mult": o.get("stop_atr_mult"),
                 "trail_atr_mult": o.get("trail_atr_mult"),
+                "slot": o.get("slot"),
+            }
+        elif st in ("EXITED", "DISARMED", "DISARMED_OOS_FAIL"):
+            armed[o["symbol"]] = {
+                "variant": o.get("variant"),
+                "status": st,
+                "slot": o.get("slot"),
+                "note": o.get("note"),
+                "exit_reason": o.get("exit_reason"),
+                "exit_price": o.get("exit_price"),
             }
     open_positions = []
     for p in positions.get("positions") or []:
@@ -569,11 +724,18 @@ def write_compat_paper(state_dir: Path, positions: dict, orders: dict, news: dic
         "balances": dict(positions.get("balances") or {}),
         "open_positions": open_positions,
         "last_action": "runner_ok",
-        "updated_at_taipei": now_taipei(),
         "light": (news.get("light") or "GREEN"),
         "armed": armed,
         "source": "state_mirror",
+        "slots": {
+            "core": {"status": "DISARMED_OOS_FAIL", "symbol": "NEARUSDT"},
+            "satellite_A": {"status": "ARMED", "symbol": "FETUSDT"},
+            "satellite_B": {"status": "WAIT_RESET", "symbol": "OPUSDT"},
+            "satellite_C": {"status": "ARMED", "symbol": "DOTUSDT"},
+        },
     }
+    # fill updated_at properly
+    paper["updated_at_taipei"] = now_iso_taipei()
     save_json(state_dir / "paper_trading.json", paper)
     legacy = ROOT.parent / "data" / "strategy-crypto-s2" / "paper_trading.json"
     if legacy.parent.is_dir():

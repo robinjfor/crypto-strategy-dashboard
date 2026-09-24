@@ -1,20 +1,25 @@
 {
   "total_usdt": 5000,
   "yellow_light": false,
-  "updated": "2026-09-24 14:37:29 UTC+08:00",
-  "ruling": "NEAR EXITED_MAX_HOLD; FET ARMED_WAIT_BREAKOUT; sat B EXITED_SLOT_EMPTY; equity=5736.7457",
+  "updated": "2026-09-24 14:50:29 UTC+08:00",
+  "ruling": "2026-09-24: OP rearm reset_below_hi (sat B); DOT sat C 1000 from core; NEAR core DISARMED_OOS_FAIL, cash until majors-800 research",
   "core": {
     "symbol": "NEARUSDT",
     "pct": 40,
     "variant": "donchian_breakout_atr__NEAR__4h",
-    "status": "EXITED_MAX_HOLD",
+    "status": "DISARMED_OOS_FAIL",
     "demo_qty": 0,
     "entry_approx": 2.97,
     "pending": "re_arm",
     "last_exit": {
-      "reason": "max_hold",
-      "note": "NEAR max_hold=36 (4h) hit; core pending re-arm (no auto re-entry)"
-    }
+      "reason": "max_hold_36",
+      "price": 4.405,
+      "qty": 505,
+      "pnl_usdt": 720.2
+    },
+    "oos": "3/6",
+    "notional_usdt_cash": 1000,
+    "note": "40% slot cash; 1000 lent to sat C; filled by best qualifying majors strategy later"
   },
   "satellite_A": {
     "symbol": "FETUSDT",
@@ -47,7 +52,7 @@
     "backup_variant": "donchian20_s1.5_t2.5__OP__4h",
     "oos": "4/6",
     "maxdd_pct": -22.7,
-    "status": "EXITED_SLOT_EMPTY",
+    "status": "ARMED_WAIT_RESET",
     "open_when": "4h close > Donchian20 high via box_paper_vision",
     "fil": "REMOVED_NO_RETRY",
     "preopen": "op_preopen_2026-09-19",
@@ -66,9 +71,9 @@
     "last_symbol": "OPUSDT",
     "last_variant": "donchian20_s1.5_t1.5__OP__4h",
     "last_exit": {
-      "reason": "trail_stop",
-      "status": "EXITED_TRAIL_STOP",
-      "note": "OP trail stop exited; satellite B empty pending new candidate"
+      "price": 0.1298,
+      "pnl_usdt": 56.3,
+      "reason": "trail_stop"
     },
     "filled_archive": {
       "qty": 8169.934641,
@@ -83,7 +88,9 @@
       "quote_usdt": 1000,
       "source": "box_paper"
     },
-    "can_open_demo": false
+    "can_open_demo": false,
+    "rearm_rule": "reset_below_hi: need 4h close < Donch20 hi, then new close breakout",
+    "dist_to_hi_atr": -2.63
   },
   "cash_pct": 15,
   "removed": [
@@ -121,5 +128,27 @@
     "status": "OBSERVE_ONLY",
     "not_in_slot": true
   },
-  "virtual_equity": 5736.7457
+  "virtual_equity": 5736.7457,
+  "satellite_C": {
+    "symbol": "DOTUSDT",
+    "pct": 20,
+    "notional_usdt": 1000,
+    "funded_from": "core",
+    "variant": "donchian20_s1.5_t1.5__DOT__4h",
+    "params": {
+      "donchian": 20,
+      "tf": "4h",
+      "atr_stop": 1.5,
+      "atr_trail": 1.5,
+      "atr": "Wilder14"
+    },
+    "oos": "5/6",
+    "maxdd_pct": -38.9,
+    "is_ret_pct": 26.1,
+    "bh_pct": -82.9,
+    "status": "ARMED_WAIT_BREAKOUT",
+    "dist_to_hi_atr": -2.92,
+    "stop_ref": 1.073,
+    "rearm_rule": "reset_below_hi"
+  }
 }

@@ -1,0 +1,40 @@
+{
+  "updated_at": "2026-09-24T14:51:41+08:00",
+  "virtual_equity": 5736.7457,
+  "core": {
+    "slot": "core",
+    "symbol": "NEARUSDT",
+    "status": "DISARMED_OOS_FAIL",
+    "pct": 40,
+    "notional_usdt_cash": 1000,
+    "note": "1000 lent to sat C; not shown in 預計持倉"
+  },
+  "satellites": [
+    {
+      "slot": "satellite_A",
+      "symbol": "FETUSDT",
+      "status": "WAIT_BREAKOUT",
+      "pct": 25,
+      "notional_usdt": 1250,
+      "variant": "donchian55_s2.0_t3.0__FET__1h"
+    },
+    {
+      "slot": "satellite_B",
+      "symbol": "OPUSDT",
+      "status": "WAIT_RESET",
+      "pct": 20,
+      "notional_usdt": 1000,
+      "variant": "donchian20_s1.5_t1.5__OP__4h",
+      "rearm_rule": "reset_below_hi"
+    },
+    {
+      "slot": "satellite_C",
+      "symbol": "DOTUSDT",
+      "status": "WAIT_BREAKOUT",
+      "pct": 20,
+      "notional_usdt": 1000,
+      "variant": "donchian20_s1.5_t1.5__DOT__4h",
+      "stop_ref": 1.073
+    }
+  ]
+}

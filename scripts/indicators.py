@@ -142,14 +142,27 @@ def split_closed(df: pd.DataFrame, interval: str, now: datetime | None = None):
     return df.copy(), None
 
 
+def wilder_atr(df: pd.DataFrame, n: int = 14) -> pd.Series:
+    """Wilder ATR(n): SMA seed then RMA (alpha=1/n). Same as trading-view/Wilder."""
+    h, l, c = df["High"], df["Low"], df["Close"]
+    prev = c.shift(1)
+    tr = pd.concat([(h - l), (h - prev).abs(), (l - prev).abs()], axis=1).max(axis=1)
+    atr = tr.copy().astype(float)
+    atr[:] = np.nan
+    if len(tr) < n:
+        return atr
+    atr.iloc[n - 1] = float(tr.iloc[:n].mean())
+    for i in range(n, len(tr)):
+        atr.iloc[i] = (float(atr.iloc[i - 1]) * (n - 1) + float(tr.iloc[i])) / n
+    return atr
+
+
 def add_donch_atr(df: pd.DataFrame, donch_n: int = 20) -> pd.DataFrame:
     o = df.copy()
     c, h, l = o["Close"], o["High"], o["Low"]
     o["donch_hi"] = h.rolling(donch_n).max().shift(1)
     o["donch_lo"] = l.rolling(donch_n).min().shift(1)
-    prev = c.shift(1)
-    tr = pd.concat([(h - l), (h - prev).abs(), (l - prev).abs()], axis=1).max(axis=1)
-    o["atr"] = tr.rolling(14).mean()
+    o["atr"] = wilder_atr(o, 14)
     return o
 
 
@@ -382,10 +395,43 @@ def compute_live_stop(
     trail_atr_mult: float,
     initial_stop: float | None = None,
 ) -> tuple[float, float, float]:
-    """Replay trail from entry bar; return (stop, donch_lo, atr) on last closed bar."""
+    """Replay close-ratchet trail; return (stop, donch_lo, atr) on last closed bar.
+
+    Path-correct replay (see replay_stop_path): initial stop from entry bar ATR
+    (seed ignored if it would skip the path), no ratchet on entry bar, then
+    check low vs stop before ratcheting on later bars.
+    """
+    res = replay_stop_path(
+        closed, entry, entry_bar_ts, stop_atr_mult, trail_atr_mult, initial_stop=None
+    )
+    return res["stop"], res["donch_lo"], res["atr"]
+
+
+def replay_stop_path(
+    closed: pd.DataFrame,
+    entry: float,
+    entry_bar_ts: str | None,
+    stop_atr_mult: float,
+    trail_atr_mult: float,
+    initial_stop: float | None = None,
+) -> dict:
+    """Bar-by-bar Wilder trail with low-hit exits.
+
+    Rules (capital-control aligned):
+    - ATR = Wilder ATR14 (via add_donch_atr)
+    - Entry bar: set initial stop = entry - stop_mult*ATR (or initial_stop);
+      do NOT exit; do NOT ratchet from entry close
+    - Later bars: if Low <= stop → exit at min(Open, stop); else
+      stop = max(stop, Close - trail_mult*ATR)
+    """
     ind = closed.dropna(subset=["atr", "donch_hi", "donch_lo"])
+    nan = float("nan")
     if ind.empty:
-        return float(initial_stop or entry), float("nan"), float("nan")
+        s0 = float(initial_stop) if initial_stop is not None else float(entry)
+        return {
+            "stop": s0, "donch_lo": nan, "atr": nan,
+            "exit": None, "bars_replayed": 0,
+        }
     if entry_bar_ts:
         ets = pd.Timestamp(entry_bar_ts)
         if ets.tzinfo is None:
@@ -396,17 +442,45 @@ def compute_live_stop(
     else:
         post = ind.iloc[-50:].copy()
 
-    stop = float(initial_stop) if initial_stop is not None else None
-    for _, row in post.iterrows():
+    stop: float | None = None
+    exit_info = None
+    for i, (ts, row) in enumerate(post.iterrows()):
+        o = float(row["Open"])
         c = float(row["Close"])
+        lo = float(row["Low"])
         atr = float(row["atr"])
         if stop is None:
-            stop = entry - stop_atr_mult * atr
+            stop = float(initial_stop) if initial_stop is not None else (
+                float(entry) - stop_atr_mult * atr
+            )
+        if i == 0:
+            # entry bar: establish stop only
+            continue
+        if lo <= stop:
+            exit_ref = min(o, stop)
+            exit_info = {
+                "bar_ts": bar_ts_iso(ts),
+                "stop": float(stop),
+                "exit_ref": float(exit_ref),
+                "open": o,
+                "low": lo,
+                "close": c,
+                "atr": atr,
+                "reason": "stop",
+            }
+            break
         trail = c - trail_atr_mult * atr
         if trail > stop:
             stop = trail
+
     last = ind.iloc[-1]
-    return float(stop), float(last["donch_lo"]), float(last["atr"])
+    return {
+        "stop": float(stop if stop is not None else entry),
+        "donch_lo": float(last["donch_lo"]),
+        "atr": float(last["atr"]),
+        "exit": exit_info,
+        "bars_replayed": int(len(post)),
+    }
 
 
 def bar_ts_iso(ts) -> str:

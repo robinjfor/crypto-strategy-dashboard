@@ -6,11 +6,27 @@
       "symbol": "FETUSDT",
       "status": "ARMED",
       "triggered": false,
-      "dist_atr": -5.0832,
-      "mark": 0.1998,
+      "dist_atr": -4.4359,
+      "mark": 0.1994,
       "donch_hi": 0.216
+    },
+    {
+      "symbol": "OPUSDT",
+      "status": "ARMED",
+      "reset_done": true,
+      "mark": 0.1254,
+      "donch_hi": 0.1412,
+      "dist_atr": -2.9314
+    },
+    {
+      "symbol": "DOTUSDT",
+      "status": "ARMED",
+      "triggered": false,
+      "dist_atr": -3.3812,
+      "mark": 1.128,
+      "donch_hi": 1.236
     }
   ],
   "light": "GREEN",
-  "checked_at": "2026-09-24 14:45:04 CST"
+  "checked_at": "2026-09-24 14:51:41 CST"
 }

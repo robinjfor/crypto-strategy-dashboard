@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-09-24T14:45:04+08:00",
+  "updated_at": "2026-09-24T14:51:44+08:00",
   "virtual_equity": 5736.7457,
   "balances": {
     "USDT": 5736.7457054603055
   },
   "light": "GREEN",
   "positions": [],
-  "seed_note": "flat book 2026-09-24 14:37 CST — NEAR/OP exited; FET armed; matches paper_trading.json"
+  "seed_note": "flat book; core NEAR DISARMED_OOS_FAIL; sat A FET / B OP reset / C DOT armed"
 }
