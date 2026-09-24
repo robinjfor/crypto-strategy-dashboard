@@ -1,0 +1,151 @@
+# Manual deploy only — does NOT run on push.
+name: deploy-trader
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_probe:
+        description: "After deploy, execute job once in probe mode"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: asia-east1
+  JOB_NAME: crypto-trader
+  SCHEDULER_HOURLY: crypto-trader-hourly
+  SCHEDULER_DAILY_SOL: crypto-trader-daily-sol
+  REPO_NAME: trader
+  IMAGE_NAME: crypto-trader
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        working-directory: service
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO_NAME}/${IMAGE_NAME}"
+          TAG="${GITHUB_SHA::12}"
+          docker build -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:${TAG}"
+          docker push "${IMAGE}:latest"
+          echo "IMAGE_URI=${IMAGE}:${TAG}" >> "$GITHUB_ENV"
+
+      - name: Resolve trader mode
+        id: mode
+        run: |
+          MODE="${{ vars.TRADER_MODE }}"
+          MODE="${MODE:-dry-run}"
+          if [ "$MODE" = "live" ]; then
+            JOB_ARGS='["run"]'
+          else
+            JOB_ARGS='["dry-run"]'
+          fi
+          echo "trader_mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "job_args=$JOB_ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Cloud Run Job
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          ENABLED="${{ vars.TRADER_ENABLED }}"
+          ENABLED="${ENABLED:-true}"
+          MODE="${{ steps.mode.outputs.trader_mode }}"
+
+          gcloud run jobs deploy "${JOB_NAME}" \
+            --project="${PROJECT}" \
+            --region="${REGION}" \
+            --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" \
+            --task-timeout=600 \
+            --max-retries=1 \
+            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,VISION_BASE_URL=https://data-api.binance.vision" \
+            --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
+            --args='${{ steps.mode.outputs.job_args }}' \
+            --memory=512Mi \
+            --cpu=1
+
+      - name: Ensure hourly Cloud Scheduler (satellites + windowed SOL check)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${JOB_NAME}:run"
+
+          gcloud run jobs add-iam-policy-binding "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" \
+            --role="roles/run.invoker" || true
+
+          if gcloud scheduler jobs describe "${SCHEDULER_HOURLY}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http "${SCHEDULER_HOURLY}" \
+              --project="${PROJECT}" --location="${REGION}" \
+              --schedule="1 * * * *" --time-zone="UTC" \
+              --uri="${URI}" --http-method=POST \
+              --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+          else
+            gcloud scheduler jobs create http "${SCHEDULER_HOURLY}" \
+              --project="${PROJECT}" --location="${REGION}" \
+              --schedule="1 * * * *" --time-zone="UTC" \
+              --uri="${URI}" --http-method=POST \
+              --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+          fi
+
+      - name: Ensure daily SOL scheduler (UTC 00:07 ≈ Taipei 08:07)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${JOB_NAME}:run"
+          # Same job; SOL core only acts on would_order inside UTC 00:05–00:15.
+          # Dedicated daily trigger guarantees a run inside that window.
+          if gcloud scheduler jobs describe "${SCHEDULER_DAILY_SOL}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http "${SCHEDULER_DAILY_SOL}" \
+              --project="${PROJECT}" --location="${REGION}" \
+              --schedule="7 0 * * *" --time-zone="UTC" \
+              --uri="${URI}" --http-method=POST \
+              --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+          else
+            gcloud scheduler jobs create http "${SCHEDULER_DAILY_SOL}" \
+              --project="${PROJECT}" --location="${REGION}" \
+              --schedule="7 0 * * *" --time-zone="UTC" \
+              --uri="${URI}" --http-method=POST \
+              --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+          fi
+
+      - name: Execute probe once
+        if: ${{ inputs.run_probe }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs execute "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --args=probe --wait
+          gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME}" \
+            --project="${PROJECT}" --limit=50 \
+            --format='value(textPayload)' || true

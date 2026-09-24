@@ -1,0 +1,66 @@
+{
+  "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
+  "generated_at_taipei": "2026-09-24 15:02:52 CST",
+  "generated_at_iso": "2026-09-24T15:02:52+08:00",
+  "bar": {
+    "interval": "1d",
+    "last_closed_open_time_utc": "2026-09-23 00:00:00+00:00",
+    "last_closed_date_utc": "2026-09-23",
+    "note": "只用已收盤日線；UTC 00:00 開盤的日K在次日 00:00 UTC 才算收盤"
+  },
+  "sol": {
+    "symbol": "SOLUSDT",
+    "close": 114.99,
+    "donch20_hi": 119.99,
+    "donch20_lo": 95.82,
+    "atr14_sma": 5.485,
+    "atr14_wilder_ref_only": 5.362793,
+    "atr_method_live": "SMA_TR_14_matches_backtest",
+    "above_hi": false,
+    "dist_to_breakout_pct": 4.3482,
+    "dist_to_breakout_atr": 0.9116,
+    "pct_above_hi": null
+  },
+  "btc_regime": {
+    "symbol": "BTCUSDT",
+    "close": 84397.6,
+    "ma_type": "SMA",
+    "ma_n": 200,
+    "ma_value": 70794.8201,
+    "regime_on": true,
+    "gap_pct": 19.2144,
+    "rule": "regime_on iff BTC_Close > SMA(200) on same UTC daily close"
+  },
+  "signal": {
+    "donchian_state": 1,
+    "regime_filtered": 1,
+    "prev_regime_filtered": 1,
+    "rising_edge_0_to_1": false,
+    "needs_reset_before_entry": true,
+    "entry_rule": "enter only on regime_filtered rising edge 0→1 after closed bar",
+    "exit_flat_rule": "signal→0 when close < donch20_lo OR BTC regime off"
+  },
+  "order_plan_if_enter_at_last_close": {
+    "quote_usdt": 1500.0,
+    "entry_px_model_close_plus_20bps": 115.21998,
+    "qty_raw": 13.01857542,
+    "qty_floored_lot_step": 13.018,
+    "lot_step": 0.001,
+    "initial_stop": 104.24998,
+    "stop_formula": "entry_px - 2.0 * atr14_sma",
+    "trail_mult": 3.0,
+    "trail_formula": "stop = max(stop, close - 3.0 * atr); ratchet up only"
+  },
+  "conclusion": "wait_signal_reset_then_breakout",
+  "conclusion_zh": "Donchian 狀態已為持有（或價仍高於下軌的延續態）且無 0→1 邊沿：不可立即進；需等訊號歸零（收盤跌破下軌或 regime 關）後，再等突破上軌",
+  "params_locked": {
+    "donch_n": 20,
+    "atr_n": 14,
+    "atr_stop_mult": 2.0,
+    "atr_trail_mult": 3.0,
+    "use_trail": true,
+    "max_hold_bars": 10000,
+    "btc_sma_n": 200,
+    "one_way_bps": 20.0
+  }
+}
