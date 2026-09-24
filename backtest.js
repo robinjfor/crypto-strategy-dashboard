@@ -107,6 +107,7 @@
     const iClose = idx("close");
     const iHalted = idx("halted");
     const iDd = idx("drawdown_pct");
+    const iBh = idx("buy_hold") >= 0 ? idx("buy_hold") : idx("buyhold");
     const rows = [];
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(",");
@@ -114,12 +115,14 @@
       const equityRaw = iEquity >= 0 ? cols[iEquity] : "";
       const closeRaw = iClose >= 0 ? cols[iClose] : "";
       const ddRaw = iDd >= 0 ? cols[iDd] : "";
+      const bhRaw = iBh >= 0 ? cols[iBh] : "";
       const haltedRaw = iHalted >= 0 ? (cols[iHalted] || "").toLowerCase() : "";
       try {
         rows.push({
           date: iDate >= 0 ? cols[iDate] : "",
           equity: equityRaw !== "" ? parseFloat(equityRaw) : null,
           close: closeRaw !== "" ? parseFloat(closeRaw) : null,
+          buy_hold: bhRaw !== "" ? parseFloat(bhRaw) : null,
           halted: ["1", "true", "yes"].includes(haltedRaw),
           drawdown_pct: ddRaw !== "" ? parseFloat(ddRaw) : null,
         });
@@ -240,6 +243,10 @@
     const status = meta.approval_status || "";
     const label = meta.approval_label || "";
     const note = meta.approval_note || "";
+    const caveat =
+      (payload.results && payload.results.metrics && payload.results.metrics.caveat) ||
+      (payload.results && payload.results.extensions && payload.results.extensions.caveat) ||
+      "";
     if (!status && !label) return "";
     const isUnapproved = status === "research_unapproved";
     const isCandidate = status === "candidate_pending_sim";
@@ -253,6 +260,7 @@
     return `<div class="${cls}" role="status">
       <strong>${escapeHtml(title)}</strong>
       ${note ? `<span>${escapeHtml(note)}</span>` : ""}
+      ${caveat ? `<span class="hint">注意：${escapeHtml(caveat)}</span>` : ""}
       ${
         isUnapproved
           ? "<span>尚未贏過 B&amp;H，不可當作已核准上線策略。</span>"
@@ -315,6 +323,33 @@
         value: fmtPct(vsBH),
         cls: clsSigned(vsBH),
         sub: `B&H ${fmtPct(m.buy_hold_return_pct)}`,
+      },
+      {
+        label: "OOS",
+        value: escapeHtml((m.oos_score != null ? m.oos_score : (r.extensions && r.extensions.oos_score)) || "—"),
+        cls: "neutral",
+      },
+      {
+        label: "近 3 年報酬 %",
+        value: fmtPct(m.ret_3y_pct != null ? m.ret_3y_pct : (r.extensions && r.extensions.ret_3y_pct)),
+        cls: clsSigned(m.ret_3y_pct != null ? m.ret_3y_pct : (r.extensions && r.extensions.ret_3y_pct)),
+      },
+      {
+        label: "近 5 年報酬 %",
+        value: fmtPct(m.ret_5y_pct != null ? m.ret_5y_pct : (r.extensions && r.extensions.ret_5y_pct)),
+        cls: clsSigned(m.ret_5y_pct != null ? m.ret_5y_pct : (r.extensions && r.extensions.ret_5y_pct)),
+      },
+      {
+        label: "配置",
+        value: escapeHtml((m.allocation_label || (r.extensions && r.extensions.allocation_label)) || "—"),
+        cls: "neutral",
+        wide: true,
+      },
+      {
+        label: "狀態",
+        value: escapeHtml((m.status_label || (r.extensions && r.extensions.status_label)) || "—"),
+        cls: "neutral",
+        wide: true,
       },
       {
         label: weeklyLabel,
@@ -380,11 +415,9 @@
     const labels = (equity || []).map((r) => r.date);
     const data = (equity || []).map((r) => r.equity);
     const dd = (equity || []).map((r) => r.drawdown_pct);
-    equityChart = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
+    const bh = (equity || []).map((r) => r.buy_hold);
+    const hasBh = bh.some((v) => v != null && !Number.isNaN(v));
+    const datasets = [
           {
             label: "資金曲線 Equity",
             data,
@@ -396,7 +429,22 @@
             borderWidth: 2,
             yAxisID: "y",
           },
-          {
+        ];
+    if (hasBh) {
+      datasets.push({
+            label: "Buy & Hold",
+            data: bh,
+            borderColor: "#94a3b8",
+            backgroundColor: "transparent",
+            fill: false,
+            tension: 0.15,
+            pointRadius: 0,
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            yAxisID: "y",
+          });
+    }
+    datasets.push({
             label: "回撤 %",
             data: dd,
             borderColor: "#ef4444",
@@ -407,8 +455,12 @@
             borderWidth: 1,
             borderDash: [4, 3],
             yAxisID: "y1",
-          },
-        ],
+          });
+    equityChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets,
       },
       options: {
         responsive: true,

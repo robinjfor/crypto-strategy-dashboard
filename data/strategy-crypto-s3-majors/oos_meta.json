@@ -1,0 +1,17 @@
+{
+  "strategy_id": "strategy-crypto-s3-majors",
+  "locked_variant": "donchian20_atr_btcRegime__SOL__1d",
+  "symbol": "SOL",
+  "timeframe": "1d",
+  "generated_at_taipei": "2026-09-24 15:21:20 CST",
+  "headline": "Walk-forward OOS 4/6 勝 SOL B&H（REPORT）",
+  "n_folds": 6,
+  "folds_beating_bh": 4,
+  "folds_positive": null,
+  "stitched_beats_bh": true,
+  "summary": "WF 4/6 勝 SOL B&H；折1靠現金避險（0% vs BH 約 -83%）。未附各折明細 CSV，故折表留空，僅顯示彙總。",
+  "selection_bias_warning": "報酬多來自 2020–21，樣本少，回撤貼近上限",
+  "folds": [],
+  "equity_oos_png": null,
+  "source": "REPORT.md / results.json full_pass"
+}

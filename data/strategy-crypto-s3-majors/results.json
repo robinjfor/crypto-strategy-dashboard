@@ -1,0 +1,118 @@
+{
+  "strategy_id": "strategy-crypto-s3-majors",
+  "market": "crypto",
+  "timeframe_primary": "1d",
+  "timeframe_selected": "1d",
+  "selected_variant": "donchian20_atr_btcRegime__SOL__1d",
+  "hard_gate": {
+    "rule": "REPORT full-pass gates (ret≥800%, MaxDD≤45%, OOS≥4/6, beat B&H)",
+    "pass": true
+  },
+  "selection_note": "S3 majors research: only full-pass strategy. SOL daily Donchian20 + ATR stop/trail + BTC SMA200 regime filter, leverage 1.0x.",
+  "honest_assessment": "報酬多來自 2020–21，樣本少，回撤貼近上限。全期高報酬高度依賴 2020–2021 SOL 暴漲；近 3／5 年遠低於全期。OOS 4/6 部分折靠空倉避險。",
+  "no_oos": false,
+  "cost_assumptions": {
+    "one_way_bps": 20.0,
+    "round_trip_bps": 40.0,
+    "note": "單邊 20 bps（REPORT）"
+  },
+  "metrics": {
+    "symbol": "SOL",
+    "symbols": [
+      "SOL"
+    ],
+    "period_start": "2020-08-24",
+    "period_end": "2026-09-24",
+    "years": 6.08,
+    "initial_capital": 100000.0,
+    "final_equity": 26942781.89,
+    "total_return_pct": 26842.8,
+    "cagr_pct": 150.9,
+    "max_drawdown_pct": -44.7,
+    "sharpe": 1.688,
+    "n_trades": 24,
+    "win_rate_pct": 50.0,
+    "buy_hold_return_pct": 3368.2879,
+    "excess_vs_bh_pct": 23474.5121,
+    "beats_bh": true,
+    "hard_gate_pass": true,
+    "ret_3y_pct": 429.47,
+    "ret_5y_pct": 513.84,
+    "oos_score": "4/6",
+    "allocation_label": "核心 30%（1500 USDT）",
+    "status_label": "等待新突破（尚未下單）",
+    "caveat": "報酬多來自 2020–21，樣本少，回撤貼近上限",
+    "leverage": 1.0,
+    "params": {
+      "variant": "donchian20_atr_btcRegime__SOL__1d",
+      "family": "donchian",
+      "symbol": "SOL",
+      "timeframe": "1d",
+      "donch_n": 20,
+      "atr_stop_mult": 2.0,
+      "atr_trail_mult": 3.0,
+      "use_trail": true,
+      "btc_regime": true,
+      "btc_sma": 200,
+      "leverage": 1.0,
+      "one_way_bps": 20.0
+    },
+    "generated_at_taipei": "2026-09-24 15:21:20 CST"
+  },
+  "all_variants": [
+    {
+      "name": "donchian20_atr_btcRegime__SOL__1d",
+      "description": "SOL 1d Donchian20 + ATR + BTC regime（無槓桿）",
+      "score": 1.0,
+      "total_return_pct": 26842.8,
+      "cagr_pct": 150.9,
+      "max_drawdown_pct": -44.7,
+      "sharpe": 1.688,
+      "n_trades": 24,
+      "selected": true
+    }
+  ],
+  "trades": [],
+  "extensions": {
+    "ret_3y_pct": 429.47,
+    "ret_5y_pct": 513.84,
+    "oos_score": "4/6",
+    "allocation_label": "核心 30%（1500 USDT）",
+    "status_label": "等待新突破（尚未下單）",
+    "caveat": "報酬多來自 2020–21，樣本少，回撤貼近上限",
+    "source_report": "REPORT.md",
+    "number_mismatches_vs_brief": [
+      {
+        "field": "總報酬",
+        "brief": "+26,843%",
+        "report": "26842.8%",
+        "used": "26842.8%"
+      },
+      {
+        "field": "CAGR",
+        "brief": "151%",
+        "report": "150.9%",
+        "used": "150.9%"
+      },
+      {
+        "field": "近3年",
+        "brief": "+430%",
+        "report": "429.47%（表列 429.5%）",
+        "used": "429.47%"
+      },
+      {
+        "field": "近5年",
+        "brief": "+514%",
+        "report": "513.84%",
+        "used": "513.84%"
+      },
+      {
+        "field": "回測期間",
+        "brief": "2020-08 to 2026-09",
+        "report": "2020-08-24→2026-09-24",
+        "used": "2020-08-24→2026-09-24"
+      }
+    ]
+  },
+  "generated_at_taipei": "2026-09-24 15:21:20 CST"
+}

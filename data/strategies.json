@@ -64,6 +64,28 @@
       "approval_note": "Emily 已認可；OOS 4/6 勝 BH、縫合仍勝 BH，近兩折落後現貨。模擬盤進行中（黃燈不加碼）。"
     },
     {
+      "id": "strategy-crypto-s3-majors",
+      "path": "./data/strategy-crypto-s3-majors",
+      "has_equity_csv": true,
+      "has_settlement": false,
+      "results_mtime": "2026-09-24 15:21:20 CST",
+      "is_crypto": true,
+      "selected_variant": "donchian20_atr_btcRegime__SOL__1d",
+      "generated_at_taipei": "2026-09-24 15:21:20 CST",
+      "symbol": "SOL",
+      "symbols": [
+        "SOL"
+      ],
+      "total_return_pct": 26842.8,
+      "cagr_pct": 150.9,
+      "sharpe": 1.688,
+      "buy_hold_return_pct": 3368.2879,
+      "max_drawdown_pct": -44.7,
+      "approval_status": "mainline_candidate_paper",
+      "approval_label": "核心候選 · 核心 30%（1500 USDT） · 等待新突破（尚未下單）",
+      "approval_note": "報酬多來自 2020–21，樣本少，回撤貼近上限。OOS 4/6；近3年 429.47%／近5年 513.84%；勝 B&H。配置核心 30%（1500 USDT）；狀態：等待新突破（尚未下單）。"
+    },
+    {
       "id": "strategy-v1",
       "path": "./data/strategy-v1",
       "has_equity_csv": true,

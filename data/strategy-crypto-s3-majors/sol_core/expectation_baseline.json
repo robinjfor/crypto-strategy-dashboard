@@ -1,0 +1,80 @@
+{
+  "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
+  "generated_at_taipei": "2026-09-24 15:03:17 CST",
+  "selection_bias_note": "Chosen 1 of 946 tested param×symbol combos in s3 research; OOS 4/6 with some wins via cash in bear; recent 3y return << full-sample.",
+  "backtest_window": {
+    "start": "2020-08-11",
+    "end": "2026-09-23",
+    "years": 6.1164
+  },
+  "cost_assumption_bps_one_way": 20,
+  "metrics": {
+    "n_trades": 24,
+    "win_rate_pct": 50.0,
+    "avg_hold_days": 24.21,
+    "median_hold_days": 13.5,
+    "p25_hold_days": 3.75,
+    "p75_hold_days": 34.25,
+    "avg_win_pct": 206.63,
+    "median_win_pct": 26.36,
+    "avg_loss_pct": -9.09,
+    "median_loss_pct": -7.31,
+    "trades_per_year": 3.92,
+    "typical_entry_signals_per_14d": 0.15,
+    "exit_reasons": {
+      "stop_loss": 14,
+      "signal_exit": 9,
+      "eod_flat": 1
+    }
+  },
+  "slippage_fee_model": {
+    "backtest_one_way_bps": 20,
+    "live_assumption_note": "Compare fill vs signal-bar close; attribute residual to slip+fee vs model 20bps."
+  },
+  "binance_filters_snapshot": {
+    "LOT_SIZE": {
+      "filterType": "LOT_SIZE",
+      "minQty": "0.00100000",
+      "maxQty": "90000.00000000",
+      "stepSize": "0.00100000"
+    },
+    "NOTIONAL": {
+      "filterType": "NOTIONAL",
+      "minNotional": "5.00000000",
+      "applyMinToMarket": true,
+      "maxNotional": "9000000.00000000",
+      "applyMaxToMarket": false,
+      "avgPriceMins": 5
+    },
+    "PRICE_FILTER": {
+      "filterType": "PRICE_FILTER",
+      "minPrice": "0.01000000",
+      "maxPrice": "10000.00000000",
+      "tickSize": "0.01000000"
+    }
+  },
+  "fields_to_log_per_event": [
+    "event_type",
+    "bar_open_time_utc",
+    "decision_ts_taipei",
+    "sol_close",
+    "donch20_hi",
+    "donch20_lo",
+    "atr14_sma",
+    "btc_close",
+    "btc_sma200",
+    "regime_on",
+    "donchian_state",
+    "regime_filtered_signal",
+    "rising_edge",
+    "expected_entry_px_model",
+    "actual_fill_px",
+    "slippage_bps_vs_close",
+    "qty",
+    "stop_before",
+    "stop_after",
+    "exit_reason",
+    "backtest_replay_same_bar_action",
+    "diff_vs_backtest_note"
+  ]
+}

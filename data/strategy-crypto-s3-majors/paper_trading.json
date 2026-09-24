@@ -1,0 +1,23 @@
+{
+  "exchange": "Binance Demo（計劃配置）",
+  "source": "allocation_plan",
+  "mode": "SIGNAL_ONLY",
+  "virtual_equity": null,
+  "balances": {
+    "USDT": null
+  },
+  "open_positions": [],
+  "allocation": {
+    "slot": "core",
+    "pct": 30,
+    "notional_usdt": 1500,
+    "label": "核心 30%（1500 USDT）"
+  },
+  "status": "WAIT_BREAKOUT",
+  "status_label": "等待新突破（尚未下單）",
+  "selected_variant": "donchian20_atr_btcRegime__SOL__1d",
+  "symbol": "SOLUSDT",
+  "note": "報酬多來自 2020–21，樣本少，回撤貼近上限",
+  "updated_at_taipei": "2026-09-24 15:21:20 CST",
+  "source_label": "研究定稿／尚未下單"
+}
