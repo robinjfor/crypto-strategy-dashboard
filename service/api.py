@@ -732,6 +732,9 @@ def build_status() -> dict:
     live_allocation = (state.get("allocation_public") or _allocation_public(state)).get("live_slots") or []
     last_decisions = [add_code(d, d.get("strategy_id"), d.get("family")) for d in (meta.get("last_decisions") or []) if isinstance(d, dict)]
     closed_norm = [add_code(t, t.get("strategy_id"), t.get("family")) for t in closed_norm]
+    for trade in closed_norm:
+        if not trade.get("code"):
+            trade["code"] = code_for_symbol(trade.get("symbol"), SLOTS + [SOL_SLOT])
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
