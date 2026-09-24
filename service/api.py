@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Cloud Run HTTP API: public GET /status + PIN-gated control writes."""
+"""Cloud Run HTTP API: session-gated /status + /control; POST /auth/login."""
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
 import logging
 import os
 import time
@@ -71,6 +73,15 @@ CORS_ORIGIN = os.environ.get("CORS_ORIGIN") or "https://robinjfor.github.io"
 PIN_SALT = os.environ.get("CONTROL_PIN_SALT") or "crypto-trader-v1"
 PIN_HASH = (os.environ.get("CONTROL_PIN_HASH") or "").strip().lower()
 PIN_HEADER = "X-Trader-Pin"
+AUTH_HEADER = "Authorization"
+SESSION_TTL_SEC = int(os.environ.get("SESSION_TTL_SEC") or str(12 * 3600))
+# Prefer explicit secret; else derive stably from pin hash (never the raw PIN).
+_SESSION_SECRET_ENV = (os.environ.get("SESSION_HMAC_SECRET") or "").strip()
+SESSION_HMAC_SECRET = (
+    _SESSION_SECRET_ENV.encode("utf-8")
+    if _SESSION_SECRET_ENV
+    else hashlib.sha256(("session-v1|" + PIN_SALT + "|" + PIN_HASH).encode("utf-8")).digest()
+)
 
 _fail_buckets: dict[str, list[float]] = {}
 RATE_MAX = 5
@@ -79,10 +90,66 @@ _bal_cache: dict[str, Any] = {"ts": 0.0, "data": None}
 BAL_TTL = 15.0
 
 
+def normalize_pin(raw: str | None) -> str:
+    """Strip whitespace and map full-width digits (０-９) to ASCII."""
+    if raw is None:
+        return ""
+    s = str(raw).strip()
+    out: list[str] = []
+    for ch in s:
+        o = ord(ch)
+        if 0xFF10 <= o <= 0xFF19:
+            out.append(chr(o - 0xFF10 + ord("0")))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _b64url_decode(s: str) -> bytes:
+    pad = "=" * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + pad)
+
+
+def mint_session_token(now: float | None = None) -> tuple[str, int]:
+    """Return (token, exp_unix). Payload is compact JSON; HMAC-SHA256 over it."""
+    ts = int(now if now is not None else time.time())
+    exp = ts + SESSION_TTL_SEC
+    payload = json.dumps({"v": 1, "exp": exp}, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    sig = hmac.new(SESSION_HMAC_SECRET, payload, hashlib.sha256).digest()
+    return f"{_b64url(payload)}.{_b64url(sig)}", exp
+
+
+def verify_session_token(token: str) -> bool:
+    if not token or "." not in token:
+        return False
+    try:
+        body_b64, sig_b64 = token.split(".", 1)
+        payload = _b64url_decode(body_b64)
+        expected = hmac.new(SESSION_HMAC_SECRET, payload, hashlib.sha256).digest()
+        got = _b64url_decode(sig_b64)
+        if not hmac.compare_digest(expected, got):
+            return False
+        data = json.loads(payload.decode("utf-8"))
+        exp = int(data.get("exp") or 0)
+        if exp < int(time.time()):
+            return False
+        return int(data.get("v") or 0) == 1
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _pin_digest(pin: str) -> str:
+    return hashlib.sha256((PIN_SALT + pin).encode("utf-8")).hexdigest()
+
+
 def _cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = CORS_ORIGIN
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = f"Content-Type, {PIN_HEADER}"
+    resp.headers["Access-Control-Allow-Headers"] = f"Content-Type, {PIN_HEADER}, {AUTH_HEADER}"
     resp.headers["Access-Control-Max-Age"] = "3600"
     return resp
 
@@ -98,6 +165,7 @@ def root():
 
 
 @app.route("/status", methods=["OPTIONS"])
+@app.route("/auth/login", methods=["OPTIONS"])
 @app.route("/control/pause", methods=["OPTIONS"])
 @app.route("/control/resume", methods=["OPTIONS"])
 @app.route("/control/close", methods=["OPTIONS"])
@@ -129,24 +197,89 @@ def _record_fail(ip: str) -> None:
     _fail_buckets.setdefault(ip, []).append(time.time())
 
 
-def _check_pin() -> tuple[bool, str, int]:
+def _clear_fails(ip: str) -> None:
+    _fail_buckets.pop(ip, None)
+
+
+def _require_https() -> tuple[bool, str, int] | None:
+    proto = (request.headers.get("X-Forwarded-Proto") or request.scheme or "").lower()
+    if proto and proto != "https" and os.environ.get("ALLOW_HTTP_PIN") != "1":
+        return False, "僅接受 HTTPS", 403
+    return None
+
+
+def _check_pin_value(pin_raw: str) -> bool:
+    pin = normalize_pin(pin_raw)
+    if not pin or not PIN_HASH:
+        return False
+    return hmac.compare_digest(_pin_digest(pin), PIN_HASH)
+
+
+def _check_auth() -> tuple[bool, str, int]:
+    """Accept Authorization: Bearer <session> or legacy X-Trader-Pin (normalized)."""
     if not PIN_HASH:
         return False, "伺服器未設定控制 PIN 雜湊", 503
     ip = _client_ip()
     if _rate_limited(ip):
         return False, "嘗試次數過多，請稍後再試", 429
-    proto = (request.headers.get("X-Forwarded-Proto") or request.scheme or "").lower()
-    if proto and proto != "https" and os.environ.get("ALLOW_HTTP_PIN") != "1":
-        return False, "僅接受 HTTPS", 403
+    https_err = _require_https()
+    if https_err is not None:
+        return https_err
+
+    auth = request.headers.get(AUTH_HEADER) or ""
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+        if verify_session_token(token):
+            _clear_fails(ip)
+            return True, "", 200
+        _record_fail(ip)
+        return False, "登入已過期或無效，請重新登入", 401
+
     pin = request.headers.get(PIN_HEADER) or ""
     if not pin:
         _record_fail(ip)
-        return False, "缺少操作密碼", 401
-    digest = hashlib.sha256((PIN_SALT + pin).encode("utf-8")).hexdigest()
-    if not hmac.compare_digest(digest, PIN_HASH):
+        return False, "未登入或缺少操作密碼", 401
+    if not _check_pin_value(pin):
         _record_fail(ip)
         return False, "操作密碼錯誤", 401
+    _clear_fails(ip)
     return True, "", 200
+
+
+def _check_pin() -> tuple[bool, str, int]:
+    """Back-compat alias — prefer session Bearer via _check_auth."""
+    return _check_auth()
+
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    if not PIN_HASH:
+        return jsonify({"ok": False, "error": "伺服器未設定控制 PIN 雜湊"}), 503
+    ip = _client_ip()
+    if _rate_limited(ip):
+        return jsonify({"ok": False, "error": "嘗試次數過多，請稍後再試"}), 429
+    https_err = _require_https()
+    if https_err is not None:
+        return jsonify({"ok": False, "error": https_err[1]}), https_err[2]
+
+    body = request.get_json(silent=True) or {}
+    pin = body.get("pin") or body.get("password") or request.headers.get(PIN_HEADER) or ""
+    if not normalize_pin(pin):
+        _record_fail(ip)
+        return jsonify({"ok": False, "error": "缺少密碼"}), 401
+    if not _check_pin_value(pin):
+        _record_fail(ip)
+        return jsonify({"ok": False, "error": "密碼錯誤"}), 401
+
+    _clear_fails(ip)
+    token, exp = mint_session_token()
+    return jsonify({
+        "ok": True,
+        "token": token,
+        "expires_at": exp,
+        "expires_in": SESSION_TTL_SEC,
+        "token_type": "Bearer",
+    })
 
 
 def _balances(client: BinanceClient) -> list:
@@ -604,6 +737,9 @@ def build_status() -> dict:
 
 @app.route("/status", methods=["GET"])
 def status():
+    ok, err, code = _check_auth()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
     try:
         return jsonify(build_status())
     except Exception as e:  # noqa: BLE001
@@ -737,6 +873,9 @@ def close_all():
 
 @app.route("/approved", methods=["GET"])
 def approved_list():
+    ok, err, code = _check_auth()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
     try:
         return jsonify(_approved_public())
     except Exception as e:  # noqa: BLE001

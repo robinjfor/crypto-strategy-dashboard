@@ -90,10 +90,12 @@ jobs:
             echo "CONTROL_PIN_HASH missing — set GitHub secret TRADER_CONTROL_PIN" >&2
             exit 1
           fi
-          # Salted SHA-256; never echo the PIN
-          HASH=$(python3 -c "import hashlib,os; print(hashlib.sha256((os.environ['PIN_SALT']+os.environ['TRADER_CONTROL_PIN']).encode()).hexdigest())")
+          # Salted SHA-256; strip whitespace + full-width digits; never echo the PIN
+          HASH=$(python3 -c "import hashlib,os; salt=os.environ['PIN_SALT']; raw=os.environ.get('TRADER_CONTROL_PIN') or ''; s=raw.strip(); pin=''.join(chr(ord(c)-0xFF10+ord('0')) if 0xFF10<=ord(c)<=0xFF19 else c for c in s); print(hashlib.sha256((salt+pin).encode()).hexdigest())")
           echo "pin_hash=$HASH" >> "$GITHUB_OUTPUT"
           echo "pin_hash_len=${#HASH}"
+          SESS=$(HASH="$HASH" PIN_SALT="$PIN_SALT" python3 -c "import hashlib,os; print(hashlib.sha256(('session-v1|'+os.environ['PIN_SALT']+'|'+os.environ['HASH']).encode()).hexdigest())")
+          echo "session_secret=$SESS" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Cloud Run Job
         run: |
@@ -130,6 +132,7 @@ jobs:
           ENABLED="${ENABLED:-true}"
           MODE="${{ steps.mode.outputs.trader_mode }}"
           PIN_HASH="${{ steps.mode.outputs.pin_hash }}"
+          SESS_SECRET="${{ steps.mode.outputs.session_secret }}"
 
           gcloud run deploy "${SERVICE_NAME}" \
             --project="${PROJECT}" \
@@ -140,7 +143,7 @@ jobs:
             --port=8080 \
             --command=python \
             --args=-u,api.py \
-            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH}" \
+            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH},SESSION_HMAC_SECRET=${SESS_SECRET}" \
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
             --memory=512Mi \
             --cpu=1 \

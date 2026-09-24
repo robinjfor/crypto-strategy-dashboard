@@ -770,6 +770,37 @@
   }
 
   function openPinModal(opts) {
+    // Session login replaces per-action PIN prompts
+    if (window.TraderAuth && window.TraderAuth.getToken && window.TraderAuth.getToken()) {
+      var confirmed = true;
+      if (opts.confirmText) confirmed = window.confirm(opts.confirmText);
+      if (!confirmed) return;
+      var fakeResult = { textContent: "" };
+      // Prefer a visible result target if modal exists
+      var modalEarly = $("pinModal");
+      if (modalEarly) {
+        modalEarly.classList.remove("hidden");
+        modalEarly.setAttribute("aria-hidden", "false");
+        var bodyEarly = $("pinModalBody");
+        if (bodyEarly) {
+          bodyEarly.innerHTML = "<h3>" + esc(opts.title || "確認") + "</h3>" +
+            (opts.confirmText ? '<p class="modal-confirm">' + esc(opts.confirmText) + "</p>" : "") +
+            (opts.extraHtml || "") +
+            '<div class="modal-actions">' +
+            '<button type="button" class="primary" id="pinSubmit">確認</button>' +
+            '<button type="button" id="pinCancel">取消</button></div>' +
+            '<p class="modal-result" id="pinResult"></p>';
+          $("pinSubmit").onclick = function () {
+            opts.onSubmit("", $("pinResult"));
+          };
+          $("pinCancel").onclick = closeModal;
+          return;
+        }
+      }
+      opts.onSubmit("", fakeResult);
+      return;
+    }
+
     opts = opts || {};
     var modal = $("strategyModal");
     var body = $("modalBody");
@@ -789,7 +820,9 @@
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
     var submit = function () {
-      var pin = ($("pinInput") && $("pinInput").value) || "";
+      var pin = (window.TraderAuth && window.TraderAuth.normalizePin)
+        ? window.TraderAuth.normalizePin(($("pinInput") && $("pinInput").value) || "")
+        : String(($("pinInput") && $("pinInput").value) || "").trim();
       var remember = $("pinRemember") && $("pinRemember").checked;
       setPin(pin, remember);
       if (typeof opts.onSubmit === "function") opts.onSubmit(pin, $("pinResult"));
@@ -808,15 +841,17 @@
     modal.setAttribute("aria-hidden", "true");
   }
 
-  async function postControl(path, pin, body) {
+    async function postControl(path, pin, body) {
     if (!apiBase) throw new Error("尚未設定雲端 API");
+    var tok = (window.TraderAuth && window.TraderAuth.getToken && window.TraderAuth.getToken()) || "";
+    var headers = { "Content-Type": "application/json" };
+    if (tok) headers["Authorization"] = "Bearer " + tok;
+    else if (pin) headers["X-Trader-Pin"] = (window.TraderAuth && window.TraderAuth.normalizePin)
+      ? window.TraderAuth.normalizePin(pin) : String(pin || "").trim();
     var res = await fetch(apiBase + path, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Trader-Pin": pin
-      },
-      body: body ? JSON.stringify(body) : "{}"
+      headers: headers,
+      body: body ? JSON.stringify(body) : undefined
     });
     var data = await res.json().catch(function () { return {}; });
     if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
