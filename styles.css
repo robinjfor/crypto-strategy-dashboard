@@ -579,3 +579,9 @@ tr.score-row.fail td { background: #7f1d1d22; }
 .alloc-book-table td, .alloc-book-table th { white-space: nowrap; }
 .alloc-signal-only { margin-top: 12px; }
 .alloc-signal-only h3 { font-size: 0.95rem; margin: 0 0 8px; color: #94a3b8; }
+
+tr.score-row.pass td { background: rgba(34,197,94,0.08); }
+tr.score-row.fail td { background: rgba(239,68,68,0.10); }
+tr.score-row.data-short td { box-shadow: inset 3px 0 0 #f59e0b; }
+.strategy-score-card.unsupported { opacity: 0.92; }
+.strategy-score-card .ssc-rules { margin-bottom: 12px; }

@@ -8,6 +8,18 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   var RUNNER_FAMILIES = { donchian: true, donchian_btc_regime: true };
+  // catalog family_id → runner family
+  var CATALOG_FAMILY_RUNNER = {
+    donchian_atr: "donchian",
+    donchian_btc_regime: "donchian_btc_regime",
+    donchian_lev: null,
+    ema_cross_atr: null,
+    ema_trend_hold: null,
+    supertrend: null,
+    momentum_rotation: null,
+    sma_regime_hold: null,
+    dual_ma_rsi: null
+  };
 
   var scores = null;
   var catalog = null;
@@ -213,50 +225,74 @@
     return '<span class="badge ' + cls + '">' + esc(s) + "</span>";
   }
 
-  function approveControls(row) {
+  function approveControls(row, familyId) {
     var sid = row.strategy_id;
     var ap = approvedMap[sid];
     var so = signalOnlyMap[sid];
     if (ap && ap.mode !== "signal_only" && ap.approved !== false) {
       return '<span class="badge ok">已核准</span> ' +
-        '<button type="button" class="btn-revoke" data-sid="' + esc(sid) + '">撤銷</button>';
+        '<button type="button" class="btn-revoke" data-sid="' + esc(sid) + '">退回</button>';
     }
-    var meta = (scores && scores.meta) || {};
-    var ok = bothGatesOk(row, meta);
-    var supported = runnerSupports(row);
+    var ok = bothGatesOk(row);
+    var supported = runnerSupports(row, familyId || row._family_id);
     var locked = !ok || !supported;
     var title = !ok
       ? "未過雙門檻（3年＋全期），無法核准"
       : (!supported ? "雲端尚未支援此策略類型" : "核准上線待命");
     var notion = row.notional_usdt != null ? row.notional_usdt
-      : (row.slot === "satellite_A" || /FET__4h/.test(sid) ? 1250 : 1000);
-    var prefix = (so || (ap && ap.mode === "signal_only"))
-      ? '<span class="badge warn">只算訊號</span> '
-      : "";
+      : (/FET/.test(sid) && /4h/.test(sid) ? 1250 : 1000);
+    var bits = [];
+    if (so || (ap && ap.mode === "signal_only")) {
+      bits.push('<span class="badge warn">只算訊號（未核准）</span>');
+    }
+    if (row.data_short) {
+      bits.push('<span class="badge warn" title="樣本期間偏短">data_short</span>');
+    }
+    if (!supported) {
+      bits.push('<span class="badge muted">雲端尚未支援此策略類型</span>');
+    }
+    var prefix = bits.length ? bits.join(" ") + " " : "";
     if (locked) {
-      return prefix + '<button type="button" class="btn-approve" disabled title="' + esc(title) + '">審核通過</button>';
+      return prefix + '<button type="button" class="btn-approve" disabled title="' + esc(title) + '">批准</button>';
     }
     return prefix + '<button type="button" class="btn-approve" data-sid="' + esc(sid) +
-      '" data-notional="' + esc(notion) + '" title="' + esc(title) + '">審核通過</button>';
+      '" data-notional="' + esc(notion) + '" data-family="' + esc(familyId || row._family_id || "") +
+      '" title="' + esc(title) + '">批准</button>';
   }
 
-  function renderMeta(meta) {
+
+  function renderMeta(meta, srcHint) {
     if (!meta) return "";
-    var period = meta.period || {};
+    var period = meta.period_3y || meta.period || {};
     var costs = meta.costs || {};
     var gate = meta.gate || {};
-    var scoring = meta.scoring_method || {};
+    var scoring = meta.scoring_method || meta.scoring || {};
+    var start = period.start || period.start_utc || "—";
+    var end = period.end || period.end_utc || "—";
+    var oneWay = costs.one_way_bps != null ? costs.one_way_bps : 20;
+    var fee = costs.fee_bps != null ? costs.fee_bps : "—";
+    var slip = costs.slippage_bps != null ? costs.slippage_bps : "—";
+    var oosMin = gate.oos_pass_min || "4/6";
+    var maxdd = gate.maxdd_max_abs != null ? gate.maxdd_max_abs : 45;
+    var nPass = meta.n_gate_pass_3y != null ? meta.n_gate_pass_3y : meta.n_gate_pass;
+    var nBoth = meta.n_gate_pass_both != null ? meta.n_gate_pass_both : "—";
+    var nAll = meta.n_rows != null ? meta.n_rows : meta.n_strategies;
+    var nFam = meta.n_strategies != null ? meta.n_strategies : "—";
     return '<section class="section" id="sec-meta">' +
       '<div class="section-head"><h2>統一標準</h2><span class="hint">產生於 ' + esc(meta.generated_at || "—") + "</span></div>" +
       '<div class="meta-grid">' +
-      "<div><span class=\"lbl\">期間</span> 近 3 年 · " + esc(period.start_utc || "—") + " → " + esc(period.end_utc || "—") + "</div>" +
+      "<div><span class=\"lbl\">期間</span> 近 3 年 · " + esc(start) + " → " + esc(end) + "</div>" +
       "<div><span class=\"lbl\">起始資金</span> " + num(meta.initial, 0) + " USDT</div>" +
-      "<div><span class=\"lbl\">成本</span> 單邊 " + esc(costs.one_way_bps || 20) + " bps（fee " + esc(costs.fee_bps) + " + slip " + esc(costs.slippage_bps) + "）</div>" +
-      "<div><span class=\"lbl\">門檻</span> 勝 B&amp;H · OOS≥" + esc((gate.oos_pass_min || gate.oos_pass_min)) + " · |MaxDD|≤" + esc((gate.maxdd_max_abs || gate.maxdd_max_abs)) + "% · 雙過＝3年＋全期</div>" +
-      "<div><span class=\"lbl\">通過</span> 3年 " + esc(meta.n_gate_pass) + " · 雙過 " + esc(meta.n_gate_pass_both != null ? meta.n_gate_pass_both : "—") + " / " + esc(meta.n_strategies) + "</div>" +
+      "<div><span class=\"lbl\">成本</span> 單邊 " + esc(oneWay) + " bps（fee " + esc(fee) + " + slip " + esc(slip) + "）</div>" +
+      "<div><span class=\"lbl\">門檻</span> 勝 B&amp;H · OOS≥" + esc(oosMin) + " · |MaxDD|≤" + esc(maxdd) + "% · 雙過＝3年＋全期</div>" +
+      "<div><span class=\"lbl\">通過</span> 3年 " + esc(nPass) + " · 雙過 " + esc(nBoth) + " / " + esc(nAll) + " 列（" + esc(nFam) + " 族）</div>" +
       "<div class=\"meta-formula\"><span class=\"lbl\">計分</span> " + esc(JSON.stringify(scoring.weights || scoring)) + "</div>" +
-      "</div></section>";
+      "</div>" +
+      (srcHint ? '<p class="hint" style="margin:8px 0 0">資料來源：' + esc(srcHint) + " · 頁面分數為 catalog 重標（與 scores.json 不同）</p>" : "") +
+      "</section>";
   }
+
+
 
   /** Build strategy groups from scores.json */
   function groupsFromScores(data) {
@@ -277,37 +313,101 @@
     }).sort(function (a, b) { return b.best_score - a.best_score; });
   }
 
-  /** Tolerant catalog loader → same shape as groupsFromScores */
-  function groupsFromCatalog(cat, scoreRows) {
+  
+  function runnerFamilyForCatalog(familyId, row) {
+    if (familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
+      return CATALOG_FAMILY_RUNNER[familyId];
+    }
+    return familyOf(row || {});
+  }
+
+  function runnerSupports(row, familyId) {
+    if (row && row.supported_by_runner === true) return true;
+    if (row && row.supported_by_runner === false) return false;
+    var rf = runnerFamilyForCatalog(familyId || row && row._family_id, row);
+    if (rf == null && familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
+      return false;
+    }
+    return !!RUNNER_FAMILIES[rf] || (rf && String(rf).indexOf("donchian") === 0);
+  }
+
+  function bothGatesOk(row) {
+    if (row.gate_pass_both != null) return !!row.gate_pass_both;
+    var fp = row.full_period || {};
+    if (row.gate_pass_3y != null && fp.gate_pass_full != null) {
+      return !!row.gate_pass_3y && !!fp.gate_pass_full;
+    }
+    if (row.gate_pass != null && fp.gate_pass_full != null) {
+      return !!row.gate_pass && !!fp.gate_pass_full;
+    }
+    return !!(row.gate_pass_3y || row.gate_pass);
+  }
+
+  function failReasons(row) {
+    return row.gate_fail_reasons || row.gate_fail_reasons || [];
+  }
+
+
+  /** Prefer catalog.json (analyst schema). Fallback: group scores.json. */
+  function groupsFromCatalog(cat) {
     if (!cat || typeof cat !== "object") return null;
-    var list = cat.strategies || cat.catalog || cat.groups || cat.items;
+    var list = cat.strategies || cat.families || cat.catalog || cat.groups || cat.items;
     if (!Array.isArray(list) || !list.length) return null;
-    var byId = {};
-    (scoreRows || []).forEach(function (r) { byId[r.strategy_id] = r; });
     var out = [];
     list.forEach(function (g) {
-      var key = g.key || g.id || g.strategy_key || g.name || "";
+      var familyId = g.strategy_family_id || g.family_id || g.id || g.key || "";
       var rowsRaw = g.rows || g.variants || g.symbols || g.results || [];
       var rows = rowsRaw.map(function (r) {
-        if (typeof r === "string") return byId[r] || { strategy_id: r };
-        var sid = r.strategy_id || r.id || (key + "__" + (r.symbol || "") + "__" + (r.timeframe || r.tf || ""));
-        return Object.assign({}, byId[sid] || {}, r, { strategy_id: sid });
+        var sid = r.strategy_id || r.id || "";
+        return Object.assign({}, r, {
+          strategy_id: sid,
+          symbol: r.symbol,
+          timeframe: r.timeframe || (r.params && (r.params.tf || r.params.timeframe)) || "",
+          initial: r.initial != null ? r.initial : 10000,
+          final: r.final,
+          ret_3y: r.ret_3y,
+          ret_1y: r.ret_1y,
+          bh_ret_3y: r.bh_ret_3y,
+          maxdd: r.maxdd_3y != null ? r.maxdd_3y : r.maxdd,
+          maxdd_3y: r.maxdd_3y != null ? r.maxdd_3y : r.maxdd,
+          oos_pass: r.oos_pass_3y || r.oos_pass,
+          oos_wins: r.oos_wins_3y != null ? r.oos_wins_3y : r.oos_wins,
+          oos_total: r.oos_total_3y != null ? r.oos_total_3y : (r.oos_total || 6),
+          n_trades: r.n_trades_3y != null ? r.n_trades_3y : r.n_trades,
+          gate_pass: r.gate_pass_3y != null ? r.gate_pass_3y : r.gate_pass,
+          gate_pass_3y: r.gate_pass_3y != null ? r.gate_pass_3y : r.gate_pass,
+          gate_pass_both: r.gate_pass_both,
+          gate_fail_reasons: r.gate_fail_reasons || [],
+          score: r.score,
+          status: r.status,
+          review: r.review,
+          data_short: !!r.data_short,
+          full_period: r.full_period || {},
+          params: r.params || {},
+          _family_id: familyId,
+          notional_usdt: (/FET/.test(sid) && /4h/.test(sid)) ? 1250 : 1000
+        });
       });
-      if (!rows.length && key) {
-        // pull matching scores rows
-        rows = (scoreRows || []).filter(function (r) { return strategyKey(r.strategy_id) === key; });
-      }
+      rows.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+      var rf = Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)
+        ? CATALOG_FAMILY_RUNNER[familyId]
+        : familyOf(rows[0] || {});
       out.push({
-        key: key,
-        params: g.params || (rows[0] && rows[0].params) || {},
-        kind: g.kind || g.family || (rows[0] && rows[0].kind),
-        rules_zh: g.rules_zh || g.description_zh || g.description || null,
-        rows: rows
+        key: familyId,
+        family_id: familyId,
+        name_zh: g.name_zh || g.name || familyId,
+        description_zh: g.description_zh || "",
+        entry_zh: g.entry_zh || "",
+        exit_zh: g.exit_zh || "",
+        stop_zh: g.stop_zh || "",
+        params_schema: g.params_schema || {},
+        params: (rows[0] && rows[0].params) || {},
+        kind: familyId,
+        rows: rows,
+        best_score: rows.length ? (rows[0].score || 0) : 0,
+        runner_family: rf,
+        supported: rf != null && (!!RUNNER_FAMILIES[rf] || String(rf).indexOf("donchian") === 0)
       });
-    });
-    out.forEach(function (g) {
-      g.rows.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
-      g.best_score = g.rows.length ? (g.rows[0].score || 0) : 0;
     });
     out.sort(function (a, b) { return b.best_score - a.best_score; });
     return out.length ? out : null;
@@ -316,10 +416,15 @@
   function dualBadge(row) {
     if (row.gate_pass_both) return '<span class="badge ok">雙過</span>';
     var bits = [];
-    bits.push(row.gate_pass ? "3年✓" : "3年✗");
+    bits.push((row.gate_pass_3y || row.gate_pass) ? "3年✓" : "3年✗");
     var fp = row.full_period || {};
     if (fp.gate_pass_full != null) bits.push(fp.gate_pass_full ? "全期✓" : "全期✗");
     return '<span class="badge bad">' + esc(bits.join(" · ")) + "</span>";
+  }
+
+  function fpFailReasons(fp) {
+    fp = fp || {};
+    return fp.gate_fail_reasons || fp.gate_fail_reasons || [];
   }
 
   function expandHtml(r) {
@@ -330,13 +435,13 @@
       '<div class="fp-grid">' +
       "<div><span class=\"lbl\">3 年</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) +
       " · OOS " + esc(r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + r.oos_total) : "—")) +
-      " · 門檻 " + (r.gate_pass ? "過" : "未過") + "</div>" +
+      " · 門檻 " + ((r.gate_pass_3y || r.gate_pass) ? "過" : "未過") + "</div>" +
       "<div><span class=\"lbl\">全期</span> " + esc((fp.start || "").slice(0, 10)) + " → " + esc((fp.end || "").slice(0, 10)) +
       " · 報酬 " + pctPts(fp.ret) + " · B&amp;H " + pctPts(fp.bh_ret) +
       " · MaxDD " + pctPts(fp.maxdd) + " · OOS " + esc(fp.oos_pass || "—") +
       " · 門檻 " + (fp.gate_pass_full ? "過" : "未過") + "</div>" +
-      (reasons ? '<div class="fail-reason">3年未過：' + esc(reasons) + '</div>' : '') +
-      (fpReasons ? '<div class="fail-reason">全期未過：' + esc(fpReasons) + '</div>' : '') +
+      (reasons ? '<div class="fail-reason">3年未過：' + esc(reasons) + "</div>" : "") +
+      (fpReasons ? '<div class="fail-reason">全期未過：' + esc(fpReasons) + "</div>" : "") +
       "</div>" +
       '<canvas id="eq-' + esc(r.strategy_id) + '" height="180"></canvas>' +
       '<div class="equity-status" id="eqst-' + esc(r.strategy_id) + '">展開列以載入權益曲線…</div></div>';
@@ -344,31 +449,37 @@
 
   function renderGroupCard(g) {
     var sample = g.rows[0] || { strategy_id: g.key, params: g.params };
-    var rules = g.rules_zh
-      ? (Array.isArray(g.rules_zh) ? g.rules_zh : [g.rules_zh])
-      : describeRules(g.key, sample);
-    var rulesHtml = rules.map(function (line) {
-      return "<li>" + esc(line) + "</li>";
-    }).join("");
-    var p = g.params || sample.params || {};
-    var paramBits = [];
-    if (p.donch_n != null) paramBits.push("Donch " + p.donch_n);
-    if (p.stop_m != null) paramBits.push("停損 " + p.stop_m + "×ATR");
-    if (p.trail_m != null) paramBits.push("移動 " + p.trail_m + "×ATR");
-    if (p.btc_regime) paramBits.push("BTC SMA200");
-    if (p.reset_below_hi) paramBits.push("reset_below_hi");
-    if (p.max_hold != null) paramBits.push("max_hold " + p.max_hold);
+    var familyId = g.family_id || g.key;
+    var supported = g.supported != null ? g.supported : runnerSupports(sample, familyId);
+    var rulesHtml = "";
+    if (g.description_zh || g.entry_zh || g.exit_zh || g.stop_zh) {
+      rulesHtml =
+        (g.description_zh ? "<li><strong>概述</strong>：" + esc(g.description_zh) + "</li>" : "") +
+        (g.entry_zh ? "<li><strong>進場</strong>：" + esc(g.entry_zh) + "</li>" : "") +
+        (g.exit_zh ? "<li><strong>出場</strong>：" + esc(g.exit_zh) + "</li>" : "") +
+        (g.stop_zh ? "<li><strong>停損／停利</strong>：" + esc(g.stop_zh) + "</li>" : "");
+    } else {
+      var rules = g.rules_zh
+        ? (Array.isArray(g.rules_zh) ? g.rules_zh : [g.rules_zh])
+        : describeRules(g.key, sample);
+      rulesHtml = rules.map(function (line) { return "<li>" + esc(line) + "</li>"; }).join("");
+    }
+    var supportNote = supported
+      ? '<span class="badge ok">雲端可執行</span>'
+      : '<span class="badge muted">雲端尚未支援此策略類型</span>';
 
     var body = g.rows.map(function (r) {
-      var fail = !bothGatesOk(r) && !r.gate_pass;
-      var failBoth = !bothGatesOk(r);
+      var passBoth = bothGatesOk(r);
       var reasons = (failReasons(r)).map(gateReasonZh).join("；");
-      var oos = r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + r.oos_total) : "—");
+      var oos = r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + (r.oos_total || 6)) : "—");
       var fp = r.full_period || {};
       var sym = (r.symbol || "").replace(/USDT$/, "");
-      return '<tr class="score-row' + (failBoth ? " fail" : "") + '" data-sid="' + esc(r.strategy_id) + '">' +
+      var rowCls = passBoth ? " pass" : " fail";
+      if (r.data_short) rowCls += " data-short";
+      return '<tr class="score-row" data-sid="' + esc(r.strategy_id) + '">' +
         "<td><strong>" + esc(sym) + "</strong> / " + esc(r.timeframe || "") +
-        (failBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
+        (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
+        (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
         '<td class="num">' + num(r.initial, 0) + "</td>" +
         '<td class="num">' + num(r.final, 2) + "</td>" +
         '<td class="num ' + signedCls(r.ret_3y) + '">' + pctPts(r.ret_3y) + "</td>" +
@@ -380,17 +491,16 @@
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(r.score, 2) + "</td>" +
         "<td>" + statusBadge(r.status) + "</td>" +
-        "<td>" + approveControls(r) + "</td>" +
+        "<td>" + approveControls(r, familyId) + "</td>" +
         "</tr>" +
-        '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="12">' +
+        '<tr class="expand-row' + esc(r.strategy_id) + '"><td colspan="12">' +
         expandHtml(r) + "</td></tr>";
     }).join("");
 
-    return '<article class="strategy-score-card" data-key="' + esc(g.key) + '">' +
+    return '<article class="strategy-score-card' + (supported ? "" : " unsupported") + '" data-key="' + esc(g.key) + '">' +
       '<div class="ssc-head">' +
-      "<h3>" + esc(g.key) + "</h3>" +
-      '<span class="badge muted">' + esc(g.kind || familyOf(sample)) + "</span>" +
-      (paramBits.length ? '<span class="ssc-params">' + esc(paramBits.join(" · ")) + "</span>" : "") +
+      "<h3>" + esc(g.name_zh || g.key) + "</h3>" +
+      '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
       "</div>" +
       '<div class="ssc-rules"><div class="lbl">規則說明</div><ul>' + rulesHtml + "</ul></div>" +
       '<div class="table-scroll"><table class="data scores">' +
@@ -408,8 +518,8 @@
       return '<div class="empty-state">尚無策略資料</div>';
     }
     return '<section class="section" id="sec-scores">' +
-      '<div class="section-head"><h2>策略評分（依策略分組）</h2>' +
-      '<span class="hint">' + groups.length + " 組 · 點列展開權益曲線與全期數字</span></div>" +
+      '<div class="section-head"><h2>策略評分（依策略家族）</h2>' +
+      '<span class="hint">' + groups.length + " 族 · 點列展開權益曲線與全期數字 · 綠＝雙過門檻</span></div>" +
       '<div class="strategy-score-list">' + groups.map(renderGroupCard).join("") + "</div></section>";
   }
 
@@ -456,6 +566,34 @@
     }
   }
 
+
+  // Canonical name aliases (tolerate mixed spellings in call sites)
+  var bothGatesOk = bothGatesOk;
+  var runnerSupports = runnerSupports;
+  var describeRules = describeRules;
+  var pctPts = pctPts;
+  var approveControls = approveControls;
+  var runnerFamilyForCatalog = function (familyId, row) {
+    if (familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
+      return CATALOG_FAMILY_RUNNER[familyId];
+    }
+    return familyOf(row || {});
+  };
+
+  function findRowById(sid) {
+    if (catalog && catalog.strategies) {
+      for (var i = 0; i < catalog.strategies.length; i++) {
+        var rows = catalog.strategies[i].rows || [];
+        for (var j = 0; j < rows.length; j++) {
+          if (rows[j].strategy_id === sid) {
+            return Object.assign({ _family_id: catalog.strategies[i].strategy_family_id }, rows[j]);
+          }
+        }
+      }
+    }
+    return ((scores && scores.strategies) || []).find(function (r) { return r.strategy_id === sid; }) || {};
+  }
+
   function bindRows() {
     document.querySelectorAll("tr.score-row").forEach(function (tr) {
       tr.onclick = function (ev) {
@@ -479,22 +617,24 @@
         var notion = Number(btn.getAttribute("data-notional") || 1000);
         notion = Math.min(Math.max(notion, 10), MAX_NOTIONAL);
         openPinModal({
-          title: "審核通過 · 上線待命",
-          confirmText: "核准 " + sid + "？名義約 " + notion + " USDT（上限 " + MAX_NOTIONAL + "）。同衛星槽其他候選將改為只算訊號。",
+          title: "批准 · 上線待命",
+          confirmText: "批准 " + sid + "？名義約 " + notion + " USDT（上限 " + MAX_NOTIONAL + "）。同衛星槽其他候選將改為只算訊號。",
           extraHtml: '<label class="pin-label">名義 USDT<input type="number" id="notionInput" class="pin-input" value="' + notion + '" min="10" max="' + MAX_NOTIONAL + '" /></label>',
           onSubmit: function (pin, resultEl) {
             var n = Number(($("notionInput") && $("notionInput").value) || notion);
             n = Math.min(Math.max(n, 10), MAX_NOTIONAL);
             resultEl.textContent = "處理中…";
-            var row = (scores.strategies || []).find(function (r) { return r.strategy_id === sid; }) || {};
+            var row = findRowById(sid);
+            var famId = btn.getAttribute("data-family") || row._family_id || "";
             postControl("/control/approve", pin, {
               strategy_id: sid,
               notional: n,
               passed_threshold: bothGatesOk(row),
               gate_pass_both: bothGatesOk(row),
-              supported_by_runner: runnerSupports(row),
-              family: familyOf(row),
+              supported_by_runner: runnerSupports(row, famId),
+              family: runnerFamilyForCatalog(famId, row) || familyOf(row),
               slot: row.slot || null,
+              satellite_slot: row.slot || null,
               symbol: row.symbol ? (String(row.symbol).indexOf("USDT") >= 0 ? row.symbol : row.symbol + "USDT") : null,
               timeframe: row.timeframe || null,
               params: row.params || null
@@ -513,8 +653,8 @@
         ev.stopPropagation();
         var sid = btn.getAttribute("data-sid");
         openPinModal({
-          title: "撤銷核准",
-          confirmText: "確定撤銷 " + sid + "？若仍有持倉將續管止損／出場，不再新開倉。",
+          title: "退回核准",
+          confirmText: "確定退回 " + sid + "？若仍有持倉將續管止損／出場，不再新開倉。",
           onSubmit: function (pin, resultEl) {
             resultEl.textContent = "處理中…";
             postControl("/control/revoke", pin, { strategy_id: sid }).then(function (r) {
@@ -540,10 +680,10 @@
       scores = await getJSON(SCORES_URL);
       catalog = null;
       try { catalog = await getJSON(CATALOG_URL); } catch (e) { catalog = null; }
-      var groups = groupsFromCatalog(catalog, scores.strategies) || groupsFromScores(scores);
-      var srcHint = catalog ? "catalog.json" : "scores.json（依策略分組）";
-      metaBox.innerHTML = renderMeta(scores.meta) +
-        '<p class="hint" style="margin:8px 0 0">資料來源：' + esc(srcHint) + "</p>";
+      var groups = groupsFromCatalog(catalog) || groupsFromScores(scores);
+      var srcHint = catalog ? "catalog.json（家族×幣別）" : "scores.json（依策略分組）";
+      var meta = (catalog && catalog.meta) || (scores && scores.meta) || {};
+      metaBox.innerHTML = renderMeta(meta, srcHint);
       main.innerHTML = renderGroups(groups);
       main.classList.remove("loading");
       metaBox.classList.remove("loading");

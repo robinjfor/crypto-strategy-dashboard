@@ -144,3 +144,18 @@ Schema is analyst-owned and may evolve. Loader (`backtest.js`) is tolerant and m
 | missing / unreadable | fall back to grouping `scores.json` by strategy key (prefix before `__SYMBOL__TF`) |
 
 Chinese rule text is generated from `params` + known specs when catalog omits `rules_zh` / `description_zh`.
+
+
+## catalog.json (preferred source for backtest.html)
+
+Path: `/workspace/strategy-unified-3y/catalog.json` → `data/unified-3y/catalog.json`.
+
+Top-level: `{ meta, strategies: Family[] }` where each Family has:
+`strategy_family_id`, `name_zh`, `description_zh`, `entry_zh`, `exit_zh`, `stop_zh`, `params_schema`, `rows[]`.
+
+Row fields used by UI: `strategy_id`, `symbol`, `timeframe`, `initial`, `final`, `ret_3y`, `ret_1y`,
+`bh_ret_3y`, `maxdd_3y`, `oos_pass_3y`, `n_trades_3y`, `full_period`, `gate_pass_3y`, `gate_pass_full`,
+`gate_pass_both`, `gate_fail_reasons`, `score` (**catalog-rescored**), `status`, `review`, `data_short`.
+
+Approve lock: `gate_pass_both !== true` OR runner does not support the family.
+scores.json remains the source for homepage 現役/候選 allocation scores.
