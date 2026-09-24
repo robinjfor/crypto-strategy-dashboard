@@ -879,7 +879,7 @@ def approve():
     # Ignore legacy gate_pass_both from old clients — do not block
     supported = body.get("supported_by_runner")
     if supported is None:
-        supported = family in SUPPORTED_FAMILIES or family.startswith("donchian")
+        supported = family in SUPPORTED_FAMILIES
     if supported is False:
         return jsonify({"ok": False, "error": "雲端尚未支援此策略類型"}), 400
     try:

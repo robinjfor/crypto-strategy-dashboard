@@ -7,12 +7,16 @@
   var CLOUD_CFG = "./data/cloud_api.json";
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
-  var RUNNER_FAMILIES = { donchian: true, donchian_btc_regime: true };
-  // catalog family_id → runner family
+  // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true };
+  // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
-    donchian_atr: "donchian",
+    donchian_atr: "donchian_atr",
     donchian_btc_regime: "donchian_btc_regime",
     donchian_lev: null,
+    donchian_lev_vol: null,
+    donchian_long_short_btc_regime: null,
+    donchian_fear_greed: null,
     ema_cross_atr: null,
     ema_trend_hold: null,
     supertrend: null,
@@ -20,6 +24,8 @@
     sma_regime_hold: null,
     dual_ma_rsi: null
   };
+  var LOCK_UNSUPPORTED = "雲端尚未支援此策略類型";
+  var LOCK_DERIV = "雲端尚未支援（需合約／槓桿／做空）";
 
   var scores = null;
   var catalog = null;
@@ -75,11 +81,52 @@
     return "other";
   }
 
-  function runnerSupports(row) {
-    if (row.supported_by_runner === true) return true;
+  /** Futures / leverage / short — lock even if family name looks like donchian_*. */
+  function needsDerivatives(row, familyId) {
+    row = row || {};
+    var p = row.params || {};
+    var lev = Number(p.leverage != null ? p.leverage : row.leverage);
+    if (lev > 1) return true;
+    var side = String(p.side || p.kind || row.side || row.kind || "").toLowerCase();
+    if (side === "ls" || side === "short" || side === "long_short" || side === "longshort") return true;
+    var mkt = String(p.market || row.market || p.venue || "").toLowerCase();
+    if (/futures|perp|perpetual|swap|contract|合約/.test(mkt)) return true;
+    if (p.check_liq === true || row.check_liq === true) return true;
+    var fund = Number(p.funding_ann != null ? p.funding_ann : (row.funding_ann != null ? row.funding_ann : 0));
+    if (fund > 0) return true;
+    var sid = String(row.strategy_id || "");
+    if (/^ls_|^lev_|__ls$|_long_short|long.?short/i.test(sid)) return true;
+    var fid = String(familyId || row._family_id || row.family || "");
+    if (/long_short|_ls|donchian_lev/.test(fid)) return true;
+    return false;
+  }
+
+  function runnerFamilyId(familyId, row) {
+    if (familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
+      return CATALOG_FAMILY_RUNNER[familyId];
+    }
+    var fam = familyOf(row || {});
+    if (fam === "donchian") return "donchian_atr";
+    if (fam === "donchian_btc_regime") return "donchian_btc_regime";
+    return null;
+  }
+
+  /** True only for cloud-supported spot long families (no leverage/short). */
+  function runnerSupports(row, familyId) {
+    row = row || {};
     if (row.supported_by_runner === false) return false;
-    var fam = familyOf(row);
-    return !!RUNNER_FAMILIES[fam] || fam.indexOf("donchian") === 0;
+    familyId = familyId || row._family_id || row.family || "";
+    if (needsDerivatives(row, familyId)) return false;
+    var rf = runnerFamilyId(familyId, row);
+    return !!(rf && RUNNER_FAMILIES[rf]);
+  }
+
+  function approveLockReason(row, familyId) {
+    row = row || {};
+    familyId = familyId || row._family_id || "";
+    if (needsDerivatives(row, familyId)) return LOCK_DERIV;
+    if (!runnerSupports(row, familyId)) return LOCK_UNSUPPORTED;
+    return null;
   }
 
   /** Emily 資金控管: lock unless BOTH 3y + full-period gates pass. */
@@ -133,10 +180,20 @@
       }
     } else if (fam === "supertrend" || /^supertrend/.test(key)) {
       parts.push("SuperTrend 趨勢跟隨。");
-    } else if (fam === "rotation") {
-      parts.push("輪動／配置類策略。");
+    } else if (fam === "rotation" || /rotation|momentum/i.test(key)) {
+      parts.push("多幣動能輪動：依回看報酬選前 N 且為正報酬等權持有。");
+    } else if (/fear_greed|fg_/i.test(key) || (sample && sample.params && sample.params.fg_mode)) {
+      parts.push("Donchian 突破＋恐懼貪婪指數過濾做多時段。");
+      if (sample && sample.params && sample.params.leverage > 1) parts.push("含名義槓桿（合約假設）。");
+    } else if (/long_short|_ls/i.test(key) || (sample && String((sample.params || {}).side || "").toLowerCase() === "ls")) {
+      parts.push("Donchian 多空雙向：依 BTC SMA200 分向過濾。");
+      parts.push("需合約／做空能力（雲端現貨 runner 不支援）。");
+    } else if (/_lev|lev_/i.test(key) || (sample && Number((sample.params || {}).leverage) > 1)) {
+      parts.push("Donchian＋ATR 架構加名義槓桿（永續假設，含資金費／強平檢查）。");
+    } else if (/sma_regime|dual_ma/i.test(key)) {
+      parts.push("均線政權／雙均線類規則（詳見家族說明）。");
     } else {
-      parts.push("策略參數見下表；規則依 params 與 AUTOMATION_SPEC。");
+      parts.push("策略參數見下表；規則依家族說明與 params。");
     }
     return parts;
   }
@@ -243,11 +300,12 @@
         '<button type="button" class="btn-revoke" data-sid="' + esc(sid) + '">退回</button>';
     }
     var ok = gatePass3y(row);
-    var supported = runnerSupports(row, familyId || row._family_id);
+    var lockReason = approveLockReason(row, familyId || row._family_id);
+    var supported = !lockReason;
     var locked = !ok || !supported;
     var title = !ok
       ? "未過 3 年門檻，無法核准"
-      : (!supported ? "雲端尚未支援此策略類型" : "核准上線待命");
+      : (lockReason || "核准上線待命");
     var notion = row.notional_usdt != null ? row.notional_usdt
       : (/FET/.test(sid) && /4h/.test(sid) ? 1250 : 1000);
     var bits = [];
@@ -257,8 +315,8 @@
     if (row.data_short) {
       bits.push('<span class="badge warn" title="樣本期間偏短">data_short</span>');
     }
-    if (!supported) {
-      bits.push('<span class="badge muted">雲端尚未支援此策略類型</span>');
+    if (lockReason) {
+      bits.push('<span class="badge muted">' + esc(lockReason) + "</span>");
     }
     var prefix = bits.length ? bits.join(" ") + " " : "";
     if (locked) {
@@ -360,22 +418,8 @@
   }
 
   
-  function runnerFamilyForCatalog(familyId, row) {
-    if (familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
-      return CATALOG_FAMILY_RUNNER[familyId];
-    }
-    return familyOf(row || {});
-  }
+  // runnerFamilyId / runnerSupports defined above
 
-  function runnerSupports(row, familyId) {
-    if (row && row.supported_by_runner === true) return true;
-    if (row && row.supported_by_runner === false) return false;
-    var rf = runnerFamilyForCatalog(familyId || row && row._family_id, row);
-    if (rf == null && familyId && Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)) {
-      return false;
-    }
-    return !!RUNNER_FAMILIES[rf] || (rf && String(rf).indexOf("donchian") === 0);
-  }
 
   function gatePass3y(row) {
     if (row.gate_pass_3y != null) return !!row.gate_pass_3y;
@@ -431,9 +475,7 @@
         });
       });
       rows.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
-      var rf = Object.prototype.hasOwnProperty.call(CATALOG_FAMILY_RUNNER, familyId)
-        ? CATALOG_FAMILY_RUNNER[familyId]
-        : familyOf(rows[0] || {});
+      var rf = runnerFamilyId(familyId, rows[0] || {});
       out.push({
         key: familyId,
         family_id: familyId,
@@ -448,7 +490,7 @@
         rows: rows,
         best_score: rows.length ? (rows[0].score || 0) : 0,
         runner_family: rf,
-        supported: rf != null && (!!RUNNER_FAMILIES[rf] || String(rf).indexOf("donchian") === 0)
+        supported: !!(rf && RUNNER_FAMILIES[rf])
       });
     });
     out.sort(function (a, b) { return b.best_score - a.best_score; });
@@ -501,7 +543,20 @@
 
   function familyControls(g) {
     var familyId = g.family_id || g.key;
-    var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
+    var sample = (g.rows && g.rows[0]) || {};
+    var famLock = approveLockReason(sample, familyId);
+    // Family-level: unsupported if family not on runner OR any/typical row needs derivatives
+    if (!famLock && (g.rows || []).some(function (r) { return needsDerivatives(r, familyId); })) {
+      // still allow family approve only if runner supports AND we don't classify whole family as deriv-only
+      // For lev/ls families CATALOG_FAMILY_RUNNER is null → already locked.
+    }
+    if (!runnerFamilyId(familyId, sample) || !RUNNER_FAMILIES[runnerFamilyId(familyId, sample)]) {
+      famLock = famLock || LOCK_UNSUPPORTED;
+    }
+    if ((g.rows || []).length && (g.rows || []).every(function (r) { return needsDerivatives(r, familyId); })) {
+      famLock = LOCK_DERIV;
+    }
+    var supported = !famLock;
     var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
     var nAll = (g.rows || []).length;
     var approved = familyApproved(familyId);
@@ -511,7 +566,7 @@
     var info = '<span class="fam-pass-info">過關 ' + nPass + " / " + nAll + "</span>";
     var btn;
     if (!supported) {
-      btn = '<button type="button" class="btn-fam-approve" disabled title="雲端尚未支援此策略類型">批准家族</button>';
+      btn = '<button type="button" class="btn-fam-approve" disabled title="' + esc(famLock) + '">批准家族</button>';
     } else if (approved) {
       btn = '<button type="button" class="btn-fam-revoke" data-family="' + esc(familyId) + '">撤銷家族</button>';
     } else {
@@ -549,9 +604,18 @@
         : describeRules(g.key, g.rows[0] || {});
       rulesHtml = rules.map(function (line) { return "<li>" + esc(line) + "</li>"; }).join("");
     }
+    var sample0 = (g.rows && g.rows[0]) || {};
+    var cardLock = approveLockReason(sample0, familyId);
+    if (!runnerFamilyId(familyId, sample0) || !RUNNER_FAMILIES[runnerFamilyId(familyId, sample0)]) {
+      cardLock = cardLock || LOCK_UNSUPPORTED;
+    }
+    if ((g.rows || []).length && (g.rows || []).every(function (r) { return needsDerivatives(r, familyId); })) {
+      cardLock = LOCK_DERIV;
+    }
+    supported = !cardLock;
     var supportNote = supported
       ? '<span class="badge ok">雲端可執行</span>'
-      : '<span class="badge muted">雲端尚未支援此策略類型</span>';
+      : '<span class="badge muted">' + esc(cardLock || LOCK_UNSUPPORTED) + "</span>";
 
     var body = rows.map(function (r) {
       var passBoth = gatePass3y(r);
