@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="app">
-    <header class="topbar">
+    <header class="topbar" id="siteHeader">
       <div class="brand">
         <div class="brand-mark">⚡</div>
         <div>
@@ -20,8 +20,7 @@
       <nav class="nav-links" aria-label="主選單">
         <a class="nav-link active" href="./">帳戶總覽</a>
         <a class="nav-link" href="./history.html">成交歷史</a>
-        <a class="nav-link" href="./watchlist.html">追蹤名單</a>
-        <a class="nav-link" href="./backtest.html">回測績效</a>
+        <a class="nav-link" href="./backtest.html">策略評分</a>
       </nav>
       <div class="controls">
         <label class="ctrl auto-toggle" title="自動重整">
@@ -46,6 +45,7 @@
     </div>
   </div>
 
+  <script src="./nav.js"></script>
   <script src="./exit-reasons.js"></script>
   <script src="./app-live.js"></script>
 </body>

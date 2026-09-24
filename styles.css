@@ -605,3 +605,58 @@ tr.score-row.data-short td { box-shadow: inset 3px 0 0 #f59e0b; }
 .backtest-summary { display:flex; flex-wrap:wrap; gap:12px; margin: 8px 0 16px; }
 .backtest-summary .pill { background:#1e293b; border:1px solid #334155; border-radius:999px; padding:6px 12px; font-size:0.85rem; }
 .backtest-filters { margin: 0 0 14px; display:flex; gap:10px; align-items:center; }
+
+
+/* Operator control panel (homepage) */
+.ops-panel {
+  margin: 10px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #3a4556;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+}
+.ops-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.ops-pos-hint {
+  color: #9aa4b2;
+  font-size: 12px;
+}
+.ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.btn-close-all {
+  appearance: none;
+  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-close-all:hover { filter: brightness(1.12); background: rgba(239, 68, 68, 0.28); }
+.ops-help {
+  margin: 10px 0 0;
+  color: #9aa4b2;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ops-result {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: rgba(0,0,0,0.25);
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.ops-result.hidden { display: none; }
+.modal-confirm { color: #fbbf24; font-size: 13px; line-height: 1.45; }

@@ -252,13 +252,25 @@
     var cls = color === "green" ? "ok" : color === "yellow" ? "warn" : color === "red" ? "bad" : "idle";
     var toggleLabel = paused ? "恢復自動交易" : "暫停自動交易";
     var stateLabel = paused ? "已暫停（不開新倉）" : "自動交易中";
+    var openN = openPositions().filter(function (p) {
+      return !p.status || p.status === "FILLED" || p.status === "OPEN";
+    }).length;
     return '<div class="health-bar ' + cls + '" id="systemHealth">' +
       '<span class="health-light ' + cls + '">● ' + esc(label) + '</span>' +
       '<span class="health-meta">狀態：' + esc(stateLabel) + '</span>' +
       '<span class="health-meta">模式：' + esc((cloud && cloud.mode) || (book && book.mode) || "—") + '</span>' +
       '<span class="health-meta">上次任務：' + esc((cloud && cloud.last_job_run_at) || "—") + '</span>' +
+      '</div>' +
+      '<div class="ops-panel" id="opsPanel">' +
+      '<div class="ops-head"><strong>操作區</strong>' +
+      '<span class="ops-pos-hint">' + (openN === 0 ? "目前沒有持倉，將只暫停" : ("目前持倉 " + openN + " 檔")) + '</span></div>' +
+      '<div class="ops-actions">' +
       '<button type="button" class="btn-toggle ' + (paused ? "resume" : "pause") + '" id="btnPauseToggle">' +
       esc(toggleLabel) + '</button>' +
+      '<button type="button" class="btn-close-all" id="btnCloseAll">全部平倉並暫停</button>' +
+      '</div>' +
+      '<p class="ops-help">暫停：不再開新倉，已持有的倉照止損管理。全部平倉：立即市價賣出所有持倉並暫停。</p>' +
+      '<div class="ops-result hidden" id="closeAllResult"></div>' +
       '</div>';
   }
 
@@ -716,6 +728,50 @@
               .then(function (r) {
                 resultEl.textContent = r.message || "完成";
                 setTimeout(function () { closeModal(); loadAll(); }, 600);
+              })
+              .catch(function (e) {
+                resultEl.textContent = "失敗：" + (e.message || e);
+              });
+          }
+        });
+      };
+    }
+    var btnCloseAll = $("btnCloseAll");
+    if (btnCloseAll) {
+      btnCloseAll.onclick = function () {
+        var openN = openPositions().filter(function (p) {
+          return !p.status || p.status === "FILLED" || p.status === "OPEN";
+        }).length;
+        var confirmText = openN === 0
+          ? "目前沒有持倉，將只暫停。確定繼續？"
+          : ("⚠ 將先暫停，再以市價賣出全部 " + openN + " 個持倉（取消止損後市價賣出）。此操作不可撤銷。確定？");
+        openPinModal({
+          title: "全部平倉並暫停",
+          confirmText: confirmText,
+          onSubmit: function (pin, resultEl) {
+            resultEl.textContent = "處理中…";
+            postControl("/control/close_all", pin)
+              .then(function (r) {
+                var lines = [r.message || "完成"];
+                (r.results || []).forEach(function (row) {
+                  if (row.ok) {
+                    var c = row.closed || {};
+                    lines.push("✓ " + (row.symbol || row.slot) +
+                      (c.pnl_usdt != null ? ("  PnL " + Number(c.pnl_usdt).toFixed(2)) : ""));
+                  } else {
+                    lines.push("✗ " + (row.symbol || row.slot) + "：" + (row.error || "失敗"));
+                  }
+                });
+                if (!(r.results || []).length) {
+                  lines.push("（無持倉，僅暫停）");
+                }
+                resultEl.textContent = lines.join("\n");
+                var box = $("closeAllResult");
+                if (box) {
+                  box.classList.remove("hidden");
+                  box.textContent = lines.join("\n");
+                }
+                setTimeout(function () { closeModal(); loadAll(); }, 1200);
               })
               .catch(function (e) {
                 resultEl.textContent = "失敗：" + (e.message || e);

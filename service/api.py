@@ -97,6 +97,7 @@ def root():
 @app.route("/control/pause", methods=["OPTIONS"])
 @app.route("/control/resume", methods=["OPTIONS"])
 @app.route("/control/close", methods=["OPTIONS"])
+@app.route("/control/close_all", methods=["OPTIONS"])
 @app.route("/control/approve", methods=["OPTIONS"])
 @app.route("/control/revoke", methods=["OPTIONS"])
 @app.route("/approved", methods=["OPTIONS"])
@@ -633,6 +634,64 @@ def close_slot():
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500
 
+
+
+
+@app.route("/control/close_all", methods=["POST"])
+def close_all():
+    """Pause first, then market-close every open position under the GCS lock."""
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+
+    store = StateStore()
+    result_holder: dict = {}
+
+    def mut(st):
+        st["paused"] = True
+        st.setdefault("meta", {})["paused_at"] = now_iso_taipei()
+        st["meta"]["paused_by"] = "close_all"
+        pos_map = dict(st.get("positions") or {})
+        if not pos_map:
+            result_holder["r"] = {
+                "ok": True,
+                "paused": True,
+                "results": [],
+                "message": "目前沒有持倉，已只暫停",
+            }
+            return st
+        client = BinanceClient()
+        results = []
+        for slot_id in list(pos_map.keys()):
+            snap = pos_map.get(slot_id) or {}
+            r = market_close_slot(client, st, slot_id, reason="close_all")
+            closed = r.get("closed") or {}
+            results.append(
+                {
+                    "slot": slot_id,
+                    "symbol": closed.get("symbol") or snap.get("symbol") or slot_id,
+                    "ok": bool(r.get("ok")),
+                    "error": r.get("error"),
+                    "closed": closed if r.get("ok") else None,
+                }
+            )
+        all_ok = all(x["ok"] for x in results)
+        result_holder["r"] = {
+            "ok": all_ok,
+            "paused": True,
+            "results": results,
+            "message": ("已暫停並平倉全部持倉" if all_ok else "已暫停，部分平倉失敗"),
+        }
+        return st
+
+    try:
+        store.mutate(mut)
+        r = result_holder.get("r") or {}
+        status = 200 if r.get("ok") else 207
+        return jsonify(r), status
+    except Exception as e:  # noqa: BLE001
+        log.exception("close_all_fail")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/approved", methods=["GET"])

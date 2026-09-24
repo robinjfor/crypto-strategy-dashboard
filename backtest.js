@@ -638,6 +638,23 @@
   }
 
   function bindRows() {
+    // Family card expand/collapse — was missing (cards did nothing on click)
+    document.querySelectorAll(".ssc-head[data-toggle-key]").forEach(function (head) {
+      head.onclick = function (ev) {
+        if (ev.target.closest("button, a, input, label")) return;
+        var key = head.getAttribute("data-toggle-key");
+        if (!key) return;
+        expandedKeys[key] = !expandedKeys[key];
+        refresh(true);
+      };
+    });
+    var filt = $("filterPassOnly");
+    if (filt) {
+      filt.onchange = function () {
+        filterPassOnly = !!filt.checked;
+        refresh(true);
+      };
+    }
     document.querySelectorAll("tr.score-row").forEach(function (tr) {
       tr.onclick = function (ev) {
         if (ev.target.closest("button")) return;
@@ -718,7 +735,7 @@
     var main = $("main");
     err.classList.add("hidden");
     try {
-      if (!keepUi || !catalog && !scores) {
+      if (!keepUi || (!catalog && !scores)) {
         apiBase = await resolveApiBase();
         await loadApproved();
         scores = await getJSON(SCORES_URL);

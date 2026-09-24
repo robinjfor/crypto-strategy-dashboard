@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="app">
-    <header class="topbar">
+    <header class="topbar" id="siteHeader">
       <div class="brand">
         <div class="brand-mark">📊</div>
         <div>
@@ -21,7 +21,6 @@
         <a class="nav-link" href="./">帳戶總覽</a>
         <a class="nav-link" href="./history.html">成交歷史</a>
         <a class="nav-link active" href="./backtest.html">策略評分</a>
-        <a class="nav-link" href="./watchlist.html">追蹤名單</a>
       </nav>
       <div class="controls">
         <button type="button" class="primary" id="btnRefresh">重整</button>
@@ -43,6 +42,7 @@
     </div>
   </div>
 
+  <script src="./nav.js"></script>
   <script src="./exit-reasons.js"></script>
   <script src="./backtest.js"></script>
 </body>
