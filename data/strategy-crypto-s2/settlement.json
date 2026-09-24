@@ -10,7 +10,7 @@
     "quote": 1499.85,
     "status": "FILLED",
     "note": "Real Demo BUY",
-    "reason": "demo_buy"
+    "reason": "manual_entry"
   },
   {
     "ts": "2026-09-24T14:53:00+08:00",
@@ -39,7 +39,7 @@
     "entry_price": 2.97,
     "realized_pnl_usdt": 680.8558,
     "realized_pct": 45.39,
-    "reason": "demo_sell",
+    "reason": "manual_exit",
     "price": 4.327694
   }
 ]

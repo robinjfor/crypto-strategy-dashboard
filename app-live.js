@@ -28,6 +28,40 @@
 
   function $(id) { return document.getElementById(id); }
 
+
+  var TARGET_PCT = { FET: 25, OP: 20, DOT: 20, SOL: 30 };
+  var STATUS_ZH = {
+    waiting_breakout: "等訊號",
+    wait_breakout: "等訊號",
+    WAIT_BREAKOUT: "等訊號",
+    armed: "已武裝",
+    ARMED: "已武裝",
+    WAIT_RESET: "等回落重置（需先收回上軌下方）",
+    wait_reset: "等回落重置（需先收回上軌下方）",
+    wait_signal_reset_then_breakout: "等回落重置（需先收回上軌下方）",
+    WAIT_SIGNAL_RESET_THEN_BREAKOUT: "等回落重置（需先收回上軌下方）",
+    PENDING_FILL: "已掛單，等成交",
+    pending_fill: "已掛單，等成交"
+  };
+
+  function statusZh(code) {
+    if (code == null || code === "") return "—";
+    var s = String(code).trim();
+    if (STATUS_ZH[s]) return STATUS_ZH[s];
+    var low = s.toLowerCase();
+    for (var k in STATUS_ZH) {
+      if (k.toLowerCase() === low) return STATUS_ZH[k];
+    }
+    return s + "（未對照）";
+  }
+
+  function targetPctFor(pl) {
+    if (pl && pl.target_pct != null && pl.target_pct !== "") return Number(pl.target_pct);
+    var asset = String((pl && (pl.asset || pl.symbol)) || "").replace("USDT", "").toUpperCase();
+    if (TARGET_PCT[asset] != null) return TARGET_PCT[asset];
+    return null;
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -287,7 +321,21 @@
   }
 
   function plannedList() {
-    if (cloud && Array.isArray(cloud.planned_positions)) return cloud.planned_positions;
+    if (cloud && Array.isArray(cloud.planned_positions)) {
+      return cloud.planned_positions.map(function (pl) {
+        var copy = Object.assign({}, pl);
+        copy.status_code = pl.status_code || pl.ui_status || pl.status_label;
+        // If API already sent Chinese status_label, keep it; else map
+        var raw = pl.status_code || pl.ui_status || "";
+        if (pl.status_label && /[\u4e00-\u9fff]/.test(String(pl.status_label))) {
+          copy.status_label = pl.status_label;
+        } else {
+          copy.status_label = statusZh(pl.status_label || pl.ui_status || pl.status_code);
+        }
+        if (copy.target_pct == null) copy.target_pct = targetPctFor(copy);
+        return copy;
+      });
+    }
     if (cloud && Array.isArray(cloud.armed_slots)) {
       return cloud.armed_slots.map(function (a) {
         return {
@@ -298,10 +346,13 @@
           tf: a.tf,
           target_notional_usdt: a.quote_usdt,
           ui_status: a.status || a.action || "ARMED",
-          status_label: a.reason || a.status,
+          status_label: a.status_zh || statusZh(a.status || a.reason || a.action),
+          status_code: a.status || a.reason || a.action,
           entry_rule: a.entry_condition,
           mark: a.mark,
           trigger: a.trigger,
+          target_pct: a.target_pct,
+          target_notional_usdt: a.quote_usdt || a.target_notional_usdt,
           stop_note: a.suggested_stop != null ? ("建議止損 " + a.suggested_stop) : "—",
           stop_mode: "pending",
           donch_n: a.slot === "sat_fet_1h" ? 55 : 20
@@ -329,9 +380,9 @@
         var safe = String(stopNote).replace(/目標價/g, "止損參考");
         return "<tr>" +
           "<td><strong>" + esc(pl.asset) + '</strong><div class="kpi-sub">' + esc(pl.strategy_name || "") + "</div></td>" +
-          '<td class="num">' + num(pl.target_pct, 0) + "%</td>" +
+          '<td class="num">' + (targetPctFor(pl) != null ? num(targetPctFor(pl), 0) + "%" : "—") + "</td>" +
           '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
-          "<td>" + esc(pl.status_label || pl.ui_status || "—") + "</td>" +
+          "<td>" + esc(pl.status_label || statusZh(pl.status_code || pl.ui_status) || "—") + "</td>" +
           "<td>" + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n || "—")) + "</td>" +
           "<td>" + esc(pl.entry_rule || "—") + "</td>" +
           "<td>" + esc(safe) + "</td>" +
@@ -358,7 +409,7 @@
         var active = true;
         return '<article class="strategy-card ' + (active ? "active" : "") + '">' +
           '<div class="sc-top"><strong>' + esc(s.symbol || s.slot) + '</strong>' +
-          '<span class="badge ok">' + esc(s.status || s.action || "armed") + "</span></div>" +
+          '<span class="badge ok">' + esc(s.status_zh || statusZh(s.status || s.reason || s.action || "armed")) + "</span></div>" +
           '<p class="sc-sum">' + esc(s.entry_condition || s.variant || "") + "</p>" +
           '<div class="sc-meta">' + esc(s.tf || "") + " · " + esc(s.symbol || "") + " · 1x · 名義 " +
           esc(String(s.quote_usdt || "")) + "</div>" +
@@ -366,7 +417,7 @@
           '<div><span class="lbl">進場</span> ' + esc(s.entry_condition || "—") + "</div>" +
           '<div><span class="lbl">觸發</span> ' + (s.trigger != null ? num(s.trigger, 4) : "—") +
           " · 現價 " + (s.mark != null ? num(s.mark, 4) : "—") + "</div>" +
-          '<div><span class="lbl">狀態</span> ' + esc(s.reason || s.status || "—") + "</div>" +
+          '<div><span class="lbl">狀態</span> ' + esc(s.status_zh || statusZh(s.status || s.reason) || "—") + "</div>" +
           "</div></article>";
       }).join("");
     } else {
@@ -374,7 +425,7 @@
         var active = s.status === "active" || s.status === "armed_wait_breakout" || s.status === "wait_reset";
         return '<article class="strategy-card ' + (active ? "active" : "") + '">' +
           '<div class="sc-top"><strong>' + esc(s.name || s.id || "—") + '</strong>' +
-          '<span class="badge ' + (active ? "ok" : "muted") + '">' + esc(s.status || "—") + "</span></div>" +
+          '<span class="badge ' + (active ? "ok" : "muted") + '">' + esc(statusZh(s.status) || "—") + "</span></div>" +
           '<p class="sc-sum">' + esc(s.summary || "") + "</p></article>";
       }).join("");
     }

@@ -14,9 +14,46 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS
+from slots import SLOTS, SOL_SLOT
 from state_store import StateStore
 from strategy import now_iso_taipei
+
+
+
+STATUS_ZH = {
+    "waiting_breakout": "等訊號",
+    "WAIT_BREAKOUT": "等訊號",
+    "wait_breakout": "等訊號",
+    "armed": "已武裝",
+    "ARMED": "已武裝",
+    "WAIT_RESET": "等回落重置（需先收回上軌下方）",
+    "wait_reset": "等回落重置（需先收回上軌下方）",
+    "wait_signal_reset_then_breakout": "等回落重置（需先收回上軌下方）",
+    "WAIT_SIGNAL_RESET_THEN_BREAKOUT": "等回落重置（需先收回上軌下方）",
+    "PENDING_FILL": "已掛單，等成交",
+    "pending_fill": "已掛單，等成交",
+}
+
+
+def status_zh(code) -> str:
+    """Map slot/strategy status codes to Traditional Chinese labels."""
+    if code is None or code == "":
+        return "—"
+    s = str(code).strip()
+    if s in STATUS_ZH:
+        return STATUS_ZH[s]
+    low = s.lower()
+    for k, v in STATUS_ZH.items():
+        if k.lower() == low:
+            return v
+    # collapse separators
+    compact = low.replace("-", "_")
+    for k, v in STATUS_ZH.items():
+        if k.lower().replace("-", "_") == compact:
+            return v
+    return f"{s}（未對照）"
+
+
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -204,6 +241,7 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "armed": slot.get("armed", True),
                 "variant": slot.get("variant"),
                 "quote_usdt": slot.get("quote_usdt"),
+                "target_pct": slot.get("target_pct"),
                 "require_reset_below_hi": slot.get("require_reset_below_hi"),
                 "action": sig.get("action"),
                 "reason": sig.get("reason"),
@@ -216,36 +254,79 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "mark": mark,
                 "distance": dist,
                 "suggested_stop": sig.get("suggested_stop") or sig.get("stop"),
+                "status_zh": status_zh(sig.get("status") or sig.get("reason") or sig.get("action") or (meta.get("last_signal") or {}).get("status")),
             }
         )
     sol = by_id.get("core_sol") or {}
     sol_meta = (state.get("slots") or {}).get("core_sol") or {}
     sol_sig = sol.get("signal") or {}
-    trigger = sol_sig.get("donch20_hi") or (sol.get("order_plan_if_enter_at_last_close") or {}).get("donch_hi")
-    mark = sol.get("sol_close")
+    # Prefer live feed fields; fall back to expectation log / compute_signal
+    latest_exp = None
+    for key in ("expectation_log", "sol_expectation_log"):
+        evs = state.get(key) or []
+        if evs:
+            latest_exp = evs[-1]
+            break
+    trigger = (
+        sol_sig.get("donch20_hi")
+        or sol.get("donch20_hi")
+        or (sol.get("order_plan_if_enter_at_last_close") or {}).get("donch_hi")
+        or (latest_exp or {}).get("donch20_hi")
+        or (latest_exp or {}).get("donch20_hi")
+    )
+    mark = (
+        sol.get("sol_close")
+        or sol_sig.get("sol_close")
+        or (sol_sig.get("sol") or {}).get("close")
+        or (latest_exp or {}).get("sol_close")
+    )
+    if mark is None or trigger is None:
+        try:
+            from sol_core.signal import compute_signal as sol_compute_signal
+            fresh = sol_compute_signal()
+            mark = mark if mark is not None else fresh.get("sol_close") or (fresh.get("sol") or {}).get("close")
+            trigger = trigger if trigger is not None else (
+                (fresh.get("signal") or {}).get("donch20_hi")
+                or fresh.get("donch20_hi")
+            )
+            if not sol.get("status"):
+                sol = {**sol, **{k: fresh.get(k) for k in ("status", "action", "reason", "conclusion", "in_daily_window") if fresh.get(k) is not None}}
+                sol_sig = fresh.get("signal") or sol_sig
+        except Exception as e:  # noqa: BLE001
+            log.warning("sol_fresh_skip err=%s", e)
+    if mark is None:
+        try:
+            mark = BinanceClient().ticker_price("SOLUSDT")
+        except Exception:  # noqa: BLE001
+            pass
     dist = None
     try:
         if trigger is not None and mark is not None:
             dist = float(trigger) - float(mark)
     except Exception:  # noqa: BLE001
         pass
+    status = sol.get("status") or (sol_meta.get("last_signal") or {}).get("status")
+    reason = sol.get("reason") or sol.get("conclusion") or (sol_meta.get("last_signal") or {}).get("reason")
     rows.append(
         {
             "slot": "core_sol",
             "symbol": "SOLUSDT",
             "tf": "1d",
             "armed": True,
-            "variant": "donchian20_atr_btcRegime",
-            "quote_usdt": 1500,
+            "variant": SOL_SLOT.get("variant") or "donchian20_atr_btcRegime",
+            "quote_usdt": SOL_SLOT.get("quote_usdt") or 1500,
+            "target_pct": SOL_SLOT.get("target_pct") or 30.0,
             "require_reset_below_hi": True,
             "action": sol.get("action"),
-            "reason": sol.get("reason") or sol.get("conclusion"),
-            "status": sol.get("status") or (sol_meta.get("last_signal") or {}).get("status"),
+            "reason": reason,
+            "status": status,
+            "status_zh": status_zh(status or reason),
             "entry_condition": "BTC>SMA200 且 Donchian20 上升沿 0→1（需先重置）· UTC 00:05–00:15",
             "trigger": trigger,
             "mark": mark,
             "distance": dist,
             "needs_reset": sol_sig.get("needs_reset_before_entry")
+            or (latest_exp or {}).get("needs_reset_before_entry")
             or (sol_meta.get("last_signal") or {}).get("needs_reset"),
             "in_daily_window": sol.get("in_daily_window"),
         }
@@ -270,7 +351,9 @@ def _planned_from_armed(armed: list) -> list:
                 "donch_n": 55 if "fet" in str(a.get("slot")) else 20,
                 "target_notional_usdt": a.get("quote_usdt"),
                 "ui_status": status,
-                "status_label": a.get("reason") or status,
+                "status_label": status_zh(a.get("status") or a.get("reason") or status),
+                "status_code": a.get("status") or a.get("reason") or status,
+                "target_pct": a.get("target_pct"),
                 "entry_rule": a.get("entry_condition"),
                 "mark": a.get("mark"),
                 "trigger": a.get("trigger"),

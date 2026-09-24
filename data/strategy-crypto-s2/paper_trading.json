@@ -156,7 +156,7 @@
       "price": 2.97,
       "quote": 1499.85,
       "fee": null,
-      "reason": "demo_manual_or_bot",
+      "reason": "manual_entry",
       "source": "binance_demo",
       "status": "FILLED"
     },
@@ -180,7 +180,7 @@
         }
       ],
       "orderId": 421133398,
-      "reason": "demo_sell",
+      "reason": "manual_exit",
       "source": "binance_demo",
       "status": "FILLED",
       "residual_near": 0.095
