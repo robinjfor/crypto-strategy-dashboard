@@ -1,4 +1,4 @@
-"""Donchian breakout + Wilder ATR trail."""
+"""Donchian breakout + ATR trail (Wilder or SMA of TR via atr_mode)."""
 from __future__ import annotations
 
 import logging
@@ -48,7 +48,11 @@ def evaluate_slot(
 ) -> dict[str, Any]:
     tf = slot["tf"]
     closed, forming = split_closed(klines, tf)
-    ind = add_donch_atr(closed, int(slot.get("donch_n") or slot.get("donch_n") or 20)).dropna(
+    atr_mode = str(slot.get("atr_mode") or "wilder").strip().lower()
+    if atr_mode not in ("sma", "wilder"):
+        raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{atr_mode!r}")
+    donch_n = int(slot.get("donch_n") or 20)
+    ind = add_donch_atr(closed, donch_n, atr_mode=atr_mode).dropna(
         subset=["atr", "donch_hi", "donch_lo"]
     )
     if ind.empty:
@@ -66,7 +70,9 @@ def evaluate_slot(
         "slot": slot["id"],
         "symbol": slot["symbol"],
         "tf": tf,
-        "variant": slot["variant"],
+        "variant": slot.get("variant"),
+        "atr_mode": atr_mode,
+        "require_reset_below_hi": bool(slot.get("require_reset_below_hi")),
         "bar_ts": bar_ts,
         "mark": mark,
         "close": float(bar["Close"]),

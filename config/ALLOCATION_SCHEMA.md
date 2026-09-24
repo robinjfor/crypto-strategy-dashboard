@@ -30,7 +30,7 @@
 | `timeframe` | string | ✓ | `1h` / `4h` / `1d` 等 |
 | `notional_usdt` | number | ✓ | 名義 USDT；≤ 單筆上限 |
 | `enabled` | boolean | ✓ | `true` 才可能實盤；`false` 僅候選／只算訊號 |
-| `params` | object | ✓ | 執行參數（`donch_n`、`stop_atr_mult`、`trail_atr_mult`…） |
+| `params` | object | ✓ | 執行參數（`donch_n`、`stop_atr_mult`、`trail_atr_mult`、`atr_mode`、`require_reset_below_hi`…） |
 | `note` | string | | 備註 |
 
 ## 驗證規則（workflow + 交易 job）
@@ -44,6 +44,21 @@
 7. `slot`、`strategy_id` 不可重複。
 
 任一條失敗 → **整份檔案拒絕**。
+
+
+## `params`（donchian_atr）
+
+| 欄位 | 型別 | 預設 | 說明 |
+|------|------|------|------|
+| `donch_n` | number | — | Donchian 視窗（必填） |
+| `stop_atr_mult` | number | — | 初始停損 ATR 倍數（必填） |
+| `trail_atr_mult` | number | — | 移動停利 ATR 倍數（必填） |
+| `max_hold_bars` | number | | 最長持有 bar 數 |
+| `require_reset_below_hi` | boolean | `false` | `true`＝出場後須先收盤跌破上軌才重新允許進場；`false`＝不需重置（與 ARB 回測同款） |
+| `atr_mode` | `"wilder"` \| `"sma"` | `"wilder"` | ATR 計算：`wilder`＝Wilder ATR14（既有預設）；`sma`＝TR 的 SMA14（與 SOL core / 部分 3y 回測相同）。影響初始停損、移動停利、距離（ATR）顯示 |
+| `btc_regime` | boolean | `false` | 是否套用 BTC 趨勢過濾（donchian_atr 通常為 false） |
+
+其他 `atr_mode` 值會讓整份 allocation **驗證失敗**。
 
 ## 與家族批准的關係
 

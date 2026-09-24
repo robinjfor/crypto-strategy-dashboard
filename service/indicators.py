@@ -1,4 +1,4 @@
-"""Donchian + Wilder ATR14."""
+"""Donchian + ATR14 (Wilder or SMA of TR)."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -41,11 +41,35 @@ def wilder_atr(df: pd.DataFrame, n: int = 14) -> pd.Series:
     return atr
 
 
-def add_donch_atr(df: pd.DataFrame, donch_n: int = 20) -> pd.DataFrame:
+def sma_atr(df: pd.DataFrame, n: int = 14) -> pd.Series:
+    """SMA of True Range over n bars — same formula as SOL core atr14_sma."""
+    h, l, c = df["High"], df["Low"], df["Close"]
+    prev = c.shift(1)
+    tr = pd.concat([(h - l), (h - prev).abs(), (l - prev).abs()], axis=1).max(axis=1)
+    return tr.rolling(n).mean()
+
+
+def resolve_atr(df: pd.DataFrame, n: int = 14, atr_mode: str = "wilder") -> pd.Series:
+    mode = (atr_mode or "wilder").strip().lower()
+    if mode == "sma":
+        return sma_atr(df, n)
+    if mode == "wilder":
+        return wilder_atr(df, n)
+    raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{atr_mode!r}")
+
+
+def add_donch_atr(
+    df: pd.DataFrame,
+    donch_n: int = 20,
+    *,
+    atr_n: int = 14,
+    atr_mode: str = "wilder",
+) -> pd.DataFrame:
     o = df.copy()
     o["donch_hi"] = o["High"].rolling(donch_n).max().shift(1)
     o["donch_lo"] = o["Low"].rolling(donch_n).min().shift(1)
-    o["atr"] = wilder_atr(o, 14)
+    o["atr"] = resolve_atr(o, atr_n, atr_mode)
+    o["atr_mode"] = (atr_mode or "wilder").strip().lower()
     return o
 
 

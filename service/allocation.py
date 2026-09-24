@@ -45,12 +45,24 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
                 errors.append(f"slots[{idx}].params.{k} 必填（donchian_atr）")
         n = p.get("donch_n")
         if n is not None and (not isinstance(n, (int, float)) or n < 5 or n > 200):
-            errors.append(f"slots[{idx}].params.donch_n 不合理範圍")
+            errors.append(f"slots[{idx}].params.donch_n 超出範圍")
+        # atr_mode: optional, default wilder; only sma|wilder allowed
+        if "atr_mode" in p and p.get("atr_mode") is not None:
+            mode = str(p.get("atr_mode") or "").strip().lower()
+            if mode not in ("sma", "wilder"):
+                errors.append(
+                    f"slots[{idx}].params.atr_mode 必須是 sma 或 wilder，收到：{p.get('atr_mode')!r}"
+                )
+        # require_reset_below_hi: optional bool (False = no reset; ARB backtest style)
+        if "require_reset_below_hi" in p and p.get("require_reset_below_hi") is not None:
+            if not isinstance(p.get("require_reset_below_hi"), bool):
+                errors.append(f"slots[{idx}].params.require_reset_below_hi 必須是 boolean")
     elif family == "donchian_btc_regime":
         if "donch_n" not in p:
             errors.append(f"slots[{idx}].params.donch_n 必填（donchian_btc_regime）")
     else:
         errors.append(f"slots[{idx}].family 雲端尚未支援：{family}")
+
 
 
 def fetch_usdt_symbols() -> set[str] | None:
@@ -252,6 +264,9 @@ def slot_to_runtime(slot: dict) -> dict:
     params = slot.get("params") or {}
     symbol = str(slot.get("symbol") or "").upper()
     tf = str(slot.get("timeframe") or "").lower()
+    _atr_mode = str(params.get("atr_mode") or "wilder").strip().lower()
+    if _atr_mode not in ("sma", "wilder"):
+        raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{params.get('atr_mode')!r}")
     return {
         "id": slot.get("slot"),
         "strategy_id": slot.get("strategy_id"),
@@ -264,6 +279,7 @@ def slot_to_runtime(slot: dict) -> dict:
         "max_hold_bars": params.get("max_hold_bars"),
         "quote_usdt": float(slot.get("notional_usdt") or 0),
         "require_reset_below_hi": bool(params.get("require_reset_below_hi", False)),
+        "atr_mode": _atr_mode,
         "btc_regime": bool(params.get("btc_regime", False)),
         "armed": True,
         "mode": slot.get("order_mode") or ("live" if slot.get("enabled") else "signal_only"),
