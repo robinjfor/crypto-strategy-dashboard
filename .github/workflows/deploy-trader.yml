@@ -9,6 +9,10 @@ on:
         description: "After deploy, execute job once in probe mode"
         type: boolean
         default: false
+      run_futures_probe:
+        description: "After deploy, execute job once in futures-probe mode (Demo USD-M)"
+        type: boolean
+        default: false
       run_once:
         description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
@@ -104,7 +108,7 @@ jobs:
             --service-account="${RUNTIME_SA}" \
             --task-timeout=600 \
             --max-retries=1 \
-            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,VISION_BASE_URL=https://data-api.binance.vision" \
+            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision" \
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
             --command=python \
             --args=-u,${{ steps.mode.outputs.job_arg1 }},${{ steps.mode.outputs.job_arg2 }} \
@@ -132,7 +136,7 @@ jobs:
             --port=8080 \
             --command=python \
             --args=-u,api.py \
-            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,VISION_BASE_URL=https://data-api.binance.vision,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH}" \
+            --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH}" \
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
             --memory=512Mi \
             --cpu=1 \
@@ -201,6 +205,21 @@ jobs:
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
             --args=main.py,probe --wait
+
+
+      - name: Execute futures-probe once
+        if: ${{ inputs.run_futures_probe }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs execute "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --args=main.py,futures-probe --wait
+          echo "--- futures-probe logs ---"
+          gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME}" \
+            --project="${PROJECT}" --limit=30 \
+            --format='value(textPayload)' || true
 
       - name: Execute job once (live/dry-run per TRADER_MODE)
         if: ${{ inputs.run_once }}

@@ -2,9 +2,10 @@
 """Binance Demo trader — Cloud Run Job entrypoint.
 
 Modes:
-  probe    — ping / time / signed account (nonzero balances only; never print keys)
-  dry-run  — compute signals & intended orders; place nothing
-  run      — reconcile + place when TRADER_MODE=live AND TRADER_ENABLED=true
+  probe         — ping / time / signed account (nonzero balances only; never print keys)
+  futures-probe — Demo USD-M futures auth/connectivity (no orders)
+  dry-run       — compute signals & intended orders; place nothing
+  run           — reconcile + place when TRADER_MODE=live AND TRADER_ENABLED=true
 
 Env:
   BINANCE_DEMO_API_KEY / BINANCE_DEMO_API_SECRET
@@ -508,11 +509,16 @@ def main(argv: list[str] | None = None) -> int:
         "mode",
         nargs="?",
         default=os.environ.get("JOB_MODE") or "run",
-        choices=["probe", "run", "dry-run"],
+        choices=["probe", "futures-probe", "run", "dry-run"],
     )
     args = ap.parse_args(argv)
     client = BinanceClient()
     try:
+        if args.mode == "futures-probe":
+            from futures_client import probe_futures
+            result = probe_futures()
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 2
         if args.mode == "probe":
             return cmd_probe(client)
         if args.mode == "dry-run":

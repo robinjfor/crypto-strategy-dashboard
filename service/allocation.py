@@ -11,12 +11,29 @@ from typing import Any
 log = logging.getLogger("trader.allocation")
 
 # Catalog family ids the Cloud Run job can execute today
-RUNNER_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime"})
+RUNNER_FAMILIES = frozenset({
+    "donchian_atr",
+    "donchian_btc_regime",
+    "ema_cross_atr",
+    # donchian_fear_greed: spot path coded, but family stays locked until futures
+    # covers leverage>1 catalog passers (Emily: whole family must be supported).
+})
+# Futures families — added to whitelist only after Demo FAPI probe + tests pass
+FUTURES_FAMILIES = frozenset({
+    "donchian_lev_vol",
+    "donchian_long_short_btc_regime",
+    "donchian_lev",
+})
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
     "donchian": "donchian_atr",
     "donchian_atr": "donchian_atr",
     "donchian_btc_regime": "donchian_btc_regime",
+    "ema_cross_atr": "ema_cross_atr",
+    "donchian_fear_greed": "donchian_fear_greed",
+    "donchian_lev_vol": "donchian_lev_vol",
+    "donchian_long_short_btc_regime": "donchian_long_short_btc_regime",
+    "donchian_lev": "donchian_lev",
 }
 
 DEFAULT_BOOK = 5000.0
@@ -37,29 +54,82 @@ def _require(slot: dict, key: str, errors: list[str], idx: int) -> Any:
     return slot[key]
 
 
+def _check_atr_mode(p: dict, errors: list[str], idx: int) -> None:
+    if "atr_mode" in p and p.get("atr_mode") is not None:
+        mode = str(p.get("atr_mode") or "").strip().lower()
+        if mode not in ("sma", "wilder"):
+            errors.append(
+                f"slots[{idx}].params.atr_mode 必須是 sma 或 wilder，收到：{p.get('atr_mode')!r}"
+            )
+
+
+def _stop_trail_keys(p: dict) -> tuple:
+    """Accept stop_atr_mult/trail_atr_mult or catalog stop_m/trail_m."""
+    stop = p.get("stop_atr_mult", p.get("stop_m"))
+    trail = p.get("trail_atr_mult", p.get("trail_m"))
+    return stop, trail
+
+
 def validate_params(family: str, params: dict | None, errors: list[str], idx: int) -> None:
     p = params if isinstance(params, dict) else {}
     if family == "donchian_atr":
         for k in ("donch_n", "stop_atr_mult", "trail_atr_mult"):
-            if k not in p:
-                errors.append(f"slots[{idx}].params.{k} 必填（donchian_atr）")
+            if k not in p and not (k == "stop_atr_mult" and "stop_m" in p) and not (
+                k == "trail_atr_mult" and "trail_m" in p
+            ):
+                if k == "stop_atr_mult" and p.get("stop_m") is not None:
+                    continue
+                if k == "trail_atr_mult" and p.get("trail_m") is not None:
+                    continue
+                if k in p:
+                    continue
+                # require either naming
+                if k == "donch_n" and "donch_n" not in p:
+                    errors.append(f"slots[{idx}].params.{k} 必填（donchian_atr）")
+                elif k == "stop_atr_mult" and p.get("stop_m") is None and p.get("stop_atr_mult") is None:
+                    errors.append(f"slots[{idx}].params.stop_atr_mult/stop_m 必填（donchian_atr）")
+                elif k == "trail_atr_mult" and p.get("trail_m") is None and p.get("trail_atr_mult") is None:
+                    errors.append(f"slots[{idx}].params.trail_atr_mult/trail_m 必填（donchian_atr）")
         n = p.get("donch_n")
         if n is not None and (not isinstance(n, (int, float)) or n < 5 or n > 200):
             errors.append(f"slots[{idx}].params.donch_n 超出範圍")
-        # atr_mode: optional, default wilder; only sma|wilder allowed
-        if "atr_mode" in p and p.get("atr_mode") is not None:
-            mode = str(p.get("atr_mode") or "").strip().lower()
-            if mode not in ("sma", "wilder"):
-                errors.append(
-                    f"slots[{idx}].params.atr_mode 必須是 sma 或 wilder，收到：{p.get('atr_mode')!r}"
-                )
-        # require_reset_below_hi: optional bool (False = no reset; ARB backtest style)
+        _check_atr_mode(p, errors, idx)
         if "require_reset_below_hi" in p and p.get("require_reset_below_hi") is not None:
             if not isinstance(p.get("require_reset_below_hi"), bool):
                 errors.append(f"slots[{idx}].params.require_reset_below_hi 必須是 boolean")
     elif family == "donchian_btc_regime":
         if "donch_n" not in p:
             errors.append(f"slots[{idx}].params.donch_n 必填（donchian_btc_regime）")
+        _check_atr_mode(p, errors, idx)
+    elif family == "ema_cross_atr":
+        fast = p.get("ema_fast", p.get("fast"))
+        slow = p.get("ema_slow", p.get("slow"))
+        if fast is None or slow is None:
+            errors.append(f"slots[{idx}].params.ema_fast/fast 與 ema_slow/slow 必填（ema_cross_atr）")
+        stop, trail = _stop_trail_keys(p)
+        if stop is None or trail is None:
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（ema_cross_atr）")
+        _check_atr_mode(p, errors, idx)
+    elif family == "donchian_fear_greed":
+        if "donch_n" not in p:
+            errors.append(f"slots[{idx}].params.donch_n 必填（donchian_fear_greed）")
+        stop, trail = _stop_trail_keys(p)
+        if stop is None or trail is None:
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（donchian_fear_greed）")
+        fg = str(p.get("fg_mode") or "none").strip().lower()
+        if fg not in ("none", "gt25", "lt75", "mid25_75", "fggt25", "fglt75", "fgmid25_75", "mid"):
+            errors.append(f"slots[{idx}].params.fg_mode 不支援：{p.get('fg_mode')!r}")
+        lev = float(p.get("leverage") or 1.0)
+        if lev > 1.0 + 1e-9:
+            errors.append(
+                f"slots[{idx}].params.leverage={lev} 需要合約 runner（目前僅支援 leverage<=1 現貨 fear_greed）"
+            )
+        _check_atr_mode(p, errors, idx)
+        if "require_reset_below_hi" in p and p.get("require_reset_below_hi") is not None:
+            if not isinstance(p.get("require_reset_below_hi"), bool):
+                errors.append(f"slots[{idx}].params.require_reset_below_hi 必須是 boolean")
+    elif family in FUTURES_FAMILIES:
+        errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
         errors.append(f"slots[{idx}].family 雲端尚未支援：{family}")
 
@@ -264,23 +334,36 @@ def slot_to_runtime(slot: dict) -> dict:
     params = slot.get("params") or {}
     symbol = str(slot.get("symbol") or "").upper()
     tf = str(slot.get("timeframe") or "").lower()
-    _atr_mode = str(params.get("atr_mode") or "wilder").strip().lower()
+    fam = normalize_family(slot.get("family"))
+    # EMA catalog default atr_mode=sma; others wilder
+    default_atr = "sma" if fam == "ema_cross_atr" else "wilder"
+    _atr_mode = str(params.get("atr_mode") or default_atr).strip().lower()
     if _atr_mode not in ("sma", "wilder"):
         raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{params.get('atr_mode')!r}")
+    stop = params.get("stop_atr_mult", params.get("stop_m"))
+    trail = params.get("trail_atr_mult", params.get("trail_m"))
+    max_hold = params.get("max_hold_bars", params.get("max_hold"))
+    reset = params.get("require_reset_below_hi", params.get("reset_below_hi", False))
     return {
         "id": slot.get("slot"),
         "strategy_id": slot.get("strategy_id"),
-        "family": normalize_family(slot.get("family")),
+        "family": fam,
         "symbol": symbol,
         "tf": tf,
         "donch_n": params.get("donch_n"),
-        "stop_atr_mult": params.get("stop_atr_mult"),
-        "trail_atr_mult": params.get("trail_atr_mult"),
-        "max_hold_bars": params.get("max_hold_bars"),
+        "ema_fast": params.get("ema_fast", params.get("fast")),
+        "ema_slow": params.get("ema_slow", params.get("slow")),
+        "stop_atr_mult": stop,
+        "trail_atr_mult": trail,
+        "max_hold_bars": max_hold,
         "quote_usdt": float(slot.get("notional_usdt") or 0),
-        "require_reset_below_hi": bool(params.get("require_reset_below_hi", False)),
+        "require_reset_below_hi": bool(reset),
         "atr_mode": _atr_mode,
         "btc_regime": bool(params.get("btc_regime", False)),
+        "fg_mode": params.get("fg_mode") or "none",
+        "leverage": float(params.get("leverage") or 1.0),
+        "vol_target": params.get("vol_target"),
+        "kind": params.get("kind") or "long",
         "armed": True,
         "mode": slot.get("order_mode") or ("live" if slot.get("enabled") else "signal_only"),
         "note": slot.get("note"),

@@ -148,3 +148,54 @@ def needs_reset_below_hi(closed_ind: pd.DataFrame, exit_bar_ts: str | None) -> b
         if float(row["Close"]) < float(row["donch_hi"]):
             return False
     return True
+
+
+def add_ema(df: pd.DataFrame, spans: list[int] | tuple[int, ...] = (12, 26)) -> pd.DataFrame:
+    o = df.copy()
+    c = o["Close"].astype(float)
+    for span in spans:
+        o[f"ema_{int(span)}"] = c.ewm(span=int(span), adjust=False).mean()
+    return o
+
+
+def signal_ema(df: pd.DataFrame, fast: int, slow: int) -> pd.Series:
+    """1 when ema_fast > ema_slow else 0 — matches strategy-unified-3y engine.signal_ema."""
+    return (df[f"ema_{int(fast)}"] > df[f"ema_{int(slow)}"]).astype(int)
+
+
+def signal_donchian_state(df: pd.DataFrame) -> pd.Series:
+    """Stateful long Donchian hold (1 in position, 0 flat) — matches engine.signal_donchian."""
+    hold = np.zeros(len(df), dtype=int)
+    state = 0
+    closes = df["Close"].astype(float).values
+    his = df["donch_hi"].astype(float).values
+    los = df["donch_lo"].astype(float).values
+    for i in range(len(df)):
+        if np.isnan(his[i]) or np.isnan(los[i]):
+            hold[i] = state
+            continue
+        if state == 0 and closes[i] > his[i]:
+            state = 1
+        elif state == 1 and closes[i] < los[i]:
+            state = 0
+        hold[i] = state
+    return pd.Series(hold, index=df.index)
+
+
+def signal_donchian_ls(df: pd.DataFrame) -> pd.Series:
+    """+1 long / -1 short stateful — matches high_return ext_engine.signal_donchian_ls."""
+    c = df["Close"].astype(float).values
+    hi = df["donch_hi"].astype(float).values
+    lo = df["donch_lo"].astype(float).values
+    out = np.zeros(len(df), dtype=int)
+    pos = 0
+    for i in range(len(df)):
+        if np.isnan(hi[i]) or np.isnan(lo[i]):
+            out[i] = 0
+            continue
+        if c[i] > hi[i]:
+            pos = 1
+        elif c[i] < lo[i]:
+            pos = -1
+        out[i] = pos
+    return pd.Series(out, index=df.index)
