@@ -609,8 +609,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result.get("ok") else 2
         if args.mode == "futures-order-probe":
             from futures_client import probe_futures_orders
-            result = probe_futures_orders(symbol="OPUSDT")
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+            try:
+                result = probe_futures_orders(symbol="OPUSDT")
+            except Exception as e:  # noqa: BLE001
+                log.exception("futures_order_probe_crash")
+                result = {"ok": False, "error": str(e)[:400], "needs_emily": [str(e)[:400]]}
+            print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
             return 0 if result.get("ok") else 2
         if args.mode == "probe":
             return cmd_probe(client)

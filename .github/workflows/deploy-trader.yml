@@ -224,12 +224,16 @@ jobs:
             --args=main.py,futures-order-probe --wait
           EC=$?
           set -e
-          echo "exit_code=$EC" >> "$GITHUB_OUTPUT"
-          echo "--- futures-order-probe exit=$EC (non-zero means order/test failed; families stay 準備中) ---"
-          # Best-effort: pull last execution status
-          gcloud run jobs executions list --job="${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" --limit=1 \
-            --format='table(name,status.completionTime,status.succeededCount,status.failedCount)' || true
-          exit $EC
+          echo "exit_code=${EC}" >> "$GITHUB_OUTPUT"
+          EXEC=$(gcloud run jobs executions list --job="${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" --limit=1 --format='value(name)')
+          echo "execution=${EXEC}"
+          if [ -n "${EXEC}" ]; then
+            gcloud run jobs executions describe "${EXEC}" --project="${PROJECT}" --region="${REGION}" \
+              --format='yaml(status)' || true
+          fi
+          echo "--- futures-order-probe exit=${EC} ---"
+          exit ${EC}
+
 
       - name: Execute futures-probe once
         if: ${{ inputs.run_futures_probe }}

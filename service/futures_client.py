@@ -353,4 +353,18 @@ def probe_futures_orders(symbol: str = "OPUSDT") -> dict:
             "Demo FAPI order/test 未全過。請確認金鑰有 Futures 交易權限、符號可用，"
             "並檢查 One-way mode（非 Hedge）。失敗家族將維持「準備中」。"
         )
+    # Persist for /status (deploy SA cannot read Cloud Logging)
+    try:
+        from state_store import StateStore
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        store = StateStore()
+        st = store.load()
+        st.setdefault("meta", {})["futures_order_probe"] = {
+            **{k: out[k] for k in ("ok", "base", "symbol", "steps", "needs_emily") if k in out},
+            "at": datetime.now(ZoneInfo("Asia/Taipei")).isoformat(timespec="seconds"),
+        }
+        store.save(st)
+    except Exception as e:  # noqa: BLE001
+        out["steps"].append({"step": "persist_state", "ok": False, "error": str(e)[:160]})
     return out

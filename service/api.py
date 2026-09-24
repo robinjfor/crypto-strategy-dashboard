@@ -582,6 +582,7 @@ def build_status() -> dict:
         "closed_trades": closed_norm,
         "last_job_run_at": meta.get("last_run_at"),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
+        "futures_order_probe": (state.get("meta") or {}).get("futures_order_probe"),
         "last_job_ok": meta.get("last_ok"),
         "last_mode": meta.get("last_mode"),
         "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
