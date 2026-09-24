@@ -23,55 +23,8 @@
       "notional_usdt": 1000,
       "role": "satellite_B",
       "default_status": "approved_live"
-    },
-    {
-      "id": "sat_fet_4h",
-      "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
-      "name": "FET 唐奇安 55（衛星 A）",
-      "symbol": "FET",
-      "timeframe": "4h",
-      "pct": 25,
-      "notional_usdt": 1250,
-      "role": "satellite_A",
-      "default_status": "pending_review"
-    },
-    {
-      "id": "core_slot",
-      "strategy_id": null,
-      "name": "核心槽",
-      "symbol": "—",
-      "timeframe": "—",
-      "pct": 30,
-      "notional_usdt": 1500,
-      "role": "core",
-      "default_status": "cash"
-    },
-    {
-      "id": "cash",
-      "strategy_id": null,
-      "name": "現金緩衝",
-      "symbol": "USDT",
-      "timeframe": "—",
-      "pct": 5,
-      "notional_usdt": 250,
-      "role": "cash",
-      "default_status": "cash"
     }
   ],
-  "signal_only_watch": [
-    {
-      "id": "core_sol",
-      "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
-      "name": "SOL 核心",
-      "symbol": "SOL",
-      "timeframe": "1d"
-    },
-    {
-      "id": "sat_fet_1h",
-      "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
-      "name": "FET 1h（待替換）",
-      "symbol": "FET",
-      "timeframe": "1h"
-    }
-  ]
+  "signal_only_watch": [],
+  "note": "Homepage 目前配置 is computed live from /status approved order_mode=live; rows here are name hints only."
 }

@@ -63,10 +63,60 @@
 
   function targetPctFor(pl) {
     if (pl && pl.target_pct != null && pl.target_pct !== "") return Number(pl.target_pct);
+    if (pl && pl.target_notional_usdt != null && bookUsdt() > 0) {
+      return (Number(pl.target_notional_usdt) / bookUsdt()) * 100;
+    }
+    var sid = pl && pl.strategy_id;
+    var live = approvedLiveSlots();
+    for (var i = 0; i < live.length; i++) {
+      if (sid && live[i].strategy_id === sid) {
+        var n = Number(live[i].notional_usdt || 0);
+        return bookUsdt() > 0 ? (n / bookUsdt()) * 100 : null;
+      }
+      if (pl.slot && live[i].slot === pl.slot) {
+        var n2 = Number(live[i].notional_usdt || 0);
+        return bookUsdt() > 0 ? (n2 / bookUsdt()) * 100 : null;
+      }
+    }
     var asset = String((pl && (pl.asset || pl.symbol)) || "").replace("USDT", "").toUpperCase();
     if (TARGET_PCT[asset] != null) return TARGET_PCT[asset];
     return null;
   }
+
+
+  function bookUsdt() {
+    return Number((allocCfg && allocCfg.book_usdt) || 5000);
+  }
+
+  /** Approved slots that are actually deployed (order_mode=live). Homepage source of truth. */
+  function approvedLiveSlots() {
+    if (!cloud) return [];
+    var list = cloud.approved || cloud.approved_list || [];
+    if (!Array.isArray(list) && list && typeof list === "object") {
+      list = Object.keys(list).map(function (k) {
+        return Object.assign({ strategy_id: k }, list[k]);
+      });
+    }
+    return (list || []).filter(function (a) {
+      if (!a) return false;
+      if (a.approved === false) return false;
+      var mode = a.order_mode || a.mode || "live";
+      return mode === "live";
+    });
+  }
+
+  function armedFor(slotId, strategyId) {
+    var armed = (cloud && (cloud.armed_slots || cloud.slots)) || [];
+    for (var i = 0; i < armed.length; i++) {
+      var a = armed[i];
+      if ((slotId && (a.slot === slotId || a.id === slotId)) ||
+          (strategyId && a.strategy_id === strategyId)) {
+        return a;
+      }
+    }
+    return null;
+  }
+
 
   function esc(s) {
     return String(s == null ? "" : s)
@@ -285,9 +335,7 @@
     var openN = openPositions().filter(function (p) {
       return !p.status || p.status === "FILLED" || p.status === "OPEN";
     }).length;
-    pieParts = [];
-    if (usdt != null && usdt > 0) pieParts.push({ label: "USDT", value: usdt });
-    if (usdc != null && usdc > 0) pieParts.push({ label: "USDC", value: usdc });
+    // pieParts filled by renderAllocation (live-approved notionals + cash)
     return '<section class="section" id="sec-account">' +
       '<div class="section-head"><h2>帳戶總覽</h2><span class="hint">' +
       esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") + '</span></div>' +
@@ -298,7 +346,7 @@
       '<div class="kpi"><div class="label">USDT 側權益</div><div class="value">' + num(equity, 2) + '</div><div class="sublabel">雲端即時</div></div>' +
       '<div class="kpi"><div class="label">實際持倉數</div><div class="value">' + num(openN, 0) + '</div><div class="sublabel">' +
       (openN === 0 ? "目前空倉（全現金）" : "幣種倉") + '</div></div>' +
-      '</div><div class="kpi kpi-pie"><div class="label">現金結構</div><div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div></div></div></section>';
+      '</div><div class="kpi kpi-pie"><div class="label">目前配置</div><div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div></div></div></section>';
   }
 
   function tradeRow(r) {
@@ -381,7 +429,7 @@
     if (cloud && Array.isArray(cloud.planned_positions)) {
       return cloud.planned_positions.filter(function (pl) {
         var om = pl.order_mode || pl.mode || "";
-        if (om === "signal_only" || pl.approved === false) return false;
+        if (om !== "live" || pl.approved === false) return false;
         return pl.approved === true || om === "live";
       }).map(function (pl) {
         var copy = Object.assign({}, pl);
@@ -402,7 +450,8 @@
     }
     if (cloud && Array.isArray(cloud.armed_slots)) {
       return cloud.armed_slots.filter(function (a) {
-        return a.approved === true && a.order_mode !== "signal_only" && a.mode !== "signal_only";
+        var om = a.order_mode || a.mode || "";
+        return a.approved === true && om === "live";
       }).map(function (a) {
         return {
           asset: String(a.symbol || "").replace(/USDT$/i, ""),
@@ -519,67 +568,89 @@
   }
 
   function renderAllocation() {
-    var cfg = allocCfg || { book_usdt: 5000, rows: [], signal_only_watch: [] };
-    var rows = cfg.rows || [];
-    // pie parts from allocation plan
+    var book = bookUsdt();
+    var live = approvedLiveSlots();
+    var rows = live.map(function (a) {
+      var src = armedFor(a.slot, a.strategy_id) || {};
+      var notion = Number(a.notional_usdt != null ? a.notional_usdt : src.quote_usdt);
+      if (!(notion > 0)) notion = 0;
+      var pct = book > 0 ? (notion / book) * 100 : 0;
+      var sym = String(a.symbol || src.symbol || "").replace(/USDT$/i, "") || "—";
+      var tf = a.tf || src.tf || "—";
+      var name = a.name || a.label_zh || a.label || null;
+      if (!name || name.indexOf("已核准") >= 0 || name.indexOf("上線") >= 0) {
+        name = sym + (tf && tf !== "—" ? (" · " + tf) : "");
+      }
+      // Optional friendly name from static book rows (label only; pct comes from /status)
+      if (allocCfg && Array.isArray(allocCfg.rows)) {
+        for (var bi = 0; bi < allocCfg.rows.length; bi++) {
+          var br = allocCfg.rows[bi];
+          if (br.strategy_id && br.strategy_id === a.strategy_id && br.name) { name = br.name; break; }
+          if (br.id && br.id === a.slot && br.name) { name = br.name; break; }
+        }
+      }
+      return {
+        strategy_id: a.strategy_id,
+        slot: a.slot || src.slot,
+        name: name,
+        symbol: sym,
+        timeframe: tf,
+        pct: pct,
+        notional_usdt: notion,
+        signal: slotSignalFromCloud(a.slot || src.slot, a.strategy_id),
+        score: scoreFor(a.strategy_id)
+      };
+    });
+    var allocated = rows.reduce(function (s, r) { return s + (Number(r.notional_usdt) || 0); }, 0);
+    var cashNotion = Math.max(0, book - allocated);
+    var cashPct = book > 0 ? (cashNotion / book) * 100 : 100;
+
     pieParts = rows.map(function (r) {
-      return { label: r.name || r.id, value: Number(r.notional_usdt) || 0 };
+      return { label: r.symbol || r.name, value: Number(r.notional_usdt) || 0 };
     }).filter(function (p) { return p.value > 0; });
+    if (cashNotion > 0) pieParts.push({ label: "現金", value: cashNotion });
 
     var body = rows.map(function (r) {
-      var sid = r.strategy_id;
-      var status = approvalLabelFor(r);
-      var badgeCls = status === "已核准" ? "ok" : (status === "待審核" ? "warn" : (status.indexOf("只算") >= 0 ? "muted" : "muted"));
-      var sc = sid ? scoreFor(sid) : null;
-      var sig = (r.default_status === "cash") ? "—" : slotSignalFromCloud(r.id, sid);
       return "<tr>" +
         "<td><strong>" + esc(r.name) + "</strong>" +
-        (sid ? '<div class="dim mono">' + esc(sid) + "</div>" : "") + "</td>" +
+        (r.strategy_id ? '<div class="dim mono">' + esc(r.strategy_id) + "</div>" : "") + "</td>" +
         "<td>" + esc(r.symbol) + " / " + esc(r.timeframe) + "</td>" +
-        '<td class="num">' + esc(String(r.pct)) + "%</td>" +
+        '<td class="num">' + num(r.pct, 0) + "%</td>" +
         '<td class="num">' + num(r.notional_usdt, 0) + "</td>" +
-        '<td class="num">' + (sc != null ? num(sc, 2) : "—") + "</td>" +
-        '<td><span class="badge ' + badgeCls + '">' + esc(status) + "</span></td>" +
-        "<td>" + esc(sig) + "</td>" +
+        '<td class="num">' + (r.score != null ? num(r.score, 2) : "—") + "</td>" +
+        '<td><span class="badge ok">已核准 · 上線</span></td>' +
+        "<td>" + esc(r.signal) + "</td>" +
         "</tr>";
     }).join("");
+    body += "<tr>" +
+      "<td><strong>現金</strong><div class=\"dim\">未配置餘額</div></td>" +
+      "<td>USDT / —</td>" +
+      '<td class="num">' + num(cashPct, 0) + "%</td>" +
+      '<td class="num">' + num(cashNotion, 0) + "</td>" +
+      '<td class="num">—</td>' +
+      '<td><span class="badge muted">現金</span></td>' +
+      "<td>—</td></tr>";
 
-    var watch = (cfg.signal_only_watch || []).map(function (w) {
-      var sig = slotSignalFromCloud(w.id, w.strategy_id);
-      var sc = scoreFor(w.strategy_id);
-      return "<tr>" +
-        "<td>" + esc(w.name) + '<div class="dim mono">' + esc(w.strategy_id) + "</div></td>" +
-        "<td>" + esc(w.symbol) + " / " + esc(w.timeframe) + "</td>" +
-        '<td class="num">' + (sc != null ? num(sc, 2) : "—") + "</td>" +
-        '<td><span class="badge warn">只算訊號（未核准）</span></td>' +
-        "<td>" + esc(sig) + "</td></tr>";
-    }).join("");
+    if (!rows.length) {
+      body = '<tr><td colspan="7" class="empty-row">尚無已上線核准策略（請至策略評分核准）</td></tr>' +
+        "<tr>" +
+        "<td><strong>現金</strong></td><td>USDT / —</td>" +
+        '<td class="num">100%</td>' +
+        '<td class="num">' + num(book, 0) + "</td>" +
+        '<td class="num">—</td><td><span class="badge muted">現金</span></td><td>—</td></tr>';
+      pieParts = [{ label: "現金", value: book }];
+    }
 
     return '<section class="section" id="sec-alloc">' +
       '<div class="section-head"><h2>目前配置</h2><span class="hint">基準 ' +
-      num(cfg.book_usdt || 5000, 0) + " USDT 帳本 · 核准狀態來自雲端</span></div>" +
+      num(book, 0) + " USDT · 僅已核准且 order_mode=live（核准／撤銷後自動更新）</span></div>" +
       '<div class="card"><div class="table-scroll"><table class="data alloc-book-table">' +
       "<thead><tr><th>策略</th><th>幣別／週期</th><th class=\"num\">配置%</th><th class=\"num\">名義 USDT</th><th class=\"num\">分數</th><th>狀態</th><th>目前訊號</th></tr></thead>" +
-      "<tbody>" + body + "</tbody></table></div>" +
-      (watch
-        ? '<div class="alloc-signal-only"><h3>只算訊號（未核准）</h3><div class="table-scroll"><table class="data">' +
-          "<thead><tr><th>策略</th><th>幣別／週期</th><th class=\"num\">分數</th><th>狀態</th><th>目前訊號</th></tr></thead>" +
-          "<tbody>" + watch + "</tbody></table></div></div>"
-        : "") +
-      "</div></section>";
+      "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
   function renderStrategies() {
-    var approved = [];
-    if (cloud) {
-      var list = cloud.approved || [];
-      if (!Array.isArray(list) && list && typeof list === "object") {
-        list = Object.keys(list).map(function (k) { return Object.assign({ strategy_id: k }, list[k]); });
-      }
-      approved = (list || []).filter(function (a) {
-        return a && a.mode !== "signal_only" && a.approved !== false;
-      });
-    }
+    var approved = approvedLiveSlots();
     var armed = (cloud && (cloud.armed_slots || cloud.slots)) || [];
     function enrich(a) {
       var slot = null;
@@ -613,7 +684,7 @@
       ? approved.map(enrich).join("")
       : '<div class="empty-state">尚無已核准策略</div>';
     return '<section class="section" id="sec-strategies">' +
-      '<div class="section-head"><h2>策略列表</h2><span class="hint">已核准／上線 ' + approved.length + "</span></div>" +
+      '<div class="section-head"><h2>策略列表</h2><span class="hint">已上線（live） ' + approved.length + " · 其餘見策略評分</span></div>" +
       '<div class="strategy-grid">' + cards + "</div></section>";
   }
 
