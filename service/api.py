@@ -14,7 +14,7 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY
 from state_store import StateStore
 from strategy import now_iso_taipei
 
@@ -258,6 +258,14 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "distance": dist,
                 "suggested_stop": sig.get("suggested_stop") or sig.get("stop"),
                 "status_zh": status_zh(sig.get("status") or sig.get("reason") or sig.get("action") or (meta.get("last_signal") or {}).get("status")),
+                "strategy_id": slot.get("strategy_id"),
+                "approved": is_approved_live(state, slot.get("strategy_id") or ""),
+                "order_mode": approval_mode(state, slot.get("strategy_id") or ""),
+                "label_zh": (
+                    LABEL_SIGNAL_ONLY
+                    if approval_mode(state, slot.get("strategy_id") or "") == "signal_only"
+                    else ("已核准 · 上線待命" if is_approved_live(state, slot.get("strategy_id") or "") else "未核准")
+                ),
             }
         )
     sol = by_id.get("core_sol") or {}
@@ -314,8 +322,11 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
         {
             "slot": "core_sol",
             "symbol": "SOLUSDT",
-            "mode": approval_mode(state, SOL_SLOT.get("strategy_id") or ""),
-            "label_zh": "訊號監看（未核准下單）" if approval_mode(state, SOL_SLOT.get("strategy_id") or "") == "signal_only" else "已核准",
+            "strategy_id": SOL_SLOT.get("strategy_id"),
+            "approved": False,
+            "order_mode": "signal_only",
+            "mode": "signal_only",
+            "label_zh": LABEL_SIGNAL_ONLY,
             "tf": "1d",
             "armed": True,
             "variant": SOL_SLOT.get("variant") or "donchian20_atr_btcRegime",
@@ -356,7 +367,10 @@ def _planned_from_armed(armed: list) -> list:
                 "donch_n": 55 if "fet" in str(a.get("slot")) else 20,
                 "target_notional_usdt": a.get("quote_usdt"),
                 "ui_status": status,
-                "status_label": status_zh(a.get("status") or a.get("reason") or status),
+                "status_label": (LABEL_SIGNAL_ONLY if a.get("order_mode") == "signal_only" or a.get("mode") == "signal_only" else status_zh(a.get("status") or a.get("reason") or status)),
+                "approved": a.get("approved"),
+                "order_mode": a.get("order_mode") or a.get("mode") or "live",
+                "label_zh": a.get("label_zh"),
                 "status_code": a.get("status") or a.get("reason") or status,
                 "target_pct": a.get("target_pct"),
                 "entry_rule": a.get("entry_condition"),
@@ -371,65 +385,81 @@ def _planned_from_armed(armed: list) -> list:
 
 
 
+
 def _ensure_approved(state: dict) -> dict:
-    """Seed approved map; always enforce SOL signal_only until 資金控管 lifts it."""
+    """Seed OP/DOT as live-approved; keep FET/SOL out of approved (signal_only monitor)."""
     approved = state.get("approved")
-    if not isinstance(approved, dict) or not approved:
+    if not isinstance(approved, dict):
         approved = {}
+    dirty = False
+    # Seed missing live defaults
+    if not approved:
         for sid, meta in DEFAULT_APPROVED.items():
-            approved[sid] = {**meta, "approved_at": now_iso_taipei()}
-        state["approved"] = approved
+            approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
+        dirty = True
+    else:
+        for sid, meta in DEFAULT_APPROVED.items():
+            if sid not in approved:
+                approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
+                dirty = True
+            else:
+                # Force live for OP/DOT
+                cur = approved[sid]
+                if cur.get("mode") == "signal_only" or cur.get("approved") is False:
+                    approved[sid] = {**meta, **cur, "mode": "live", "approved": True, "label_zh": meta.get("label_zh")}
+                    dirty = True
+    # Remove / demote FET & SOL from approved list (ruling: not approved)
+    monitored = state.get("signal_only") if isinstance(state.get("signal_only"), dict) else {}
+    for sid, meta in DEFAULT_SIGNAL_ONLY.items():
+        if sid in approved:
+            approved.pop(sid, None)
+            dirty = True
+        if sid not in monitored:
+            monitored[sid] = {**meta, "updated_at": now_iso_taipei()}
+            dirty = True
+        else:
+            monitored[sid] = {**meta, **monitored[sid], "mode": "signal_only", "approved": False, "label_zh": LABEL_SIGNAL_ONLY}
+    state["approved"] = approved
+    state["signal_only"] = monitored
+    if dirty:
         state["_seeded_approved_dirty"] = True
-    # Enforce SOL signal_only on every load (idempotent migration)
-    sol_id = SOL_SLOT.get("strategy_id") or "donchian20_atr_btcRegime__SOL__1d"
-    seed = DEFAULT_APPROVED.get(sol_id) or {}
-    cur = approved.get(sol_id) or {}
-    if cur.get("mode") != "signal_only" or not cur:
-        approved[sol_id] = {
-            **seed,
-            **cur,
-            "mode": "signal_only",
-            "label_zh": "訊號監看（未核准下單）",
-            "slot": "core_sol",
-            "notional_usdt": cur.get("notional_usdt") or seed.get("notional_usdt") or 1500,
-            "approved_at": cur.get("approved_at") or now_iso_taipei(),
-        }
-        state["approved"] = approved
-        state["_seeded_approved_dirty"] = True
-    # Ensure FET gate_fail flags present (still live)
-    fet_id = next((k for k in DEFAULT_APPROVED if "FET" in k), "donchian55_s2.0_t3.0__FET__1h")
-    if fet_id in approved:
-        fet_seed = DEFAULT_APPROVED.get(fet_id) or {}
-        if approved[fet_id].get("gate_pass") is None:
-            approved[fet_id] = {**fet_seed, **approved[fet_id], "mode": approved[fet_id].get("mode") or "live"}
-            state["approved"] = approved
-            state["_seeded_approved_dirty"] = True
-    return state["approved"]
+    return approved
+
+
 
 
 def _approved_public(state: dict | None = None) -> dict:
     store = StateStore()
     st = state if state is not None else store.load()
     approved = _ensure_approved(st)
-    # Persist seed if we just created it
     if state is None and st.get("_seeded_approved_dirty"):
-        pass
-    # Save seed if newly created (generation-safe mutate)
-    if not state:
         def mut(s):
             _ensure_approved(s)
+            s.pop("_seeded_approved_dirty", None)
             return s
         try:
-            # Only write if missing
             cur = store.load()
-            if not isinstance(cur.get("approved"), dict) or not cur.get("approved"):
-                store.mutate(mut)
-                st = store.load()
-                approved = st.get("approved") or approved
+            _ensure_approved(cur)
+            # Always persist migration once
+            store.mutate(lambda s: (_ensure_approved(s) or True) and (s.pop("_seeded_approved_dirty", None) or True) or s)
+            # simpler persist:
+        except Exception:
+            pass
+        try:
+            def mut2(s):
+                _ensure_approved(s)
+                s.pop("_seeded_approved_dirty", None)
+                return s
+            store.mutate(mut2)
+            st = store.load()
+            approved = st.get("approved") or approved
         except Exception as e:  # noqa: BLE001
             log.warning("approved_seed_save_skip err=%s", e)
+
     out = []
     for sid, meta in (approved or {}).items():
+        if str(meta.get("mode") or "live") == "signal_only" or meta.get("approved") is False:
+            continue
         slot = slot_by_strategy_id(sid) or {}
         out.append({
             "strategy_id": sid,
@@ -438,14 +468,29 @@ def _approved_public(state: dict | None = None) -> dict:
             "family": slot.get("family"),
             "notional_usdt": meta.get("notional_usdt") or slot.get("quote_usdt") or 1000,
             "approved_at": meta.get("approved_at"),
-            "mode": meta.get("mode") or "live",
+            "approved": True,
+            "mode": "live",
+            "order_mode": "live",
+            "label_zh": meta.get("label_zh") or "已核准 · 上線待命",
+        })
+    sig_only = []
+    mon = st.get("signal_only") if isinstance(st.get("signal_only"), dict) else dict(DEFAULT_SIGNAL_ONLY)
+    for sid, meta in mon.items():
+        slot = slot_by_strategy_id(sid) or {}
+        sig_only.append({
+            "strategy_id": sid,
+            "slot": meta.get("slot") or slot.get("id"),
+            "symbol": slot.get("symbol"),
+            "family": slot.get("family"),
+            "approved": False,
+            "mode": "signal_only",
+            "order_mode": "signal_only",
+            "label_zh": LABEL_SIGNAL_ONLY,
             "gate_pass": meta.get("gate_pass"),
             "gate_fail_reasons": meta.get("gate_fail_reasons") or [],
-            "label_zh": meta.get("label_zh") or ("訊號監看（未核准下單）" if meta.get("mode") == "signal_only" else "已核准 · 上線待命"),
-            "status": meta.get("status") or "live_standby",
-            "label_zh": "已核准 · 上線待命",
         })
-    return {"ok": True, "approved": out, "count": len(out)}
+    return {"ok": True, "approved": out, "signal_only": sig_only, "count": len(out)}
+
 
 
 def build_status() -> dict:
@@ -517,6 +562,7 @@ def build_status() -> dict:
         "source_label": "Binance Demo · Cloud Run",
         "planned_positions": _planned_from_armed(armed),
         "approved": _approved_public(state).get("approved"),
+        "signal_only": _approved_public(state).get("signal_only"),
         "satellite_strategies": [],
         "strategies": [],
     }

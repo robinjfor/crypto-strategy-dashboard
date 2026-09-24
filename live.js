@@ -346,7 +346,7 @@
           tf: a.tf,
           target_notional_usdt: a.quote_usdt,
           ui_status: a.status || a.action || "ARMED",
-          status_label: a.mode === "signal_only" ? (a.label_zh || "訊號監看（未核准下單）") : (a.status_zh || statusZh(a.status || a.reason || a.action)),
+          status_label: a.mode === "signal_only" ? (a.label_zh || "只算訊號（未核准）") : (a.status_zh || statusZh(a.status || a.reason || a.action)),
           mode: a.mode,
           label_zh: a.label_zh,
           status_code: a.status || a.reason || a.action,
@@ -386,7 +386,7 @@
           '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
           "<td>" + esc(
             (pl.mode === "signal_only" || pl.label_zh && String(pl.label_zh).indexOf("監看") >= 0)
-              ? (pl.label_zh || "訊號監看（未核准下單）")
+              ? (pl.label_zh || "只算訊號（未核准）")
               : (pl.status_label || statusZh(pl.status_code || pl.ui_status) || "—")
           ) + "</td>" +
           "<td>" + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n || "—")) + "</td>" +

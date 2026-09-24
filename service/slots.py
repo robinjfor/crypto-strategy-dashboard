@@ -76,37 +76,51 @@ SOL_SLOT = {
 # Families the Cloud Run job can actually execute today
 SUPPORTED_FAMILIES = frozenset({"donchian", "donchian_btc_regime"})
 
+# Live-approved (may place Demo orders). OP + DOT only per 資金控管 ruling.
 DEFAULT_APPROVED: dict[str, dict] = {
-    "donchian55_s2.0_t3.0__FET__1h": {
-        "slot": "sat_fet_1h",
-        "notional_usdt": 1250.0,
-        "seeded": True,
-        "mode": "live",
-        "gate_pass": False,
-        "gate_fail_reasons": ["maxdd worse than -45% (3y unified scores)"],
-        "label_zh": "已核准（門檻未過 · 現役維持）",
-    },
     "donchian20_s1.5_t1.5__OP__4h": {
         "slot": "sat_op_4h",
         "notional_usdt": 1000.0,
         "seeded": True,
+        "mode": "live",
+        "approved": True,
+        "label_zh": "已核准 · 上線待命",
     },
     "donchian20_s1.5_t1.5__DOT__4h": {
         "slot": "sat_dot_4h",
         "notional_usdt": 1000.0,
         "seeded": True,
+        "mode": "live",
+        "approved": True,
+        "label_zh": "已核准 · 上線待命",
+    },
+}
+
+# Monitored but NOT approved — signals only, never place orders.
+DEFAULT_SIGNAL_ONLY: dict[str, dict] = {
+    "donchian55_s2.0_t3.0__FET__1h": {
+        "slot": "sat_fet_1h",
+        "notional_usdt": 1250.0,
+        "seeded": True,
+        "mode": "signal_only",
+        "approved": False,
+        "label_zh": "只算訊號（未核准）",
+        "gate_pass": False,
+        "gate_fail_reasons": ["maxdd worse than -45% (3y unified scores)"],
     },
     "donchian20_atr_btcRegime__SOL__1d": {
         "slot": "core_sol",
         "notional_usdt": 1500.0,
         "seeded": True,
-        # 資金控管：SOL 僅訊號監看，禁止 Demo 實單，直到另行核准
         "mode": "signal_only",
-        "label_zh": "訊號監看（未核准下單）",
+        "approved": False,
+        "label_zh": "只算訊號（未核准）",
         "gate_pass": False,
         "gate_fail_reasons": ["ret_3y <= bh_ret_3y (3y unified scores)"],
     },
 }
+
+LABEL_SIGNAL_ONLY = "只算訊號（未核准）"
 
 
 def slot_by_strategy_id(strategy_id: str) -> dict | None:
@@ -128,11 +142,25 @@ def strategy_id_for_slot(slot_id: str) -> str | None:
 
 
 def approval_mode(state: dict | None, strategy_id: str) -> str:
-    """Return live | signal_only | none for a strategy_id."""
-    approved = (state or {}).get("approved") if state else None
-    if not isinstance(approved, dict) or not approved:
-        approved = DEFAULT_APPROVED
-    meta = approved.get(strategy_id) or {}
-    if not meta:
+    """Return live | signal_only | none."""
+    if not strategy_id:
         return "none"
-    return str(meta.get("mode") or "live")
+    approved = (state or {}).get("approved") if state else None
+    if not isinstance(approved, dict):
+        approved = {}
+    if strategy_id in approved:
+        meta = approved[strategy_id] or {}
+        mode = str(meta.get("mode") or "live")
+        if mode == "signal_only" or meta.get("approved") is False:
+            return "signal_only"
+        return "live"
+    # Defaults
+    if strategy_id in DEFAULT_APPROVED:
+        return "live"
+    if strategy_id in DEFAULT_SIGNAL_ONLY:
+        return "signal_only"
+    return "none"
+
+
+def is_approved_live(state: dict | None, strategy_id: str) -> bool:
+    return approval_mode(state, strategy_id) == "live"

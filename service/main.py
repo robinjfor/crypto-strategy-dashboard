@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 
 from binance_client import BinanceClient
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
-from slots import MAX_NOTIONAL_USDT, SLOTS, strategy_id_for_slot, DEFAULT_APPROVED, approval_mode
+from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei
 from sol_core.signal import compute_signal as sol_compute_signal, expectation_heartbeat, in_daily_window
@@ -101,11 +101,20 @@ def cmd_probe(client: BinanceClient) -> int:
 
 
 def _approved_ids(state: dict) -> set[str]:
+    """Strategy IDs allowed to place Demo orders (mode=live only)."""
     approved = state.get("approved")
     if not isinstance(approved, dict) or not approved:
-        # Seed in-memory (API persists on first /approved hit)
         return set(DEFAULT_APPROVED.keys())
-    return set(approved.keys())
+    out = set()
+    for sid, meta in approved.items():
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("approved") is False:
+            continue
+        if str(meta.get("mode") or "live") == "signal_only":
+            continue
+        out.add(sid)
+    return out
 
 
 def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[bool, str]:
@@ -337,6 +346,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     if paused:
         log.info("paused=True — managing exits/stops only; no new entries")
     log.info("approved_ids=%s", sorted(_approved_ids(state)))
+    log.info("signal_only_ids=%s", sorted(DEFAULT_SIGNAL_ONLY.keys()))
 
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
     signals = evaluate_all(client, state)
@@ -397,9 +407,9 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         if sol_mode == "signal_only":
             # Compute + log only; never place Demo orders
             sol_sig["mode"] = "signal_only"
-            sol_sig["label_zh"] = "訊號監看（未核准下單）"
+            sol_sig["label_zh"] = "只算訊號（未核准）"
             if sol_sig.get("would_order"):
-                log.info("sol_signal_only_suppress_order would_order=True status=%s", sol_sig.get("status"))
+                log.info("sol_signal_only_no_order would_order=True status=%s", sol_sig.get("status"))
             sol_sig["would_order"] = False
             sol_sig = apply_sol_entry(client, state, sol_sig, live=live, allow_entries=False)
             sol_sig["mode"] = "signal_only"
