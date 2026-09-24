@@ -21,6 +21,10 @@ on:
         description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
         default: true
+      backfill_slot:
+        description: "Optional: set BACKFILL_SLOT for the post-deploy job run (e.g. sat_fet_4h)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -263,8 +267,15 @@ jobs:
         run: |
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          BF="${{ inputs.backfill_slot }}"
+          EXTRA=()
+          if [ -n "${BF}" ]; then
+            EXTRA+=(--update-env-vars="BACKFILL_SLOT=${BF},BACKFILL_MAX_CHASE_PCT=3")
+            echo "Backfill enabled for slot=${BF}"
+          fi
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
+            "${EXTRA[@]}" \
             --wait
           echo "--- recent job logs ---"
           gcloud logging read \

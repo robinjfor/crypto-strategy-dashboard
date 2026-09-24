@@ -557,12 +557,16 @@ def _planned_from_armed(armed: list) -> list:
 
 
 def _ensure_approved(state: dict) -> dict:
-    """Seed OP/DOT as live-approved; keep FET/SOL out of approved (signal_only monitor)."""
+    """Seed DEFAULT_APPROVED; sync signal_only with family+allocation live gate.
+
+    Strategies whose family is approved and allocation slot enabled are LIVE —
+    do NOT demote them into signal_only just because they appear in
+    DEFAULT_SIGNAL_ONLY (that list is only the pre-approval default).
+    """
     approved = state.get("approved")
     if not isinstance(approved, dict):
         approved = {}
     dirty = False
-    # Seed missing live defaults
     if not approved:
         for sid, meta in DEFAULT_APPROVED.items():
             approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
@@ -573,14 +577,31 @@ def _ensure_approved(state: dict) -> dict:
                 approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
                 dirty = True
             else:
-                # Force live for OP/DOT
                 cur = approved[sid]
                 if cur.get("mode") == "signal_only" or cur.get("approved") is False:
                     approved[sid] = {**meta, **cur, "mode": "live", "approved": True, "label_zh": meta.get("label_zh")}
                     dirty = True
-    # Remove / demote FET & SOL from approved list (ruling: not approved)
     monitored = state.get("signal_only") if isinstance(state.get("signal_only"), dict) else {}
     for sid, meta in DEFAULT_SIGNAL_ONLY.items():
+        # Family+allocation live → promote out of signal_only
+        if is_approved_live(state, sid):
+            if sid in monitored:
+                monitored.pop(sid, None)
+                dirty = True
+            if sid not in approved:
+                slot = slot_by_strategy_id(sid) or {}
+                approved[sid] = {
+                    **meta,
+                    "approved": True,
+                    "mode": "live",
+                    "approved_at": now_iso_taipei(),
+                    "label_zh": "已核准 · 上線待命",
+                    "slot": meta.get("slot") or slot.get("id"),
+                    "family": slot.get("family") or meta.get("family"),
+                    "notional_usdt": meta.get("notional_usdt") or slot.get("quote_usdt"),
+                }
+                dirty = True
+            continue
         if sid in approved:
             approved.pop(sid, None)
             dirty = True
@@ -718,6 +739,8 @@ def build_status() -> dict:
         "futures_order_probe": (state.get("meta") or {}).get("futures_order_probe"),
         "last_job_ok": meta.get("last_ok"),
         "last_mode": meta.get("last_mode"),
+        "last_decisions": meta.get("last_decisions") or [],
+        "last_decisions_at": meta.get("last_decisions_at"),
         "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
         "sol_expectation_latest": (state.get("expectation_log") or [None])[-1],
         "feed_updated_at": feed.get("updated_at"),

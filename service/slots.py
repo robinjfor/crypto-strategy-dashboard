@@ -214,11 +214,39 @@ def strategy_id_for_slot(slot_id: str) -> str | None:
     return None
 
 
+def _allocation_enabled_for(strategy_id: str, state: dict | None) -> bool | None:
+    """True/False if allocation mentions strategy; None if unknown.
+
+    Prefer resolve_allocation() (repo/GCS source of truth) over ephemeral
+    state.allocation, which the API often leaves unset — that previously
+    let DEFAULT_SIGNAL_ONLY shadow family-approved live slots (e.g. FET 4h).
+    """
+    slots_lists: list[list] = []
+    try:
+        from allocation import resolve_allocation
+        doc, _src = resolve_allocation()
+        if isinstance(doc, dict) and doc.get("slots"):
+            slots_lists.append(list(doc.get("slots") or []))
+    except Exception:
+        pass
+    alloc = (state or {}).get("allocation") if state else None
+    if isinstance(alloc, dict) and alloc.get("slots"):
+        slots_lists.append(list(alloc.get("slots") or []))
+    for slots in slots_lists:
+        for s in slots:
+            if s.get("strategy_id") == strategy_id:
+                return bool(s.get("enabled"))
+    return None
+
+
 def approval_mode(state: dict | None, strategy_id: str) -> str:
     """Return live | signal_only | none.
 
-    Family-level model: live only if strategy's family is in approved_families
-    AND (when allocation is present) the matching slot is enabled.
+    Family-level model: live if strategy's family is in approved_families
+    AND the matching allocation slot is enabled (when listed).
+    DEFAULT_SIGNAL_ONLY is only a fallback when the family is NOT approved
+    (or allocation explicitly disables the slot) — it must not override an
+    approved family + enabled allocation row.
     """
     if not strategy_id:
         return "none"
@@ -226,37 +254,33 @@ def approval_mode(state: dict | None, strategy_id: str) -> str:
     family = (slot or {}).get("family") or ""
     if family == "donchian":
         family = "donchian_atr"
-    # Prefer family approval list
     try:
         fams = ensure_approved_families(state or {})
     except Exception:
         fams = list(DEFAULT_APPROVED_FAMILIES)
     if family and family not in fams:
-        # still monitored as signal_only if known
         if strategy_id in DEFAULT_SIGNAL_ONLY or strategy_id in DEFAULT_APPROVED or slot:
             return "signal_only"
         return "none"
-    # Family approved — check per-strategy overrides / allocation enablement
+    # Explicit per-strategy demotion in state.approved (rare)
     approved = (state or {}).get("approved") if state else None
     if isinstance(approved, dict) and strategy_id in approved:
         meta = approved[strategy_id] or {}
         mode = str(meta.get("mode") or "live")
         if mode == "signal_only" or meta.get("approved") is False:
             return "signal_only"
-    # Allocation gate (optional): if allocation lists this strategy disabled → signal_only
-    alloc = (state or {}).get("allocation") if state else None
-    if isinstance(alloc, dict):
-        for s in alloc.get("slots") or []:
-            if s.get("strategy_id") == strategy_id:
-                if not s.get("enabled"):
-                    return "signal_only"
-                return "live"
+    enabled = _allocation_enabled_for(strategy_id, state)
+    if enabled is False:
+        return "signal_only"
+    if enabled is True:
+        return "live"
     if strategy_id in DEFAULT_APPROVED:
+        return "live"
+    # Family approved + known runnable slot → live (DEFAULT_SIGNAL_ONLY must not win)
+    if slot and family in fams:
         return "live"
     if strategy_id in DEFAULT_SIGNAL_ONLY:
         return "signal_only"
-    if slot and family in fams:
-        return "live"
     return "none"
 
 

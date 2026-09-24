@@ -177,6 +177,37 @@ def slot_meta_venue(sig: dict) -> str:
         return "futures"
     return "spot"
 
+
+def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dict | None:
+    """Re-enter a missed breakout only if mark still above trigger and within chase cap."""
+    if sig.get("action") != "enter" and sig.get("reason") not in ("signal_only", "not_approved", None):
+        # Allow re-issue when prior run skipped for approval bug but signal still enter-shaped
+        pass
+    close = float(sig.get("close") or sig.get("mark") or 0)
+    trigger = float(sig.get("donch_hi") or sig.get("trigger") or 0)
+    stop = float(sig.get("suggested_stop") or 0)
+    if not close or not trigger:
+        return {"ok": False, "skip": "missing_close_or_trigger"}
+    try:
+        mark = float(client.ticker_price(sig["symbol"]))
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "skip": f"mark_fail:{e}"}
+    if mark < trigger:
+        return {"ok": False, "skip": "mark_below_breakout", "mark": mark, "trigger": trigger}
+    if close > 0 and (mark / close - 1.0) * 100.0 > max_chase_pct:
+        return {"ok": False, "skip": "chase_too_far", "mark": mark, "close": close,
+                "chase_pct": round((mark / close - 1.0) * 100.0, 4)}
+    if stop and mark <= stop:
+        return {"ok": False, "skip": "mark_at_or_below_stop", "mark": mark, "stop": stop}
+    # Force enter shape
+    forced = dict(sig)
+    forced["action"] = "enter"
+    forced["reason"] = "backfill_breakout"
+    forced["backfill"] = True
+    forced["mark"] = mark
+    return {"ok": True, "sig": forced, "mark": mark}
+
+
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
     """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
@@ -480,6 +511,56 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         apply_signal(client, state, sig, live=live, allow_entries=allow_entries)
         for sig in signals
     ]
+    # Persist per-slot decision audit trail for /status (no Cloud Logging needed)
+    decisions = []
+    for sig, app in zip(signals, applied):
+        decisions.append({
+            "slot": sig.get("slot") or app.get("slot"),
+            "symbol": sig.get("symbol") or app.get("symbol"),
+            "strategy_id": sig.get("strategy_id") or app.get("strategy_id"),
+            "action": sig.get("action"),
+            "reason": app.get("reason") or sig.get("reason"),
+            "executed": bool(app.get("executed")),
+            "approval_mode": approval_mode(state, strategy_id_for_slot(str(sig.get("slot") or "")) or str(sig.get("strategy_id") or "")),
+            "bar_ts": sig.get("bar_ts"),
+            "close": sig.get("close"),
+            "donch_hi": sig.get("donch_hi") or sig.get("trigger"),
+            "suggested_stop": sig.get("suggested_stop"),
+            "quote_usdt": sig.get("quote_usdt"),
+            "fill": app.get("fill"),
+        })
+    state.setdefault("meta", {})["last_decisions"] = decisions
+    state["meta"]["last_decisions_at"] = now_iso_taipei()
+
+    # Optional one-shot backfill for a missed entry (Cloud Run Job env BACKFILL_SLOT)
+    bf_slot = (os.environ.get("BACKFILL_SLOT") or "").strip()
+    bf_chase = float(os.environ.get("BACKFILL_MAX_CHASE_PCT") or "3")
+    if bf_slot and live:
+        for i, sig in enumerate(list(signals)):
+            if str(sig.get("slot") or "") != bf_slot:
+                continue
+            # Prefer current signal; if approval previously stripped enter, rebuild enter from bars
+            base = dict(sig)
+            if base.get("action") != "enter":
+                # Still try validity on last known breakout fields from feed/meta
+                base["action"] = "enter"
+            chk = _backfill_enter_if_valid(client, state, base, max_chase_pct=bf_chase)
+            state.setdefault("meta", {})["backfill_check"] = {k: chk.get(k) for k in (chk or {}) if k != "sig"}
+            if not chk or not chk.get("ok"):
+                log.warning("backfill_skip slot=%s detail=%s", bf_slot, chk)
+                break
+            log.info("backfill_force_enter slot=%s mark=%s", bf_slot, chk.get("mark"))
+            forced = chk["sig"]
+            applied_bf = apply_signal(client, state, forced, live=True, allow_entries=True)
+            applied[i] = applied_bf
+            state["meta"]["backfill_result"] = {
+                "slot": bf_slot,
+                "executed": bool(applied_bf.get("executed")),
+                "reason": applied_bf.get("reason"),
+                "fill": applied_bf.get("fill"),
+            }
+            log.info("backfill_result %s", state["meta"]["backfill_result"])
+            break
 
     # --- SOL core ---
     sol_meta = state.setdefault("slots", {}).setdefault("core_sol", {})
@@ -599,6 +680,17 @@ def main(argv: list[str] | None = None) -> int:
         default=os.environ.get("JOB_MODE") or "run",
         choices=["probe", "futures-probe", "futures-order-probe", "run", "dry-run"],
     )
+    ap.add_argument(
+        "--backfill-slot",
+        default=os.environ.get("BACKFILL_SLOT") or "",
+        help="If set, force-enter this slot when signal still valid (live only)",
+    )
+    ap.add_argument(
+        "--backfill-max-chase-pct",
+        type=float,
+        default=float(os.environ.get("BACKFILL_MAX_CHASE_PCT") or "3"),
+        help="Skip backfill if mark is more than this %% above signal close",
+    )
     args = ap.parse_args(argv)
     client = BinanceClient()
     try:
@@ -618,6 +710,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result.get("ok") else 2
         if args.mode == "probe":
             return cmd_probe(client)
+        if getattr(args, "backfill_slot", None):
+            os.environ["BACKFILL_SLOT"] = str(args.backfill_slot)
+        if getattr(args, "backfill_max_chase_pct", None) is not None:
+            os.environ["BACKFILL_MAX_CHASE_PCT"] = str(args.backfill_max_chase_pct)
         if args.mode == "dry-run":
             return cmd_run(client, dry_run=True)
         return cmd_run(client, dry_run=(trader_mode() != "live"))
