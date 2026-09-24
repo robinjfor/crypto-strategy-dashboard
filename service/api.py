@@ -433,24 +433,12 @@ def _approved_public(state: dict | None = None) -> dict:
     st = state if state is not None else store.load()
     approved = _ensure_approved(st)
     if state is None and st.get("_seeded_approved_dirty"):
-        def mut(s):
+        def _seed(s):
             _ensure_approved(s)
             s.pop("_seeded_approved_dirty", None)
             return s
         try:
-            cur = store.load()
-            _ensure_approved(cur)
-            # Always persist migration once
-            store.mutate(lambda s: (_ensure_approved(s) or True) and (s.pop("_seeded_approved_dirty", None) or True) or s)
-            # simpler persist:
-        except Exception:
-            pass
-        try:
-            def mut2(s):
-                _ensure_approved(s)
-                s.pop("_seeded_approved_dirty", None)
-                return s
-            store.mutate(mut2)
+            store.mutate(_seed)
             st = store.load()
             approved = st.get("approved") or approved
         except Exception as e:  # noqa: BLE001
@@ -458,6 +446,8 @@ def _approved_public(state: dict | None = None) -> dict:
 
     out = []
     for sid, meta in (approved or {}).items():
+        if not isinstance(meta, dict):
+            continue
         if str(meta.get("mode") or "live") == "signal_only" or meta.get("approved") is False:
             continue
         slot = slot_by_strategy_id(sid) or {}
@@ -465,12 +455,13 @@ def _approved_public(state: dict | None = None) -> dict:
             "strategy_id": sid,
             "slot": meta.get("slot") or slot.get("id"),
             "symbol": slot.get("symbol"),
-            "family": slot.get("family"),
+            "family": slot.get("family") or meta.get("family"),
             "notional_usdt": meta.get("notional_usdt") or slot.get("quote_usdt") or 1000,
             "approved_at": meta.get("approved_at"),
             "approved": True,
             "mode": "live",
             "order_mode": "live",
+            "status": "live_standby",
             "label_zh": meta.get("label_zh") or "已核准 · 上線待命",
         })
     sig_only = []
@@ -481,13 +472,14 @@ def _approved_public(state: dict | None = None) -> dict:
             "strategy_id": sid,
             "slot": meta.get("slot") or slot.get("id"),
             "symbol": slot.get("symbol"),
-            "family": slot.get("family"),
+            "family": slot.get("family") or meta.get("family"),
             "approved": False,
             "mode": "signal_only",
             "order_mode": "signal_only",
             "label_zh": LABEL_SIGNAL_ONLY,
             "gate_pass": meta.get("gate_pass"),
             "gate_fail_reasons": meta.get("gate_fail_reasons") or [],
+            "satellite_slot": meta.get("satellite_slot") or slot.get("satellite_slot"),
         })
     return {"ok": True, "approved": out, "signal_only": sig_only, "count": len(out)}
 
@@ -741,7 +733,7 @@ def approve():
         r = summary_holder.get("r") or {}
         msg = f"已核准 {strategy_id}（上線待命）"
         if r.get("demoted"):
-            msg += f"；同槽下架：{", ".join(r["demoted"])}"
+            msg += "；同槽下架：" + ", ".join(r["demoted"])
         return jsonify({
             "ok": True,
             "message": msg,
