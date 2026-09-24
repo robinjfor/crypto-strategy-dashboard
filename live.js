@@ -1,1045 +1,329 @@
-/* Live paper-trading dashboard — static GitHub Pages client */
+/* Homepage live view — Binance Demo real fills. Mirror to live.js */
 (function () {
   "use strict";
 
-  const $ = (id) => document.getElementById(id);
   const BOOK_URL = "./data/live_book.json";
-  const BINANCE_TICKER = "https://data-api.binance.vision/api/v3/ticker/price?symbol=";
-  const BINANCE_KLINES = "https://data-api.binance.vision/api/v3/klines";
-  const STATE_HEALTH_URL = "./state/health.json";
-  const STATE_ORDERS_URL = "./state/orders.json";
-  const STATE_POSITIONS_URL = "./state/positions.json";
-  const STATE_ALERTS_URL = "./state/alerts.json";
-  const STATE_PAPER_URL = "./state/paper_trading.json";
+  const HEALTH_URL = "./state/health.json";
+  const POSITIONS_URL = "./state/positions.json";
+  const PAPER_URL = "./state/paper_trading.json";
+  const SETTLEMENT_URL = "./data/strategy-crypto-s2/settlement.json";
+  const SETTLEMENT_JSONL = "./state/settlement.jsonl";
 
   let book = null;
-  let strategyPayloads = []; // [{ meta, paper, settlement, error }]
-  let selectedId = null;
-  let markPrices = {}; // symbol -> { price, source }
-  let autoOn = true;
-  let refreshSec = 15;
-  let countdown = 15;
-  let timerId = null;
+  let health = null;
+  let positions = null;
+  let paper = null;
+  let settlements = [];
   let loading = false;
-  let allocChart = null;
-  let pendingPieParts = [];
-  let modalProfile = null;
-  let stateHealth = null;
-  let stateOrders = null;
-  let statePositions = null;
-  let stateAlerts = null;
+  let autoOn = true;
+  let refreshSec = 30;
+  let countdown = 30;
+  let timerId = null;
+  let pieParts = [];
 
-  function fmtPct(v, digits = 2) {
-    if (v == null || Number.isNaN(Number(v))) return "—";
-    const n = Number(v);
-    const sign = n > 0 ? "+" : "";
-    return sign + n.toFixed(digits) + "%";
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function fmtNum(v, digits = 2) {
-    if (v == null || Number.isNaN(Number(v))) return "—";
+
+  function num(v, d) {
+    if (v == null || v === "" || Number.isNaN(Number(v))) return "—";
     return Number(v).toLocaleString("en-US", {
-      maximumFractionDigits: digits,
-      minimumFractionDigits: digits,
+      minimumFractionDigits: d, maximumFractionDigits: d
     });
   }
-  function fmtInt(v) {
-    if (v == null || Number.isNaN(Number(v))) return "—";
-    return String(Math.round(Number(v)));
+
+  function signedCls(v) {
+    if (v == null || Number.isNaN(Number(v))) return "";
+    if (Number(v) > 0) return "pos";
+    if (Number(v) < 0) return "neg";
+    return "";
   }
-  function clsSigned(v) {
-    if (v == null || Number.isNaN(Number(v))) return "neutral";
-    const n = Number(v);
-    if (n > 0) return "pos";
-    if (n < 0) return "neg";
-    return "neutral";
+
+  function reason(code) {
+    if (typeof window.reasonZh === "function") return window.reasonZh(code);
+    return (code == null || code === "") ? "—" : String(code);
   }
-  function escapeHtml(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
+
   function showErr(msg) {
-    const el = $("errBanner");
-    if (!msg) {
-      el.style.display = "none";
-      el.textContent = "";
-      return;
-    }
-    el.style.display = "block";
-    el.textContent = msg;
+    var el = $("errBanner");
+    if (!el) return;
+    if (!msg) { el.textContent = ""; el.classList.add("hidden"); return; }
+    el.textContent = msg; el.classList.remove("hidden");
   }
 
-  async function fetchJSON(url) {
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error(`HTTP ${r.status} · ${url}`);
-    return r.json();
+  async function getJSON(url) {
+    var res = await fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error(url + " HTTP " + res.status);
+    return res.json();
   }
 
-  async function fetchJSONOptional(url) {
+  async function getJSONOpt(url) {
+    try { return await getJSON(url); } catch (e) { return null; }
+  }
+
+  async function loadSettlements() {
     try {
-      const r = await fetch(url, { cache: "no-store" });
-      if (!r.ok) return null;
-      return await r.json();
-    } catch (_) {
-      return null;
-    }
+      var arr = await getJSON(SETTLEMENT_URL);
+      if (Array.isArray(arr)) return arr;
+    } catch (e) {}
+    try {
+      var res = await fetch(SETTLEMENT_JSONL + "?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) return [];
+      return (await res.text()).trim().split("\n").filter(Boolean).map(function (l) { return JSON.parse(l); });
+    } catch (e) { return []; }
   }
 
   function parseTs(s) {
     if (!s) return null;
-    const d = new Date(s);
+    var d = new Date(String(s).replace(" ", "T"));
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  function loadSettlements(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (Array.isArray(raw.settlements)) return raw.settlements;
-    if (Array.isArray(raw.fills)) return raw.fills;
-    return [];
+  function nowLabel() {
+    try { return new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }) + " CST"; }
+    catch (e) { return new Date().toISOString(); }
   }
 
-  function nowTaipeiLabel() {
-    try {
-      return new Date().toLocaleString("zh-TW", {
-        timeZone: "Asia/Taipei",
-        hour12: false,
-      }) + " CST";
-    } catch (_) {
-      return new Date().toISOString();
-    }
-  }
-
-  /** Aggregate balances / equity across all strategy papers */
-  function aggregateAccount(payloads) {
-    const balances = {};
-    let equitySum = 0;
-    let equityCount = 0;
-    const openPositions = [];
-    for (const p of payloads) {
-      if (!p.paper) continue;
-      const pt = p.paper;
-      if (pt.virtual_equity != null) {
-        equitySum += Number(pt.virtual_equity);
-        equityCount += 1;
-      }
-      const bal = pt.balances || {};
-      for (const [asset, qty] of Object.entries(bal)) {
-        balances[asset] = (balances[asset] || 0) + Number(qty || 0);
-      }
-      const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
-      for (const o of opens) openPositions.push({ ...o, strategy_id: p.meta.id });
-    }
-    // Prefer single-strategy equity; if multiple, sum (each strategy may have own book)
-    const virtualEquity =
-      equityCount === 1
-        ? equitySum
-        : equityCount > 1
-          ? equitySum
-          : null;
-    return { balances, virtualEquity, openPositions };
-  }
-
-
-  function posEntry(o) {
-    if (!o) return null;
-    if (o.entry_price != null) return Number(o.entry_price);
-    if (o.entry != null) return Number(o.entry);
-    return null;
-  }
-
-  function resolveMarkPrice(asset, payloads) {
-    if (asset === "CASH" || asset === "USDT") {
-      return { price: 1, source: "現金" };
-    }
-    const pair = asset + "USDT";
-    if (markPrices[pair] && markPrices[pair].price != null) {
-      return markPrices[pair];
-    }
-    // Fallback from paper signal / open entry
-    for (const p of payloads) {
-      const pt = p.paper;
-      if (!pt) continue;
-      const sym = (pt.symbol || "").toUpperCase();
-      const msym = (pt.market_symbol || "").toUpperCase();
-      if (sym === asset || msym === pair || msym === asset + "USDT") {
-        if (pt.signal && pt.signal.close != null) {
-          return { price: Number(pt.signal.close), source: "paper.signal.close" };
-        }
-      }
-      const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
-      for (const o of opens) {
-        const os = (o.symbol || "").toUpperCase();
-        if (os === pair || os === asset || os.startsWith(asset)) {
-          if (o.entry_price != null) {
-            return { price: Number(o.entry_price), source: "paper.entry" };
-          }
-        }
-      }
-    }
-    return { price: null, source: "無" };
-  }
-
-
-  function atrWilder(bars, n) {
-    const trs = [];
-    for (let i = 1; i < bars.length; i++) {
-      const h = bars[i].h, l = bars[i].l, pc = bars[i - 1].c;
-      trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
-    }
-    if (trs.length < n) return null;
-    let atr = trs.slice(0, n).reduce((a, b) => a + b, 0) / n;
-    for (let i = n; i < trs.length; i++) atr = (atr * (n - 1) + trs[i]) / n;
-    return atr;
-  }
-
-  async function refreshSignalFromKlines(payloads) {
-    for (const p of payloads) {
-      if (!p.paper) continue;
-      const sym = String(p.paper.market_symbol || ((p.paper.symbol || "") + "USDT")).toUpperCase();
-      if (!sym || sym === "USDT") continue;
-      try {
-        const url = BINANCE_KLINES + "?symbol=" + encodeURIComponent(sym) + "&interval=4h&limit=80";
-        const raw = await fetchJSON(url);
-        if (!Array.isArray(raw) || raw.length < 25) continue;
-        const bars = raw.map((r) => ({ t: r[0], h: Number(r[2]), l: Number(r[3]), c: Number(r[4]) }));
-        const forming = bars[bars.length - 1];
-        const closed = bars.slice(0, -1);
-        const last = closed[closed.length - 1];
-        const win = closed.slice(-21, -1);
-        const donch_hi = Math.max(...win.map((b) => b.h));
-        const donch_lo = Math.min(...win.map((b) => b.l));
-        const atr = atrWilder(closed.slice(-60), 14);
-        if (atr == null) continue;
-        const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
-        let peak = forming.c;
-        for (const o of opens) {
-          const entry = posEntry(o) != null ? posEntry(o) : null;
-          if (entry != null) peak = Math.max(peak, entry);
-        }
-        peak = Math.max(peak, ...closed.slice(-40).map((b) => b.h), forming.h);
-        // Live mark: prefer already-fetched ticker; else forming-bar close (tracks spot)
-        const live =
-          markPrices[sym] && markPrices[sym].price != null
-            ? Number(markPrices[sym].price)
-            : Number(forming.c);
-        for (const o of opens) {
-          const entry = posEntry(o) != null ? posEntry(o) : null;
-          if (entry == null) continue;
-          const hard = entry - 2 * atr;
-          const trail = peak - 3 * atr;
-          const stop = Math.max(hard, trail);
-          o.stop = stop;
-          o.mark_price = live;
-          if (o.qty != null) {
-            const q = Number(o.qty);
-            o.unrealized_pnl = (live - entry) * q;
-            o.unrealized_pct = entry ? ((live - entry) / entry) * 100 : null;
-          }
-        }
-        p.paper.signal = Object.assign({}, p.paper.signal || {}, {
-          ready: true,
-          bar_open_ms: forming.t,
-          close: live,
-          last_closed: last.c,
-          donch_hi,
-          donch_lo,
-          atr,
-          stop: opens[0] && opens[0].stop != null ? opens[0].stop : peak - 3 * atr,
-          trail_dist: 3 * atr,
-          peak_since_entry: peak,
-          exit_long: live < donch_lo,
-          source: "binance_vision_live_mark",
-        });
-        // Do not overwrite a fresher ticker with a stale closed bar
-        if (!markPrices[sym] || markPrices[sym].price == null) {
-          markPrices[sym] = { price: live, source: "Binance 進行中 4h" };
-        }
-      } catch (_) {
-        /* keep paper snapshot */
-      }
-    }
-  }
-
-  function computeAllocation(book, payloads) {
-    const { balances, virtualEquity } = aggregateAccount(payloads);
-    const capital = Number(book.total_capital_usdt) || 5000;
-    const usdtCash = Number(balances.USDT || 0);
-
-    // Mark-to-market holdings
-    const holdings = {};
-    let positionsValue = 0;
-    for (const [asset, qty] of Object.entries(balances)) {
-      if (asset === "USDT") continue;
-      const { price, source } = resolveMarkPrice(asset, payloads);
-      const q = Number(qty) || 0;
-      const value = price != null ? q * price : 0;
-      holdings[asset] = { qty: q, price, source, value };
-      positionsValue += value;
-    }
-
-    // Always mark-to-market from live prices; paper virtual_equity is a stale snapshot
-    const equity = usdtCash + positionsValue;
-
-    const targets = Array.isArray(book.target_allocation)
-      ? book.target_allocation
-      : [];
-
-    const rows = targets.map((t) => {
-      const asset = t.asset;
-      const targetPct = Number(t.pct) || 0;
-      let actualValue = 0;
-      let markSource = "—";
-      if (asset === "CASH" || (t.symbol || "").toUpperCase() === "USDT") {
-        actualValue = usdtCash;
-        markSource = "balances.USDT";
-      } else {
-        const h = holdings[asset];
-        if (h) {
-          actualValue = h.value;
-          markSource = h.source;
-        } else {
-          actualValue = 0;
-          markSource = "無持倉";
-        }
-      }
-      const actualPct = equity > 0 ? (actualValue / equity) * 100 : 0;
-      return {
-        asset,
-        label: asset === "CASH" ? "現金 (USDT)" : asset,
-        targetPct,
-        actualPct,
-        actualValue,
-        markSource,
-      };
+  function sortDesc(rows) {
+    return (rows || []).slice().sort(function (a, b) {
+      var ta = parseTs(a.ts || a.time);
+      var tb = parseTs(b.ts || b.time);
+      return (tb ? tb.getTime() : 0) - (ta ? ta.getTime() : 0);
     });
+  }
 
-    const pnl = equity - capital;
-    const pnlPct = capital > 0 ? (pnl / capital) * 100 : null;
+  function isTrade(r) {
+    var sym = String(r.symbol || "").toUpperCase();
+    if (sym.indexOf("OPUSDT") >= 0 || sym.indexOf("FILUSDT") >= 0) return false;
+    if (sym === "OP" || sym === "FIL") return false;
+    return true;
+  }
 
+  function bals() {
+    var b = (positions && positions.balances) || (paper && paper.balances) || (book && book.balances) || {};
     return {
-      equity,
-      capital,
-      pnl,
-      pnlPct,
-      usdtCash,
-      positionsValue,
-      holdings,
-      rows,
+      USDT: b.USDT != null ? Number(b.USDT) : null,
+      USDC: b.USDC != null ? Number(b.USDC) : null,
+      NEAR: b.NEAR != null ? Number(b.NEAR) : 0
     };
   }
-
-
-  function syncUnrealizedFromMarks(payloads) {
-    for (const p of payloads) {
-      if (!p.paper) continue;
-      const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
-      for (const o of opens) {
-        const os = String(o.symbol || "").toUpperCase();
-        const mark = markPrices[os];
-        const spot = mark && mark.price != null ? Number(mark.price) : o.mark_price != null ? Number(o.mark_price) : null;
-        const entry = posEntry(o) != null ? posEntry(o) : null;
-        if (spot == null || entry == null || o.qty == null) continue;
-        const q = Number(o.qty);
-        const side = String(o.side || "LONG").toUpperCase();
-        const diff = side === "SHORT" ? entry - spot : spot - entry;
-        o.mark_price = spot;
-        o.unrealized_pnl = diff * q;
-        o.unrealized_pct = entry ? (diff / entry) * 100 : null;
-      }
-      if (p.paper.signal && opens[0] && opens[0].mark_price != null) {
-        p.paper.signal.close = Number(opens[0].mark_price);
-      }
-      // refresh paper equity to live MTM for any leftover readers
-      const bal = p.paper.balances || {};
-      let eq = Number(bal.USDT || 0);
-      for (const [asset, qty] of Object.entries(bal)) {
-        if (asset === "USDT") continue;
-        const pair = asset + "USDT";
-        const m = markPrices[pair];
-        if (m && m.price != null) eq += Number(qty || 0) * Number(m.price);
-      }
-      if (eq > 0) {
-        p.paper.virtual_equity = eq;
-        p.paper.virtual_equity_source = "live_mark_to_market";
-      }
-    }
-  }
-
-  async function fetchMarkPrices(payloads) {
-    const symbols = new Set();
-    for (const p of payloads) {
-      if (!p.paper) continue;
-      const m = p.paper.market_symbol;
-      if (m) symbols.add(String(m).toUpperCase());
-      else if (p.paper.symbol) symbols.add(String(p.paper.symbol).toUpperCase() + "USDT");
-      const opens = Array.isArray(p.paper.open_positions) ? p.paper.open_positions : [];
-      for (const o of opens) {
-        if (o.symbol) symbols.add(String(o.symbol).toUpperCase());
-      }
-    }
-    // Also try target allocation assets
-    if (book && Array.isArray(book.target_allocation)) {
-      for (const t of book.target_allocation) {
-        if (t.asset && t.asset !== "CASH") {
-          symbols.add(String(t.asset).toUpperCase() + "USDT");
-        }
-      }
-    }
-
-    const next = { ...markPrices };
-    await Promise.all(
-      [...symbols].map(async (sym) => {
-        try {
-          const data = await fetchJSON(BINANCE_TICKER + encodeURIComponent(sym));
-          const price = data && data.price != null ? Number(data.price) : null;
-          if (price != null && !Number.isNaN(price)) {
-            next[sym] = { price, source: "Binance 公開價" };
-          }
-        } catch (_) {
-          // CORS / network — keep previous or fall back later
-        }
-      })
-    );
-    markPrices = next;
-  }
-
-  function renderAllocation(alloc) {
-    const capital = alloc.capital || 5000;
-    const holdings = alloc.holdings || {};
-
-    // 實際持倉：不含 USDT 現金列
-    const actualRows = [];
-    for (const [asset, h] of Object.entries(holdings)) {
-      const qty = h.qty || 0;
-      const spot = h.price;
-      let entry = null, stop = null, exitLo = null, upnl = null, upct = null, side = "LONG";
-      for (const p of strategyPayloads) {
-        const pt = p.paper || {};
-        for (const o of pt.open_positions || []) {
-          const os = String(o.symbol || "").toUpperCase();
-          if (os === asset + "USDT" || os === asset || os.startsWith(asset)) {
-            entry = posEntry(o) != null ? posEntry(o) : entry;
-            stop = o.stop != null ? Number(o.stop) : stop;
-            side = o.side || side;
-            if (spot != null && entry != null && o.qty != null) {
-              const diff = String(side).toUpperCase() === "SHORT" ? entry - spot : spot - entry;
-              upnl = diff * Number(o.qty);
-              upct = entry !== 0 ? (diff / entry) * 100 : null;
-            }
-          }
-        }
-        const byAsset = pt.signals_by_asset || (pt.signal && pt.signal.by_asset) || {};
-        const assetSig = byAsset[asset] || byAsset[String(asset).toUpperCase()];
-        if (assetSig) {
-          if (assetSig.donch_lo != null) exitLo = Number(assetSig.donch_lo);
-          if (stop == null && assetSig.stop != null) stop = Number(assetSig.stop);
-        } else if (pt.signal && (String(pt.symbol || "").toUpperCase() === asset || String(pt.market_symbol || "").toUpperCase() === asset + "USDT")) {
-          if (pt.signal.donch_lo != null) exitLo = Number(pt.signal.donch_lo);
-          if (stop == null && pt.signal.stop != null) stop = Number(pt.signal.stop);
-        }
-      }
-      actualRows.push({ asset, qty, spot, entry, stop, exitLo, upnl, upct, source: h.source || "—", value: h.value || 0 });
-    }
-
-    const actualHtml = actualRows.length
-      ? actualRows.map((r) => {
-          const pnl = r.upnl == null ? "—" : `${fmtNum(r.upnl, 2)} (${fmtPct(r.upct)})`;
-          return `<tr>
-            <td><strong>${escapeHtml(r.asset)}</strong></td>
-            <td class="num">${fmtNum(r.qty, 3)}</td>
-            <td class="num">${r.spot != null ? fmtNum(r.spot, 4) : "—"}<div class="kpi-sub">${escapeHtml(r.source)}</div></td>
-            <td class="num">${r.entry != null ? fmtNum(r.entry, 4) : "—"}</td>
-            <td class="num">${r.stop != null ? fmtNum(r.stop, 4) : "—"}<div class="kpi-sub">只會上移 · 非上漲目標</div></td>
-            <td class="num">${r.exitLo != null ? fmtNum(r.exitLo, 4) : "—"}<div class="kpi-sub">Donchian 下軌 · 跌破才結算</div></td>
-            <td class="num">${fmtNum(r.value, 2)}</td>
-            <td class="num ${clsSigned(r.upnl)}"><strong>${pnl}</strong></td>
-          </tr>`;
-        }).join("")
-      : `<tr><td colspan="8" class="empty-row">尚無幣種持倉</td></tr>`;
-
-    // 預計持倉：排除已 open、CASH/reserve
-    const planned = (Array.isArray(book.planned_positions) ? book.planned_positions : []).filter(
-      (pl) => pl.status !== "open" && pl.status !== "reserve" && pl.asset !== "CASH"
-    );
-
-    const plannedHtml = planned.length
-      ? planned.map((pl) => {
-          const targetUsdt = ((Number(pl.target_pct) || 0) / 100) * capital;
-          const pair = (pl.asset || "") + "USDT";
-          const mark = markPrices[pair];
-          const ref = mark && mark.price != null ? Number(mark.price) : pl.ref_price != null ? Number(pl.ref_price) : null;
-          const notional = pl.target_notional_usdt != null ? Number(pl.target_notional_usdt) : targetUsdt;
-          let buyQty = pl.target_buy_qty;
-          if (pl.display_only || pl.status === "candidate_oos") {
-            buyQty = null;
-          } else if ((buyQty == null || buyQty === "") && ref && ref > 0) {
-            buyQty = notional / ref;
-          }
-          let buyLabel;
-          if (pl.display_only || pl.status === "candidate_oos") {
-            buyLabel = `不下單<div class="kpi-sub">候選人／OOS 未過關</div>`;
-          } else if (buyQty != null) {
-            buyLabel = fmtNum(buyQty, 3) + `<div class="kpi-sub">≈ 目標 ${fmtNum(notional, 0)} USDT` + (ref ? ` ÷ ${fmtNum(ref, 4)}` : "") + `</div>`;
-          } else {
-            buyLabel = `待定<div class="kpi-sub">≈ ${fmtNum(notional, 0)} USDT · 綠燈後依市價</div>`;
-          }
-          const stopLabel = pl.stop_mode === "pending" ? "未開倉 → 無有效止損" : (pl.stop_note || "—");
-          const sid = pl.strategy_id || ("planned-" + pl.asset);
-          return `<tr class="click-row" data-profile="${escapeHtml(sid)}" role="button" tabindex="0">
-            <td><strong>${escapeHtml(pl.asset)}</strong><div class="kpi-sub">${escapeHtml(pl.strategy_name || pl.notes || "")}</div></td>
-            <td class="num">${fmtNum(pl.target_pct, 0)}%</td>
-            <td class="num">${fmtNum(targetUsdt, 2)}</td>
-            <td class="num">${buyLabel}</td>
-            <td>${escapeHtml(pl.status_label || pl.status || "—")}</td>
-            <td>${escapeHtml(pl.entry_rule || "—")}</td>
-            <td>${escapeHtml(pl.exit_rule || "—")}</td>
-            <td>${escapeHtml(stopLabel)}</td>
-            <td>${escapeHtml(pl.leverage || "1x")}</td>
-          </tr>`;
-        }).join("")
-      : `<tr><td colspan="9" class="empty-row">目前沒有待開的預計持倉</td></tr>`;
-
-    return `
-      <section class="section">
-        <div class="section-head"><h2>實際持倉</h2><span class="hint">現金見上方帳戶總覽；此處只列幣種倉</span></div>
-        <div class="card"><div class="table-scroll"><table class="data">
-          <thead><tr>
-            <th>資產</th><th class="num">數量</th><th class="num">現價</th><th class="num">進場價</th><th class="num">移動止損</th><th class="num">出場下軌</th><th class="num">USDT 市值</th><th class="num">目前損益</th>
-          </tr></thead>
-          <tbody>${actualHtml}</tbody>
-        </table></div></div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>預計持倉</h2><span class="hint">尚未開倉的配置計畫 · 點列可看策略說明</span></div>
-        <div class="card"><div class="table-scroll"><table class="data">
-          <thead><tr>
-            <th>資產</th><th class="num">目標%</th><th class="num">目標 USDT</th><th class="num">預計購買量</th><th>狀態</th><th>進場條件</th><th>結算／出場</th><th>止損</th><th>倍數</th>
-          </tr></thead>
-          <tbody>${plannedHtml}</tbody>
-        </table></div>
-        <p class="hint" style="padding:10px 16px 14px;margin:0">已進場標的不重複列在這裡。點列開啟策略簡介；回測詳情可從彈窗進入。</p>
-        </div>
-      </section>`;
-  }
-
-  function renderKpis(alloc) {
-    const cashTarget = (Array.isArray(book.target_allocation) ? book.target_allocation : [])
-      .find((t) => t.asset === "CASH" || (t.symbol || "").toUpperCase() === "USDT");
-    const cashPct = cashTarget ? Number(cashTarget.pct) || 15 : 15;
-    const cashTargetUsdt = (cashPct / 100) * (alloc.capital || 5000);
-    const holdings = alloc.holdings || {};
-    const usdtCash = alloc.usdtCash || 0;
-    const equity = alloc.equity || 0;
-    const pieParts = [];
-    if (usdtCash > 0) pieParts.push({ label: "USDT 現金", value: usdtCash });
-    for (const [asset, h] of Object.entries(holdings)) {
-      if ((h.value || 0) > 0) pieParts.push({ label: asset, value: h.value });
-    }
-    if (!pieParts.length && equity > 0) pieParts.push({ label: "權益", value: equity });
-    pendingPieParts = pieParts;
-    return `
-      <section class="section">
-        <div class="section-head"><h2>帳戶總覽</h2>
-          <span class="hint">${escapeHtml(book.exchange || "")} · ${escapeHtml(book.api_base || "")} · 圓餅＝實際市值比重（含現金）</span>
-        </div>
-        <div class="overview-row">
-          <div class="kpi-grid">
-            <div class="kpi">
-              <div class="label">虛擬權益</div>
-              <div class="value">${fmtNum(alloc.equity, 2)}</div>
-              <div class="sublabel">USDT</div>
-            </div>
-            <div class="kpi">
-              <div class="label">起始資金／保留現金目標</div>
-              <div class="value neutral">${fmtNum(alloc.capital, 2)}</div>
-              <div class="sublabel">目標保留現金 ${fmtNum(cashPct, 0)}% ≈ ${fmtNum(cashTargetUsdt, 0)} USDT · 目前現金 ${fmtNum(alloc.usdtCash, 2)}</div>
-            </div>
-            <div class="kpi">
-              <div class="label">損益 %</div>
-              <div class="value ${clsSigned(alloc.pnlPct)}">${fmtPct(alloc.pnlPct)}</div>
-              <div class="sublabel">${fmtNum(alloc.pnl, 2)} USDT</div>
-            </div>
-            <div class="kpi">
-              <div class="label">持倉市值</div>
-              <div class="value">${fmtNum(alloc.positionsValue, 2)}</div>
-              <div class="sublabel">幣種 mark-to-market</div>
-            </div>
-          </div>
-          <div class="kpi kpi-pie" title="實際市值比重（含現金）">
-            <div class="label">資產配置</div>
-            <div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div>
-          </div>
-        </div>
-      </section>`;
-  }
-
-  function profileFromMeta(meta, paper) {
-    const pt = paper || {};
-    return {
-      id: meta.id,
-      name: meta.name || pt.strategy_name || meta.id,
-      summary: meta.summary || pt.notes || "",
-      description: meta.description || "",
-      entry_rule: meta.entry_rule || "",
-      exit_rule: meta.exit_rule || "",
-      stop_rule: meta.stop_rule || "",
-      timeframe: meta.timeframe || pt.timeframe || "",
-      symbol: meta.symbol || pt.market_symbol || pt.symbol || "",
-      leverage: meta.leverage || pt.leverage || "1x",
-      oos_note: meta.oos_note || "",
-      backtest_url: meta.backtest_url || `./backtest.html?strategy=${encodeURIComponent(meta.id)}`,
-      status: pt.status || meta.status || "",
-    };
-  }
-
-  function openStrategyModal(profile) {
-    modalProfile = profile;
-    const modal = $("strategyModal");
-    const body = $("modalBody");
-    if (!modal || !body || !profile) return;
-    body.innerHTML = `
-      <h2 style="margin:0 0 8px;font-size:1.15rem">${escapeHtml(profile.name)}</h2>
-      <div class="chips" style="margin-bottom:12px">
-        ${profile.symbol ? `<span class="chip">${escapeHtml(profile.symbol)}</span>` : ""}
-        ${profile.timeframe ? `<span class="chip">${escapeHtml(profile.timeframe)}</span>` : ""}
-        ${profile.leverage ? `<span class="chip">${escapeHtml(profile.leverage)} 現貨</span>` : ""}
-        ${profile.status ? `<span class="badge">${escapeHtml(profile.status)}</span>` : ""}
-      </div>
-      <p style="color:var(--text);margin:0 0 10px">${escapeHtml(profile.summary || "—")}</p>
-      ${profile.description ? `<p class="hint" style="margin:0 0 14px">${escapeHtml(profile.description)}</p>` : ""}
-      <div class="grid-2">
-        <div class="card"><div class="card-body">
-          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">進場規則</h2></div>
-          <p style="margin:0">${escapeHtml(profile.entry_rule || "—")}</p>
-        </div></div>
-        <div class="card"><div class="card-body">
-          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">出場／結算</h2></div>
-          <p style="margin:0">${escapeHtml(profile.exit_rule || "—")}</p>
-        </div></div>
-        <div class="card"><div class="card-body">
-          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">止損</h2></div>
-          <p style="margin:0">${escapeHtml(profile.stop_rule || "—")}</p>
-        </div></div>
-        <div class="card"><div class="card-body">
-          <div class="section-head" style="margin-bottom:8px"><h2 style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text)">回測／OOS</h2></div>
-          <p style="margin:0 0 10px">${escapeHtml(profile.oos_note || "可至回測頁查看 IS／OOS")}</p>
-          <a class="nav-link active" style="display:inline-block" href="${escapeHtml(profile.backtest_url)}">打開回測資料 →</a>
-        </div></div>
-      </div>`;
-    modal.classList.remove("hidden");
-    modal.setAttribute("aria-hidden", "false");
-  }
-
-  function closeStrategyModal() {
-    const modal = $("strategyModal");
-    if (!modal) return;
-    modal.classList.add("hidden");
-    modal.setAttribute("aria-hidden", "true");
-    modalProfile = null;
-  }
-
-  function renderStrategyCards(payloads) {
-    const cards = payloads
-      .map((p) => {
-        const pt = p.paper || {};
-        const active = p.meta.id === selectedId ? " active" : "";
-        const status = pt.status || (p.error ? "error" : "—");
-        const variant = pt.selected_variant || "—";
-        const symbol = pt.market_symbol || pt.symbol || "—";
-        const lastAction = pt.last_action || "—";
-        const equity = pt.virtual_equity != null ? fmtNum(pt.virtual_equity, 2) : "—";
-        const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
-        const openSummary =
-          opens.length === 0
-            ? "無未平倉"
-            : opens.map((o) => `${o.side || "?"} ${fmtNum(o.qty, 3)} @ ${fmtNum(posEntry(o), 4)}`).join(" · ");
-        const errNote = p.error ? `<div class="card-err">${escapeHtml(p.error)}</div>` : "";
-        return `<div class="strategy-card-wrap">
-          <button type="button" class="strategy-card${active}" data-id="${escapeHtml(p.meta.id)}">
-            <div class="sc-top">
-              <strong>${escapeHtml(p.meta.name || pt.strategy_name || p.meta.id)}</strong>
-              <span class="badge ${status === "live_demo" || status === "live" ? "ok" : status === "error" ? "warn" : ""}">${escapeHtml(status)}</span>
-            </div>
-            <div class="sc-meta"><span>${escapeHtml(symbol)}</span><span class="dim">·</span><span class="mono dim">${escapeHtml(variant)}</span></div>
-            <div class="sc-row"><span class="dim">最近動作</span><span>${escapeHtml(lastAction)}</span></div>
-            <div class="sc-row"><span class="dim">未平倉</span><span>${escapeHtml(openSummary)}</span></div>
-            <div class="sc-row"><span class="dim">權益</span><span class="mono">${equity}</span></div>
-            ${errNote}
-          </button>
-          <button type="button" class="ghost strategy-info-btn" data-profile-id="${escapeHtml(p.meta.id)}">策略說明／回測</button>
-        </div>`;
-      })
-      .join("");
-
-    const sats = Array.isArray(book.satellite_strategies) ? book.satellite_strategies : [];
-    const satCards = sats
-      .map((s) => `<div class="strategy-card-wrap">
-        <button type="button" class="strategy-card dim-card" data-sat="${escapeHtml(s.id)}">
-          <div class="sc-top"><strong>${escapeHtml(s.name)}</strong><span class="badge ${s.status === "armed_wait_breakout" || s.status === "pending_green" ? "ok" : "warn"}">${escapeHtml(s.status || "pending")}</span></div>
-          <div class="sc-meta"><span>${escapeHtml(s.symbol || s.asset || "")}</span><span class="dim">·</span><span>${escapeHtml(s.timeframe || "")}</span></div>
-          <div class="sc-row"><span class="dim">目標配置</span><span>${fmtNum(s.target_pct, 0)}%</span></div>
-          <div class="sc-row"><span class="dim">狀態</span><span>${escapeHtml(s.oos_note || s.status || "綠燈・待訊號")}</span></div>
-        </button>
-        <button type="button" class="ghost strategy-info-btn" data-sat-profile="${escapeHtml(s.id)}">策略說明</button>
-      </div>`)
-      .join("");
-
-    return `
-      <section class="section">
-        <div class="section-head"><h2>正在跑的策略</h2><span class="hint">點卡片看倉位詳情；「策略說明」看規則與回測</span></div>
-        <div class="strategy-cards">${cards || `<div class="empty-state">尚未配置策略</div>`}</div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>預計策略（衛星）</h2><span class="hint">綠燈・訊號觸發後可開／已開</span></div>
-        <div class="strategy-cards">${satCards || `<div class="empty-state">無衛星策略</div>`}</div>
-      </section>`;
-  }
-
-  function renderDetail(payload) {
-    if (!payload) {
-      return `<section class="section"><div class="empty-state">請選擇策略</div></section>`;
-    }
-    const pt = payload.paper || {};
-    const settlements = loadSettlements(payload.settlement).slice().reverse();
-    const opens = Array.isArray(pt.open_positions) ? pt.open_positions : [];
-    const signals = Array.isArray(pt.signals) ? pt.signals.slice().reverse() : [];
-    const latestSignal = pt.signal || null;
-    const levDefault = pt.leverage || (payload.meta && payload.meta.leverage) || "1x";
-
-    const openRows =
-      opens.length === 0
-        ? `<tr><td colspan="10" class="empty-row">尚無未平倉</td></tr>`
-        : opens
-            .map((o) => {
-              const pair = (o.symbol || "").toUpperCase();
-              const mark = markPrices[pair];
-              const entry = posEntry(o) != null ? posEntry(o) : null;
-              const qty = o.qty != null ? Number(o.qty) : null;
-              const markPx = mark && mark.price != null ? Number(mark.price) : null;
-              let upnl = o.unrealized_pnl;
-              let upct = o.unrealized_pct;
-              if (markPx != null && entry != null && qty != null) {
-                const side = (o.side || "LONG").toUpperCase();
-                const diff = side === "SHORT" ? entry - markPx : markPx - entry;
-                upnl = diff * qty;
-                upct = entry !== 0 ? (diff / entry) * 100 : null;
-              }
-              const notional = qty != null && (markPx != null || entry != null) ? qty * (markPx != null ? markPx : entry) : null;
-              const lev = o.leverage || levDefault || "1x";
-              const exitLo = latestSignal && latestSignal.donch_lo != null ? Number(latestSignal.donch_lo) : null;
-              const trailStop = o.stop != null ? Number(o.stop) : (latestSignal && latestSignal.stop != null ? Number(latestSignal.stop) : null);
-              const pnlCell = upnl == null ? "—" : `${fmtNum(upnl, 2)} USDT` + (upct != null ? `<div class="kpi-sub">${fmtPct(upct)}</div>` : "");
-              return `<tr>
-                <td>${escapeHtml(o.opened_at || "—")}</td>
-                <td>${escapeHtml(o.symbol || "—")}</td>
-                <td><span class="badge">${escapeHtml(o.side || "—")}</span></td>
-                <td class="num">${fmtNum(qty, 3)}</td>
-                <td class="num">${entry != null ? fmtNum(entry, 4) : "—"}</td>
-                <td class="num">${markPx != null ? fmtNum(markPx, 4) : "—"}<div class="kpi-sub">${escapeHtml((mark && mark.source) || "—")}</div></td>
-                <td class="num">${notional != null ? fmtNum(notional, 2) : "—"}</td>
-                <td class="num ${clsSigned(upnl)}"><strong>${pnlCell}</strong></td>
-                <td class="num">${trailStop != null ? fmtNum(trailStop, 4) : "—"}<div class="kpi-sub">移動止損 · 只會上移</div></td>
-                <td class="num">${exitLo != null ? fmtNum(exitLo, 4) : "—"}<div class="kpi-sub">出場下軌 · 跌破才結算</div></td>
-                <td>${escapeHtml(String(lev))} · 現貨</td>
-              </tr>`;
-            })
-            .join("");
-
-    const fillRows =
-      settlements.length === 0
-        ? `<tr><td colspan="8" class="empty-row">尚無成交</td></tr>`
-        : settlements.slice(0, 30).map((s) => `<tr>
-              <td>${escapeHtml(s.ts || s.entry_time || "—")}</td>
-              <td>${escapeHtml(s.symbol || "—")}</td>
-              <td><span class="badge">${escapeHtml(s.side || "—")}</span></td>
-              <td class="num">${fmtNum(s.qty != null ? s.qty : s.shares, 4)}</td>
-              <td class="num">${fmtNum(s.price != null ? s.price : s.entry_price, 4)}</td>
-              <td>${escapeHtml(s.status || "—")}</td>
-              <td>${escapeHtml(s.reason || s.note || "—")}</td>
-              <td>${s.orderId != null ? escapeHtml(String(s.orderId)) : "—"}</td>
-            </tr>`).join("");
-
-    return `
-      <section class="section">
-        <div class="section-head">
-          <h2>策略詳情 · ${escapeHtml(payload.meta.name || payload.meta.id)}</h2>
-          <span class="hint">更新：${escapeHtml(pt.updated_at_taipei || "—")} · <button type="button" class="linkish" id="btnOpenProfile">策略說明／回測</button></span>
-        </div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="section-head" style="padding:12px 16px 0;margin:0">
-            <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">未平倉 · 目前損益</h2>
-          </div>
-          <div class="table-scroll"><table class="data">
-            <thead><tr>
-              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">進場價</th><th class="num">現價</th><th class="num">USDT 價值</th><th class="num">目前損益</th><th class="num">移動止損</th><th class="num">出場下軌</th><th>倍數</th>
-            </tr></thead>
-            <tbody>${openRows}</tbody>
-          </table></div>
-        </div>
-        <div class="card">
-          <div class="section-head" style="padding:12px 16px 0;margin:0">
-            <h2 style="text-transform:none;letter-spacing:0;font-size:0.9rem;color:var(--text)">最近成交</h2>
-          </div>
-          <div class="table-scroll"><table class="data">
-            <thead><tr>
-              <th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">價格</th><th>狀態</th><th>原因</th><th>orderId</th>
-            </tr></thead>
-            <tbody>${fillRows}</tbody>
-          </table></div>
-        </div>
-      </section>`;
-  }
-
-
-  function mountAllocPie(parts) {
-    const canvas = $("allocPie");
-    if (!canvas) return;
-    const wrap = canvas.parentElement;
-    wrap.querySelectorAll(".pie-empty-hint").forEach((el) => el.remove());
-    if (typeof Chart === "undefined") {
-      wrap.insertAdjacentHTML("beforeend", '<p class="hint pie-empty-hint" style="text-align:center">圖表庫未載入</p>');
-      return;
-    }
-    parts = Array.isArray(parts) ? parts : pendingPieParts;
-    if (allocChart) {
-      allocChart.destroy();
-      allocChart = null;
-    }
-    if (!parts.length) {
-      wrap.insertAdjacentHTML("beforeend", '<p class="hint pie-empty-hint" style="text-align:center">尚無配置資料</p>');
-      return;
-    }
-    allocChart = new Chart(canvas.getContext("2d"), {
-      type: "doughnut",
-      data: {
-        labels: parts.map((p) => p.label),
-        datasets: [{
-          data: parts.map((p) => p.value),
-          backgroundColor: ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#22d3ee"],
-          borderWidth: 0,
-        }],
-      },
-      options: {
-        plugins: {
-          legend: { position: "bottom", labels: { color: "#8b9bb0", boxWidth: 10, font: { size: 10 }, padding: 6 } },
-          tooltip: {
-            callbacks: {
-              label(ctx) {
-                const v = Number(ctx.raw) || 0;
-                const sum = (ctx.dataset.data || []).reduce((a, b) => a + Number(b || 0), 0);
-                const pct = sum > 0 ? (v / sum) * 100 : 0;
-                return ctx.label + ": " + v.toFixed(2) + " USDT (" + pct.toFixed(1) + "%)";
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  function wireLiveClicks() {
-    document.querySelectorAll(".strategy-info-btn[data-profile-id]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const id = btn.getAttribute("data-profile-id");
-        const payload = strategyPayloads.find((x) => x.meta.id === id);
-        if (payload) openStrategyModal(profileFromMeta(payload.meta, payload.paper));
-      });
-    });
-    document.querySelectorAll(".strategy-info-btn[data-sat-profile]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const id = btn.getAttribute("data-sat-profile");
-        const sat = (book.satellite_strategies || []).find((s) => s.id === id);
-        if (sat) openStrategyModal(sat);
-      });
-    });
-    document.querySelectorAll(".strategy-card[data-sat]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-sat");
-        const sat = (book.satellite_strategies || []).find((s) => s.id === id);
-        if (sat) openStrategyModal(sat);
-      });
-    });
-    document.querySelectorAll("tr.click-row[data-profile]").forEach((tr) => {
-      tr.addEventListener("click", () => {
-        const id = tr.getAttribute("data-profile");
-        const sat = (book.satellite_strategies || []).find((s) => s.id === id || s.asset && id.includes(s.asset.toLowerCase()));
-        const planned = (book.planned_positions || []).find((p) => (p.strategy_id || ("planned-" + p.asset)) === id);
-        if (sat) return openStrategyModal(sat);
-        if (planned) {
-          openStrategyModal({
-            id,
-            name: planned.strategy_name || planned.asset,
-            summary: planned.status_label || "",
-            description: planned.notes || "",
-            entry_rule: planned.entry_rule,
-            exit_rule: planned.exit_rule,
-            stop_rule: planned.stop_note || planned.stop_mode,
-            timeframe: "",
-            symbol: planned.asset + "USDT",
-            leverage: planned.leverage || "1x",
-            status: planned.status,
-            backtest_url: "./backtest.html",
-            oos_note: "衛星策略回測待綠燈後補檔",
-          });
-        }
-      });
-    });
-    const btnProf = $("btnOpenProfile");
-    if (btnProf) {
-      btnProf.addEventListener("click", () => {
-        const payload = strategyPayloads.find((x) => x.meta.id === selectedId);
-        if (payload) openStrategyModal(profileFromMeta(payload.meta, payload.paper));
-      });
-    }
-  }
-
 
   function renderHealth() {
-    const h = stateHealth || {};
-    const last = parseTs(h.last_success_at || h.last_runner_at);
-    const ageMs = last ? Date.now() - last.getTime() : null;
-    const stale = ageMs == null || ageMs > 60 * 60 * 1000;
-    const lightCls = stale ? "bad" : "ok";
-    const lightText = stale
-      ? "自動化逾時（>1 小時無成功 runner）"
-      : "自動化正常";
-    const lastLabel = h.last_success_at || h.last_runner_at || "—";
-    const scanLabel = h.last_scanner_at || "—";
-    const alerts = ((stateAlerts && stateAlerts.alerts) || []).slice(-5).reverse();
-    const alertHtml = alerts.length
-      ? `<ul class="alert-list">${alerts
-          .map((a) => {
-            const lv = String(a.level || "").toLowerCase();
-            const cls = lv === "error" ? "err" : "warn";
-            return `<li class="${cls}">[${escapeHtml(a.level || "")}] ${escapeHtml(
-              a.code || ""
-            )} · ${escapeHtml(a.msg || "")}${
-              a.symbol ? " (" + escapeHtml(a.symbol) + ")" : ""
-            }</li>`;
-          })
-          .join("")}</ul>`
-      : `<span class="health-meta">無近期告警</span>`;
-    return `<div class="health-bar" id="systemHealth">
-      <span class="health-light ${lightCls}">● ${escapeHtml(lightText)}</span>
-      <span class="health-meta">runner 成功：${escapeHtml(String(lastLabel))}</span>
-      <span class="health-meta">scanner：${escapeHtml(String(scanLabel))}</span>
-      <span class="health-meta">紅燈僅禁新倉＋告警，不自動平倉</span>
-      <div style="flex-basis:100%">${alertHtml}</div>
-    </div>`;
+    var h = health || {};
+    var label = h.automation_label || "自動執行：尚未啟用（等待雲端主機）";
+    return '<div class="health-bar idle" id="systemHealth">' +
+      '<span class="health-light idle">● ' + esc(label) + '</span>' +
+      '<span class="health-meta">訊號 runner 待命 · Actions 已停用</span>' +
+      '<span class="health-meta">來源：' + esc((book && book.source_label) || "Binance Demo") + '</span>' +
+      '</div>';
   }
 
-  function renderPendingOrders() {
-    const all = stateOrders && Array.isArray(stateOrders.orders) ? stateOrders.orders : [];
-    const active = all.filter((o) =>
-      ["ARMED", "SIGNAL", "PENDING", "PAUSED", "FILLED"].includes(o.status)
-    );
-    const exited = all.filter((o) => o.status === "EXITED").slice(-3);
-    const list = active.concat(exited);
-    const rows = list.length
-      ? list
-          .map((o) => {
-            const st = o.status || "—";
-            const pillCls =
-              st === "ARMED" || st === "SIGNAL" || st === "PENDING"
-                ? "armed"
-                : st === "FILLED"
-                  ? "filled"
-                  : "";
-            let qty = o.qty;
-            let entry = o.entry;
-            let mark = o.mark;
-            let stop = o.stop;
-            let upnlPct = o.unrealized_pct;
-            let upnlUsdt = o.unrealized_usdt;
-            if (st === "FILLED" && statePositions && Array.isArray(statePositions.positions)) {
-              const pos = statePositions.positions.find(
-                (p) => p.symbol === o.symbol && p.status === "FILLED"
-              );
-              if (pos) {
-                qty = pos.qty;
-                entry = pos.entry;
-                mark = pos.mark;
-                stop = pos.stop;
-                upnlPct = pos.unrealized_pct;
-                upnlUsdt = pos.unrealized_usdt;
-              }
-            }
-            const trailGap =
-              mark != null && stop != null && Number(mark) !== 0
-                ? fmtPct(((Number(mark) - Number(stop)) / Number(mark)) * 100)
-                : "—";
-            const unreal =
-              upnlPct != null
-                ? fmtPct(upnlPct) + (upnlUsdt != null ? ` · ${fmtNum(upnlUsdt, 2)} U` : "")
-                : upnlUsdt != null
-                  ? fmtNum(upnlUsdt, 2) + " U"
-                  : "—";
-            return `<tr>
-              <td><span class="status-pill ${pillCls}">${escapeHtml(st)}</span></td>
-              <td><strong>${escapeHtml(o.symbol || "—")}</strong><div class="kpi-sub">${escapeHtml(
-                o.slot || ""
-              )}</div></td>
-              <td class="num">${entry != null ? fmtNum(entry, 4) : "—"}<div class="kpi-sub">qty ${
-                qty != null ? fmtNum(qty, 3) : "—"
-              } · quote ${fmtNum(o.quote_usdt, 0)}</div></td>
-              <td class="num">${mark != null ? fmtNum(mark, 4) : "—"}</td>
-              <td class="num">${stop != null ? fmtNum(stop, 4) : "—"}<div class="kpi-sub">trail gap ${trailGap}</div></td>
-              <td class="num">${unreal}</td>
-              <td>${escapeHtml(o.last_check_at || "—")}<div class="kpi-sub">下次約 +15m</div></td>
-              <td class="mono">${escapeHtml(o.variant || "—")}</td>
-            </tr>`;
-          })
-          .join("")
-      : `<tr><td colspan="8" class="empty-row">尚無掛單／持倉狀態（等待 runner）</td></tr>`;
-    return `
-      <section class="section">
-        <div class="section-head"><h2>掛單追蹤</h2><span class="hint">ARMED → SIGNAL → PENDING → FILLED · v1 手動操作請改 commands.json（唯讀）</span></div>
-        <div class="card"><div class="table-scroll"><table class="data">
-          <thead><tr>
-            <th>狀態</th><th>標的</th><th class="num">進場</th><th class="num">現價</th><th class="num">stop／trail</th><th class="num">損益</th><th>最後檢查</th><th>變體</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div></div>
-      </section>`;
+  function renderAccount() {
+    var b = bals();
+    var usdt = b.USDT, usdc = b.USDC;
+    var total = (usdt != null && usdc != null) ? usdt + usdc
+      : (book && book.equity_total_stable != null ? Number(book.equity_total_stable) : null);
+    var equity = (positions && positions.virtual_equity != null) ? Number(positions.virtual_equity)
+      : (book && book.equity_usdt != null ? Number(book.equity_usdt) : usdt);
+    var realized = (book && book.realized_pnl_usdt != null) ? Number(book.realized_pnl_usdt) : null;
+    var maxDd = (book && book.max_drawdown != null) ? book.max_drawdown : null;
+    var openN = ((positions && positions.positions) || (book && book.open_positions) || []).length;
+
+    pieParts = [];
+    if (usdt != null && usdt > 0) pieParts.push({ label: "USDT", value: usdt });
+    if (usdc != null && usdc > 0) pieParts.push({ label: "USDC", value: usdc });
+
+    return '<section class="section" id="sec-account">' +
+      '<div class="section-head"><h2>帳戶總覽</h2><span class="hint">' +
+      esc((book && book.source_label) || "Binance Demo 帳戶（真實成交）") + '</span></div>' +
+      '<div class="overview-row"><div class="kpi-grid kpi-grid-demo">' +
+      '<div class="kpi"><div class="label">USDT</div><div class="value">' + num(usdt, 2) + '</div><div class="sublabel">可用餘額</div></div>' +
+      '<div class="kpi"><div class="label">USDC</div><div class="value">' + num(usdc, 2) + '</div><div class="sublabel">可用餘額</div></div>' +
+      '<div class="kpi kpi-emphasis"><div class="label">穩定幣合計</div><div class="value">' + num(total, 2) + '</div><div class="sublabel">USDT + USDC（標明合計）</div></div>' +
+      '<div class="kpi"><div class="label">USDT 側權益</div><div class="value">' + num(equity, 2) + '</div><div class="sublabel">含粉塵標的市值（若有）</div></div>' +
+      '<div class="kpi"><div class="label">已實現損益（NEAR）</div><div class="value ' + signedCls(realized) + '">' +
+      (realized == null ? "—" : ((realized > 0 ? "+" : "") + num(realized, 2))) +
+      '</div><div class="sublabel">僅 Demo 真實成交</div></div>' +
+      '<div class="kpi"><div class="label">最大回撤</div><div class="value">' + (maxDd == null ? "—" : num(maxDd, 2) + "%") + '</div><div class="sublabel">資料未提供則顯示 —</div></div>' +
+      '<div class="kpi"><div class="label">實際持倉數</div><div class="value">' + num(openN, 0) + '</div><div class="sublabel">' +
+      (openN === 0 ? "目前空倉（全現金）" : "幣種倉") + '</div></div>' +
+      '</div><div class="kpi kpi-pie"><div class="label">現金結構</div><div class="alloc-pie-wrap"><canvas id="allocPie" width="120" height="120"></canvas></div></div></div></section>';
+  }
+
+  function tradeRow(r) {
+    var ts = r.ts || r.time || "—";
+    var kind = r.kind || "—";
+    var sym = r.symbol || "—";
+    var side = r.side || (String(kind).toUpperCase() === "OPEN" ? "BUY" : String(kind).toUpperCase() === "CLOSE" ? "SELL" : "—");
+    var qty = r.qty;
+    var px = r.price != null ? r.price : r.avg_price;
+    var fee = r.fee;
+    var pnl = r.realized_pnl_usdt != null ? r.realized_pnl_usdt : r.pnl_usdt;
+    return "<tr>" +
+      "<td>" + esc(String(ts)) + "</td>" +
+      "<td>" + esc(String(kind)) + "</td>" +
+      "<td><strong>" + esc(String(sym)) + "</strong></td>" +
+      "<td>" + esc(String(side)) + "</td>" +
+      '<td class="num">' + num(qty, 4) + "</td>" +
+      '<td class="num">' + num(px, 4) + "</td>" +
+      '<td class="num">' + (fee == null ? "—" : num(fee, 4)) + "</td>" +
+      '<td class="num ' + signedCls(pnl) + '">' + (pnl == null ? "—" : num(pnl, 2)) + "</td>" +
+      "<td>" + esc(reason(r.reason || kind)) + "</td></tr>";
+  }
+
+  function renderChanges() {
+    var rows = sortDesc(settlements.filter(isTrade)).slice(0, 5);
+    var body = rows.length ? rows.map(tradeRow).join("") :
+      '<tr><td colspan="9" class="empty-row">尚無成交紀錄</td></tr>';
+    return '<section class="section" id="sec-changes">' +
+      '<div class="section-head"><h2>帳戶變動明細</h2><span class="hint">最新 5 筆 · <a href="./history.html">完整歷史</a></span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data">' +
+      "<thead><tr><th>時間</th><th>類型</th><th>標的</th><th>方向</th><th class=\"num\">數量</th><th class=\"num\">價格</th><th class=\"num\">手續費</th><th class=\"num\">已實現損益</th><th>原因</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table></div></div></section>";
+  }
+
+  function renderActual() {
+    var list = (positions && Array.isArray(positions.positions) && positions.positions) ||
+      (book && book.open_positions) || [];
+    var open = list.filter(function (p) { return !p.status || p.status === "FILLED" || p.status === "OPEN"; });
+    var body;
+    if (!open.length) {
+      body = '<tr><td colspan="9" class="empty-row">目前空倉（全現金）</td></tr>';
+    } else {
+      body = open.map(function (p) {
+        var upnl = p.unrealized_pnl != null ? p.unrealized_pnl : p.unrealized_usdt;
+        return "<tr>" +
+          "<td><strong>" + esc(p.symbol || p.asset || "—") + '</strong><div class="kpi-sub">' + esc(p.variant || "") + "</div></td>" +
+          "<td>" + esc(p.tf || "—") + "</td>" +
+          '<td class="num">' + num(p.qty, 4) + "</td>" +
+          '<td class="num">' + num(p.entry != null ? p.entry : p.entry_price, 4) + "</td>" +
+          '<td class="num">' + (p.mark_price != null || p.mark != null ? num(p.mark_price != null ? p.mark_price : p.mark, 4) : "—") + "</td>" +
+          '<td class="num">' + (p.stop != null ? num(p.stop, 4) : "—") + '<div class="kpi-sub">移動止損</div></td>' +
+          '<td class="num">' + (p.donch_lo != null ? num(p.donch_lo, 4) : "—") + '<div class="kpi-sub">出場下軌</div></td>' +
+          '<td class="num">' + num((p.entry || p.entry_price || 0) * (p.qty || 0), 2) + "</td>" +
+          '<td class="num ' + signedCls(upnl) + '">' + (upnl == null ? "—" : num(upnl, 2)) + "</td></tr>";
+      }).join("");
+    }
+    return '<section class="section" id="sec-actual">' +
+      '<div class="section-head"><h2>實際持倉</h2><span class="hint">僅 Demo 真實部位</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data">' +
+      "<thead><tr><th>標的／策略</th><th>週期</th><th class=\"num\">數量</th><th class=\"num\">進場價</th><th class=\"num\">現價</th><th class=\"num\">移動止損</th><th class=\"num\">出場下軌</th><th class=\"num\">市值</th><th class=\"num\">未實現損益</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table></div></div></section>";
+  }
+
+  function plannedList() {
+    var planned = (book && Array.isArray(book.planned_positions) ? book.planned_positions : []).slice();
+    planned = planned.filter(function (p) {
+      var st = String(p.ui_status || p.status || "").toUpperCase();
+      return st.indexOf("WAIT_BREAKOUT") >= 0 || st.indexOf("WAIT_RESET") >= 0 ||
+        st.indexOf("REARM") >= 0 || st.indexOf("PENDING") >= 0 || st.indexOf("ARMED") >= 0;
+    });
+    return planned.filter(function (p) {
+      var a = String(p.asset || p.symbol || "").toUpperCase();
+      return a !== "NEAR" && a !== "NEARUSDT" && String(p.ui_status || "").indexOf("DISARM") < 0;
+    });
+  }
+
+  function renderPlanned() {
+    var planned = plannedList();
+    var body;
+    if (!planned.length) {
+      body = '<tr><td colspan="8" class="empty-row">目前沒有預計持倉</td></tr>';
+    } else {
+      body = planned.map(function (pl) {
+        var stopNote = pl.stop_mode === "pending"
+          ? (pl.stop_note || "未開倉 → 無有效移動止損／出場下軌")
+          : (pl.stop_note || (pl.stop_ref != null ? "止損參考 " + pl.stop_ref : "—"));
+        var safe = String(stopNote).replace(/目標價/g, "止損參考");
+        return "<tr>" +
+          "<td><strong>" + esc(pl.asset) + '</strong><div class="kpi-sub">' + esc(pl.strategy_name || "") + "</div></td>" +
+          '<td class="num">' + num(pl.target_pct, 0) + "%</td>" +
+          '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
+          "<td>" + esc(pl.status_label || pl.ui_status || "—") + "</td>" +
+          "<td>" + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n || "—")) + "</td>" +
+          "<td>" + esc(pl.entry_rule || "—") + "</td>" +
+          "<td>" + esc(safe) + "</td>" +
+          '<td class="num">' + (pl.mark != null ? num(pl.mark, 4) : "—") +
+          '<div class="kpi-sub">觸發 ' + (pl.trigger != null ? num(pl.trigger, 4) : "—") + "</div></td></tr>";
+      }).join("");
+    }
+    return '<section class="section" id="sec-planned">' +
+      '<div class="section-head"><h2>預計持倉</h2><span class="hint">訊號槽 · 不含 NEAR</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data">' +
+      "<thead><tr><th>標的</th><th class=\"num\">目標%</th><th class=\"num\">名義 USDT</th><th>狀態</th><th>週期</th><th>進場條件</th><th>止損／出場</th><th class=\"num\">現價／觸發</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table></div></div></section>";
+  }
+
+  function renderStrategies() {
+    var sats = (book && book.satellite_strategies) || [];
+    var core = (book && book.strategies) || [];
+    var n = plannedList().length;
+    var cards = core.concat(sats).map(function (s) {
+      var active = s.status === "active" || s.status === "armed_wait_breakout" || s.status === "wait_reset";
+      return '<article class="strategy-card ' + (active ? "active" : "") + '">' +
+        '<div class="sc-top"><strong>' + esc(s.name || s.id || "—") + '</strong>' +
+        '<span class="badge ' + (active ? "ok" : "muted") + '">' + esc(s.status || "—") + "</span></div>" +
+        '<p class="sc-sum">' + esc(s.summary || "") + "</p>" +
+        '<div class="sc-meta">' + esc(s.timeframe || "") + " · " + esc(s.symbol || s.asset || "") + " · " + esc(s.leverage || "1x") + "</div>" +
+        '<div class="sc-rules">' +
+        '<div><span class="lbl">進場</span> ' + esc(s.entry_rule || "—") + "</div>" +
+        '<div><span class="lbl">出場</span> ' + esc(s.exit_rule || "—") + "</div>" +
+        '<div><span class="lbl">止損</span> ' + esc(String(s.stop_rule || "—").replace(/目標價/g, "止損參考")) + "</div>" +
+        "</div></article>";
+    }).join("");
+    return '<section class="section" id="sec-strategies">' +
+      '<div class="section-head"><h2>策略列表</h2><span class="hint">使用中訊號槽 ' + n + "</span></div>" +
+      '<div class="strategy-grid">' + (cards || '<div class="empty-state">無策略</div>') + "</div></section>";
+  }
+
+  function renderTrades() {
+    var rows = sortDesc(settlements.filter(isTrade)).slice(0, 10);
+    var body = rows.length ? rows.map(tradeRow).join("") :
+      '<tr><td colspan="9" class="empty-row">尚無成交</td></tr>';
+    return '<section class="section" id="sec-trades">' +
+      '<div class="section-head"><h2>最近成交</h2><span class="hint">Binance Demo 真實成交 · 原因已中文化</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data">' +
+      "<thead><tr><th>時間</th><th>類型</th><th>標的</th><th>方向</th><th class=\"num\">數量</th><th class=\"num\">價格</th><th class=\"num\">手續費</th><th class=\"num\">已實現損益</th><th>原因</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table></div></div></section>";
+  }
+
+  function mountPie(parts) {
+    var canvas = $("allocPie");
+    if (!canvas || typeof Chart === "undefined") return;
+    var data = (parts || []).filter(function (p) { return p.value > 0; });
+    if (!data.length) return;
+    if (canvas._chart) canvas._chart.destroy();
+    canvas._chart = new Chart(canvas, {
+      type: "doughnut",
+      data: {
+        labels: data.map(function (d) { return d.label; }),
+        datasets: [{ data: data.map(function (d) { return d.value; }),
+          backgroundColor: ["#3b82f6", "#22d3ee", "#22c55e", "#f59e0b"], borderWidth: 0 }]
+      },
+      options: {
+        plugins: { legend: { display: true, position: "bottom",
+          labels: { color: "#8b9bb0", boxWidth: 10, font: { size: 10 } } } },
+        cutout: "62%"
+      }
+    });
   }
 
   function renderAll() {
-    const main = $("main");
+    var main = $("main");
+    if (!main) return;
     if (!book) {
-      main.innerHTML = `<div class="empty-state">無法載入 live_book.json</div>`;
+      main.className = "";
+      main.innerHTML = '<div class="empty-state">無法載入 live_book.json</div>';
       return;
     }
-    const alloc = computeAllocation(book, strategyPayloads);
-    const selected =
-      strategyPayloads.find((p) => p.meta.id === selectedId) ||
-      strategyPayloads[0] ||
-      null;
-    if (selected && selectedId !== selected.meta.id) {
-      selectedId = selected.meta.id;
-    }
-
     main.className = "";
-    main.innerHTML =
-      renderHealth() +
-      renderKpis(alloc) +
-      renderPendingOrders() +
-      renderAllocation(alloc) +
-      renderStrategyCards(strategyPayloads) +
-      renderDetail(selected);
-    mountAllocPie(pendingPieParts);
-    wireLiveClicks();
-
-    main.querySelectorAll(".strategy-card").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedId = btn.getAttribute("data-id");
-        renderAll();
-      });
-    });
+    main.innerHTML = renderHealth() + renderAccount() + renderChanges() +
+      renderActual() + renderPlanned() + renderStrategies() + renderTrades();
+    mountPie(pieParts);
   }
 
   async function loadAll() {
@@ -1047,102 +331,23 @@
     loading = true;
     showErr("");
     try {
-      book = await fetchJSON(BOOK_URL);
-      stateHealth = await fetchJSONOptional(STATE_HEALTH_URL);
-      stateOrders = await fetchJSONOptional(STATE_ORDERS_URL);
-      statePositions = await fetchJSONOptional(STATE_POSITIONS_URL);
-      stateAlerts = await fetchJSONOptional(STATE_ALERTS_URL);
-      const statePaper = await fetchJSONOptional(STATE_PAPER_URL);
-      refreshSec = Number(book.auto_refresh_sec) || 15;
-      if ($("pageTitle")) {
-        $("pageTitle").textContent =
-          "模擬倉即時 · " + (book.exchange || book.title || "Binance Demo");
+      book = await getJSON(BOOK_URL);
+      health = await getJSONOpt(HEALTH_URL);
+      positions = await getJSONOpt(POSITIONS_URL);
+      paper = await getJSONOpt(PAPER_URL);
+      settlements = await loadSettlements();
+      refreshSec = Number(book.auto_refresh_sec) || 30;
+      if ($("pageTitle")) $("pageTitle").textContent = book.title || "Binance Demo 帳戶（真實成交）";
+      if ($("pageSub")) {
+        $("pageSub").textContent = (book.source_label || "Binance Demo") + " · 訊號監控 · 靜態／GitHub Pages";
       }
-      if ($("pageSub") && book.api_base) {
-        $("pageSub").textContent =
-          (book.title || "活策略模擬倉") + " · " + book.api_base;
-      }
-
-      const strategies = Array.isArray(book.strategies) ? book.strategies : [];
-      const payloads = await Promise.all(
-        strategies.map(async (meta) => {
-          try {
-            const [paper, settlementRaw] = await Promise.all([
-              fetchJSON(meta.paper_path),
-              fetchJSON(meta.settlement_path).catch(() => []),
-            ]);
-            return {
-              meta,
-              paper,
-              settlement: loadSettlements(settlementRaw),
-              error: null,
-            };
-          } catch (e) {
-            return {
-              meta,
-              paper: null,
-              settlement: [],
-              error: String(e.message || e),
-            };
-          }
-        })
-      );
-      // Prefer automation state when present (fallback keeps legacy paper_path)
-      if (statePositions && Array.isArray(statePositions.positions) && payloads.length && payloads[0].paper) {
-        const paper = Object.assign({}, payloads[0].paper);
-        if (statePositions.virtual_equity != null) paper.virtual_equity = statePositions.virtual_equity;
-        if (statePositions.balances) paper.balances = statePositions.balances;
-        paper.open_positions = statePositions.positions
-          .filter((x) => x.status === "FILLED")
-          .map((x) => ({
-            symbol: x.symbol,
-            side: x.side || "LONG",
-            qty: x.qty,
-            entry: x.entry,
-            entry_price: x.entry,
-            stop: x.stop,
-            mark_price: x.mark,
-            unrealized_pct: x.unrealized_pct,
-            unrealized_pnl: x.unrealized_usdt,
-            variant: x.variant,
-            donch_lo: x.donch_lo,
-          }));
-        paper.updated_at_taipei = statePositions.updated_at || paper.updated_at_taipei;
-        paper.light = statePositions.light || paper.light;
-        if (stateOrders && Array.isArray(stateOrders.orders)) {
-          const armed = {};
-          for (const o of stateOrders.orders) {
-            if (["ARMED", "SIGNAL", "PENDING", "PAUSED", "FILLED"].includes(o.status)) {
-              armed[o.symbol] = {
-                variant: o.variant,
-                quote: o.quote_usdt,
-                status: o.status === "ARMED" ? "WAIT_BREAKOUT" : o.status,
-                mark: o.mark,
-                tf: o.tf,
-                donch_n: o.donch_n,
-              };
-            }
-          }
-          paper.armed = armed;
-        }
-        payloads[0] = Object.assign({}, payloads[0], { paper });
-      } else if (statePaper && payloads.length) {
-        payloads[0] = Object.assign({}, payloads[0], { paper: statePaper });
-      }
-      strategyPayloads = payloads;
-      if (!selectedId && payloads.length) selectedId = payloads[0].meta.id;
-
-      await refreshSignalFromKlines(payloads);
-      await fetchMarkPrices(payloads);
-      syncUnrealizedFromMarks(payloads);
       renderAll();
-      $("lastUpdated").innerHTML =
-        "最後更新：<strong>" + escapeHtml(nowTaipeiLabel()) + "</strong>";
+      if ($("lastUpdated")) {
+        $("lastUpdated").innerHTML = "最後更新：<strong>" + esc(nowLabel()) + "</strong>";
+      }
     } catch (e) {
       showErr("載入失敗：" + (e.message || e));
-      if ($("main").classList.contains("loading")) {
-        $("main").textContent = "載入失敗";
-      }
+      if ($("main") && $("main").classList.contains("loading")) $("main").textContent = "載入失敗";
     } finally {
       loading = false;
       countdown = refreshSec;
@@ -1151,72 +356,35 @@
   }
 
   function updateCountdown() {
-    const el = $("countdownPill");
+    var el = $("countdownPill");
     if (!el) return;
-    if (!autoOn) {
-      el.textContent = "自動重整：關";
-      return;
-    }
-    el.textContent = "倒數：" + countdown + "s";
+    el.textContent = autoOn ? ("倒數：" + countdown + "s") : "自動重整：關";
   }
 
   function startTimer() {
     if (timerId) clearInterval(timerId);
-    timerId = setInterval(() => {
-      if (!autoOn) {
-        updateCountdown();
-        return;
-      }
+    timerId = setInterval(function () {
+      if (!autoOn) { updateCountdown(); return; }
       countdown -= 1;
-      if (countdown <= 0) {
-        loadAll();
-      } else {
-        updateCountdown();
-      }
+      if (countdown <= 0) loadAll();
+      else updateCountdown();
     }, 1000);
   }
 
   function init() {
-    $("btnRefresh").addEventListener("click", () => {
-      countdown = refreshSec;
-      loadAll();
-    });
-    const chk = $("autoRefresh");
-    chk.addEventListener("change", () => {
+    var btn = $("btnRefresh");
+    if (btn) btn.addEventListener("click", function () { countdown = refreshSec; loadAll(); });
+    var chk = $("autoRefresh");
+    if (chk) {
+      chk.addEventListener("change", function () {
+        autoOn = chk.checked; countdown = refreshSec; updateCountdown();
+      });
       autoOn = chk.checked;
-      countdown = refreshSec;
-      updateCountdown();
-    });
-    autoOn = chk.checked;
-
-    const modal = $("strategyModal");
-    const closeBtn = $("modalClose");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        closeStrategyModal();
-      });
     }
-    if (modal) {
-      modal.addEventListener("click", (e) => {
-        const t = e.target;
-        if (t && (t.getAttribute("data-close") === "1" || t.classList.contains("modal-backdrop"))) {
-          closeStrategyModal();
-        }
-      });
-    }
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeStrategyModal();
-    });
-
     loadAll();
     startTimer();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();

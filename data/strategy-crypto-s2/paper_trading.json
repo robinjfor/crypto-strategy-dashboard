@@ -1,87 +1,197 @@
 {
-  "exchange": "Box Paper (Binance Vision)",
+  "exchange": "Binance Demo",
+  "source": "binance_demo",
+  "mode": "SIGNAL_ONLY",
   "base_url": "https://data-api.binance.vision",
-  "strategy": "multi box paper",
-  "virtual_equity": 5736.7457,
+  "strategy": "multi signal watch",
+  "virtual_equity": 5681.2676,
+  "demo_equity_incl_usdc": 10680.8558,
   "balances": {
-    "USDT": 5736.7457054603055
+    "USDT": 5680.8558,
+    "USDC": 5000.0,
+    "NEAR": 0.095,
+    "FET": 0,
+    "OP": 0,
+    "DOT": 0,
+    "FIL": 0
   },
   "open_positions": [],
-  "last_action": "runner_ok",
+  "planned_entries": [
+    {
+      "symbol": "FETUSDT",
+      "slot": "satellite_A",
+      "variant": "donchian55_s2.0_t3.0__FET__1h",
+      "quote": 1250,
+      "tf": "1h",
+      "donch_n": 55,
+      "status": "WAIT_BREAKOUT",
+      "trigger": 0.216,
+      "mark": 0.1994,
+      "dist_to_trigger_pct": -7.69,
+      "rearm_rule": null,
+      "reset_seen": true,
+      "note": "entry trigger = Donchian upper (prior N closed bars, exclude signal)"
+    },
+    {
+      "symbol": "OPUSDT",
+      "slot": "satellite_B",
+      "variant": "donchian20_s1.5_t1.5__OP__4h",
+      "quote": 1000,
+      "tf": "4h",
+      "donch_n": 20,
+      "status": "WAIT_BREAKOUT",
+      "trigger": 0.1412,
+      "mark": 0.1254,
+      "dist_to_trigger_pct": -11.19,
+      "rearm_rule": "reset_below_hi",
+      "reset_seen": true,
+      "note": "entry trigger = Donchian upper (prior N closed bars, exclude signal)"
+    },
+    {
+      "symbol": "DOTUSDT",
+      "slot": "satellite_C",
+      "variant": "donchian20_s1.5_t1.5__DOT__4h",
+      "quote": 1000,
+      "tf": "4h",
+      "donch_n": 20,
+      "status": "WAIT_BREAKOUT",
+      "trigger": 1.236,
+      "mark": 1.128,
+      "dist_to_trigger_pct": -8.74,
+      "rearm_rule": "reset_below_hi",
+      "reset_seen": true,
+      "note": "entry trigger = Donchian upper (prior N closed bars, exclude signal)"
+    }
+  ],
+  "signals": [],
+  "last_action": "mtm_ok_catchup_stops",
+  "updated_at_taipei": "2026-09-24 14:55:31 CST",
   "light": "GREEN",
   "armed": {
     "NEARUSDT": {
       "variant": "donchian_breakout_atr__NEAR__4h",
       "status": "DISARMED_OOS_FAIL",
       "slot": "core",
-      "note": "OOS fail / DISARMED; cash until majors-800 research; not in 預計持倉",
-      "exit_reason": "max_hold",
-      "exit_price": 4.405
+      "tf": "4h",
+      "donch_n": 20,
+      "stop_atr_mult": 2.0,
+      "trail_atr_mult": 3.0,
+      "max_hold_bars": 36,
+      "oos": "3/6",
+      "pending": "strategy_review",
+      "note": "OOS 3/6 below gate; DISARMED; no signal watch / no auto re-arm"
     },
     "FETUSDT": {
       "variant": "donchian55_s2.0_t3.0__FET__1h",
-      "quote": 1250.0,
+      "quote": 1250,
       "status": "WAIT_BREAKOUT",
-      "mark": 0.1994,
+      "slot": "satellite_A",
       "tf": "1h",
       "donch_n": 55,
-      "donch_hi": 0.216,
-      "dist_to_breakout_atr": -4.4359,
       "stop_atr_mult": 2.0,
       "trail_atr_mult": 3.0,
-      "rearm_rule": null,
-      "reset_done": true,
-      "slot": "satellite_A"
+      "max_hold_bars": 192,
+      "donch_hi": 0.216,
+      "trigger": 0.216,
+      "mark": 0.1994,
+      "last_close": 0.1981,
+      "dist_to_trigger_pct": -7.69,
+      "last_check_at": "2026-09-24 14:55:27 CST",
+      "donch_lo": 0.1905,
+      "reset_seen": true
     },
     "OPUSDT": {
       "variant": "donchian20_s1.5_t1.5__OP__4h",
-      "quote": 1000.0,
+      "quote": 1000,
       "status": "WAIT_BREAKOUT",
-      "mark": 0.1254,
+      "slot": "satellite_B",
       "tf": "4h",
       "donch_n": 20,
-      "donch_hi": 0.1412,
-      "dist_to_breakout_atr": -2.9314,
       "stop_atr_mult": 1.5,
       "trail_atr_mult": 1.5,
+      "max_hold_bars": 36,
       "rearm_rule": "reset_below_hi",
-      "reset_done": true,
-      "slot": "satellite_B"
+      "reset_seen": true,
+      "reset_bar_ts_ms": 1790179200000,
+      "exit_bar_ts_ms": 1790164800000,
+      "note": "Signal watch only. reset_below_hi. No local OP fills (voided; never on Demo).",
+      "donch_hi": 0.1412,
+      "trigger": 0.1412,
+      "mark": 0.1254,
+      "last_close": 0.1239,
+      "dist_to_trigger_pct": -11.19,
+      "last_check_at": "2026-09-24 14:55:28 CST",
+      "donch_lo": 0.1209
     },
     "DOTUSDT": {
       "variant": "donchian20_s1.5_t1.5__DOT__4h",
-      "quote": 1000.0,
+      "quote": 1000,
       "status": "WAIT_BREAKOUT",
-      "mark": 1.128,
+      "slot": "satellite_C",
       "tf": "4h",
       "donch_n": 20,
-      "donch_hi": 1.236,
-      "dist_to_breakout_atr": -3.3812,
       "stop_atr_mult": 1.5,
       "trail_atr_mult": 1.5,
+      "max_hold_bars": 36,
       "rearm_rule": "reset_below_hi",
-      "reset_done": true,
-      "slot": "satellite_C"
+      "reset_seen": true,
+      "funded_from": "core",
+      "oos": "5/6",
+      "note": "Signal watch only. Sat C from core cash allocation.",
+      "donch_hi": 1.236,
+      "trigger": 1.236,
+      "mark": 1.128,
+      "last_close": 1.111,
+      "dist_to_trigger_pct": -8.74,
+      "last_check_at": "2026-09-24 14:55:30 CST",
+      "donch_lo": 1.078
     }
   },
-  "source": "state_mirror",
-  "slots": {
-    "core": {
-      "status": "DISARMED_OOS_FAIL",
-      "symbol": "NEARUSDT"
+  "trade_log": [
+    {
+      "ts_taipei": "2026-09-18 00:56",
+      "symbol": "NEARUSDT",
+      "side": "BUY",
+      "qty": 505.0,
+      "price": 2.97,
+      "quote": 1499.85,
+      "fee": null,
+      "reason": "demo_manual_or_bot",
+      "source": "binance_demo",
+      "status": "FILLED"
     },
-    "satellite_A": {
-      "status": "ARMED",
-      "symbol": "FETUSDT"
-    },
-    "satellite_B": {
-      "status": "WAIT_RESET",
-      "symbol": "OPUSDT"
-    },
-    "satellite_C": {
-      "status": "ARMED",
-      "symbol": "DOTUSDT"
+    {
+      "ts_taipei": "2026-09-24 14:53",
+      "symbol": "NEARUSDT",
+      "side": "SELL",
+      "qty": 504.4,
+      "price": 4.327694,
+      "quote": 2182.8887,
+      "fee": 2.1829,
+      "fee_asset": "USDT",
+      "fills": [
+        {
+          "qty": 349.9,
+          "price": 4.328
+        },
+        {
+          "qty": 154.5,
+          "price": 4.327
+        }
+      ],
+      "orderId": 421133398,
+      "reason": "demo_sell",
+      "source": "binance_demo",
+      "status": "FILLED",
+      "residual_near": 0.095
     }
+  ],
+  "marks": {
+    "NEARUSDT": 4.335,
+    "FETUSDT": 0.1994,
+    "OPUSDT": 0.1254,
+    "DOTUSDT": 1.128
   },
-  "updated_at_taipei": "2026-09-24T14:51:44+08:00"
+  "source_label": "Binance Demo 帳戶（真實成交）",
+  "realized_pnl_usdt_near": 680.8558
 }

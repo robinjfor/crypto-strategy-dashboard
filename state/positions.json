@@ -1,10 +1,13 @@
 {
-  "updated_at": "2026-09-24T14:51:44+08:00",
-  "virtual_equity": 5736.7457,
+  "updated_at": "2026-09-24T15:00:18+08:00",
+  "virtual_equity": 5681.2676,
   "balances": {
-    "USDT": 5736.7457054603055
+    "USDT": 5680.8558,
+    "USDC": 5000.0,
+    "NEAR": 0.095
   },
   "light": "GREEN",
   "positions": [],
-  "seed_note": "flat book; core NEAR DISARMED_OOS_FAIL; sat A FET / B OP reset / C DOT armed"
+  "source": "binance_demo",
+  "source_label": "Binance Demo 帳戶（真實成交）"
 }

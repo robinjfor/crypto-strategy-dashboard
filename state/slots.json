@@ -1,13 +1,17 @@
 {
-  "updated_at": "2026-09-24T14:51:41+08:00",
-  "virtual_equity": 5736.7457,
+  "updated_at": "2026-09-24T15:00:18+08:00",
+  "virtual_equity": 5681.2676,
+  "balances": {
+    "USDT": 5680.8558,
+    "USDC": 5000.0
+  },
+  "source": "binance_demo",
   "core": {
     "slot": "core",
     "symbol": "NEARUSDT",
     "status": "DISARMED_OOS_FAIL",
     "pct": 40,
-    "notional_usdt_cash": 1000,
-    "note": "1000 lent to sat C; not shown in 預計持倉"
+    "notional_usdt_cash": 1000
   },
   "satellites": [
     {
@@ -16,16 +20,19 @@
       "status": "WAIT_BREAKOUT",
       "pct": 25,
       "notional_usdt": 1250,
-      "variant": "donchian55_s2.0_t3.0__FET__1h"
+      "variant": "donchian55_s2.0_t3.0__FET__1h",
+      "status_label": "等訊號"
     },
     {
       "slot": "satellite_B",
       "symbol": "OPUSDT",
-      "status": "WAIT_RESET",
+      "status": "WAIT_BREAKOUT",
       "pct": 20,
       "notional_usdt": 1000,
       "variant": "donchian20_s1.5_t1.5__OP__4h",
-      "rearm_rule": "reset_below_hi"
+      "rearm_rule": "reset_below_hi",
+      "reset_done": true,
+      "status_label": "等訊號（已完成回落重置）"
     },
     {
       "slot": "satellite_C",
@@ -34,7 +41,8 @@
       "pct": 20,
       "notional_usdt": 1000,
       "variant": "donchian20_s1.5_t1.5__DOT__4h",
-      "stop_ref": 1.073
+      "stop_ref": 1.073,
+      "status_label": "等訊號"
     }
   ]
 }

@@ -1,8 +1,27 @@
 {
-  "title": "Box Paper 模擬倉（24h）",
-  "exchange": "Box Paper",
-  "api_base": "https://data-api.binance.vision",
+  "title": "Binance Demo 帳戶（真實成交）",
+  "exchange": "Binance Demo",
+  "api_base": "https://demo-api.binance.com",
+  "data_api_base": "https://data-api.binance.vision",
+  "source_label": "Binance Demo 帳戶（真實成交）",
+  "mode": "SIGNAL_ONLY",
   "total_capital_usdt": 5000,
+  "balances": {
+    "USDT": 5680.8558,
+    "USDC": 5000.0,
+    "NEAR": 0.095
+  },
+  "virtual_equity": 5681.2676,
+  "equity_usdt": 5681.2676,
+  "equity_total_stable": 10680.8558,
+  "realized_pnl_usdt": 680.8558,
+  "max_drawdown": null,
+  "open_positions": [],
+  "closed_positions": [],
+  "auto_refresh_sec": 30,
+  "light": "GREEN",
+  "yellow_light": false,
+  "allocation_note": "Binance Demo 真實成交。USDT 5680.86、USDC 5000。NEAR 已平；FET／OP／DOT 等訊號。",
   "target_allocation": [
     {
       "asset": "CASH_CORE",
@@ -33,17 +52,19 @@
       "status": "armed_wait_breakout",
       "ui_status": "WAIT_BREAKOUT",
       "status_label": "等訊號",
-      "entry_rule": "FET 1h 收盤 > 前 55 根已收盤 K 的最高價（Donchian55 上軌）",
+      "entry_rule": "FET 1h 收盤 > 前 55 根已收盤 K 最高價（Donchian55 上軌）",
       "exit_rule": "跌破下軌或 ATR 停損／trail",
       "stop_mode": "pending",
       "stop_note": "未開倉 → 無有效移動止損／出場下軌",
       "leverage": "1x",
       "strategy_id": "satellite-fet",
       "strategy_name": "donchian55_s2.0_t3.0__FET__1h",
-      "selected_variant": "donchian55_s2.0_t3.0__FET__1h",
       "target_notional_usdt": 1250,
       "tf": "1h",
-      "donch_n": 55
+      "donch_n": 55,
+      "trigger": 0.216,
+      "mark": 0.1994,
+      "dist_to_trigger_pct": -7.69
     },
     {
       "asset": "OP",
@@ -58,12 +79,14 @@
       "leverage": "1x",
       "strategy_id": "satellite-op",
       "strategy_name": "donchian20_s1.5_t1.5__OP__4h",
-      "selected_variant": "donchian20_s1.5_t1.5__OP__4h",
       "target_notional_usdt": 1000,
       "tf": "4h",
       "donch_n": 20,
       "rearm_rule": "reset_below_hi",
-      "note_rearm": "rearm_rule=reset_below_hi; reset_done=true as of 2026-09-24 ~14:51 CST (mark 0.1254 < donch_hi 0.1412)"
+      "reset_done": true,
+      "trigger": 0.1412,
+      "mark": 0.1254,
+      "dist_to_trigger_pct": -11.19
     },
     {
       "asset": "DOT",
@@ -71,48 +94,47 @@
       "status": "armed_wait_breakout",
       "ui_status": "WAIT_BREAKOUT",
       "status_label": "等訊號",
-      "entry_rule": "DOT 4h 收盤 > 前 20 根已收盤 K 的最高價（Donchian20 上軌）",
+      "entry_rule": "DOT 4h 收盤 > 前 20 根已收盤 K 最高價（Donchian20 上軌）",
       "exit_rule": "跌破下軌或 ATR trail",
       "stop_mode": "pending",
       "stop_note": "開倉後止損參考 ≈1.073；未開倉無有效移動止損／出場下軌",
       "leverage": "1x",
       "strategy_id": "satellite-dot",
       "strategy_name": "donchian20_s1.5_t1.5__DOT__4h",
-      "selected_variant": "donchian20_s1.5_t1.5__DOT__4h",
       "target_notional_usdt": 1000,
       "tf": "4h",
       "donch_n": 20,
-      "stop_ref": 1.073
+      "stop_ref": 1.073,
+      "trigger": 1.236,
+      "mark": 1.128,
+      "dist_to_trigger_pct": -8.74
     }
   ],
   "strategies": [
     {
       "id": "strategy-crypto-s2",
-      "name": "S2 Box Paper（FET／OP reset／DOT）",
+      "name": "S2 Binance Demo（FET／OP／DOT 訊號）",
       "paper_path": "./data/strategy-crypto-s2/paper_trading.json",
       "settlement_path": "./data/strategy-crypto-s2/settlement.json",
       "leverage": "1x",
       "market_type": "spot",
-      "summary": "全現金 ~5736.7。NEAR DISARMED；FET＋DOT 等突破；OP 等回落重置。",
-      "description": "核心 NEAR max_hold 出場待 re-arm；OP trail 出場；FET donchian55 1h armed。",
-      "entry_rule": "4h 收盤突破 Donchian20 上軌進場做多",
-      "exit_rule": "4h 收盤跌破 Donchian 下軌，或觸及 ATR 停損／移動停利",
+      "summary": "Demo 真實成交。USDT 5680.86 + USDC 5000。無實際持倉。FET／DOT／OP 等訊號。",
+      "description": "Runner 僅發訊號；成交以 Binance Demo 帳戶為準。",
+      "entry_rule": "收盤突破 Donchian 上軌（排除訊號 K）",
+      "exit_rule": "跌破下軌或 ATR 停損／trail",
       "stop_rule": "開倉後：移動止損（ATR trail）／出場下軌（Donchian lo）；未開倉無有效止損",
-      "timeframe": "4h",
-      "symbol": "NEARUSDT",
-      "brief_path": "./data/strategy-crypto-s2/BRIEF.md",
-      "backtest_url": "./backtest.html?strategy=strategy-crypto-s2",
-      "oos_note": "exchange: Box Paper · Vision marks"
+      "timeframe": "multi",
+      "symbol": "MULTI",
+      "status": "active"
     }
   ],
-  "auto_refresh_sec": 15,
   "satellite_strategies": [
     {
       "id": "satellite-fet",
       "name": "donchian55_s2.0_t3.0__FET__1h",
       "asset": "FET",
       "status": "armed_wait_breakout",
-      "summary": "衛星A 25% ~1250 USDT · 等突破",
+      "summary": "衛星A 25% ~1250 · 等訊號",
       "entry_rule": "1h 收盤站上 Donchian(55) 上軌",
       "exit_rule": "跌破下軌或 ATR×2／trail×3",
       "stop_rule": "開倉後進場 − 2×ATR；移動止損 trail 3×ATR；出場下軌 Donchian lo",
@@ -126,7 +148,7 @@
       "name": "donchian20_s1.5_t1.5__OP__4h",
       "asset": "OP",
       "status": "armed_wait_breakout",
-      "summary": "衛星B 20% ~1000 · 已完成回落重置，等突破",
+      "summary": "衛星B 20% ~1000 · 已完成回落重置，等訊號",
       "entry_rule": "reset_below_hi 後再突破 Donchian20",
       "exit_rule": "跌破下軌或 ATR trail 1.5",
       "stop_rule": "開倉後進場 − 1.5×ATR；移動止損 trail 1.5×ATR",
@@ -140,7 +162,7 @@
       "name": "donchian20_s1.5_t1.5__DOT__4h",
       "asset": "DOT",
       "status": "armed_wait_breakout",
-      "summary": "衛星C 20% ~1000（由核心撥款）· 等突破；止損參考 1.073",
+      "summary": "衛星C 20% ~1000 · 等訊號；止損參考 1.073",
       "entry_rule": "4h 收盤站上 Donchian(20) 上軌",
       "exit_rule": "跌破下軌或 ATR trail 1.5",
       "stop_rule": "開倉後進場 − 1.5×ATR；止損參考 ≈1.073",
@@ -150,11 +172,5 @@
       "target_notional_usdt": 1000,
       "stop_ref": 1.073
     }
-  ],
-  "allocation_note": "全現金 ~5736.7。核心 NEAR DISARMED_OOS_FAIL；衛星A FET 等突破；衛星B OP 等回落重置；衛星C DOT 等突破。",
-  "spec_path": "./data/strategy-crypto-s2/DASHBOARD_EXPECTED_HOLDINGS.md",
-  "allocation_path": "./data/strategy-crypto-s2/ALLOCATION_5000.json",
-  "satellite_rules_path": "./data/strategy-crypto-s2/SATELLITE_OPEN_RULES.md",
-  "light": "GREEN",
-  "yellow_light": false
+  ]
 }
