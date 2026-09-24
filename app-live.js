@@ -158,6 +158,19 @@
     return "";
   }
 
+  function signedNum(v, d) {
+    if (v == null || Number.isNaN(Number(v))) return "—";
+    var n = Number(v);
+    return n > 0 ? "+" + num(n, d) : num(n, d);
+  }
+
+  function formatPnl(pnl, pct) {
+    if (pnl == null || Number.isNaN(Number(pnl))) return "—";
+    var out = signedNum(pnl, 2) + " USDT";
+    if (pct != null && !Number.isNaN(Number(pct))) out += " (" + signedNum(pct, 2) + "%)";
+    return out;
+  }
+
   function reason(code) {
     if (typeof window.reasonZh === "function") return window.reasonZh(code);
     return (code == null || code === "") ? "—" : String(code);
@@ -352,26 +365,40 @@
     var balMap = (cloud && (cloud.balances_map || cloud.balances_map)) || {};
     openPositions().forEach(function (p) {
       if (p.status && p.status !== "FILLED" && p.status !== "OPEN") return;
-      var sym = String(p.symbol || "").toUpperCase();
+      var sym = String(p.symbol || p.raw_symbol || "").toUpperCase();
       var asset = String(p.asset || sym.replace(/USDT$/i, "")).toUpperCase();
-      var qty = Number(p.qty != null ? p.qty : p.quantity) || 0;
+      var rawQty = Number(p.qty != null ? p.qty : (p.quantity != null ? p.quantity : p.position_amt)) || 0;
+      var qty = Math.abs(rawQty);
+      var entry = Number(p.entry != null ? p.entry : (p.entry_price != null ? p.entry_price : (p.avg_entry_price != null ? p.avg_entry_price : p.avgPrice))) || 0;
       var px = Number(
         p.mark_price != null ? p.mark_price : (p.mark != null ? p.mark : p.price)
       ) || 0;
       var mv = qty * px;
       if (!(mv >= DUST_USDT)) return;
+      var side = String(p.side || p.position_side || p.positionSide || "").toUpperCase();
+      var isShort = side === "SHORT" || side === "SELL" || rawQty < 0;
+      var rawPnl = p.unrealized_pnl != null ? p.unrealized_pnl : (p.unrealized_usdt != null ? p.unrealized_usdt : p.unrealizedPnl);
+      var unrealized = rawPnl != null ? Number(rawPnl) : null;
+      if (unrealized == null && entry > 0 && px > 0) {
+        unrealized = (isShort ? entry - px : px - entry) * qty;
+      }
+      var entryCost = entry > 0 ? qty * entry : null;
+      var unrealizedPct = unrealized != null && entryCost > 0 ? (unrealized / entryCost) * 100 : null;
       rows.push({
         slot: p.slot || "",
         symbol: sym,
         asset: asset,
         tf: p.tf || p.timeframe || "",
         qty: qty,
-        entry: p.entry != null ? p.entry : p.entry_price,
+        entry: entry || null,
         mark: px,
         stop: p.stop,
         donch_lo: p.donch_lo,
         market_value: mv,
-        unrealized: p.unrealized_pnl != null ? p.unrealized_pnl : p.unrealized_usdt,
+        entry_cost: entryCost,
+        unrealized: unrealized,
+        unrealized_pct: unrealizedPct,
+        side: side,
         bal_qty: balMap[asset] != null ? Number(balMap[asset]) : null
       });
     });
@@ -394,6 +421,19 @@
     return parts.filter(function (p) { return p.value >= DUST_USDT; });
   }
 
+  function unrealizedSummary() {
+    var rows = actualHoldings();
+    var pnl = 0, cost = 0, count = 0;
+    rows.forEach(function (r) {
+      if (r.unrealized == null) return;
+      pnl += Number(r.unrealized);
+      if (r.entry_cost > 0) cost += Number(r.entry_cost);
+      count++;
+    });
+    if (!count) return { pnl: null, cost: null, pct: null };
+    return { pnl: pnl, cost: cost, pct: cost > 0 ? (pnl / cost) * 100 : null };
+  }
+
   function renderAccount() {
     var b = bals();
     var usdt = b.USDT, usdc = b.USDC;
@@ -404,6 +444,8 @@
       : (book && book.equity_usdt != null ? Number(book.equity_usdt) : usdt);
     var holds = actualHoldings();
     var openN = holds.length;
+    var upnl = unrealizedSummary();
+    var upnlValue = '<span class="' + signedCls(upnl.pnl) + '">' + formatPnl(upnl.pnl, upnl.pct) + '</span>';
     pieParts = actualPieParts();
     var sum = pieParts.reduce(function (s, p) { return s + p.value; }, 0) || 1;
     var legend = pieParts.map(function (p) {
@@ -420,6 +462,7 @@
       '<div class="kpi"><div class="label">USDC</div><div class="value">' + num(usdc, 2) + '</div><div class="sublabel">不計入圓餅</div></div>' +
       '<div class="kpi kpi-emphasis"><div class="label">穩定幣合計</div><div class="value">' + num(total, 2) + '</div><div class="sublabel">USDT + USDC</div></div>' +
       '<div class="kpi"><div class="label">USDT 側權益</div><div class="value">' + num(equity, 2) + '</div><div class="sublabel">雲端即時</div></div>' +
+      '<div class="kpi"><div class="label">未實現損益合計</div><div class="value">' + upnlValue + '</div><div class="sublabel">按進場成本計算</div></div>' +
       '<div class="kpi"><div class="label">實際持倉數</div><div class="value">' + num(openN, 0) + '</div><div class="sublabel">' +
       (openN === 0 ? "目前空倉（全現金）" : "已成交部位") + "</div></div></div></div>" +
       '<div class="holdings-pie-panel">' +
@@ -478,7 +521,7 @@
           '<td class="num">' + (p.stop != null ? num(p.stop, 4) : "—") + '<div class="kpi-sub">移動止損</div></td>' +
           '<td class="num">' + (p.donch_lo != null ? num(p.donch_lo, 4) : "—") + '<div class="kpi-sub">出場下軌</div></td>' +
           '<td class="num">' + num(p.market_value, 2) + "</td>" +
-          '<td class="num ' + signedCls(p.unrealized) + '">' + (p.unrealized == null ? "—" : num(p.unrealized, 2)) + "</td>" +
+          '<td class="num ' + signedCls(p.unrealized) + '">' + formatPnl(p.unrealized, p.unrealized_pct) + "</td>" +
           '<td><button type="button" class="btn-close-pos" data-slot="' + esc(p.slot) + '" data-sym="' + esc(p.symbol || "") + '">手動平倉</button></td></tr>';
       }).join("");
     }
@@ -1014,8 +1057,8 @@
     }
     main.className = "";
     pieParts = actualPieParts();
-    main.innerHTML = renderHealth() + renderAccount() + renderChanges() +
-      renderActual() + renderPlanned() + renderStrategies() + renderTrades();
+    main.innerHTML = renderHealth() + renderAccount() +
+      renderActual() + renderPlanned() + renderStrategies() + renderTrades() + renderChanges();
     mountPie(pieParts);
     bindControls();
     var pending = plannedList();
