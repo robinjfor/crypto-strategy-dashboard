@@ -1,8 +1,8 @@
 {
-  "last_success_at": "2026-09-24T14:34:36+08:00",
-  "last_runner_at": "2026-09-24T14:34:36+08:00",
+  "last_success_at": "2026-09-24T14:38:49+08:00",
+  "last_runner_at": "2026-09-24T14:38:49+08:00",
   "last_runner_ok": true,
   "last_scanner_at": null,
   "last_error": null,
-  "note": "bootstrapped; awaiting first Actions runner"
+  "note": "state reseated to flat book 14:37 CST; awaiting Actions runner"
 }

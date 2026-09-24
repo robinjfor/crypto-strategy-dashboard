@@ -1,31 +1,37 @@
 {
-  "updated_at": "2026-09-24T14:34:36+08:00",
+  "updated_at": "2026-09-24T14:38:49+08:00",
   "orders": [
     {
       "id": "ord_near",
       "slot": "core",
       "symbol": "NEARUSDT",
-      "status": "FILLED",
-      "position_id": "pos_near_0",
+      "status": "EXITED",
       "variant": "donchian_breakout_atr__NEAR__4h",
       "quote_usdt": 1499.85,
       "tf": "4h",
       "donch_n": 20,
       "stop_atr_mult": 2.0,
-      "trail_atr_mult": 3.0
+      "trail_atr_mult": 3.0,
+      "exited_at": "2026-09-24T00:00:00+08:00",
+      "exit_reason": "max_hold",
+      "exit_price": 4.405,
+      "note": "pending re-arm (no auto re-entry)"
     },
     {
       "id": "ord_op",
       "slot": "satellite_B",
       "symbol": "OPUSDT",
-      "status": "FILLED",
-      "position_id": "pos_op_1",
+      "status": "EXITED",
       "variant": "donchian20_s1.5_t1.5__OP__4h",
       "quote_usdt": 1000.0,
       "tf": "4h",
       "donch_n": 20,
       "stop_atr_mult": 1.5,
-      "trail_atr_mult": 1.5
+      "trail_atr_mult": 1.5,
+      "exited_at": "2026-09-23T20:00:00+08:00",
+      "exit_reason": "trail_stop",
+      "exit_price": 0.1298,
+      "note": "satellite B slot empty"
     },
     {
       "id": "ord_fet",
@@ -34,13 +40,16 @@
       "status": "ARMED",
       "variant": "donchian55_s2.0_t3.0__FET__1h",
       "quote_usdt": 1250.0,
-      "mark": 0.1805,
+      "mark": 0.1996,
+      "donch_hi": 0.216,
+      "donch_lo": 0.1905,
       "last_signal_bar_ts": null,
       "last_acted_bar_ts": null,
       "tf": "1h",
       "donch_n": 55,
       "stop_atr_mult": 2.0,
-      "trail_atr_mult": 3.0
+      "trail_atr_mult": 3.0,
+      "last_check_at": "2026-09-24T14:37:28+08:00"
     }
   ]
 }

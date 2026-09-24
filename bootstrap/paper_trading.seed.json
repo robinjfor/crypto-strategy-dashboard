@@ -2,61 +2,49 @@
   "exchange": "Box Paper (Binance Vision)",
   "base_url": "https://data-api.binance.vision",
   "strategy": "multi box paper",
-  "virtual_equity": 5768.9649,
+  "virtual_equity": 5736.7457,
   "balances": {
-    "USDT": 2458.3332040913097,
-    "NEAR": 505.0,
+    "USDT": 5736.7457054603055,
+    "NEAR": 0.0,
     "FIL": 0.0,
-    "OP": 8169.934641
+    "OP": 0.0
   },
-  "open_positions": [
-    {
-      "symbol": "NEARUSDT",
-      "side": "LONG",
-      "qty": 505.0,
-      "entry": 2.97,
-      "stop": 3.6635781194078945,
-      "mark_price": 4.493,
-      "unrealized_pct": 51.28,
-      "variant": "donchian_breakout_atr__NEAR__4h",
-      "donch_lo": 3.916
-    },
-    {
-      "symbol": "OPUSDT",
-      "side": "LONG",
-      "qty": 8169.934641,
-      "entry": 0.1224,
-      "stop": 0.11875556990216492,
-      "mark_price": 0.1275,
-      "unrealized_pct": 4.17,
-      "variant": "donchian20_s1.5_t1.5__OP__4h",
-      "donch_lo": 0.1209,
-      "trail_atr_mult": 1.5,
-      "stop_atr_mult": 1.5,
-      "tf": "4h",
-      "donch_n": 20,
-      "signal_close": 0.1279,
-      "signal_donch_hi": 0.1219
-    }
-  ],
-  "last_action": "mtm_ok",
-  "updated_at_taipei": "2026-09-24 13:17:22 CST",
+  "open_positions": [],
+  "last_action": "mtm_ok_catchup_stops",
+  "updated_at_taipei": "2026-09-24 14:37:29 CST",
   "light": "GREEN",
   "armed": {
     "FETUSDT": {
       "variant": "donchian55_s2.0_t3.0__FET__1h",
       "quote": 1250,
       "status": "WAIT_BREAKOUT",
-      "mark": 0.1805
+      "mark": 0.1996,
+      "donch_hi": 0.216,
+      "donch_lo": 0.1905,
+      "last_check_at": "2026-09-24 14:37:28 CST"
     },
     "OPUSDT": {
       "variant": "donchian20_s1.5_t1.5__OP__4h",
       "quote": 1000,
-      "status": "FILLED",
+      "status": "EXITED_TRAIL_STOP",
       "tf": "4h",
       "donch_n": 20,
       "stop_atr_mult": 1.5,
       "trail_atr_mult": 1.5
+    },
+    "NEARUSDT": {
+      "variant": "donchian_breakout_atr__NEAR__4h",
+      "status": "EXITED_MAX_HOLD",
+      "tf": "4h",
+      "donch_n": 20,
+      "stop_atr_mult": 2.0,
+      "trail_atr_mult": 3.0,
+      "max_hold_bars": 36,
+      "exited_at": "2026-09-24 00:00:00 CST",
+      "exit_price": 4.405,
+      "exit_reason": "max_hold",
+      "pending": "re_arm",
+      "note": "No auto re-entry; analyst reviewing re-arm + max_hold"
     }
   }
 }
