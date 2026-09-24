@@ -1425,7 +1425,8 @@
           "score": 0.0,
           "data_short": true
         }
-      ]
+      ],
+      "n_gate_pass_3y": 8
     },
     {
       "strategy_family_id": "donchian_btc_regime",
@@ -1650,7 +1651,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 3
     },
     {
       "strategy_family_id": "donchian_lev",
@@ -1723,9 +1725,12 @@
             "maxdd -58.3528 worse than -45%"
           ],
           "score": 0.0,
-          "data_short": false
+          "data_short": false,
+          "cloud_supported": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0,
+      "cloud_supported": false
     },
     {
       "strategy_family_id": "ema_cross_atr",
@@ -2026,7 +2031,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 1
     },
     {
       "strategy_family_id": "ema_trend_hold",
@@ -2101,7 +2107,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0
     },
     {
       "strategy_family_id": "supertrend",
@@ -2175,7 +2182,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0
     },
     {
       "strategy_family_id": "momentum_rotation",
@@ -2242,7 +2250,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0
     },
     {
       "strategy_family_id": "sma_regime_hold",
@@ -2615,7 +2624,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0
     },
     {
       "strategy_family_id": "dual_ma_rsi",
@@ -2687,7 +2697,8 @@
           "score": 0.0,
           "data_short": false
         }
-      ]
+      ],
+      "n_gate_pass_3y": 0
     },
     {
       "strategy_family_id": "donchian_lev_vol",
@@ -3568,7 +3579,8 @@
           "robust": null,
           "source": "high_return"
         }
-      ]
+      ],
+      "n_gate_pass_3y": 19
     },
     {
       "strategy_family_id": "donchian_long_short_btc_regime",
@@ -4077,7 +4089,8 @@
           "robust": null,
           "source": "high_return"
         }
-      ]
+      ],
+      "n_gate_pass_3y": 11
     },
     {
       "strategy_family_id": "donchian_fear_greed",
@@ -4780,7 +4793,8 @@
           "robust": null,
           "source": "high_return"
         }
-      ]
+      ],
+      "n_gate_pass_3y": 15
     },
     {
       "strategy_family_id": "news_burst_confirm",
@@ -5252,8 +5266,8 @@
           "bh_final": null
         }
       ],
-      "cloud_supported": false,
-      "n_gate_pass_3y": 10
+      "n_gate_pass_3y": 10,
+      "cloud_supported": false
     },
     {
       "strategy_family_id": "news_filter_donchian",
@@ -5502,8 +5516,8 @@
           "bh_final": null
         }
       ],
-      "cloud_supported": false,
-      "n_gate_pass_3y": 5
+      "n_gate_pass_3y": 5,
+      "cloud_supported": false
     },
     {
       "strategy_family_id": "ls_donch_btc_regime_perp",
@@ -5875,7 +5889,9 @@
           "bh_final": null,
           "n_liquidations": 0
         }
-      ]
+      ],
+      "n_gate_pass_3y": 6,
+      "cloud_supported": false
     },
     {
       "strategy_family_id": "ls_univ_portfolio_perp",
@@ -6138,7 +6154,9 @@
           "bh_final": null,
           "n_liquidations": null
         }
-      ]
+      ],
+      "n_gate_pass_3y": 4,
+      "cloud_supported": false
     }
   ]
 }

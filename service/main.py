@@ -31,7 +31,7 @@ from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, DEFA
 from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
 from slots import ensure_approved_families
 from state_store import StateStore
-from strategy import evaluate_all, now_iso_taipei
+from strategy import evaluate_all, now_iso_taipei, check_position_liquidation
 from sol_core.signal import compute_signal as sol_compute_signal, expectation_heartbeat, in_daily_window
 
 logging.basicConfig(
@@ -173,7 +173,7 @@ def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[b
 
 def slot_meta_venue(sig: dict) -> str:
     fam = str(sig.get("family") or "")
-    if fam in ("donchian_lev_vol", "donchian_long_short_btc_regime") or sig.get("venue") == "futures":
+    if fam in ("donchian_lev_vol", "donchian_long_short_btc_regime", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp") or sig.get("venue") == "futures":
         return "futures"
     return "spot"
 
@@ -530,6 +530,35 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             "fill": app.get("fill"),
         })
     state.setdefault("meta", {})["last_decisions"] = decisions
+
+    # Futures liquidation monitor — force exit when mark approaches liq
+    for pid, pos in list((state.get("positions") or {}).items()):
+        if not pos or pos.get("status") != "FILLED":
+            continue
+        if (pos.get("venue") or "spot") != "futures":
+            continue
+        try:
+            mark = float(pos.get("mark") or 0)
+            if not mark:
+                sym = pos.get("symbol") or ""
+                if sym:
+                    from futures_client import FuturesDemoClient
+                    from futures_execution import mark_price as fut_mark
+                    mark = float(fut_mark(FuturesDemoClient(), sym))
+            risk = check_position_liquidation({**pos, "leverage": pos.get("leverage") or 1}, mark)
+            if risk.get("at_risk"):
+                log.warning("liq_risk_exit slot=%s risk=%s", pid, risk)
+                sig_exit = {
+                    "slot": pid, "symbol": pos.get("symbol"), "action": "exit",
+                    "reason": "liquidation_risk", "side": pos.get("side"),
+                    "venue": "futures", "mark": mark, "liq": risk,
+                }
+                applied.append(apply_signal(client, state, sig_exit, live=live, allow_entries=False))
+                state.setdefault("meta", {}).setdefault("liq_events", []).append(
+                    {"slot": pid, "risk": risk, "at": now_iso_taipei()}
+                )
+        except Exception as e:  # noqa: BLE001
+            log.warning("liq_monitor_fail slot=%s err=%s", pid, e)
     state["meta"]["last_decisions_at"] = now_iso_taipei()
 
     # Optional one-shot backfill for a missed entry (Cloud Run Job env BACKFILL_SLOT)

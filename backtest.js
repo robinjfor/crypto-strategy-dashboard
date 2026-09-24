@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -16,13 +16,17 @@
     donchian_lev: null,
     donchian_lev_vol: "donchian_lev_vol",
     donchian_long_short_btc_regime: "donchian_long_short_btc_regime",
+    ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp",
+    ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",
     ema_trend_hold: null,
     supertrend: null,
     momentum_rotation: null,
     sma_regime_hold: null,
-    dual_ma_rsi: null
+    dual_ma_rsi: null,
+    news_burst_confirm: null,
+    news_filter_donchian: null
   };
   var LOCK_PREP = "準備中";
   var LOCK_NO_PASS = "未過關，不開放批准";

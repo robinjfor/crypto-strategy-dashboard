@@ -381,8 +381,10 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
         return evaluate_fear_greed_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev_vol":
         return evaluate_lev_vol_slot(slot, klines, position, slot_meta)
-    if fam == "donchian_long_short_btc_regime":
+    if fam in ("donchian_long_short_btc_regime", "ls_donch_btc_regime_perp"):
         return evaluate_long_short_slot(slot, klines, position, slot_meta)
+    if fam == "ls_univ_portfolio_perp":
+        return evaluate_portfolio_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev":
         return {
             "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
@@ -423,7 +425,7 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
     ind = add_donch_atr(closed, donch_n, atr_mode=atr_mode).dropna(subset=["atr", "donch_hi", "donch_lo"])
     if ind.empty:
         return {"slot": slot["id"], "symbol": slot["symbol"], "error": "no_closed_bars",
-                "family": "donchian_long_short_btc_regime", "venue": "futures"}
+                "family": slot.get("family") or "donchian_long_short_btc_regime", "venue": "futures"}
 
     sig = signal_donchian_ls(ind)
     # BTC regime: long only when bull, short only when bear
@@ -445,7 +447,7 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
     prev = int(sig.iloc[-2]) if len(sig) > 1 else 0
     result = {
         "slot": slot["id"], "symbol": slot["symbol"], "tf": tf,
-        "family": "donchian_long_short_btc_regime", "venue": "futures",
+        "family": slot.get("family") or "donchian_long_short_btc_regime", "venue": "futures",
         "atr_mode": atr_mode, "bar_ts": bar_ts, "mark": mark, "close": float(bar["Close"]),
         "atr": round(atr, 8), "signal": cur, "leverage": float(slot.get("leverage") or 1.0),
         "btc_regime_on": regime_on, "checked_at": now_iso_taipei(),
@@ -503,6 +505,17 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
         return result
     from slots import MAX_NOTIONAL_USDT
     quote = min(float(slot["quote_usdt"]), MAX_NOTIONAL_USDT)
+    # Vol-target scale (ATR% → risk_frac), matching cagr70 vol_risk_frac
+    vt = slot.get("vol_target")
+    if vt:
+        try:
+            atr_pct = atr / float(bar["Close"]) if float(bar["Close"]) else 0.0
+            if atr_pct > 1e-9:
+                rf = max(0.05, min(1.0, float(vt) / atr_pct))
+                quote = max(10.0, quote * rf)
+                result["vol_risk_frac"] = round(rf, 4)
+        except Exception:
+            pass
     if cur > 0:
         suggested_stop = float(bar["Close"]) - float(slot.get("stop_atr_mult") or 1.5) * atr
         result.update(action="enter", reason="donchian_long", side="LONG",
@@ -525,13 +538,22 @@ def evaluate_all(client, state: dict) -> list[dict]:
     slots_meta = state.setdefault("slots", {})
     slots = state.get("runtime_eval_slots") or SLOTS
     need_btc = any(
-        s.get("btc_regime") or s.get("family") == "donchian_long_short_btc_regime"
+        s.get("btc_regime")
+        or s.get("family") in (
+            "donchian_long_short_btc_regime",
+            "ls_donch_btc_regime_perp",
+            "ls_univ_portfolio_perp",
+        )
         for s in slots
     )
     btc_on = btc_daily_regime_on(client) if need_btc else None
     for slot in slots:
         meta = slots_meta.setdefault(slot["id"], {})
-        if slot.get("btc_regime") or slot.get("family") == "donchian_long_short_btc_regime":
+        if slot.get("btc_regime") or slot.get("family") in (
+            "donchian_long_short_btc_regime",
+            "ls_donch_btc_regime_perp",
+            "ls_univ_portfolio_perp",
+        ):
             meta["_btc_regime_on"] = btc_on
         pos = positions.get(slot["id"])
         try:
@@ -546,3 +568,58 @@ def evaluate_all(client, state: dict) -> list[dict]:
     return results
 
 
+
+
+def evaluate_portfolio_slot(slot: dict, klines: pd.DataFrame, position: dict | None, slot_meta: dict) -> dict:
+    """Meta-slot for ls_univ_portfolio_perp: emit rebalance plan; per-coin LS filled by caller.
+
+    `klines` here is unused for multi-symbol; caller passes slot_meta["_port_marks"] /
+    `_port_atr_pct` / `_port_signals` gathered from per-symbol evaluates.
+    """
+    from portfolio import (
+        DEFAULT_UNIVERSE, MAX_BOOK_USDT, clamp_book, clamp_lev,
+        target_weights, target_notionals, rebalance_orders, liquidation_risk,
+    )
+    univ = slot.get("universe") or DEFAULT_UNIVERSE
+    univ = [str(s).upper().replace("USDT", "") for s in univ]
+    lev = clamp_lev(slot.get("leverage") or 1.5)
+    book = clamp_book(float(slot.get("quote_usdt") or MAX_BOOK_USDT))
+    mode = str(slot.get("port_mode") or slot.get("mode") or "ew")
+    atr_pcts = slot_meta.get("_port_atr_pct") or {}
+    marks = slot_meta.get("_port_marks") or {}
+    current = slot_meta.get("_port_positions") or {}
+    weights = target_weights(mode, atr_pcts, univ)
+    targets = target_notionals(book, lev, weights)
+    intents = rebalance_orders(current, targets, marks)
+    liq_alerts = []
+    for sym, pos in current.items():
+        mk = float(marks.get(sym) or pos.get("mark") or 0)
+        if mk and pos.get("qty"):
+            risk = liquidation_risk({**pos, "leverage": lev}, mk)
+            if risk.get("at_risk"):
+                liq_alerts.append({"symbol": sym, **risk})
+                intents.append({
+                    "symbol": sym, "action": "exit", "reason": "liquidation_risk",
+                    "side": pos.get("side"), "qty": pos.get("qty"),
+                })
+    return {
+        "slot": slot.get("id"),
+        "symbol": "PORTFOLIO",
+        "family": "ls_univ_portfolio_perp",
+        "venue": "futures",
+        "action": "rebalance" if intents else "hold",
+        "reason": "portfolio_plan",
+        "leverage": lev,
+        "book_usdt": book,
+        "weights": weights,
+        "targets": targets,
+        "intents": intents,
+        "liq_alerts": liq_alerts,
+        "universe": univ,
+        "checked_at": now_iso_taipei(),
+    }
+
+
+def check_position_liquidation(position: dict, mark: float) -> dict:
+    from portfolio import liquidation_risk
+    return liquidation_risk(position, mark)

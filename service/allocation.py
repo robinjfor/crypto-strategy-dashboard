@@ -19,12 +19,17 @@ RUNNER_FAMILIES = frozenset({
     "donchian_lev_vol",
     "donchian_long_short_btc_regime",
     "donchian_fear_greed",
+    # CAGR70 long-short / 10-coin portfolio (signal parity + liq monitor)
+    "ls_donch_btc_regime_perp",
+    "ls_univ_portfolio_perp",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
     "donchian_long_short_btc_regime",
     "donchian_lev",
-    "donchian_fear_greed",  # lev>1 rows need futures; family not in RUNNER yet
+    "donchian_fear_greed",
+    "ls_donch_btc_regime_perp",
+    "ls_univ_portfolio_perp",
 })
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
@@ -36,7 +41,11 @@ FAMILY_ALIASES = {
     "donchian_lev_vol": "donchian_lev_vol",
     "donchian_long_short_btc_regime": "donchian_long_short_btc_regime",
     "donchian_lev": "donchian_lev",
+    "ls_donch_btc_regime_perp": "ls_donch_btc_regime_perp",
+    "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
 }
+MAX_LEVERAGE = 3.0
+MAX_BOOK_USDT = 5000.0
 
 DEFAULT_BOOK = 5000.0
 DEFAULT_MAX_ORDER = 1500.0
@@ -138,16 +147,26 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         if lev > 3 + 1e-9:
             errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
         _check_atr_mode(p, errors, idx)
-    elif family == "donchian_long_short_btc_regime":
+    elif family in ("donchian_long_short_btc_regime", "ls_donch_btc_regime_perp"):
         if "donch_n" not in p:
-            errors.append(f"slots[{idx}].params.donch_n 必填（donchian_long_short_btc_regime）")
+            errors.append(f"slots[{idx}].params.donch_n 必填（{family}）")
         stop, trail = _stop_trail_keys(p)
         if stop is None or trail is None:
-            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（donchian_long_short_btc_regime）")
+            errors.append(f"slots[{idx}].params.stop/trail 倍數必填（{family}）")
         lev = float(p.get("leverage") or 1.0)
         if lev > 3 + 1e-9:
             errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
         _check_atr_mode(p, errors, idx)
+    elif family == "ls_univ_portfolio_perp":
+        univ = p.get("universe") or p.get("symbols") or []
+        if not isinstance(univ, list) or len(univ) < 2:
+            errors.append(f"slots[{idx}].params.universe 需為至少 2 個幣的陣列（ls_univ_portfolio_perp）")
+        lev = float(p.get("leverage") or 1.0)
+        if lev > 3 + 1e-9:
+            errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 3")
+        mode = str(p.get("mode") or "ew").strip().lower()
+        if mode not in ("ew", "inv_vol", "invvol", "inverse_vol"):
+            errors.append(f"slots[{idx}].params.mode 必須是 ew 或 inv_vol，收到：{p.get('mode')!r}")
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -383,6 +402,10 @@ def slot_to_runtime(slot: dict) -> dict:
         "fg_mode": params.get("fg_mode") or "none",
         "leverage": float(params.get("leverage") or 1.0),
         "vol_target": params.get("vol_target"),
+        "regime_scale": params.get("regime_scale") or params.get("regime_scale_mode") or "none",
+        "check_liq": bool(params.get("check_liq", True)),
+        "universe": params.get("universe") or params.get("symbols"),
+        "port_mode": params.get("mode") or "ew",
         "kind": params.get("kind") or "long",
         "armed": True,
         "mode": slot.get("order_mode") or ("live" if slot.get("enabled") else "signal_only"),
