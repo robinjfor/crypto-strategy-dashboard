@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-09-24T17:00:00+08:00",
+  "updated_at": "2026-09-25T11:45:17+08:00",
   "slots": [
     {
       "slot": "sat_op_4h",
@@ -11,7 +11,7 @@
       "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
       "symbol": "OPUSDT",
       "timeframe": "4h",
-      "notional_usdt": 1000,
+      "notional_usdt": 750,
       "enabled": true,
       "params": {
         "donch_n": 20,
@@ -29,7 +29,7 @@
       "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
       "symbol": "DOTUSDT",
       "timeframe": "4h",
-      "notional_usdt": 1000,
+      "notional_usdt": 750,
       "enabled": true,
       "params": {
         "donch_n": 20,
@@ -65,7 +65,7 @@
       "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
       "symbol": "FILUSDT",
       "timeframe": "1h",
-      "notional_usdt": 1000,
+      "notional_usdt": 750,
       "enabled": true,
       "params": {
         "donch_n": 55,
@@ -130,6 +130,48 @@
         "btc_regime": false
       },
       "note": "候選：家族 donchian_btc_regime 預設未批准 → 只算訊號"
+    },
+    {
+      "slot": "sat_sol_ema_1d",
+      "family": "ema_cross_atr",
+      "strategy_id": "ema12_26_atr_btcRegime__SOL__1d",
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "ema_fast": 12,
+        "ema_slow": 26,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 10000,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "require_reset_below_hi": false
+      },
+      "note": "ema_cross_atr 家族代表（Emily 已批家族）：3y CAGR 86.4%／DD -37.8%／OOS 4/6；現貨；core_sol 同幣但停用"
+    },
+    {
+      "slot": "ls_arb_4h",
+      "family": "ls_donch_btc_regime_perp",
+      "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
+      "symbol": "ARBUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 36,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "leverage": 1.5,
+        "vol_target": null,
+        "check_liq": true,
+        "regime_scale": "none"
+      },
+      "note": "ls_donch_btc_regime_perp 家族代表：3y CAGR 253.6%／DD -44.7%／OOS 5/6／鄰近 75%。永續多空；notional=名目部位（runner 全名目下單，1.5x→保證金約 500）"
     }
   ]
 }
