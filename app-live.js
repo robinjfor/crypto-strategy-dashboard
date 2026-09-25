@@ -622,7 +622,54 @@
         if (atr != null && atr > 0) distAtr = distAbs / atr;
       }
 
+      var kind = String(src.trigger_kind || "");
+      if (!kind) {
+        kind = fam === "ema_cross_atr" ? "ema_cross"
+          : ((fam === "ls_donch_btc_regime_perp" || fam === "donchian_long_short_btc_regime") ? "donchian_ls" : "donchian_hi");
+      }
+      var statusLabel = modeLabel(om);
+      var trigHtml = null, distHtml = null, ruleTxt = null, subTxt = null;
+      var needsMarket = (mark == null || trigger == null || atr == null);
+      if (kind === "ema_cross") {
+        var fN = src.ema_fast_n || pms.ema_fast || pms.fast || 12;
+        var sN = src.ema_slow_n || pms.ema_slow || pms.slow || 26;
+        var ef = src.ema_fast != null ? Number(src.ema_fast) : null;
+        var es = src.ema_slow != null ? Number(src.ema_slow) : null;
+        var gap = src.ema_gap_pct != null ? Number(src.ema_gap_pct) : null;
+        var bull = src.ema_bull === true || (ef != null && es != null && ef > es);
+        var btcOn = src.btc_regime_on;
+        var btcTxt = pms.btc_regime || src.btc_regime ? ("BTC 濾網 " + (btcOn === true ? "開（可做多）" : btcOn === false ? "關（不進場）" : "未知")) : "無 BTC 濾網";
+        subTxt = "EMA " + fN + "/" + sN;
+        trigHtml = (ef != null ? "EMA" + fN + " " + num(ef, 4) : "—") + "<br>" + (es != null ? "EMA" + sN + " " + num(es, 4) : "—");
+        distHtml = gap != null ? ("差距 " + (gap >= 0 ? "+" : "") + num(gap, 2) + "%<br>" + (bull ? "多頭區" : "空頭區")) : "—";
+        if (om === "live") {
+          if ((pms.btc_regime || src.btc_regime) && btcOn === false) statusLabel = "BTC 濾網關閉";
+          else if (bull) statusLabel = "已在多頭區 · 等下一次黃金交叉";
+          else statusLabel = "等黃金交叉";
+        }
+        ruleTxt = "EMA" + fN + " 上穿 EMA" + sN + "（只在交叉當根收盤進場，與回測一致）· " + btcTxt +
+          (src.last_cross_bar_ts ? " · 上次交叉 " + String(src.last_cross_bar_ts).slice(0, 10) : "");
+        needsMarket = false;
+      } else if (kind === "donchian_ls") {
+        var hi = src.donch_hi != null ? Number(src.donch_hi) : null;
+        var lo = src.donch_lo != null ? Number(src.donch_lo) : null;
+        var dh = src.dist_hi_pct != null ? Number(src.dist_hi_pct) : (hi != null && mark ? (hi / mark - 1) * 100 : null);
+        var dl = src.dist_lo_pct != null ? Number(src.dist_lo_pct) : (lo != null && mark ? (lo / mark - 1) * 100 : null);
+        var dir = String(src.allowed_direction || "");
+        var dirTxt = dir === "long_only" ? "只做多（BTC 多頭）" : dir === "short_only" ? "只做空（BTC 空頭）" : "多空皆可（BTC 狀態未知）";
+        subTxt = "Donch " + donchN + " 多空 ×" + (pms.leverage || src.leverage || 1);
+        trigHtml = "上 " + (hi != null ? num(hi, 4) : "—") + "<br>下 " + (lo != null ? num(lo, 4) : "—");
+        distHtml = "上 " + (dh != null ? (dh >= 0 ? "+" : "") + num(dh, 2) + "%" : "—") + "<br>下 " + (dl != null ? num(dl, 2) + "%" : "—");
+        if (om === "live") statusLabel = dir === "long_only" ? "等突破上軌做多" : dir === "short_only" ? "等跌破下軌做空" : "等突破";
+        ruleTxt = "Donchian" + donchN + " 收盤突破上軌做多／跌破下軌做空 · 目前允許：" + dirTxt + " · Demo 合約";
+        needsMarket = false;
+      }
+
       out.push({
+        kind: kind,
+        trig_html: trigHtml,
+        dist_html: distHtml,
+        sub_txt: subTxt,
         slot: s.slot,
         strategy_id: s.strategy_id,
         code: s.code || src.code || "",
@@ -630,7 +677,7 @@
         asset: sym.replace(/USDT$/i, ""),
         tf: s.timeframe || s.tf || src.tf,
         order_mode: om,
-        status_label: modeLabel(om),
+        status_label: statusLabel,
         target_notional_usdt: notion,
         mark: mark,
         trigger: trigger,
@@ -639,8 +686,8 @@
         dist_pct: distPct,
         dist_atr: distAtr,
         donch_n: donchN,
-        entry_rule: src.entry_condition || src.entry_rule || ("Donchian" + donchN + " 突破上軌"),
-        _needs_market: (mark == null || trigger == null || atr == null)
+        entry_rule: ruleTxt || src.entry_condition || src.entry_rule || ("Donchian" + donchN + " 突破上軌"),
+        _needs_market: needsMarket
       });
     });
     return out;
@@ -658,13 +705,14 @@
           distTxt = num(pl.dist_pct, 2) + "%";
           if (pl.dist_atr != null) distTxt += " · " + num(pl.dist_atr, 2) + " ATR";
         }
+        if (pl.dist_html) distTxt = pl.dist_html;
         var badge = pl.order_mode === "live" ? "ok" : "muted";
         return '<tr data-slot="' + esc(pl.slot) + '">' +
           "<td><strong>" + esc((pl.code ? pl.code + " " : "") + pl.asset) + '</strong><div class="kpi-sub">' +
-          esc(pl.slot) + " · " + esc(pl.tf || "—") + " / Donch " + esc(String(pl.donch_n)) + "</div></td>" +
+          esc(pl.slot) + " · " + esc(pl.tf || "—") + " / " + esc(pl.sub_txt || ("Donch " + String(pl.donch_n))) + "</div></td>" +
           '<td class="num">' + num(pl.target_notional_usdt, 0) + "</td>" +
           '<td><span class="badge ' + badge + '">' + esc(pl.status_label) + "</span></td>" +
-          '<td class="num">' + (pl.trigger != null ? num(pl.trigger, 4) : "—") + "</td>" +
+          '<td class="num">' + (pl.trig_html ? pl.trig_html : (pl.trigger != null ? num(pl.trigger, 4) : "—")) + "</td>" +
           '<td class="num">' + (pl.mark != null ? num(pl.mark, 4) : "—") + "</td>" +
           '<td class="num">' + distTxt + "</td>" +
           "<td>" + esc(pl.entry_rule || "—") + "</td></tr>";
@@ -674,7 +722,7 @@
       '<div class="section-head"><h2>預計持倉</h2><span class="hint">已核准家族 · live 槽尚未成交 · 狀態只依 live_slots.order_mode</span></div>' +
       '<div class="card"><div class="table-scroll"><table class="data" id="plannedTable">' +
       "<thead><tr><th>標的</th><th class=\"num\">計畫名義</th><th>狀態</th>" +
-      "<th class=\"num\">上軌價</th><th class=\"num\">現價</th><th class=\"num\">距突破</th><th>進場條件</th></tr></thead>" +
+      "<th class=\"num\">觸發價／指標</th><th class=\"num\">現價</th><th class=\"num\">距觸發</th><th>進場條件</th></tr></thead>" +
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 

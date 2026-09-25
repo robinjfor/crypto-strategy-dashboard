@@ -180,6 +180,15 @@ def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[b
 
 
 
+def _pct(level, mark):
+    try:
+        if level is None or not mark:
+            return None
+        return round((float(level) / float(mark) - 1.0) * 100.0, 4)
+    except (TypeError, ValueError):
+        return None
+
+
 def slot_meta_venue(sig: dict) -> str:
     if sig.get("venue") in ("futures", "spot"):
         return str(sig["venue"])
@@ -566,6 +575,23 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             "bar_ts": sig.get("bar_ts"),
             "close": sig.get("close"),
             "donch_hi": sig.get("donch_hi") or sig.get("trigger"),
+            "donch_lo": sig.get("donch_lo"),
+            "mark": sig.get("mark"),
+            "atr": sig.get("atr"),
+            "tf": sig.get("tf"),
+            "ema_fast": sig.get("ema_fast"),
+            "ema_slow": sig.get("ema_slow"),
+            "ema_fast_n": sig.get("ema_fast_n"),
+            "ema_slow_n": sig.get("ema_slow_n"),
+            "ema_gap_pct": sig.get("ema_gap_pct"),
+            "ema_bull": sig.get("ema_bull"),
+            "last_cross_bar_ts": sig.get("last_cross_bar_ts"),
+            "last_entry_edge_bar_ts": sig.get("last_entry_edge_bar_ts"),
+            "btc_regime_on": sig.get("btc_regime_on"),
+            "allowed_direction": sig.get("allowed_direction"),
+            "dist_hi_pct": sig.get("dist_hi_pct") if sig.get("dist_hi_pct") is not None else _pct(sig.get("donch_hi"), sig.get("mark") or sig.get("close")),
+            "dist_lo_pct": sig.get("dist_lo_pct") if sig.get("dist_lo_pct") is not None else _pct(sig.get("donch_lo"), sig.get("mark") or sig.get("close")),
+            "entry_rule": sig.get("entry_rule"),
             "suggested_stop": sig.get("suggested_stop"),
             "quote_usdt": sig.get("quote_usdt"),
             "fill": app.get("fill"),

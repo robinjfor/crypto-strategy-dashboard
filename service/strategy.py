@@ -36,6 +36,43 @@ def btc_daily_regime_on(client) -> bool:
 
 
 
+def btc_daily_regime_series(client) -> pd.Series | None:
+    """Per-day BTC regime (1 if closed daily Close > SMA200), indexed by the
+    daily bar CLOSE time (UTC). Closed bars only (no forming-bar peeking)."""
+    try:
+        kl = client.fetch_klines("BTCUSDT", "1d", limit=450, use_vision=True)
+        closed, _ = split_closed(kl, "1d")
+        closes = closed["Close"].astype(float)
+        if len(closes) < 200:
+            return None
+        sma = closes.rolling(200).mean()
+        bull = (closes > sma).astype(int)
+        bull = bull[sma.notna()]
+        bull.index = bull.index + pd.Timedelta(days=1)
+        return bull
+    except Exception as e:  # noqa: BLE001
+        log.warning("btc_regime_series_fail err=%s", e)
+        return None
+
+
+def regime_on_bars(slot: dict, index: pd.DatetimeIndex, fallback: bool | None) -> pd.Series | None:
+    """Map BTC daily regime onto slot bars by bar close time (causal).
+
+    Backtest parity: engine.apply_btc_regime / apply_btc_regime_ls mask the
+    signal per bar, so an entry edge also occurs on the bar where the regime
+    turns on. For 1d slots this equals the backtest exactly (same-day close).
+    Falls back to the scalar current regime for every bar when no series."""
+    from indicators import interval_ms
+    series = slot.get("_btc_series")
+    if series is None or len(series) == 0:
+        if fallback is None:
+            return None
+        return pd.Series(int(bool(fallback)), index=index)
+    close_t = index + pd.Timedelta(milliseconds=interval_ms(slot["tf"]))
+    mapped = series.sort_index().reindex(close_t, method="ffill").fillna(0).astype(int)
+    return pd.Series(mapped.values, index=index)
+
+
 def now_iso_taipei() -> str:
     return datetime.now(TZ).isoformat(timespec="seconds")
 
@@ -218,12 +255,21 @@ def evaluate_ema_slot(slot: dict, klines: pd.DataFrame, position: dict | None, s
         return {"slot": slot["id"], "symbol": slot["symbol"], "error": "no_closed_bars", "family": "ema_cross_atr"}
 
     from indicators import signal_ema
-    sig = signal_ema(ind, fast, slow)
+    raw_sig = signal_ema(ind, fast, slow)
+    sig = raw_sig
+    regime_bars = None
     if slot.get("btc_regime"):
         regime_on = slot_meta.get("_btc_regime_on")
-        if regime_on is False:
-            sig = pd.Series(0, index=sig.index, dtype=int)
+        regime_bars = regime_on_bars(slot, ind.index, regime_on)
+        if regime_bars is not None:
+            # Backtest parity (engine.apply_btc_regime): combined = ema_bull & regime,
+            # entry only on the 0→1 edge of the combined series.
+            sig = (raw_sig.astype(int) & regime_bars.astype(int)).astype(int)
         # if None, leave signal but gate entry later
+    edges = (sig.astype(int).diff() == 1) & (sig.astype(int) == 1)
+    last_edge_ts = bar_ts_iso(sig.index[edges.values][-1]) if edges.any() else None
+    raw_edges = (raw_sig.astype(int).diff() == 1) & (raw_sig.astype(int) == 1)
+    last_cross_ts = bar_ts_iso(raw_sig.index[raw_edges.values][-1]) if raw_edges.any() else None
 
     bar = ind.iloc[-1]
     bar_ts = bar_ts_iso(bar.name)
@@ -235,6 +281,14 @@ def evaluate_ema_slot(slot: dict, klines: pd.DataFrame, position: dict | None, s
         "bar_ts": bar_ts, "mark": mark, "close": float(bar["Close"]),
         "atr": round(atr, 8), "ema_fast": float(bar[f"ema_{fast}"]),
         "ema_slow": float(bar[f"ema_{slow}"]), "signal": int(sig.iloc[-1]),
+        "ema_fast_n": fast, "ema_slow_n": slow,
+        "ema_gap_pct": round((float(bar[f"ema_{fast}"]) / float(bar[f"ema_{slow}"]) - 1.0) * 100.0, 4)
+        if float(bar[f"ema_{slow}"]) else None,
+        "ema_bull": bool(int(raw_sig.iloc[-1]) == 1),
+        "btc_regime": bool(slot.get("btc_regime")),
+        "btc_regime_on": (bool(int(regime_bars.iloc[-1])) if regime_bars is not None else slot_meta.get("_btc_regime_on")),
+        "last_cross_bar_ts": last_cross_ts, "last_entry_edge_bar_ts": last_edge_ts,
+        "entry_rule": "edge_only",
         "checked_at": now_iso_taipei(), "action": "hold", "reason": None,
     }
 
@@ -283,7 +337,11 @@ def evaluate_ema_slot(slot: dict, klines: pd.DataFrame, position: dict | None, s
         result.update(action="armed", reason="btc_regime_off", btc_regime_on=False)
         return result
     if not _rising_edge(sig):
-        result.update(action="armed", reason="waiting_ema_cross")
+        # Backtest enters only on the 0→1 edge; already-bullish = wait for next edge
+        if int(sig.iloc[-1]) == 1:
+            result.update(action="armed", reason="ema_bull_wait_next_cross")
+        else:
+            result.update(action="armed", reason="waiting_ema_cross")
         return result
     quote = min(float(slot["quote_usdt"]), MAX_NOTIONAL_USDT)
     suggested_stop = float(bar["Close"]) - float(slot.get("stop_atr_mult") or 2.0) * atr
@@ -431,15 +489,16 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
                 "family": slot.get("family") or "donchian_long_short_btc_regime", "venue": "futures"}
 
     sig = signal_donchian_ls(ind)
-    # BTC regime: long only when bull, short only when bear
+    # BTC regime per bar (backtest apply_btc_regime_ls): long only when bull,
+    # short only when bear. Entry = edge into ±1 of the masked series.
     regime_on = slot_meta.get("_btc_regime_on")
-    if regime_on is True:
-        sig = sig.where(sig > 0, 0)  # block shorts in bull? wait: long only in bull
-        # long kept, short zeroed
-        sig = sig.clip(lower=0)
-    elif regime_on is False:
-        sig = sig.where(sig < 0, 0)  # short only in bear
-        sig = sig.clip(upper=0)
+    regime_bars = regime_on_bars(slot, ind.index, regime_on)
+    if regime_bars is not None:
+        rb = regime_bars.values
+        sig = sig.astype(int).copy()
+        sig[(sig > 0) & (rb == 0)] = 0
+        sig[(sig < 0) & (rb == 1)] = 0
+        regime_on = bool(int(regime_bars.iloc[-1]))
     # if regime_on is None, leave both (caller should set)
 
     bar = ind.iloc[-1]
@@ -454,6 +513,10 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
         "atr_mode": atr_mode, "bar_ts": bar_ts, "mark": mark, "close": float(bar["Close"]),
         "atr": round(atr, 8), "signal": cur, "leverage": float(slot.get("leverage") or 1.0),
         "btc_regime_on": regime_on, "checked_at": now_iso_taipei(),
+        "donch_n": donch_n, "donch_hi": float(bar["donch_hi"]), "donch_lo": float(bar["donch_lo"]),
+        "dist_hi_pct": round((float(bar["donch_hi"]) / mark - 1.0) * 100.0, 4) if mark else None,
+        "dist_lo_pct": round((float(bar["donch_lo"]) / mark - 1.0) * 100.0, 4) if mark else None,
+        "allowed_direction": ("long_only" if regime_on is True else "short_only" if regime_on is False else "both"),
         "action": "hold", "reason": None,
     }
 
@@ -574,8 +637,15 @@ def evaluate_all(client, state: dict) -> list[dict]:
         )
         for s in slots
     )
-    btc_on = btc_daily_regime_on(client) if need_btc else None
+    btc_series = btc_daily_regime_series(client) if need_btc else None
+    if need_btc:
+        btc_on = bool(int(btc_series.iloc[-1])) if btc_series is not None and len(btc_series) else btc_daily_regime_on(client)
+    else:
+        btc_on = None
     for slot in slots:
+        if btc_series is not None and (slot.get("btc_regime") or slot.get("family") in (
+            "donchian_long_short_btc_regime", "ls_donch_btc_regime_perp")):
+            slot = {**slot, "_btc_series": btc_series}
         meta = slots_meta.setdefault(slot["id"], {})
         if slot.get("btc_regime") or slot.get("family") in (
             "donchian_long_short_btc_regime",

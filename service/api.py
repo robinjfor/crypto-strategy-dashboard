@@ -37,6 +37,13 @@ STATUS_ZH = {
     "wait_reset": "等回落重置（需先收回上軌下方）",
     "wait_signal_reset_then_breakout": "等回落重置（需先收回上軌下方）",
     "WAIT_SIGNAL_RESET_THEN_BREAKOUT": "等回落重置（需先收回上軌下方）",
+    "waiting_ema_cross": "等黃金交叉",
+    "ema_bull_wait_next_cross": "已在多頭區 · 等下一次黃金交叉（只在交叉當根進場）",
+    "waiting_ls_breakout": "等突破（上軌做多／下軌做空）",
+    "btc_regime_off": "BTC 濾網關閉（不進場）",
+    "btc_regime_unchecked": "BTC 濾網未取得",
+    "idempotent_same_bar": "本根已處理",
+    "trail_update": "持倉中 · 移動止損",
     "PENDING_FILL": "已掛單，等成交",
     "pending_fill": "已掛單，等成交",
 }
@@ -426,6 +433,48 @@ def _entry_condition(slot: dict) -> str:
     return f"Donchian{slot.get('donch_n') or 20} 突破上軌{reset}{btc}"
 
 
+def _f(x):
+    try:
+        return None if x is None else float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def _trigger_fields(slot: dict, sig: dict) -> dict:
+    """Per-family trigger display fields (from the runner's last signal)."""
+    fam = str(slot.get("family") or sig.get("family") or "")
+    mark = _f(sig.get("mark") or sig.get("close"))
+    hi, lo = _f(sig.get("donch_hi")), _f(sig.get("donch_lo"))
+    pct = (lambda lv: round((lv / mark - 1.0) * 100.0, 4) if (lv is not None and mark) else None)
+    out = {
+        "trigger_kind": "donchian_hi",
+        "donch_hi": hi, "donch_lo": lo,
+        "dist_hi_pct": pct(hi), "dist_lo_pct": pct(lo),
+        "btc_regime_on": sig.get("btc_regime_on"),
+        "atr": sig.get("atr"),
+    }
+    if fam == "ema_cross_atr":
+        out.update({
+            "trigger_kind": "ema_cross",
+            "trigger": None, "distance": None,
+            "ema_fast": sig.get("ema_fast"), "ema_slow": sig.get("ema_slow"),
+            "ema_fast_n": sig.get("ema_fast_n") or slot.get("ema_fast"),
+            "ema_slow_n": sig.get("ema_slow_n") or slot.get("ema_slow"),
+            "ema_gap_pct": sig.get("ema_gap_pct"),
+            "ema_bull": sig.get("ema_bull"),
+            "last_cross_bar_ts": sig.get("last_cross_bar_ts"),
+            "last_entry_edge_bar_ts": sig.get("last_entry_edge_bar_ts"),
+            "btc_regime": bool(slot.get("btc_regime")),
+            "entry_rule_code": "edge_only",
+        })
+    elif fam in ("ls_donch_btc_regime_perp", "donchian_long_short_btc_regime"):
+        out.update({
+            "trigger_kind": "donchian_ls",
+            "allowed_direction": sig.get("allowed_direction"),
+        })
+    return out
+
+
 def _slot_status(state: dict, feed_slots: list | None) -> list:
     by_id = {s.get("slot") or s.get("id"): s for s in (feed_slots or []) if isinstance(s, dict)}
     rows = []
@@ -463,6 +512,7 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "leverage": slot.get("leverage") if (slot.get("venue") == "futures") else None,
                 "donch_n": slot.get("donch_n"),
                 "last_decision_reason": sig.get("reason"),
+                **_trigger_fields(slot, sig),
                 "trigger": trigger,
                 "mark": mark,
                 "distance": dist,

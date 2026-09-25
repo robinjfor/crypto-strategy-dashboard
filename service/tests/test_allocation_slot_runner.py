@@ -39,8 +39,8 @@ def _klines(tf: str, n: int, family: str) -> pd.DataFrame:
                          "Volume": 1000.0}, index=idx)
 
 
-def _btc_bull(n: int = 260) -> pd.DataFrame:
-    idx = pd.date_range("2025-01-01", periods=n, freq="1D", tz="UTC")
+def _btc_bull(n: int = 800) -> pd.DataFrame:
+    idx = pd.date_range("2024-01-01", periods=n, freq="1D", tz="UTC")
     c = pd.Series(np.linspace(50000, 90000, n), index=idx)
     return pd.DataFrame({"Open": c, "High": c + 1, "Low": c - 1, "Close": c, "Volume": 1.0}, index=idx)
 
