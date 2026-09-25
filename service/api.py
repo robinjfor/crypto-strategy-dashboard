@@ -16,14 +16,14 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval, ensure_approved_families, approve_family, revoke_family, DEFAULT_APPROVED_FAMILIES, is_family_approved
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval, ensure_approved_families, approve_family, revoke_family, DEFAULT_APPROVED_FAMILIES, is_family_approved, family_approvals, allocation_runtime_slots, slot_by_id, all_known_slots, venue_for_family, invalidate_allocation_cache
 from state_store import StateStore
 from allocation import (
     resolve_allocation, validate_allocation, live_slots as alloc_live_slots,
     normalize_family, RUNNER_FAMILIES, slot_to_runtime,
 )
 from strategy import now_iso_taipei
-from strategy_codes import add_code, code_for, code_for_symbol
+from strategy_codes import add_code, code_for, code_for_symbol, family_for_strategy_id, family_code
 
 
 
@@ -216,8 +216,23 @@ def _check_pin_value(pin_raw: str) -> bool:
     return hmac.compare_digest(_pin_digest(pin), PIN_HASH)
 
 
-def _check_auth() -> tuple[bool, str, int]:
-    """Accept Authorization: Bearer <session> or legacy X-Trader-Pin (normalized)."""
+READONLY_TOKEN = (os.environ.get("TRADER_READONLY_TOKEN") or "").strip()
+READONLY_MIN_LEN = 32
+
+
+def _is_readonly_token(token: str) -> bool:
+    if not READONLY_TOKEN or len(READONLY_TOKEN) < READONLY_MIN_LEN or not token:
+        return False
+    return hmac.compare_digest(token.encode("utf-8"), READONLY_TOKEN.encode("utf-8"))
+
+
+def _check_auth(allow_readonly: bool = False) -> tuple[bool, str, int]:
+    """Accept Authorization: Bearer <session> or legacy X-Trader-Pin (normalized).
+
+    allow_readonly=True additionally accepts Bearer TRADER_READONLY_TOKEN, but
+    only for GET requests (used by /status and /approved). The read-only token
+    is rejected (403) everywhere else, e.g. /control/*.
+    """
     if not PIN_HASH:
         return False, "伺服器未設定控制 PIN 雜湊", 503
     ip = _client_ip()
@@ -230,6 +245,11 @@ def _check_auth() -> tuple[bool, str, int]:
     auth = request.headers.get(AUTH_HEADER) or ""
     if auth.lower().startswith("bearer "):
         token = auth[7:].strip()
+        if _is_readonly_token(token):
+            if allow_readonly and request.method == "GET":
+                _clear_fails(ip)
+                return True, "", 200
+            return False, "唯讀權杖不可用於此操作", 403
         if verify_session_token(token):
             _clear_fails(ip)
             return True, "", 200
@@ -394,10 +414,25 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
 
 
 
+def _entry_condition(slot: dict) -> str:
+    fam = str(slot.get("family") or "")
+    reset = "（需先回落重置）" if slot.get("require_reset_below_hi") else ""
+    btc = " · BTC 日線多頭濾網" if slot.get("btc_regime") else ""
+    if fam == "ema_cross_atr":
+        return f"EMA{slot.get('ema_fast') or 12}/{slot.get('ema_slow') or 26} 黃金交叉{btc}"
+    if fam in ("ls_donch_btc_regime_perp", "donchian_long_short_btc_regime"):
+        return (f"Donchian{slot.get('donch_n') or 20} 多空突破 · BTC 多頭只做多／空頭只做空"
+                f" · 合約 ×{slot.get('leverage') or 1}")
+    return f"Donchian{slot.get('donch_n') or 20} 突破上軌{reset}{btc}"
+
+
 def _slot_status(state: dict, feed_slots: list | None) -> list:
     by_id = {s.get("slot") or s.get("id"): s for s in (feed_slots or []) if isinstance(s, dict)}
     rows = []
-    for slot in SLOTS:
+    alloc_slots = [s for s in allocation_runtime_slots() if s.get("enabled")]
+    alloc_ids = {s.get("id") for s in allocation_runtime_slots()}
+    loop_slots = [slot_by_id(s["id"]) or s for s in alloc_slots] if alloc_ids else list(SLOTS)
+    for slot in loop_slots:
         sid = slot["id"]
         sig = by_id.get(sid) or {}
         meta = (state.get("slots") or {}).get(sid) or {}
@@ -422,10 +457,12 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 "action": sig.get("action"),
                 "reason": sig.get("reason"),
                 "status": sig.get("status") or (meta.get("last_signal") or {}).get("status"),
-                "entry_condition": (
-                    f"Donchian{slot['donch_n']} 突破上軌"
-                    + ("（需先回落重置）" if slot.get("require_reset_below_hi") else "")
-                ),
+                "entry_condition": _entry_condition(slot),
+                "family": slot.get("family"),
+                "venue": slot.get("venue") or venue_for_family(slot.get("family")),
+                "leverage": slot.get("leverage") if (slot.get("venue") == "futures") else None,
+                "donch_n": slot.get("donch_n"),
+                "last_decision_reason": sig.get("reason"),
                 "trigger": trigger,
                 "mark": mark,
                 "distance": dist,
@@ -442,6 +479,9 @@ def _slot_status(state: dict, feed_slots: list | None) -> list:
                 ),
             }
         )
+    if alloc_ids and "core_sol" in alloc_ids and not any(s.get("id") == "core_sol" for s in alloc_slots):
+        # Legacy SOL core row only while allocation keeps core_sol enabled
+        return rows
     sol = by_id.get("core_sol") or {}
     sol_meta = (state.get("slots") or {}).get("core_sol") or {}
     sol_sig = sol.get("signal") or {}
@@ -541,7 +581,9 @@ def _planned_from_armed(armed: list) -> list:
                 "strategy_id": a.get("strategy_id"),
                 "code": a.get("code") or code_for(a.get("strategy_id"), a.get("family")),
                 "tf": a.get("tf"),
-                "donch_n": 55 if "fet" in str(a.get("slot")) else 20,
+                "donch_n": a.get("donch_n") or (55 if "fet" in str(a.get("slot")) else 20),
+                "family": a.get("family"),
+                "venue": a.get("venue"),
                 "target_notional_usdt": a.get("quote_usdt"),
                 "ui_status": status,
                 "status_label": (LABEL_SIGNAL_ONLY if a.get("order_mode") == "signal_only" or a.get("mode") == "signal_only" else status_zh(a.get("status") or a.get("reason") or status)),
@@ -626,6 +668,14 @@ def _ensure_approved(state: dict) -> dict:
 
 
 
+def _symbol_from_sid(sid: str) -> str | None:
+    parts = [p for p in str(sid or "").split("__") if p]
+    for p in parts[1:]:
+        if p.isupper() and p.isalpha() and 2 <= len(p) <= 10:
+            return f"{p}USDT"
+    return None
+
+
 def _approved_public(state: dict | None = None) -> dict:
     store = StateStore()
     st = state if state is not None else store.load()
@@ -649,12 +699,14 @@ def _approved_public(state: dict | None = None) -> dict:
         if str(meta.get("mode") or "live") == "signal_only" or meta.get("approved") is False:
             continue
         slot = slot_by_strategy_id(sid) or {}
+        fam = family_for_strategy_id(sid) or slot.get("family") or meta.get("family")
         out.append({
             "strategy_id": sid,
-            "code": code_for(sid, slot.get("family") or meta.get("family")),
+            "code": code_for(sid, fam),
             "slot": meta.get("slot") or slot.get("id"),
-            "symbol": slot.get("symbol"),
-            "family": slot.get("family") or meta.get("family"),
+            "symbol": slot.get("symbol") or _symbol_from_sid(sid),
+            "family": fam,
+            "venue": slot.get("venue") or venue_for_family(fam),
             "notional_usdt": meta.get("notional_usdt") or slot.get("quote_usdt") or 1000,
             "approved_at": meta.get("approved_at"),
             "approved": True,
@@ -667,12 +719,13 @@ def _approved_public(state: dict | None = None) -> dict:
     mon = st.get("signal_only") if isinstance(st.get("signal_only"), dict) else dict(DEFAULT_SIGNAL_ONLY)
     for sid, meta in mon.items():
         slot = slot_by_strategy_id(sid) or {}
+        fam = family_for_strategy_id(sid) or slot.get("family") or meta.get("family")
         sig_only.append({
             "strategy_id": sid,
-            "code": code_for(sid, slot.get("family") or meta.get("family")),
+            "code": code_for(sid, fam),
             "slot": meta.get("slot") or slot.get("id"),
-            "symbol": slot.get("symbol"),
-            "family": slot.get("family") or meta.get("family"),
+            "symbol": slot.get("symbol") or _symbol_from_sid(sid),
+            "family": fam,
             "approved": False,
             "mode": "signal_only",
             "order_mode": "signal_only",
@@ -694,13 +747,18 @@ def build_status() -> dict:
     bals_map = {b["asset"]: float(b["free"]) + float(b.get("locked") or 0) for b in bals}
     positions = _open_positions(client, state)
     recent_fills: list[dict] = []
-    for sym in ["FETUSDT", "OPUSDT", "DOTUSDT", "SOLUSDT"]:
+    _fill_syms = ["FETUSDT", "OPUSDT", "DOTUSDT", "SOLUSDT"]
+    for _s in all_known_slots():
+        if _s.get("symbol") and (_s.get("venue") or "spot") == "spot" and _s["symbol"] not in _fill_syms:
+            if _s.get("source") != "allocation" or _s.get("enabled"):
+                _fill_syms.append(_s["symbol"])
+    for sym in _fill_syms:
         try:
             for t in client.my_trades(sym, limit=10):
                 recent_fills.append(
                     {
                         "symbol": sym,
-                        "code": code_for_symbol(sym, SLOTS + [SOL_SLOT]),
+                        "code": code_for_symbol(sym, all_known_slots()),
                         "id": t.get("id"),
                         "time": datetime.fromtimestamp(int(t["time"]) / 1000, tz=timezone.utc)
                         .astimezone()
@@ -730,11 +788,34 @@ def build_status() -> dict:
     mode = os.environ.get("TRADER_MODE") or meta.get("last_mode") or "dry-run"
     armed = _slot_status(state, feed.get("slots"))
     live_allocation = (state.get("allocation_public") or _allocation_public(state)).get("live_slots") or []
-    last_decisions = [add_code(d, d.get("strategy_id"), d.get("family")) for d in (meta.get("last_decisions") or []) if isinstance(d, dict)]
+    last_decisions = []
+    for d in (meta.get("last_decisions") or []):
+        if not isinstance(d, dict):
+            continue
+        rt = slot_by_id(str(d.get("slot") or "")) or {}
+        d = {**d}
+        d["strategy_id"] = d.get("strategy_id") or rt.get("strategy_id")
+        d["family"] = d.get("family") or rt.get("family")
+        d["venue"] = d.get("venue") or rt.get("venue") or venue_for_family(d.get("family"))
+        last_decisions.append(add_code(d, d.get("strategy_id"), d.get("family")))
+    _fa_before = dict(state.get("family_approved_at") or {}) if isinstance(state.get("family_approved_at"), dict) else {}
+    fam_appr = family_approvals(state)
+    if state.get("family_approved_at") and state.get("family_approved_at") != _fa_before:
+        try:
+            _fa = dict(state["family_approved_at"])
+            def _persist_fa(st):
+                cur = st.get("family_approved_at") if isinstance(st.get("family_approved_at"), dict) else {}
+                for k, v in _fa.items():
+                    cur.setdefault(k, v)
+                st["family_approved_at"] = cur
+                return st
+            store.mutate(_persist_fa)
+        except Exception as e:  # noqa: BLE001
+            log.warning("family_approved_at_persist_skip err=%s", e)
     closed_norm = [add_code(t, t.get("strategy_id"), t.get("family")) for t in closed_norm]
     for trade in closed_norm:
         if not trade.get("code"):
-            trade["code"] = code_for_symbol(trade.get("symbol"), SLOTS + [SOL_SLOT])
+            trade["code"] = code_for_symbol(trade.get("symbol"), all_known_slots())
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -757,6 +838,7 @@ def build_status() -> dict:
         "last_mode": meta.get("last_mode"),
         "last_decisions": last_decisions,
         "last_decisions_at": meta.get("last_decisions_at"),
+        "family_approvals": fam_appr,
         "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
         "sol_expectation_latest": (state.get("expectation_log") or [None])[-1],
         "feed_updated_at": feed.get("updated_at"),
@@ -776,7 +858,7 @@ def build_status() -> dict:
 
 @app.route("/status", methods=["GET"])
 def status():
-    ok, err, code = _check_auth()
+    ok, err, code = _check_auth(allow_readonly=True)
     if not ok:
         return jsonify({"ok": False, "error": err}), code
     try:
@@ -912,7 +994,7 @@ def close_all():
 
 @app.route("/approved", methods=["GET"])
 def approved_list():
-    ok, err, code = _check_auth()
+    ok, err, code = _check_auth(allow_readonly=True)
     if not ok:
         return jsonify({"ok": False, "error": err}), code
     try:

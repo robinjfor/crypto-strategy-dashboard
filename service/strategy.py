@@ -535,11 +535,36 @@ def evaluate_long_short_slot(slot: dict, klines: pd.DataFrame, position: dict | 
 evaluate_slot = evaluate_slot_dispatch
 
 
+def _enrich_signal(res: dict, slot: dict) -> dict:
+    """Stamp slot identity (from allocation runtime slot) onto the signal so
+    the runner never needs a hardcoded lookup for strategy/family/venue."""
+    from slots import venue_for_family
+    if not isinstance(res, dict):
+        return res
+    fam = slot.get("family")
+    res.setdefault("strategy_id", slot.get("strategy_id"))
+    if fam:
+        res.setdefault("family", fam)
+    res.setdefault("venue", slot.get("venue") or venue_for_family(fam))
+    if res.get("venue") == "futures":
+        res.setdefault("leverage", slot.get("leverage") or 1)
+    if res.get("action") == "enter" and not res.get("quote_usdt") and slot.get("quote_usdt"):
+        res["quote_usdt"] = slot.get("quote_usdt")
+    return res
+
+
 def evaluate_all(client, state: dict) -> list[dict]:
     results: list[dict] = []
     positions = state.setdefault("positions", {})
     slots_meta = state.setdefault("slots", {})
-    slots = state.get("runtime_eval_slots") or SLOTS
+    slots = state.get("runtime_eval_slots")
+    if not slots:
+        try:
+            from slots import allocation_runtime_slots
+            slots = [s for s in allocation_runtime_slots() if s.get("enabled")]
+        except Exception:  # noqa: BLE001
+            slots = []
+    slots = slots or SLOTS
     need_btc = any(
         s.get("btc_regime")
         or s.get("family") in (
@@ -564,7 +589,9 @@ def evaluate_all(client, state: dict) -> list[dict]:
             ema_slow = int(slot.get("ema_slow") or slot.get("slow") or 0)
             limit = max(250, donch_n + 80, ema_slow + 80)
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
-            results.append(evaluate_slot_dispatch(slot, kl, pos, meta))
+            res = evaluate_slot_dispatch(slot, kl, pos, meta)
+            _enrich_signal(res, slot)
+            results.append(res)
         except Exception as e:  # noqa: BLE001
             log.exception("evaluate_fail slot=%s", slot["id"])
             results.append({"slot": slot["id"], "symbol": slot["symbol"], "error": str(e)})

@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 
 from binance_client import BinanceClient
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
-from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
+from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, slot_by_id, all_known_slots, FUTURES_FAMILIES, venue_for_family, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
 from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
 from slots import ensure_approved_families
 from state_store import StateStore
@@ -58,8 +58,15 @@ def build_feed(client: BinanceClient | None, state: dict, signals: list[dict], m
     if client and client.api_key:
         try:
             balances = client.nonzero_balances()
-            for slot in SLOTS:
-                sym = slot["symbol"]
+            spot_syms = []
+            for slot in all_known_slots():
+                if slot.get("source") == "allocation" and not slot.get("enabled"):
+                    continue
+                if (slot.get("venue") or "spot") != "spot":
+                    continue
+                if slot.get("symbol") and slot["symbol"] not in spot_syms and slot["symbol"] != "SOLUSDT":
+                    spot_syms.append(slot["symbol"])
+            for sym in spot_syms:
                 try:
                     trades[sym] = client.my_trades(sym, limit=20)
                 except Exception as e:  # noqa: BLE001
@@ -159,7 +166,9 @@ def _approved_ids(state: dict) -> set[str]:
 def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[bool, str]:
     if paused:
         return False, "paused_no_new_entries"
-    sid = strategy_id_for_slot(slot_id)
+    # Allocation first (resolve_allocation), hardcoded SLOTS only as fallback.
+    slot = slot_by_id(slot_id) or {}
+    sid = slot.get("strategy_id")
     if not sid:
         return False, "unknown_slot_strategy"
     if sid not in _approved_ids(state):
@@ -172,10 +181,12 @@ def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[b
 
 
 def slot_meta_venue(sig: dict) -> str:
+    if sig.get("venue") in ("futures", "spot"):
+        return str(sig["venue"])
     fam = str(sig.get("family") or "")
-    if fam in ("donchian_lev_vol", "donchian_long_short_btc_regime", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp") or sig.get("venue") == "futures":
-        return "futures"
-    return "spot"
+    if not fam and sig.get("slot"):
+        fam = str((slot_by_id(str(sig["slot"])) or {}).get("family") or "")
+    return venue_for_family(fam)
 
 
 def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dict | None:
@@ -279,7 +290,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                             stop_price=stop, qty=qty,
                             client_order_id=client_order_id(slot_id, "stop", bar_ts),
                         )
-                        positions[slot_id]["stop_order_id"] = stop_ord.get("orderId")
+                        positions[slot_id]["stop_order_id"] = stop_ord.get("algoId") or stop_ord.get("orderId")
                     except Exception as e:  # noqa: BLE001
                         log.error("futures_stop_fail slot=%s err=%s", slot_id, e)
                         positions[slot_id]["stop_error"] = str(e)
@@ -427,6 +438,33 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             pos["donch_lo"] = sig.get("donch_lo")
             pos["last_manage_bar_ts"] = sig.get("bar_ts")
             pos["updated_at"] = now_iso_taipei()
+            if str(pos.get("venue") or "spot") == "futures":
+                is_long = str(pos.get("side") or "LONG").upper() == "LONG"
+                old_stop = float(pos.get("stop") or 0)
+                better = (new_stop > old_stop) if is_long else (old_stop <= 0 or new_stop < old_stop)
+                if not better:
+                    return out
+                if live:
+                    try:
+                        from futures_client import FuturesDemoClient
+                        from futures_execution import place_stop_reduce_only
+                        fc = FuturesDemoClient()
+                        new_ord = place_stop_reduce_only(
+                            fc, symbol=pos["symbol"], is_long=is_long, stop_price=new_stop,
+                            qty=float(pos.get("qty") or 0),
+                            client_order_id=client_order_id(slot_id, "trail", str(sig.get("bar_ts") or "")),
+                        )
+                        old_id = pos.get("stop_order_id")
+                        if old_id:
+                            try:
+                                fc.cancel_algo_order(symbol=pos["symbol"], algoId=old_id)
+                            except Exception as e:  # noqa: BLE001
+                                log.warning("futures_old_stop_cancel_skip slot=%s err=%s", slot_id, e)
+                        pos["stop_order_id"] = new_ord.get("algoId") or new_ord.get("orderId")
+                    except Exception as e:  # noqa: BLE001
+                        log.error("futures_trail_replace_fail slot=%s err=%s", slot_id, e)
+                pos["stop"] = new_stop
+                return out
             if live and new_stop > float(pos.get("stop") or 0):
                 try:
                     replace_trail_stop(client, pos, new_stop, slot_id)
@@ -514,10 +552,13 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     # Persist per-slot decision audit trail for /status (no Cloud Logging needed)
     decisions = []
     for sig, app in zip(signals, applied):
+        _rt = slot_by_id(str(sig.get("slot") or app.get("slot") or "")) or {}
         decisions.append({
             "slot": sig.get("slot") or app.get("slot"),
             "symbol": sig.get("symbol") or app.get("symbol"),
-            "strategy_id": sig.get("strategy_id") or app.get("strategy_id"),
+            "strategy_id": sig.get("strategy_id") or app.get("strategy_id") or _rt.get("strategy_id"),
+            "family": sig.get("family") or _rt.get("family"),
+            "venue": sig.get("venue") or _rt.get("venue") or slot_meta_venue(sig),
             "action": sig.get("action"),
             "reason": app.get("reason") or sig.get("reason"),
             "executed": bool(app.get("executed")),

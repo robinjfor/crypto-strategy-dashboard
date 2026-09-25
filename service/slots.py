@@ -51,6 +51,8 @@ SLOTS: list[dict] = [
     {
         "id": "sat_fet_4h_btc",
         "strategy_id": "donchian55_s2.0_t3.0_btcRegimeD__FET__4h",
+        # Runtime gate keeps legacy donchian_atr so the existing approval is not
+        # silently demoted; public records use the code map (J1 / donchian_btc_regime).
         "family": "donchian_atr",
         "symbol": "FETUSDT",
         "tf": "4h",
@@ -196,22 +198,103 @@ DEFAULT_SIGNAL_ONLY: dict[str, dict] = {
 LABEL_SIGNAL_ONLY = "只算訊號（未核准）"
 
 
+FUTURES_FAMILIES = frozenset({
+    "donchian_lev_vol",
+    "donchian_long_short_btc_regime",
+    "ls_donch_btc_regime_perp",
+    "ls_univ_portfolio_perp",
+})
+
+_ALLOC_CACHE: dict = {"at": 0.0, "slots": None}
+ALLOC_CACHE_TTL_S = 60.0
+
+
+def venue_for_family(family: str | None) -> str:
+    return "futures" if str(family or "") in FUTURES_FAMILIES else "spot"
+
+
+def invalidate_allocation_cache() -> None:
+    _ALLOC_CACHE["at"] = 0.0
+    _ALLOC_CACHE["slots"] = None
+
+
+def allocation_runtime_slots() -> list[dict]:
+    """All allocation slots (enabled or not) in runner shape, cached ~60s.
+
+    Source of truth for slot → strategy/family/params/venue. The hardcoded
+    SLOTS/SOL_SLOT below are only a fallback when allocation cannot load.
+    """
+    import time as _t
+    now = _t.time()
+    cached = _ALLOC_CACHE.get("slots")
+    if cached is not None and now - float(_ALLOC_CACHE.get("at") or 0) < ALLOC_CACHE_TTL_S:
+        return cached
+    out: list[dict] = []
+    try:
+        from allocation import resolve_allocation, slot_to_runtime
+        doc, _src = resolve_allocation()
+        for raw in (doc or {}).get("slots") or []:
+            try:
+                rt = slot_to_runtime(raw)
+            except Exception:  # noqa: BLE001
+                continue
+            rt["enabled"] = bool(raw.get("enabled"))
+            rt["venue"] = venue_for_family(rt.get("family"))
+            rt["source"] = "allocation"
+            out.append(rt)
+    except Exception:  # noqa: BLE001
+        out = []
+    _ALLOC_CACHE["slots"] = out
+    _ALLOC_CACHE["at"] = now
+    return out
+
+
+def _hardcoded_slots() -> list[dict]:
+    return list(SLOTS) + ([SOL_SLOT] if SOL_SLOT else [])
+
+
+def _merge(hard: dict | None, alloc: dict | None) -> dict | None:
+    if not hard and not alloc:
+        return None
+    merged = {**(hard or {}), **{k: v for k, v in (alloc or {}).items() if v is not None}}
+    merged.setdefault("venue", venue_for_family(merged.get("family")))
+    return merged
+
+
+def all_known_slots() -> list[dict]:
+    """Allocation slots first, then hardcoded slots not present in allocation."""
+    alloc = allocation_runtime_slots()
+    ids = {s.get("id") for s in alloc}
+    sids = {s.get("strategy_id") for s in alloc}
+    out = [_merge(next((h for h in _hardcoded_slots() if h.get("id") == a.get("id")), None), a) for a in alloc]
+    for h in _hardcoded_slots():
+        if h.get("id") in ids or h.get("strategy_id") in sids:
+            continue
+        out.append(_merge(h, None))
+    return [s for s in out if s]
+
+
+def slot_by_id(slot_id: str) -> dict | None:
+    if not slot_id:
+        return None
+    hard = next((s for s in _hardcoded_slots() if s.get("id") == slot_id), None)
+    alloc = next((s for s in allocation_runtime_slots() if s.get("id") == slot_id), None)
+    return _merge(hard, alloc)
+
+
 def slot_by_strategy_id(strategy_id: str) -> dict | None:
-    for s in SLOTS:
-        if s.get("strategy_id") == strategy_id:
-            return s
-    if SOL_SLOT.get("strategy_id") == strategy_id:
-        return SOL_SLOT
-    return None
+    if not strategy_id:
+        return None
+    alloc = next((s for s in allocation_runtime_slots() if s.get("strategy_id") == strategy_id), None)
+    hard = next((s for s in _hardcoded_slots() if s.get("strategy_id") == strategy_id), None)
+    if alloc and hard and hard.get("id") != alloc.get("id"):
+        hard = None
+    return _merge(hard, alloc)
 
 
 def strategy_id_for_slot(slot_id: str) -> str | None:
-    for s in SLOTS:
-        if s["id"] == slot_id:
-            return s.get("strategy_id")
-    if SOL_SLOT["id"] == slot_id:
-        return SOL_SLOT.get("strategy_id")
-    return None
+    s = slot_by_id(slot_id)
+    return (s or {}).get("strategy_id")
 
 
 def _allocation_enabled_for(strategy_id: str, state: dict | None) -> bool | None:
@@ -428,6 +511,10 @@ def approve_family(state: dict, family: str, *, at: str, by: str = "api") -> dic
     if f not in fams:
         fams.append(f)
     state["approved_families"] = fams
+    fa = state.setdefault("family_approved_at", {})
+    if not isinstance(fa, dict):
+        fa = state["family_approved_at"] = {}
+    fa.setdefault(f, at)
     state.setdefault("meta", {})["last_family_approve"] = {"family": f, "at": at, "by": by}
     return {"approved_families": fams, "family": f}
 
@@ -439,5 +526,49 @@ def revoke_family(state: dict, family: str, *, at: str, by: str = "api") -> dict
         f = "donchian_btc_regime"
     fams = [x for x in fams if x != f]
     state["approved_families"] = fams
+    if isinstance(state.get("family_approved_at"), dict):
+        state["family_approved_at"].pop(f, None)
     state.setdefault("meta", {})["last_family_revoke"] = {"family": f, "at": at, "by": by}
     return {"approved_families": fams, "family": f}
+
+
+def family_approvals(state: dict, *, backfill: bool = True) -> list[dict]:
+    """[{family, code, approved_at, source}] for each approved family.
+
+    Family-level approved_at is stored in state.family_approved_at (set by
+    approve_family). Missing entries are backfilled from the earliest
+    per-slot approval (state.approved[*].approved_at) of that family, or the
+    last_family_approve audit record; written back into state when backfill.
+    """
+    from strategy_codes import family_for_strategy_id, family_code
+    fams = ensure_approved_families(state)
+    stored = state.get("family_approved_at") if isinstance(state.get("family_approved_at"), dict) else {}
+    earliest: dict[str, str] = {}
+    for sid, meta in (state.get("approved") or {}).items():
+        if not isinstance(meta, dict) or not meta.get("approved_at"):
+            continue
+        fam = family_for_strategy_id(sid) or (slot_by_strategy_id(sid) or {}).get("family") or meta.get("family")
+        if fam == "donchian":
+            fam = "donchian_atr"
+        if not fam:
+            continue
+        at = str(meta["approved_at"])
+        if fam not in earliest or at < earliest[fam]:
+            earliest[fam] = at
+    last = ((state.get("meta") or {}).get("last_family_approve") or {})
+    out = []
+    changed = False
+    for f in fams:
+        at = stored.get(f)
+        src = "stored"
+        if not at:
+            cands = [x for x in (earliest.get(f), last.get("at") if last.get("family") == f else None) if x]
+            at = min(cands) if cands else None
+            src = "backfill_slot_approval" if at == earliest.get(f) and at else ("backfill_last_family_approve" if at else "unknown")
+            if at and backfill:
+                stored[f] = at
+                changed = True
+        out.append({"family": f, "code": family_code(f), "approved_at": at, "source": src})
+    if changed:
+        state["family_approved_at"] = stored
+    return out

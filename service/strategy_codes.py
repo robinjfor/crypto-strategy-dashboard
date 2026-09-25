@@ -36,6 +36,10 @@ def code_for(strategy_id: str | None = None, family: str | None = None) -> str |
         rows = entry.get("rows") or {}
         if strategy_id and isinstance(rows.get(strategy_id), dict):
             return rows[strategy_id].get("code")
+        # Row lives under another family (caller passed a stale family):
+        # the row-level code wins over the caller's family letter.
+        if strategy_id and family_for_strategy_id(strategy_id):
+            return code_for(strategy_id, None)
         return entry.get("code")
     if strategy_id:
         for entry in fams.values():
@@ -45,6 +49,21 @@ def code_for(strategy_id: str | None = None, family: str | None = None) -> str |
             if isinstance(row, dict):
                 return row.get("code")
     return None
+
+
+def family_for_strategy_id(strategy_id: str | None) -> str | None:
+    """Family whose rows contain strategy_id (authoritative family for a variant)."""
+    if not strategy_id:
+        return None
+    for fam, entry in (mapping().get("families") or {}).items():
+        if isinstance(entry, dict) and isinstance((entry.get("rows") or {}).get(strategy_id), dict):
+            return fam
+    return None
+
+
+def family_code(family: str | None) -> str | None:
+    entry = (mapping().get("families") or {}).get(family or "")
+    return entry.get("code") if isinstance(entry, dict) else None
 
 
 def code_for_symbol(symbol: str | None, slots: list[dict[str, Any]]) -> str | None:
