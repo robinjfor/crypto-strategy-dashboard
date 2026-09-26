@@ -71,6 +71,9 @@ class BinanceClient:
     def my_trades(self, symbol: str, limit: int = 50) -> list:
         return self._signed("GET", "/api/v3/myTrades", {"symbol": symbol, "limit": limit})
 
+    def get_order(self, symbol: str, order_id: int) -> dict:
+        return self._signed("GET", "/api/v3/order", {"symbol": symbol, "orderId": int(order_id)})
+
     def open_orders(self, symbol: str | None = None) -> list:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/api/v3/openOrders", params)

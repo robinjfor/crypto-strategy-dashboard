@@ -600,6 +600,22 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
 
     # One-off targeted run (workflow input only_slots): act on these slots only.
     only_slots = {x.strip() for x in (os.environ.get("ONLY_SLOTS") or "").split(",") if x.strip()}
+    if only_slots:
+        allow_entries = False  # targeted maintenance runs never open positions
+        log.info("ONLY_SLOTS set → entries disabled for this run")
+    # Positions the exchange already closed (stop filled / balance gone) →
+    # record + drop from state BEFORE evaluating, so stale state never
+    # re-places a stop or tries a second sell.
+    if live:
+        try:
+            from execution import reconcile_exchange_closes
+            from slots import allocation_runtime_slots
+            tf_by_slot = {s.get("id"): s.get("tf") for s in allocation_runtime_slots()}
+            recon = reconcile_exchange_closes(client, state, only_slots=only_slots or None, tf_by_slot=tf_by_slot)
+            if recon:
+                state.setdefault("meta", {})["last_reconciled_closes"] = recon
+        except Exception as e:  # noqa: BLE001
+            log.warning("reconcile_exchange_closes_fail err=%s", e)
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
     # Evaluate allocation-enabled slots (approved → live; others signal-only via apply gate)
     try:

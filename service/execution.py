@@ -204,3 +204,156 @@ def market_close_slot(
 
 def capped_quote(quote: float) -> float:
     return min(float(quote), float(MAX_NOTIONAL_USDT))
+
+
+# --- Detect positions closed on the exchange (stop filled / balance gone) ---
+
+def _ms_to_taipei(ms) -> str | None:
+    try:
+        return datetime.fromtimestamp(int(ms) / 1000, tz=timezone.utc).astimezone(TZ).isoformat(timespec="seconds")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _bar_floor_iso(ms, tf: str | None) -> str | None:
+    try:
+        from indicators import interval_ms
+        step = interval_ms(tf or "1h")
+        t = (int(ms) // step) * step
+        return datetime.fromtimestamp(t / 1000, tz=timezone.utc).isoformat()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _entry_ms(pos: dict) -> int:
+    for k in ("filled_at", "entry_time"):
+        v = pos.get(k)
+        if v:
+            try:
+                return int(datetime.fromisoformat(str(v)).timestamp() * 1000)
+            except Exception:  # noqa: BLE001
+                pass
+    return 0
+
+
+def _record_exchange_close(state: dict, slot_id: str, pos: dict, *, qty: float, price: float | None,
+                           time_ms, order_id, reason: str, venue: str, tf: str | None) -> dict:
+    entry = float(pos.get("entry") or 0)
+    is_long = str(pos.get("side") or "LONG").upper() == "LONG"
+    pnl = None
+    if entry and price:
+        pnl = round(((price - entry) if is_long else (entry - price)) * qty, 4)
+    closed = {
+        "slot": slot_id, "symbol": pos.get("symbol"), "qty": qty, "entry": entry,
+        "exit": price, "pnl_usdt": pnl, "reason": reason, "venue": venue,
+        "closed_at": _ms_to_taipei(time_ms) or now_iso_taipei(),
+        "order_id": order_id, "strategy_id": pos.get("strategy_id"),
+        "detected_at": now_iso_taipei(), "source": "exchange_reconcile",
+    }
+    if venue == "futures":
+        closed["side"] = pos.get("side")
+    state.setdefault("closed_trades", []).append(closed)
+    state["closed_trades"] = state["closed_trades"][-200:]
+    state.setdefault("positions", {}).pop(slot_id, None)
+    meta = state.setdefault("slots", {}).setdefault(slot_id, {})
+    bar = _bar_floor_iso(time_ms, tf) if time_ms else None
+    meta["last_exit_bar_ts"] = bar or meta.get("last_exit_bar_ts")
+    meta["last_acted_bar_ts"] = bar or meta.get("last_acted_bar_ts")
+    meta["last_exit_reason"] = reason
+    log.info("exchange_close_recorded slot=%s qty=%s px=%s reason=%s order=%s", slot_id, qty, price, reason, order_id)
+    return closed
+
+
+def _spot_closed_info(client, slot_id: str, pos: dict) -> dict | None:
+    symbol = pos["symbol"]
+    sid = pos.get("stop_order_id")
+    if sid:
+        try:
+            o = client.get_order(symbol, int(sid))
+            if str(o.get("status")) == "FILLED" and float(o.get("executedQty") or 0) > 0:
+                q = float(o["executedQty"])
+                quote = float(o.get("cummulativeQuoteQty") or 0)
+                return {"qty": q, "price": (quote / q) if quote and q else float(o.get("price") or 0) or None,
+                        "time_ms": o.get("updateTime") or o.get("time"), "order_id": o.get("orderId"),
+                        "reason": "stop"}
+        except Exception as e:  # noqa: BLE001
+            log.warning("stop_order_lookup_skip slot=%s err=%s", slot_id, e)
+    # Balance gone? (free+locked below tradable size)
+    base = base_asset(symbol)
+    held = 0.0
+    for b in client.nonzero_balances():
+        if b.get("asset") == base:
+            held = float(b.get("free") or 0) + float(b.get("locked") or 0)
+            break
+    f = client.load_filters(symbol)
+    try:
+        px = float(client.ticker_price(symbol))
+    except Exception:  # noqa: BLE001
+        px = float(pos.get("entry") or 0)
+    if held >= float(f.get("minQty") or 0) and held * px >= float(f.get("minNotional") or 5.0) and held > 0:
+        return None
+    # Position gone: find the SELL(s) since entry, most recent order
+    since = _entry_ms(pos)
+    sells = [t for t in (client.my_trades(symbol, limit=100) or [])
+             if not t.get("isBuyer") and int(t.get("time") or 0) >= since]
+    if sells:
+        last_oid = sells[-1].get("orderId")
+        rows = [t for t in sells if t.get("orderId") == last_oid]
+        q = sum(float(t["qty"]) for t in rows)
+        quote = sum(float(t.get("quoteQty") or float(t["qty"]) * float(t["price"])) for t in rows)
+        reason = "stop" if (sid and str(last_oid) == str(sid)) or not sid else "external_sell"
+        return {"qty": q, "price": quote / q if q else None, "time_ms": rows[-1].get("time"),
+                "order_id": last_oid, "reason": reason}
+    return {"qty": float(pos.get("qty") or 0), "price": None, "time_ms": None,
+            "order_id": None, "reason": "position_gone"}
+
+
+def _futures_closed_info(fc, slot_id: str, pos: dict) -> dict | None:
+    symbol = pos["symbol"]
+    rows = fc.position_risk(symbol) or []
+    amt = sum(abs(float(r.get("positionAmt") or 0)) for r in rows if r.get("symbol") == symbol)
+    if amt > 1e-12:
+        return None
+    since = _entry_ms(pos)
+    is_long = str(pos.get("side") or "LONG").upper() == "LONG"
+    close_side = "SELL" if is_long else "BUY"
+    trades = [t for t in (fc.user_trades(symbol, limit=100) or [])
+              if int(t.get("time") or 0) >= since and str(t.get("side")) == close_side]
+    if trades:
+        last_oid = trades[-1].get("orderId")
+        rs = [t for t in trades if t.get("orderId") == last_oid]
+        q = sum(float(t["qty"]) for t in rs)
+        quote = sum(float(t.get("quoteQty") or float(t["qty"]) * float(t["price"])) for t in rs)
+        return {"qty": q, "price": quote / q if q else None, "time_ms": rs[-1].get("time"),
+                "order_id": last_oid, "reason": "stop"}
+    return {"qty": float(pos.get("qty") or 0), "price": None, "time_ms": None,
+            "order_id": None, "reason": "position_gone"}
+
+
+def reconcile_exchange_closes(client, state: dict, *, only_slots: set | None = None, tf_by_slot: dict | None = None) -> list[dict]:
+    """Close state positions the exchange already closed (stop filled or
+    balance/positionAmt ≈ 0). Read-only on the exchange except cancelling
+    leftover futures algo stops — never sends a sell/buy."""
+    out = []
+    for slot_id, pos in list((state.get("positions") or {}).items()):
+        if not isinstance(pos, dict) or pos.get("status") != "FILLED":
+            continue
+        if only_slots and slot_id not in only_slots:
+            continue
+        venue = str(pos.get("venue") or "spot")
+        tf = (tf_by_slot or {}).get(slot_id) or pos.get("tf")
+        try:
+            if venue == "futures":
+                from futures_client import FuturesDemoClient
+                from futures_execution import cancel_algo_stops
+                fc = FuturesDemoClient()
+                info = _futures_closed_info(fc, slot_id, pos)
+                if info:
+                    cancel_algo_stops(fc, pos["symbol"])
+            else:
+                info = _spot_closed_info(client, slot_id, pos)
+            if info:
+                out.append(_record_exchange_close(state, slot_id, pos, venue=venue, tf=tf, **info))
+        except Exception as e:  # noqa: BLE001
+            log.warning("reconcile_close_skip slot=%s err=%s", slot_id, e)
+    return out

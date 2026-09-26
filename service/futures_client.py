@@ -104,6 +104,9 @@ class FuturesDemoClient:
     def cancel_algo_order(self, **params) -> dict:
         return self._signed("DELETE", "/fapi/v1/algoOrder", params)
 
+    def user_trades(self, symbol: str, limit: int = 50) -> list:
+        return self._signed("GET", "/fapi/v1/userTrades", {"symbol": symbol, "limit": limit})
+
     def open_algo_orders(self, symbol: str | None = None) -> list:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/fapi/v1/openAlgoOrders", params)
