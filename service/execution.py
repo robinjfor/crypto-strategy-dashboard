@@ -26,16 +26,87 @@ def client_order_id(slot_id: str, kind: str, bar_ts: str | None = None) -> str:
     return raw[:36]
 
 
-def place_hard_stop(client: BinanceClient, symbol: str, qty: float, stop: float, slot_id: str) -> dict:
-    """Cancel existing opens for symbol then place STOP_LOSS_LIMIT."""
+def base_asset(symbol: str) -> str:
+    s = str(symbol or "").upper()
+    for q in ("USDT", "USDC", "FDUSD", "BUSD"):
+        if s.endswith(q):
+            return s[: -len(q)]
+    return s
+
+
+def free_balance(client: BinanceClient, asset: str) -> float:
+    for b in client.nonzero_balances():
+        if b.get("asset") == asset:
+            return float(b.get("free") or 0)
+    return 0.0
+
+
+def net_filled_qty(order: dict, symbol: str) -> float:
+    """executedQty minus commission charged in the base asset (spot BUY).
+
+    Binance takes the 0.1% fee out of the bought coin unless paid in BNB, so
+    the sellable balance is below executedQty. Using gross qty made every
+    later SELL / STOP_LOSS_LIMIT fail with insufficient balance."""
+    qty = float(order.get("executedQty") or 0)
+    base = base_asset(symbol)
+    fee = 0.0
+    for f in order.get("fills") or []:
+        if str(f.get("commissionAsset") or "").upper() == base:
+            fee += float(f.get("commission") or 0)
+    if not qty:
+        qty = sum(float(f.get("qty") or 0) for f in order.get("fills") or [])
+    return max(0.0, qty - fee)
+
+
+def cancel_symbol_orders(client: BinanceClient, symbol: str) -> None:
     try:
         client.cancel_open_orders(symbol)
+    except Exception as e:  # noqa: BLE001  (-2011 "Unknown order" when none open)
+        log.info("cancel_open_orders_skip symbol=%s err=%s", symbol, e)
+
+
+def sellable_qty(client: BinanceClient, symbol: str, want_qty: float | None = None) -> float:
+    """Free base balance (after cancels), capped at want_qty, floored to stepSize.
+    Returns 0 when below minQty/minNotional."""
+    free = free_balance(client, base_asset(symbol))
+    qty = min(free, float(want_qty)) if want_qty else free
+    try:
+        px = float(client.ticker_price(symbol))
+    except Exception:  # noqa: BLE001
+        px = 0.0
+    if px > 0:
+        return client.round_qty(symbol, qty, px)
+    f = client.load_filters(symbol)
+    return client.round_step(qty, f["stepSize"])
+
+
+def spot_market_exit(client: BinanceClient, symbol: str, pos_qty: float | None, coid: str) -> tuple[dict, float]:
+    """Exit a spot position: cancel resting stop(s) FIRST (they lock the
+    balance), then market-sell free balance (≤ position qty) rounded DOWN to
+    stepSize. Raises when nothing sellable."""
+    cancel_symbol_orders(client, symbol)
+    q = sellable_qty(client, symbol, pos_qty)
+    if q <= 0:
+        raise RuntimeError(f"no sellable {base_asset(symbol)} after cancel (pos_qty={pos_qty})")
+    order = client.market_sell(symbol, q, coid)
+    return order, q
+
+
+def place_hard_stop(client: BinanceClient, symbol: str, qty: float, stop: float, slot_id: str) -> dict:
+    """Cancel existing opens for symbol then place STOP_LOSS_LIMIT on the free
+    balance (≤ qty) — never more than the account actually holds."""
+    cancel_symbol_orders(client, symbol)
+    try:
+        q = sellable_qty(client, symbol, qty)
     except Exception as e:  # noqa: BLE001
-        log.warning("cancel_open_orders_skip symbol=%s err=%s", symbol, e)
+        log.warning("stop_qty_lookup_skip symbol=%s err=%s", symbol, e)
+        q = qty
+    if q <= 0:
+        raise RuntimeError(f"stop qty 0 for {symbol}")
     coid = client_order_id(slot_id, "stop")
     limit = stop * 0.995
-    order = client.stop_loss_limit(symbol, qty, stop, limit, coid)
-    log.info("hard_stop_placed symbol=%s qty=%s stop=%s orderId=%s", symbol, qty, stop, order.get("orderId"))
+    order = client.stop_loss_limit(symbol, q, stop, limit, coid)
+    log.info("hard_stop_placed symbol=%s qty=%s stop=%s orderId=%s", symbol, q, stop, order.get("orderId"))
     return order
 
 
@@ -87,31 +158,15 @@ def market_close_slot(
         state["closed_trades"] = state["closed_trades"][-200:]
         positions.pop(slot_id, None)
         return {"ok": True, "closed": closed}
-    # Prefer exchange free balance for base asset
-    base = symbol.replace("USDT", "")
-    qty = float(pos["qty"])
-    try:
-        bals = client.nonzero_balances()
-        for b in bals:
-            if b["asset"] == base:
-                qty = min(qty, float(b["free"]))
-                break
-    except Exception as e:  # noqa: BLE001
-        log.warning("balance_lookup_skip err=%s", e)
-
+    # Cancel resting stop FIRST (it locks the balance), then sell free qty.
     try:
         px = client.ticker_price(symbol)
     except Exception:  # noqa: BLE001
         px = float(pos.get("entry") or 0)
-
-    q = client.round_qty(symbol, qty, px)
+    cancel_symbol_orders(client, symbol)
+    q = sellable_qty(client, symbol, float(pos["qty"]))
     if q <= 0:
         return {"ok": False, "error": "數量低於 LOT_SIZE / MIN_NOTIONAL", "slot": slot_id}
-
-    try:
-        client.cancel_open_orders(symbol)
-    except Exception as e:  # noqa: BLE001
-        log.warning("cancel_before_close_skip err=%s", e)
 
     coid = client_order_id(slot_id, "mclose", datetime.now(timezone.utc).isoformat())
     order = client.market_sell(symbol, q, coid)

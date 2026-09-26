@@ -104,7 +104,7 @@ class BinanceClient:
         if step <= 0:
             return qty
         precision = max(0, int(round(-math.log10(step)))) if step < 1 else 0
-        floored = math.floor(qty / step) * step
+        floored = math.floor(qty / step + 1e-9) * step
         return float(f"{floored:.{precision}f}")
 
     def round_qty(self, symbol: str, qty: float, price: float) -> float:

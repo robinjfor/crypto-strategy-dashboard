@@ -91,6 +91,28 @@ def place_stop_reduce_only(
 
 
 
+def cancel_algo_stops(client: FuturesDemoClient, symbol: str) -> int:
+    """Conditional stops live in the Algo API and are NOT removed by
+    /fapi/v1/allOpenOrders — cancel them explicitly so no orphan stop remains."""
+    n = 0
+    try:
+        rows = client.open_algo_orders(symbol) or []
+        if isinstance(rows, dict):
+            rows = rows.get("orders") or rows.get("rows") or []
+        for o in rows:
+            aid = o.get("algoId")
+            if aid is None:
+                continue
+            try:
+                client.cancel_algo_order(symbol=symbol, algoId=aid)
+                n += 1
+            except Exception as e:  # noqa: BLE001
+                log.warning("futures_algo_cancel_skip symbol=%s algoId=%s err=%s", symbol, aid, e)
+    except Exception as e:  # noqa: BLE001
+        log.warning("futures_algo_list_skip symbol=%s err=%s", symbol, e)
+    return n
+
+
 def close_position_market(
     client: FuturesDemoClient,
     *,
@@ -103,6 +125,7 @@ def close_position_market(
         client.cancel_all(symbol)
     except Exception as e:  # noqa: BLE001
         log.warning("futures_cancel_before_close_skip symbol=%s err=%s", symbol, e)
+    cancel_algo_stops(client, symbol)
     info = client.exchange_info()
     q = round_qty_futures(info, symbol, abs(qty))
     if q <= 0:

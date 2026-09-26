@@ -26,7 +26,7 @@ import sys
 from datetime import datetime, timezone
 
 from binance_client import BinanceClient
-from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop
+from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop, spot_market_exit, net_filled_qty
 from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, slot_by_id, all_known_slots, FUTURES_FAMILIES, venue_for_family, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
 from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
 from slots import ensure_approved_families
@@ -228,6 +228,26 @@ def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dic
     return {"ok": True, "sig": forced, "mark": mark}
 
 
+def _ensure_spot_stop(client, pos: dict, slot_id: str, sig: dict) -> None:
+    """Re-place a missing spot hard stop (e.g. entry-time stop failed on gross qty).
+    Only when no open order exists for the symbol and mark is above the stop."""
+    try:
+        stop = float(pos.get("stop") or 0)
+        mark = float(sig.get("mark") or sig.get("close") or 0)
+        if stop <= 0 or mark <= stop:
+            return
+        if client.open_orders(pos["symbol"]):
+            return
+        order = place_hard_stop(client, pos["symbol"], float(pos.get("qty") or 0), stop, slot_id)
+        pos["stop_order_id"] = order.get("orderId")
+        pos["stop_client_order_id"] = order.get("clientOrderId")
+        pos.pop("stop_error", None)
+        log.info("hard_stop_restored slot=%s stop=%s", slot_id, stop)
+    except Exception as e:  # noqa: BLE001
+        pos["stop_error"] = str(e)
+        log.error("hard_stop_restore_fail slot=%s err=%s", slot_id, e)
+
+
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
     """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
@@ -311,7 +331,8 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 return out
             order = client.market_buy(sig["symbol"], quote, coid)
             fills = order.get("fills") or []
-            qty = float(order.get("executedQty") or 0)
+            gross_qty = float(order.get("executedQty") or 0)
+            qty = net_filled_qty(order, sig["symbol"]) or gross_qty
             if fills:
                 notional = sum(float(f["price"]) * float(f["qty"]) for f in fills)
                 qty2 = sum(float(f["qty"]) for f in fills)
@@ -400,11 +421,9 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 out["fill"] = {"orderId": order.get("orderId"), "venue": "futures"}
                 log.info("filled_exit_futures symbol=%s side=%s", sig["symbol"], pos.get("side"))
                 return out
-            try:
-                client.cancel_open_orders(sig["symbol"])
-            except Exception as e:  # noqa: BLE001
-                log.warning("cancel_before_exit_skip err=%s", e)
-            order = client.market_sell(sig["symbol"], qty, coid)
+            # Cancel resting stop first, then sell FREE balance floored to stepSize
+            # (state qty is gross of the base-asset buy fee → never sell it blindly).
+            order, qty = spot_market_exit(client, sig["symbol"], qty, coid)
             entry = float(pos.get("entry") or 0)
             fill_px = float(sig.get("mark") or sig.get("close") or entry)
             fills = order.get("fills") or []
@@ -432,8 +451,9 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             if slot_id == "core_sol":
                 meta["needs_reset_latch"] = True
             out["executed"] = True
-            out["fill"] = {"orderId": order.get("orderId"), "executedQty": order.get("executedQty")}
-            log.info("filled_exit symbol=%s", sig["symbol"])
+            out["fill"] = {"orderId": order.get("orderId"), "executedQty": order.get("executedQty"),
+                           "qty": qty, "price": fill_px, "venue": "spot"}
+            log.info("filled_exit symbol=%s qty=%s px=%s", sig["symbol"], qty, fill_px)
         except Exception as e:  # noqa: BLE001
             log.error("exit_fail symbol=%s err=%s", sig["symbol"], e)
             out["error"] = str(e)
@@ -477,11 +497,15 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             if live and new_stop > float(pos.get("stop") or 0):
                 try:
                     replace_trail_stop(client, pos, new_stop, slot_id)
+                    pos.pop("stop_error", None)
                 except Exception as e:  # noqa: BLE001
                     log.error("trail_replace_fail slot=%s err=%s", slot_id, e)
                     pos["stop"] = new_stop  # still update state stop target
+                    pos["stop_error"] = str(e)
             else:
-                pos["stop"] = new_stop
+                pos["stop"] = max(new_stop, float(pos.get("stop") or 0))
+                if live:
+                    _ensure_spot_stop(client, pos, slot_id, sig)
         return out
 
     return out
@@ -522,6 +546,10 @@ def apply_sol_entry(client: BinanceClient, state: dict, sol_sig: dict, live: boo
     return merged
 
 
+class _SkipSol(Exception):
+    pass
+
+
 def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     enabled = env_bool("TRADER_ENABLED", True)
     mode = "dry-run" if dry_run else trader_mode()
@@ -544,16 +572,26 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     log.info("approved_ids=%s", sorted(_approved_ids(state)))
     log.info("signal_only_ids=%s", sorted(DEFAULT_SIGNAL_ONLY.keys()))
 
+    # One-off targeted run (workflow input only_slots): act on these slots only.
+    only_slots = {x.strip() for x in (os.environ.get("ONLY_SLOTS") or "").split(",") if x.strip()}
     # --- satellites (1h/4h Donchian + Wilder ATR) ---
     # Evaluate allocation-enabled slots (approved → live; others signal-only via apply gate)
     try:
         doc, _src = resolve_allocation()
         eval_slots = [slot_to_runtime(s) for s in (doc.get("slots") or []) if s.get("enabled")]
-        if eval_slots:
+        if only_slots:
+            eval_slots = [s for s in eval_slots if s.get("id") in only_slots]
+            log.info("ONLY_SLOTS=%s → evaluating %s", sorted(only_slots), [s.get("id") for s in eval_slots])
+        if eval_slots or only_slots:
             state["runtime_eval_slots"] = eval_slots
     except Exception as e:  # noqa: BLE001
         log.warning("runtime_eval_slots_fail err=%s", e)
-    signals = evaluate_all(client, state)
+    if only_slots and not state.get("runtime_eval_slots"):
+        signals = []
+    else:
+        signals = evaluate_all(client, state)
+    if only_slots:
+        signals = [x for x in signals if str(x.get("slot") or "") in only_slots]
     applied = [
         apply_signal(client, state, sig, live=live, allow_entries=allow_entries)
         for sig in signals
@@ -595,7 +633,12 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             "suggested_stop": sig.get("suggested_stop"),
             "quote_usdt": sig.get("quote_usdt"),
             "fill": app.get("fill"),
+            "error": app.get("error"),
         })
+    if only_slots:
+        prev = [d for d in (state.get("meta") or {}).get("last_decisions") or []
+                if isinstance(d, dict) and d.get("slot") not in only_slots]
+        decisions = prev + decisions
     state.setdefault("meta", {})["last_decisions"] = decisions
 
     # Futures liquidation monitor — force exit when mark approaches liq
@@ -603,6 +646,8 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         if not pos or pos.get("status") != "FILLED":
             continue
         if (pos.get("venue") or "spot") != "futures":
+            continue
+        if only_slots and pid not in only_slots:
             continue
         try:
             mark = float(pos.get("mark") or 0)
@@ -661,6 +706,8 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     # --- SOL core ---
     sol_meta = state.setdefault("slots", {}).setdefault("core_sol", {})
     try:
+        if only_slots and "core_sol" not in only_slots:
+            raise _SkipSol()
         sol_sig = sol_compute_signal()
         if sol_meta.get("needs_reset_latch"):
             if sol_sig["signal"]["regime_filtered"] == 0:
@@ -724,6 +771,8 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         state.setdefault("expectation_log", [])
         state["expectation_log"].append(hb)
         state["expectation_log"] = state["expectation_log"][-500:]
+    except _SkipSol:
+        log.info("sol_core_skipped ONLY_SLOTS")
     except Exception as e:  # noqa: BLE001
         log.exception("sol_core_fail err=%s", e)
         applied.append({"slot": "core_sol", "symbol": "SOLUSDT", "error": str(e)})
