@@ -91,9 +91,19 @@ SESSION_HMAC_SECRET = (
     else hashlib.sha256(("session-v1|" + PIN_SALT + "|" + PIN_HASH).encode("utf-8")).digest()
 )
 
+# Per-client-IP PIN lockout (in-memory, per instance). Only WRONG PINs count:
+# missing credentials and expired/invalid session tokens return 401 but never
+# count (an open dashboard tab polling /status with an expired token used to
+# lock its own IP out of /auth/login). Never global.
 _fail_buckets: dict[str, list[float]] = {}
-RATE_MAX = 5
-RATE_WINDOW = 600.0
+_locked_until: dict[str, float] = {}
+RATE_MAX = int(os.environ.get("AUTH_FAIL_MAX") or 5)
+RATE_WINDOW = float(os.environ.get("AUTH_FAIL_WINDOW_SEC") or 300)
+LOCKOUT_SEC = float(os.environ.get("AUTH_LOCKOUT_SEC") or 300)
+# Number of trusted proxies that append to X-Forwarded-For AFTER the client IP
+# (Cloud Run direct: 0 → the rightmost entry is the client IP GFE observed;
+# behind an external HTTPS LB set 1). Left-most entries are client-controlled.
+TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS") or 0)
 _bal_cache: dict[str, Any] = {"ts": 0.0, "data": None}
 BAL_TTL = 15.0
 
@@ -189,24 +199,55 @@ def options_ok():
 
 def _client_ip() -> str:
     xff = request.headers.get("X-Forwarded-For") or ""
-    if xff:
-        return xff.split(",")[0].strip()
+    parts = [p.strip() for p in xff.split(",") if p.strip()]
+    if parts:
+        idx = len(parts) - 1 - max(0, TRUSTED_PROXY_HOPS)
+        return parts[max(0, idx)]
     return request.remote_addr or "unknown"
 
 
+def _lock_remaining(ip: str) -> float:
+    until = _locked_until.get(ip) or 0.0
+    rem = until - time.time()
+    if rem <= 0:
+        _locked_until.pop(ip, None)
+        return 0.0
+    return rem
+
+
 def _rate_limited(ip: str) -> bool:
-    now = time.time()
-    bucket = [t for t in _fail_buckets.get(ip, []) if now - t < RATE_WINDOW]
-    _fail_buckets[ip] = bucket
-    return len(bucket) >= RATE_MAX
+    return _lock_remaining(ip) > 0
 
 
 def _record_fail(ip: str) -> None:
-    _fail_buckets.setdefault(ip, []).append(time.time())
+    """Record one wrong-PIN attempt; lock the IP for LOCKOUT_SEC at RATE_MAX in RATE_WINDOW."""
+    now = time.time()
+    bucket = [t for t in _fail_buckets.get(ip, []) if now - t < RATE_WINDOW]
+    bucket.append(now)
+    _fail_buckets[ip] = bucket
+    try:
+        log.info("auth_fail ip_hash=%s n=%s path=%s ua=%s", hashlib.sha256(ip.encode()).hexdigest()[:8],
+                 len(bucket), request.path, (request.headers.get("User-Agent") or "")[:40])
+    except Exception:  # noqa: BLE001
+        pass
+    if len(bucket) >= RATE_MAX:
+        _locked_until[ip] = now + LOCKOUT_SEC
+        _fail_buckets[ip] = []
+        log.warning("auth_lockout ip_hash=%s secs=%s", hashlib.sha256(ip.encode()).hexdigest()[:8], LOCKOUT_SEC)
+    # bound memory
+    if len(_fail_buckets) > 5000:
+        for k in list(_fail_buckets)[:1000]:
+            _fail_buckets.pop(k, None)
 
 
 def _clear_fails(ip: str) -> None:
     _fail_buckets.pop(ip, None)
+    _locked_until.pop(ip, None)
+
+
+def _locked_msg(ip: str) -> str:
+    mins = max(1, int(round(_lock_remaining(ip) / 60.0)))
+    return f"嘗試次數過多，請約 {mins} 分鐘後再試"
 
 
 def _require_https() -> tuple[bool, str, int] | None:
@@ -243,8 +284,6 @@ def _check_auth(allow_readonly: bool = False) -> tuple[bool, str, int]:
     if not PIN_HASH:
         return False, "伺服器未設定控制 PIN 雜湊", 503
     ip = _client_ip()
-    if _rate_limited(ip):
-        return False, "嘗試次數過多，請稍後再試", 429
     https_err = _require_https()
     if https_err is not None:
         return https_err
@@ -254,19 +293,18 @@ def _check_auth(allow_readonly: bool = False) -> tuple[bool, str, int]:
         token = auth[7:].strip()
         if _is_readonly_token(token):
             if allow_readonly and request.method == "GET":
-                _clear_fails(ip)
                 return True, "", 200
             return False, "唯讀權杖不可用於此操作", 403
         if verify_session_token(token):
-            _clear_fails(ip)
             return True, "", 200
-        _record_fail(ip)
+        # Expired/invalid session (HMAC, unguessable) — not a PIN guess; don't count.
         return False, "登入已過期或無效，請重新登入", 401
 
     pin = request.headers.get(PIN_HEADER) or ""
     if not pin:
-        _record_fail(ip)
         return False, "未登入或缺少操作密碼", 401
+    if _rate_limited(ip):
+        return False, _locked_msg(ip), 429
     if not _check_pin_value(pin):
         _record_fail(ip)
         return False, "操作密碼錯誤", 401
@@ -284,8 +322,6 @@ def auth_login():
     if not PIN_HASH:
         return jsonify({"ok": False, "error": "伺服器未設定控制 PIN 雜湊"}), 503
     ip = _client_ip()
-    if _rate_limited(ip):
-        return jsonify({"ok": False, "error": "嘗試次數過多，請稍後再試"}), 429
     https_err = _require_https()
     if https_err is not None:
         return jsonify({"ok": False, "error": https_err[1]}), https_err[2]
@@ -293,8 +329,12 @@ def auth_login():
     body = request.get_json(silent=True) or {}
     pin = body.get("pin") or body.get("password") or request.headers.get(PIN_HEADER) or ""
     if not normalize_pin(pin):
-        _record_fail(ip)
+        # Empty submit is not a guess — never counts toward the lockout.
         return jsonify({"ok": False, "error": "缺少密碼"}), 401
+    if _rate_limited(ip):
+        resp = jsonify({"ok": False, "error": _locked_msg(ip)})
+        resp.headers["Retry-After"] = str(int(_lock_remaining(ip)) + 1)
+        return resp, 429
     if not _check_pin_value(pin):
         _record_fail(ip)
         return jsonify({"ok": False, "error": "密碼錯誤"}), 401

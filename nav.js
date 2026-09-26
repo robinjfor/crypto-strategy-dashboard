@@ -114,6 +114,16 @@
         sentBearer = String(headers.get("Authorization") || "").toLowerCase().indexOf("bearer ") === 0;
       }
       init.headers = headers;
+      // No session → don't hit the API at all (except /auth/login). Unauthenticated
+      // polling from an open tab only produces 401 noise server-side.
+      if (isApiUrl(input) && !tok && !headers.has("Authorization") && !headers.has("X-Trader-Pin")) {
+        var u0 = String(typeof input === "string" ? input : (input && input.url) || "");
+        if (u0.indexOf("/auth/login") === -1) {
+          return Promise.resolve(new Response(JSON.stringify({ ok: false, error: "未登入" }), {
+            status: 401, headers: { "Content-Type": "application/json" }
+          }));
+        }
+      }
       return _origFetch(input, init).then(function (res) {
         // Only drop the session if a Bearer request was rejected (avoid race
         // where an early unauthenticated /status 401 clears a fresh login).
