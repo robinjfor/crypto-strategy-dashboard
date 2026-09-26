@@ -228,6 +228,30 @@ def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dic
     return {"ok": True, "sig": forced, "mark": mark}
 
 
+def _reconcile_spot_qty(client, pos: dict, slot_id: str) -> None:
+    """Saved qty must not exceed what the account holds (free+locked). Older
+    positions were saved gross of the base-asset buy fee."""
+    try:
+        from execution import base_asset
+        base = base_asset(pos["symbol"])
+        held = None
+        for b in client.nonzero_balances():
+            if b.get("asset") == base:
+                held = float(b.get("free") or 0) + float(b.get("locked") or 0)
+                break
+        if held is None:
+            return
+        f = client.load_filters(pos["symbol"])
+        held = client.round_step(held, f["stepSize"])
+        cur = float(pos.get("qty") or 0)
+        if held > 0 and held < cur:
+            pos["qty_gross"] = pos.get("qty_gross") or cur
+            pos["qty"] = held
+            log.info("qty_reconciled slot=%s %s -> %s", slot_id, cur, held)
+    except Exception as e:  # noqa: BLE001
+        log.warning("qty_reconcile_skip slot=%s err=%s", slot_id, e)
+
+
 def _ensure_spot_stop(client, pos: dict, slot_id: str, sig: dict) -> None:
     """Re-place a missing spot hard stop (e.g. entry-time stop failed on gross qty).
     Only when no open order exists for the symbol and mark is above the stop."""
@@ -494,6 +518,8 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                         log.error("futures_trail_replace_fail slot=%s err=%s", slot_id, e)
                 pos["stop"] = new_stop
                 return out
+            if live:
+                _reconcile_spot_qty(client, pos, slot_id)
             if live and new_stop > float(pos.get("stop") or 0):
                 try:
                     replace_trail_stop(client, pos, new_stop, slot_id)

@@ -167,3 +167,14 @@ def test_futures_close_cancels_algo_stops():
         def new_order(self, **p): calls.append(("order", p["side"], p["reduceOnly"])); return {"orderId": 1}
     close_position_market(FC(), symbol="ARBUSDT", qty=100.0, is_long=True)
     assert ("algo_cancel", 9) in calls and calls.index(("algo_cancel", 9)) < calls.index(("order", "SELL", "true"))
+
+
+def test_manage_reconciles_gross_qty_to_holdings():
+    import main
+    c = FakeSpot(free=718.51077)
+    st = _state()
+    sig = {"slot": "sat_fil_1h", "symbol": "FILUSDT", "action": "manage", "stop": 1.10,
+           "mark": 1.20, "bar_ts": "x", "family": "donchian_atr"}
+    main.apply_signal(c, st, sig, live=True, allow_entries=True)
+    pos = st["positions"]["sat_fil_1h"]
+    assert pos["qty"] == pytest.approx(718.51) and pos["qty_gross"] == pytest.approx(719.23)
