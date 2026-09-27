@@ -28,6 +28,7 @@
   </div>
   <script src="./nav.js"></script>
   <script src="./exit-reasons.js"></script>
+  <script src="./account-changes.js"></script>
   <script>
   (async function () {
     const $ = (id) => document.getElementById(id);
@@ -43,15 +44,7 @@
         if (cfg && cfg.base) {
           const st = await (await fetch(cfg.base.replace(/\/$/,"") + "/status?t="+Date.now(),{cache:"no-store",mode:"cors"})).json();
           cloudOk = !!(st && st.ok !== false);
-          const closed = (st.closed_trades || []).map((t) => ({
-            ts: t.closed_at, kind: "CLOSE", symbol: t.symbol, code: t.code, side: "SELL",
-            qty: t.qty, price: t.exit, realized_pnl_usdt: t.pnl_usdt, reason: t.reason, source: "cloud"
-          }));
-          const fills = (st.recent_fills || []).map((t) => ({
-            ts: t.time, kind: t.side === "BUY" ? "OPEN" : "CLOSE", symbol: t.symbol, code: t.code, side: t.side,
-            qty: t.qty, price: t.price, fee: t.commission, reason: "myTrades", source: "cloud"
-          }));
-          rows = closed.concat(fills);
+          rows = window.buildAccountChanges(st);
           if (cloudOk) sourceHint = "雲端";
         }
       } catch (_) { cloudOk = false; }
@@ -67,10 +60,7 @@
           } catch (_2) { rows = []; }
         }
       }
-      rows = rows.filter((r) => {
-        const s = String(r.symbol || "").toUpperCase();
-        return !s.includes("FILUSDT") && s !== "FIL";
-      }).sort((a,b) => String(b.ts||b.time||"").localeCompare(String(a.ts||a.time||"")));
+      rows = rows.slice().sort((a,b) => (b.ms || Date.parse(b.ts||b.time||"") || 0) - (a.ms || Date.parse(a.ts||a.time||"") || 0));
       const body = rows.length ? rows.map((r) => {
         const kind = r.kind || "—";
         const side = r.side || (String(kind).toUpperCase()==="OPEN"?"BUY":String(kind).toUpperCase()==="CLOSE"?"SELL":"—");

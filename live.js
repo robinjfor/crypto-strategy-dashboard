@@ -524,12 +524,22 @@
       "<td>" + esc(reason(r.reason || kind)) + "</td></tr>";
   }
 
+  var CHANGES_N = 10;
+  function changeRows() {
+    // Same source + builder as history.html (cloud /status); static settlements only offline.
+    if (cloud && typeof window.buildAccountChanges === "function") {
+      var rows = window.buildAccountChanges(cloud);
+      if (rows.length) return rows;
+    }
+    return sortDesc(settlements || []);
+  }
+
   function renderChanges() {
-    var rows = sortDesc(settlements.filter(isTrade)).slice(0, 5);
+    var rows = changeRows().slice(0, CHANGES_N);
     var body = rows.length ? rows.map(tradeRow).join("") :
       '<tr><td colspan="9" class="empty-row">尚無成交紀錄</td></tr>';
     return '<section class="section" id="sec-changes">' +
-      '<div class="section-head"><h2>帳戶變動明細</h2><span class="hint">最新 5 筆 · <a href="./history.html">完整歷史</a></span></div>' +
+      '<div class="section-head"><h2>帳戶變動明細</h2><span class="hint">最新 ' + CHANGES_N + ' 筆（新→舊）· <a href="./history.html">完整歷史</a></span></div>' +
       '<div class="card"><div class="table-scroll"><table class="data">' +
       "<thead><tr><th>時間</th><th>類型</th><th>標的</th><th>方向</th><th class=\"num\">數量</th><th class=\"num\">價格</th><th class=\"num\">手續費</th><th class=\"num\">已實現損益</th><th>原因</th></tr></thead>" +
       "<tbody>" + body + "</tbody></table></div></div></section>";

@@ -850,6 +850,8 @@ def build_status() -> dict:
                         "symbol": sym,
                         "code": code_for_symbol(sym, all_known_slots()),
                         "id": t.get("id"),
+                        "orderId": t.get("orderId"),
+                        "commissionAsset": t.get("commissionAsset"),
                         "time": datetime.fromtimestamp(int(t["time"]) / 1000, tz=timezone.utc)
                         .astimezone()
                         .isoformat(timespec="seconds"),
@@ -919,7 +921,7 @@ def build_status() -> dict:
         "positions": positions,
         "open_positions": positions,
         "armed_slots": armed,
-        "recent_fills": recent_fills[:30],
+        "recent_fills": recent_fills[:60],
         "closed_trades": closed_norm,
         "last_job_run_at": meta.get("last_run_at"),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
