@@ -784,3 +784,39 @@ table.scores tr.fail:hover td.col-approve {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* Backtest review tabs: 批准 / 待審核 / 封存 */
+.review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.review-tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.review-tab:hover { border-color: rgba(59,130,246,0.45); color: #e2e8f0; }
+.review-tab.active {
+  background: rgba(59,130,246,0.18);
+  border-color: rgba(59,130,246,0.55);
+  color: #93c5fd;
+}
+.review-tab .tab-count {
+  display: inline-block;
+  min-width: 1.2em;
+  margin-left: 4px;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.btn-fam-archive, .btn-fam-unarchive {
+  margin-left: 4px;
+}

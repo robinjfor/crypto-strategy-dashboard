@@ -30,6 +30,9 @@
   var HIDDEN_FAMILIES = { news_burst_confirm: true, news_filter_donchian: true };
   var LOCK_PREP = "準備中";
   var LOCK_NO_PASS = "未過關，不開放批准";
+  // Family letter codes from strategy_codes.json (A=earliest proxy for created_at)
+  var FAMILY_CODE_FROM_CFG = {};
+
 
   var scores = null;
   var catalog = null;
@@ -246,6 +249,13 @@
       (d.signal_only || []).forEach(function (a) {
         signalOnlyMap[a.strategy_id] = a;
       });
+      if (d.approved_families) refreshApprovedFamilies(d);
+      else {
+        var arch = d.archived_families || {};
+        Object.keys(arch).forEach(function (f) { archivedFamilies[f] = arch[f] || true; });
+        var rest = d.restored_families || {};
+        Object.keys(rest).forEach(function (f) { restoredFamilies[f] = rest[f] || true; });
+      }
       $("cloudBanner").classList.add("hidden");
     } catch (e) {
       $("cloudBanner").classList.remove("hidden");
@@ -462,8 +472,8 @@
     return Object.keys(map).map(function (k) {
       var g = map[k];
       g.rows.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
-      var famPass = rows.some(function (r) { return gatePass3y(r); });
-      rows.forEach(function (r) { r._family_pass_3y = famPass; });
+      var famPass = g.rows.some(function (r) { return gatePass3y(r); });
+      g.rows.forEach(function (r) { r._family_pass_3y = famPass; });
       g.best_score = g.rows.length ? (g.rows[0].score || 0) : 0;
       return g;
     }).sort(function (a, b) { return b.best_score - a.best_score; });
@@ -533,7 +543,7 @@
       out.push({
         key: familyId,
         family_id: familyId,
-        code: g.code || "",
+        code: g.code || FAMILY_CODE_FROM_CFG[familyId] || "",
         name_zh: g.name_zh || g.name || familyId,
         description_zh: g.description_zh || "",
         entry_zh: g.entry_zh || "",
@@ -548,6 +558,7 @@
         supported: !!(rf && RUNNER_FAMILIES[rf])
       });
     });
+    // Final display sort applied in renderGroups (newest-first by family code).
     out.sort(function (a, b) { return b.best_score - a.best_score; });
     return out.length ? out : null;
   }
@@ -585,21 +596,68 @@
 
   
   var approvedFamilies = {}; // family_id -> true
+  var archivedFamilies = {}; // family_id -> meta (manual archive)
+  var restoredFamilies = {}; // family_id -> meta (restored from gate-fail archive)
+  var reviewTab = "pending"; // approved | pending | archived
+  // Sort proxy: strategy_codes family letter A=earliest assigned → newest-first = reverse letter.
+  // No created_at in catalog/codes; document on UI hint.
+  var FAMILY_CODE_ORDER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
   function refreshApprovedFamilies(status) {
     approvedFamilies = {};
     var list = (status && status.approved_families) || [];
     (list || []).forEach(function (f) { approvedFamilies[f] = true; });
+    archivedFamilies = {};
+    var arch = (status && status.archived_families) || {};
+    Object.keys(arch || {}).forEach(function (f) { archivedFamilies[f] = arch[f] || true; });
+    restoredFamilies = {};
+    var rest = (status && status.restored_families) || {};
+    Object.keys(rest || {}).forEach(function (f) { restoredFamilies[f] = rest[f] || true; });
   }
 
   function familyApproved(familyId) {
     return !!approvedFamilies[familyId];
   }
 
+  function familyManuallyArchived(familyId) {
+    return !!archivedFamilies[familyId];
+  }
+
+  function familyRestored(familyId) {
+    return !!restoredFamilies[familyId];
+  }
+
+  /** Tab bucket for a family card. */
+  function familyReviewBucket(g) {
+    var fid = g.family_id || g.key;
+    if (familyManuallyArchived(fid)) return "archived";
+    if (familyApproved(fid)) return "approved";
+    var hasPass = familyHasPass3y(g);
+    if (!hasPass && !familyRestored(fid)) return "archived"; // auto: failed gate
+    return "pending";
+  }
+
+  function familyCreatedRank(g) {
+    // Higher = newer. Letter A → 0 (oldest), Z → 25.
+    var code = String(g.code || "").toUpperCase().charAt(0);
+    var idx = FAMILY_CODE_ORDER.indexOf(code);
+    if (idx < 0) idx = 0;
+    return idx;
+  }
+
+  function sortGroupsNewestFirst(groups) {
+    return (groups || []).slice().sort(function (a, b) {
+      var db = familyCreatedRank(b) - familyCreatedRank(a);
+      if (db) return db;
+      return String(b.family_id || b.key || "").localeCompare(String(a.family_id || a.key || ""));
+    });
+  }
+
   function familyControls(g) {
     var familyId = g.family_id || g.key;
     var sample = (g.rows && g.rows[0]) || {};
     var hasPass = familyHasPass3y(g);
+    var bucket = familyReviewBucket(g);
     var rf = runnerFamilyId(familyId, sample);
     var onRunner = !!(rf && RUNNER_FAMILIES[rf]);
     var famLock = null;
@@ -610,20 +668,33 @@
     var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
     var nAll = (g.rows || []).length;
     var approved = familyApproved(familyId);
-    var statusHtml = approved
-      ? '<span class="badge ok">已批准</span>'
-      : '<span class="badge muted">未批准</span>';
-    var info = '<span class="fam-pass-info">過關 ' + nPass + " / " + nAll + "</span>";
-    var btn;
-    if (!supported) {
-      btn = '<button type="button" class="btn-fam-approve" disabled title="' + esc(famLock) + '">批准家族</button>';
-    } else if (approved) {
-      btn = '<button type="button" class="btn-fam-revoke" data-family="' + esc(familyId) + '">撤銷家族</button>';
+    var statusHtml = bucket === "archived"
+      ? (!hasPass && !familyManuallyArchived(familyId)
+          ? '<span class="badge bad">未過關 · 封存</span>'
+          : '<span class="badge muted">已封存</span>')
+      : (approved
+          ? '<span class="badge ok">已批准</span>'
+          : '<span class="badge muted">待審核</span>');
+    var info = '<span class="fam-pass-info">過關 ' + nPass + " / " + nAll +
+      (g.code ? (" · 代碼 " + esc(g.code)) : "") + "</span>";
+    var btns = [];
+    if (bucket === "archived") {
+      btns.push('<button type="button" class="btn-fam-unarchive" data-family="' + esc(familyId) +
+        '">恢復到待審核</button>');
+    } else if (bucket === "approved") {
+      btns.push('<button type="button" class="btn-fam-revoke" data-family="' + esc(familyId) + '">撤銷家族</button>');
+      btns.push('<button type="button" class="btn-fam-archive" data-family="' + esc(familyId) + '">封存</button>');
     } else {
-      btn = '<button type="button" class="btn-fam-approve" data-family="' + esc(familyId) + '">批准家族</button>';
+      // pending: approve only if unlocked; always allow archive
+      if (!supported) {
+        btns.push('<button type="button" class="btn-fam-approve" disabled title="' + esc(famLock) + '">批准家族</button>');
+      } else {
+        btns.push('<button type="button" class="btn-fam-approve" data-family="' + esc(familyId) + '">批准家族</button>');
+      }
+      btns.push('<button type="button" class="btn-fam-archive" data-family="' + esc(familyId) + '">封存</button>');
     }
     return '<div class="fam-approve-bar" onclick="event.stopPropagation()">' +
-      statusHtml + " " + info + " " + btn + "</div>";
+      statusHtml + " " + info + " " + btns.join(" ") + "</div>";
   }
 
   function renderGroupCard(g) {
@@ -742,14 +813,28 @@
   }
 
   function renderGroups(groups) {
-    if (!groups || !groups.length) {
-      return '<div class="empty-state">尚無策略資料</div>';
+    groups = sortGroupsNewestFirst(groups || []);
+    var counts = { approved: 0, pending: 0, archived: 0 };
+    groups.forEach(function (g) { counts[familyReviewBucket(g)] = (counts[familyReviewBucket(g)] || 0) + 1; });
+    var filtered = groups.filter(function (g) { return familyReviewBucket(g) === reviewTab; });
+    var cards = filtered.map(renderGroupCard).filter(Boolean).join("");
+    if (!cards) {
+      cards = '<div class="empty-state">此分頁目前沒有策略家族</div>';
     }
-    var cards = groups.map(renderGroupCard).filter(Boolean).join("");
+    function tabBtn(id, label) {
+      var on = reviewTab === id ? " active" : "";
+      return '<button type="button" class="review-tab' + on + '" data-review-tab="' + id + '">' +
+        label + ' <span class="tab-count">' + (counts[id] || 0) + "</span></button>";
+    }
     return '<section class="section" id="sec-scores">' +
       '<div class="section-head"><h2>策略評分（依策略家族）</h2>' +
-      '<span class="hint">預設收合 · 點標題展開</span></div>' +
-      summarizeGroups(groups) +
+      '<span class="hint">依 strategy_codes 家族代碼新→舊（無 created_at；A 最早）· 預設收合</span></div>' +
+      '<div class="review-tabs" role="tablist">' +
+      tabBtn("approved", "批准") +
+      tabBtn("pending", "待審核") +
+      tabBtn("archived", "封存") +
+      "</div>" +
+      summarizeGroups(filtered) +
       '<div class="strategy-score-list">' + cards + "</div></section>";
   }
 
@@ -879,6 +964,60 @@
     });
 
 
+
+
+    document.querySelectorAll(".btn-fam-archive").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var fam = btn.getAttribute("data-family") || "";
+        openPinModal({
+          title: "封存策略家族",
+          confirmText: "確定封存「" + fam + "」？將移到「封存」分頁；若已批准會一併撤銷開新倉。",
+          onSubmit: function (pin, resultEl) {
+            resultEl.textContent = "處理中…";
+            postControl("/control/archive_family", pin, { family: fam })
+              .then(function (r) {
+                resultEl.textContent = r.message || "已封存";
+                setTimeout(function () { closeModal(); refresh(true); }, 700);
+              })
+              .catch(function (e) {
+                resultEl.textContent = "失敗：" + ((e && e.message) || e);
+              });
+          }
+        });
+      });
+    });
+    document.querySelectorAll(".btn-fam-unarchive").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var fam = btn.getAttribute("data-family") || "";
+        openPinModal({
+          title: "恢復到待審核",
+          confirmText: "確定將「" + fam + "」恢復到「待審核」？未過關門檻者仍不可批准。",
+          onSubmit: function (pin, resultEl) {
+            resultEl.textContent = "處理中…";
+            postControl("/control/unarchive_family", pin, { family: fam })
+              .then(function (r) {
+                resultEl.textContent = r.message || "已恢復";
+                reviewTab = "pending";
+                setTimeout(function () { closeModal(); refresh(true); }, 700);
+              })
+              .catch(function (e) {
+                resultEl.textContent = "失敗：" + ((e && e.message) || e);
+              });
+          }
+        });
+      });
+    });
+    document.querySelectorAll(".review-tab").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        reviewTab = btn.getAttribute("data-review-tab") || "pending";
+        refresh(true);
+      });
+    });
 
     // Family card expand/collapse — was missing (cards did nothing on click)
     document.querySelectorAll(".ssc-head[data-toggle-key]").forEach(function (head) {

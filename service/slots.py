@@ -516,6 +516,12 @@ def approve_family(state: dict, family: str, *, at: str, by: str = "api") -> dic
         fa = state["family_approved_at"] = {}
     fa.setdefault(f, at)
     state.setdefault("meta", {})["last_family_approve"] = {"family": f, "at": at, "by": by}
+    arch = state.get("archived_families")
+    if isinstance(arch, dict):
+        arch.pop(f, None)
+    rest = state.get("restored_families")
+    if isinstance(rest, dict):
+        rest.pop(f, None)
     return {"approved_families": fams, "family": f}
 
 
@@ -572,3 +578,53 @@ def family_approvals(state: dict, *, backfill: bool = True) -> list[dict]:
     if changed:
         state["family_approved_at"] = stored
     return out
+
+
+def archived_families_map(state: dict | None) -> dict:
+    """family_id -> {archived_at, by, reason} for manually archived families."""
+    raw = (state or {}).get("archived_families")
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def restored_families_map(state: dict | None) -> dict:
+    """family_id -> {restored_at, by} — gate-fail families restored to 待審核."""
+    raw = (state or {}).get("restored_families")
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def archive_family(state: dict, family: str, *, at: str, by: str = "api") -> dict:
+    f = "donchian_atr" if family == "donchian" else family
+    arch = state.setdefault("archived_families", {})
+    if not isinstance(arch, dict):
+        arch = state["archived_families"] = {}
+    arch[f] = {"archived_at": at, "by": by, "reason": "manual"}
+    # Leave approved list alone — UI hides approve for archived; revoke if approved
+    fams = ensure_approved_families(state)
+    if f in fams:
+        revoke_family(state, f, at=at, by=by)
+    rest = state.get("restored_families")
+    if isinstance(rest, dict):
+        rest.pop(f, None)
+    state.setdefault("meta", {})["last_family_archive"] = {"family": f, "at": at, "by": by}
+    return {"archived_families": arch, "family": f}
+
+
+def unarchive_family(state: dict, family: str, *, at: str, by: str = "api") -> dict:
+    f = "donchian_atr" if family == "donchian" else family
+    arch = state.setdefault("archived_families", {})
+    if not isinstance(arch, dict):
+        arch = state["archived_families"] = {}
+    arch.pop(f, None)
+    rest = state.setdefault("restored_families", {})
+    if not isinstance(rest, dict):
+        rest = state["restored_families"] = {}
+    rest[f] = {"restored_at": at, "by": by}
+    state.setdefault("meta", {})["last_family_unarchive"] = {"family": f, "at": at, "by": by}
+    return {"archived_families": arch, "restored_families": rest, "family": f}
+
+
+def family_archive_public(state: dict) -> dict:
+    return {
+        "archived_families": archived_families_map(state),
+        "restored_families": restored_families_map(state),
+    }

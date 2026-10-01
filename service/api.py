@@ -16,7 +16,7 @@ from flask import Flask, jsonify, request
 
 from binance_client import BinanceClient
 from execution import market_close_slot
-from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval, ensure_approved_families, approve_family, revoke_family, DEFAULT_APPROVED_FAMILIES, is_family_approved, family_approvals, allocation_runtime_slots, slot_by_id, all_known_slots, venue_for_family, invalidate_allocation_cache
+from slots import SLOTS, SOL_SLOT, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, MAX_NOTIONAL_USDT, slot_by_strategy_id, strategy_id_for_slot, SUPPORTED_FAMILIES, approval_mode, is_approved_live, LABEL_SIGNAL_ONLY, apply_satellite_slot_approval, ensure_approved_families, approve_family, revoke_family, DEFAULT_APPROVED_FAMILIES, is_family_approved, family_approvals, archive_family, unarchive_family, family_archive_public, archived_families_map, restored_families_map, allocation_runtime_slots, slot_by_id, all_known_slots, venue_for_family, invalidate_allocation_cache
 from state_store import StateStore
 from allocation import (
     resolve_allocation, validate_allocation, live_slots as alloc_live_slots,
@@ -192,6 +192,8 @@ def root():
 @app.route("/control/revoke", methods=["OPTIONS"])
 @app.route("/control/approve_family", methods=["OPTIONS"])
 @app.route("/control/revoke_family", methods=["OPTIONS"])
+@app.route("/control/archive_family", methods=["OPTIONS"])
+@app.route("/control/unarchive_family", methods=["OPTIONS"])
 @app.route("/approved", methods=["OPTIONS"])
 def options_ok():
     return _cors(app.make_response(("", 204)))
@@ -824,7 +826,11 @@ def _approved_public(state: dict | None = None) -> dict:
             "gate_fail_reasons": meta.get("gate_fail_reasons") or [],
             "satellite_slot": meta.get("satellite_slot") or slot.get("satellite_slot"),
         })
-    return {"ok": True, "approved": out, "signal_only": sig_only, "count": len(out)}
+    arch = family_archive_public(st)
+    return {"ok": True, "approved": out, "signal_only": sig_only, "count": len(out),
+            "approved_families": ensure_approved_families(st),
+            "archived_families": arch.get("archived_families") or {},
+            "restored_families": arch.get("restored_families") or {}}
 
 
 
@@ -1002,6 +1008,8 @@ def build_status() -> dict:
         "last_decisions": last_decisions,
         "last_decisions_at": meta.get("last_decisions_at"),
         "family_approvals": fam_appr,
+        "archived_families": archived_families_map(state),
+        "restored_families": restored_families_map(state),
         "sol_expectation_log": (state.get("expectation_log") or [])[-30:],
         "sol_expectation_latest": (state.get("expectation_log") or [None])[-1],
         "feed_updated_at": feed.get("updated_at"),
@@ -1279,6 +1287,65 @@ def revoke_family_ep():
         })
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+
+@app.route("/control/archive_family", methods=["POST"])
+def archive_family_ep():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    family = normalize_family((body.get("family") or "").strip())
+    if not family:
+        return jsonify({"ok": False, "error": "缺少 family"}), 400
+    holder: dict = {}
+
+    def mut(st):
+        holder["r"] = archive_family(st, family, at=now_iso_taipei(), by="api")
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        r = holder.get("r") or {}
+        return jsonify({
+            "ok": True,
+            "message": f"已封存策略家族 {family}",
+            "family": family,
+            "archived_families": r.get("archived_families"),
+        })
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/unarchive_family", methods=["POST"])
+def unarchive_family_ep():
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    family = normalize_family((body.get("family") or "").strip())
+    if not family:
+        return jsonify({"ok": False, "error": "缺少 family"}), 400
+    holder: dict = {}
+
+    def mut(st):
+        holder["r"] = unarchive_family(st, family, at=now_iso_taipei(), by="api")
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        r = holder.get("r") or {}
+        return jsonify({
+            "ok": True,
+            "message": f"已恢復策略家族 {family} 到待審核",
+            "family": family,
+            "archived_families": r.get("archived_families"),
+            "restored_families": r.get("restored_families"),
+        })
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 
 def _sync_approved_from_families(st: dict) -> None:
