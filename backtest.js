@@ -30,8 +30,11 @@
   var HIDDEN_FAMILIES = { news_burst_confirm: true, news_filter_donchian: true };
   var LOCK_PREP = "準備中";
   var LOCK_NO_PASS = "未過關，不開放批准";
-  // Family letter codes from strategy_codes.json (A=earliest proxy for created_at)
+  // Family letter + created_at from strategy_codes.json
+  // created_at = first appearance in data/unified-3y/catalog.json (git history, TPT date).
   var FAMILY_CODE_FROM_CFG = {};
+  var FAMILY_CREATED_AT = {};
+  var FAMILY_CREATED_AT_ISO = {};
 
 
   var scores = null;
@@ -544,6 +547,8 @@
         key: familyId,
         family_id: familyId,
         code: g.code || FAMILY_CODE_FROM_CFG[familyId] || "",
+        created_at: g.created_at || FAMILY_CREATED_AT[familyId] || "",
+        created_at_iso: g.created_at_iso || FAMILY_CREATED_AT_ISO[familyId] || "",
         name_zh: g.name_zh || g.name || familyId,
         description_zh: g.description_zh || "",
         entry_zh: g.entry_zh || "",
@@ -599,56 +604,25 @@
   var archivedFamilies = {}; // family_id -> meta (manual archive)
   var restoredFamilies = {}; // family_id -> meta (restored from gate-fail archive)
   var reviewTab = "pending"; // approved | pending | archived
-  // Sort proxy: strategy_codes family letter A=earliest assigned → newest-first = reverse letter.
-  // No created_at in catalog/codes; document on UI hint.
-  var FAMILY_CODE_ORDER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-  function refreshApprovedFamilies(status) {
-    approvedFamilies = {};
-    var list = (status && status.approved_families) || [];
-    (list || []).forEach(function (f) { approvedFamilies[f] = true; });
-    archivedFamilies = {};
-    var arch = (status && status.archived_families) || {};
-    Object.keys(arch || {}).forEach(function (f) { archivedFamilies[f] = arch[f] || true; });
-    restoredFamilies = {};
-    var rest = (status && status.restored_families) || {};
-    Object.keys(rest || {}).forEach(function (f) { restoredFamilies[f] = rest[f] || true; });
+  function familyCreatedAt(g) {
+    var fid = g.family_id || g.key || "";
+    return g.created_at || FAMILY_CREATED_AT[fid] || "";
   }
 
-  function familyApproved(familyId) {
-    return !!approvedFamilies[familyId];
-  }
-
-  function familyManuallyArchived(familyId) {
-    return !!archivedFamilies[familyId];
-  }
-
-  function familyRestored(familyId) {
-    return !!restoredFamilies[familyId];
-  }
-
-  /** Tab bucket for a family card. */
-  function familyReviewBucket(g) {
-    var fid = g.family_id || g.key;
-    if (familyManuallyArchived(fid)) return "archived";
-    if (familyApproved(fid)) return "approved";
-    var hasPass = familyHasPass3y(g);
-    if (!hasPass && !familyRestored(fid)) return "archived"; // auto: failed gate
-    return "pending";
-  }
-
-  function familyCreatedRank(g) {
-    // Higher = newer. Letter A → 0 (oldest), Z → 25.
-    var code = String(g.code || "").toUpperCase().charAt(0);
-    var idx = FAMILY_CODE_ORDER.indexOf(code);
-    if (idx < 0) idx = 0;
-    return idx;
+  function familyCreatedAtIso(g) {
+    var fid = g.family_id || g.key || "";
+    return g.created_at_iso || FAMILY_CREATED_AT_ISO[fid] || familyCreatedAt(g) || "";
   }
 
   function sortGroupsNewestFirst(groups) {
     return (groups || []).slice().sort(function (a, b) {
-      var db = familyCreatedRank(b) - familyCreatedRank(a);
-      if (db) return db;
+      var ib = familyCreatedAtIso(b);
+      var ia = familyCreatedAtIso(a);
+      if (ib !== ia) return ib < ia ? -1 : 1; // newest first
+      var cb = String(b.code || "").toUpperCase();
+      var ca = String(a.code || "").toUpperCase();
+      if (cb !== ca) return cb < ca ? 1 : -1;
       return String(b.family_id || b.key || "").localeCompare(String(a.family_id || a.key || ""));
     });
   }
@@ -770,6 +744,7 @@
     return '<article class="strategy-score-card' + (open ? "" : " collapsed") +
       (supported ? "" : " unsupported") + '" data-key="' + esc(g.key) + '">' +
       '<div class="ssc-head" data-toggle-key="' + esc(g.key) + '">' +
+      '<span class="ssc-created" title="建立日期（TPT）">' + esc(familyCreatedAt(g) || "—") + "</span>" +
       "<h3>" + esc((g.code ? g.code + " " : "") + (g.name_zh || g.key)) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
       familyControls(g) +
@@ -828,7 +803,7 @@
     }
     return '<section class="section" id="sec-scores">' +
       '<div class="section-head"><h2>策略評分（依策略家族）</h2>' +
-      '<span class="hint">依 strategy_codes 家族代碼新→舊（無 created_at；A 最早）· 預設收合</span></div>' +
+      '<span class="hint">依建立日期新→舊（catalog 首次出現 · TPT）· 預設收合</span></div>' +
       '<div class="review-tabs" role="tablist">' +
       tabBtn("approved", "批准") +
       tabBtn("pending", "待審核") +
@@ -1127,6 +1102,19 @@
         await loadApproved();
         scores = await getJSON(SCORES_URL);
         catalog = null;
+        try {
+          var codesDoc = await getJSON("./config/strategy_codes.json");
+          FAMILY_CODE_FROM_CFG = {};
+          FAMILY_CREATED_AT = {};
+          FAMILY_CREATED_AT_ISO = {};
+          var famsCfg = (codesDoc && codesDoc.families) || {};
+          Object.keys(famsCfg).forEach(function (fid) {
+            var meta = famsCfg[fid] || {};
+            if (meta.code) FAMILY_CODE_FROM_CFG[fid] = meta.code;
+            if (meta.created_at) FAMILY_CREATED_AT[fid] = meta.created_at;
+            if (meta.created_at_iso) FAMILY_CREATED_AT_ISO[fid] = meta.created_at_iso;
+          });
+        } catch (eCodes) { /* optional */ }
         try { catalog = await getJSON(CATALOG_URL); } catch (e) { catalog = null; }
       }
       var groups = groupsFromCatalog(catalog) || groupsFromScores(scores);

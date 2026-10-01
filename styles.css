@@ -820,3 +820,14 @@ table.scores tr.fail:hover td.col-approve {
 .btn-fam-archive, .btn-fam-unarchive {
   margin-left: 4px;
 }
+
+.strategy-score-card .ssc-created {
+  flex: 0 0 auto;
+  min-width: 5.6em;
+  margin-right: 8px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}

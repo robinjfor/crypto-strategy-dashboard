@@ -29,7 +29,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-25",
+      "created_at_iso": "2026-09-25T00:39:55+08:00"
     },
     "ls_univ_portfolio_perp": {
       "code": "B",
@@ -51,7 +53,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-25",
+      "created_at_iso": "2026-09-25T00:39:55+08:00"
     },
     "donchian_atr": {
       "code": "C",
@@ -141,7 +145,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "donchian_lev_vol": {
       "code": "D",
@@ -223,7 +229,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T22:05:43+08:00"
     },
     "donchian_fear_greed": {
       "code": "E",
@@ -289,7 +297,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T22:05:43+08:00"
     },
     "ema_cross_atr": {
       "code": "F",
@@ -315,7 +325,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "news_filter_donchian": {
       "code": "G",
@@ -343,7 +355,9 @@
       },
       "active": false,
       "retired": true,
-      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI"
+      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI",
+      "created_at": "2026-09-25",
+      "created_at_iso": "2026-09-25T00:39:55+08:00"
     },
     "donchian_long_short_btc_regime": {
       "code": "H",
@@ -393,7 +407,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T22:05:43+08:00"
     },
     "news_burst_confirm": {
       "code": "I",
@@ -441,7 +457,9 @@
       },
       "active": false,
       "retired": true,
-      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI"
+      "retired_reason": "Emily 2026-09-25: poor live/backtest — cancelled from runner/UI",
+      "created_at": "2026-09-25",
+      "created_at_iso": "2026-09-25T00:39:55+08:00"
     },
     "donchian_btc_regime": {
       "code": "J",
@@ -463,7 +481,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "donchian_lev": {
       "code": "K",
@@ -473,7 +493,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "ema_trend_hold": {
       "code": "L",
@@ -483,7 +505,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "supertrend": {
       "code": "M",
@@ -493,7 +517,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "momentum_rotation": {
       "code": "N",
@@ -503,7 +529,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "sma_regime_hold": {
       "code": "O",
@@ -537,7 +565,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     },
     "dual_ma_rsi": {
       "code": "P",
@@ -547,7 +577,9 @@
           "active": true
         }
       },
-      "active": true
+      "active": true,
+      "created_at": "2026-09-24",
+      "created_at_iso": "2026-09-24T16:16:25+08:00"
     }
   }
 }
