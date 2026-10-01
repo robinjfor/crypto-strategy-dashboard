@@ -13,7 +13,7 @@
 | 欄位 | 型別 | 說明 |
 |------|------|------|
 | `version` | number | schema 版本，目前為 `1` |
-| `book_usdt` | number | **USDT 帳本**基準（預設 5000）；與 USDC 完全分開 |
+| `book_usdt` | number | **USDT 帳本**基準（預設／上限 **10000**）；與 USDC 完全分開 |
 | `book_usdc` | number | **USDC 帳本**基準（預設 5000）；尚未交易時可省略（runner 仍當 5000） |
 | `max_notional_per_order_usdt` | number | USDT 單筆上限（預設 1500） |
 | `max_notional_per_order_usdc` | number | USDC 單筆上限（預設同 USDT 上限） |
@@ -42,7 +42,7 @@
 1. `family` 須在雲端支援清單內（目前：`donchian_atr`、`donchian_btc_regime`）。
 2. `params` 須可被 runner 執行（必要鍵齊全、數值合理）。
 3. 每個 notional ≤ 對應 quote 的單筆上限（USDT→`max_notional_per_order_usdt`，USDC→`max_notional_per_order_usdc`）。
-4. **僅 `enabled: true`** 的 notional **依 quote 分開加總**：USDT 槽合計 ≤ `book_usdt`；USDC 槽合計 ≤ `book_usdc`（各預設 5000）。兩本帳互不佔額度。
+4. **僅 `enabled: true`** 的 notional **依 quote 分開加總**：USDT 槽合計 ≤ `book_usdt`（預設／硬頂 **10000**）；USDC 槽合計 ≤ `book_usdc`（預設／硬頂 **5000**）。兩本帳互不佔額度。
 5. `symbol` 必須是 Binance 現貨 `*USDT` 或 `*USDC` 且存在；`quote_currency` 須與後綴一致。
 6. 不得有重複 `symbol`（同一檔幣只能有一個 slot，避免衝突）。USDT 與 USDC 視為不同 symbol（例如 BTCUSDT ≠ BTCUSDC）。
 7. `slot`、`strategy_id` 不可重複。
@@ -84,7 +84,7 @@
    - `allocation.updated_at` 已更新
    - `allocation_alert` 為 `null`
    - `live_slots` 只含預期幣種
-5. 首頁「目前配置」應自動反映 notional／5000。
+5. 首頁「目前配置」應自動反映 notional／book_usdt（USDT 上限 10000）。
 
 ## 範例：只讓 OP、DOT 上線（種子狀態）
 
@@ -93,7 +93,7 @@ OP、DOT：`enabled: true`、各 1000 USDT；FET／SOL：`enabled: false`。
 
 ## 新增 USDC 槽（給分析師）
 
-USDT 與 USDC 是**兩本獨立的 5000 帳本**。Demo 帳戶目前有約 5000 USDC 現金可測；要把策略掛上 USDC：
+USDT 與 USDC 是**兩本獨立帳本**（USDT 上限 10000、USDC 上限 5000）。Demo 帳戶目前有約 5000 USDC 現金可測；要把策略掛上 USDC：
 
 1. 在 `slots` 加一筆，例如：
 ```json

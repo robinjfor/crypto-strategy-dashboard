@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "book_usdt": 5000,
+  "book_usdt": 10000,
   "max_notional_per_order_usdt": 1500,
   "updated_by": "strategy-analyst",
   "updated_at": "2026-10-01T19:45:10+08:00",

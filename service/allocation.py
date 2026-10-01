@@ -45,11 +45,11 @@ FAMILY_ALIASES = {
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
 }
 MAX_LEVERAGE = 3.0
-MAX_BOOK_USDT = 5000.0
+MAX_BOOK_USDT = 10000.0
 MAX_BOOK_USDC = 5000.0
 SUPPORTED_QUOTE_ASSETS = frozenset({"USDT", "USDC"})
 
-DEFAULT_BOOK = 5000.0
+DEFAULT_BOOK = 10000.0
 DEFAULT_BOOK_USDC = 5000.0
 DEFAULT_MAX_ORDER = 1500.0
 DEFAULT_MAX_ORDER_USDC = 1500.0
@@ -237,13 +237,17 @@ def validate_allocation(
     """Return list of error strings; empty means OK.
 
     USDT and USDC books are separate: enabled notionals for each quote must
-    not exceed that quote's book (book_usdt / book_usdc, default 5000 each).
+    not exceed that quote's book (book_usdt default 10000 / book_usdc default 5000).
     """
     errors: list[str] = []
     if not isinstance(doc, dict):
         return ["allocation 必須是 JSON object"]
     book_usdt = float(doc.get("book_usdt") or DEFAULT_BOOK)
     book_usdc = float(doc.get("book_usdc") or DEFAULT_BOOK_USDC)
+    if book_usdt > MAX_BOOK_USDT + 1e-9:
+        errors.append(f"book_usdt {book_usdt} 超過上限 MAX_BOOK_USDT {MAX_BOOK_USDT}")
+    if book_usdc > MAX_BOOK_USDC + 1e-9:
+        errors.append(f"book_usdc {book_usdc} 超過上限 MAX_BOOK_USDC {MAX_BOOK_USDC}")
     max_order_usdt = float(doc.get("max_notional_per_order_usdt") or DEFAULT_MAX_ORDER)
     max_order_usdc = float(
         doc.get("max_notional_per_order_usdc")
