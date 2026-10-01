@@ -166,9 +166,10 @@
     return n > 0 ? "+" + num(n, d) : num(n, d);
   }
 
-  function formatPnl(pnl, pct) {
+  function formatPnl(pnl, pct, quote) {
     if (pnl == null || Number.isNaN(Number(pnl))) return "—";
-    var out = signedNum(pnl, 2) + " USDT";
+    var q = quote || "USDT";
+    var out = signedNum(pnl, 2) + " " + q;
     if (pct != null && !Number.isNaN(Number(pct))) out += " (" + signedNum(pct, 2) + "%)";
     return out;
   }
@@ -525,7 +526,7 @@
   function renderBookCard(st) {
     var q = st.quote;
     var upnl = '<span class="' + signedCls(st.unrealized) + '">' +
-      (st.unrealized == null ? "—" : formatPnl(st.unrealized, st.unrealized_pct)) + "</span>";
+      (st.unrealized == null ? "—" : formatPnl(st.unrealized, st.unrealized_pct, q)) + "</span>";
     var rpnl = '<span class="' + signedCls(st.realized) + '">' +
       (st.realized == null ? "—" : signedNum(st.realized, 2) + " " + q) + "</span>";
     var pieId = "allocPie" + q;
