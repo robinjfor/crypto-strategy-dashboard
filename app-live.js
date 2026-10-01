@@ -87,7 +87,7 @@
 
 
   function bookUsdt() {
-    return Number((allocCfg && allocCfg.book_usdt) || 10000);
+    return Number((allocCfg && allocCfg.book_usdt) || 5000);
   }
 
   /** Approved slots that are actually deployed (order_mode=live). Homepage source of truth. */
@@ -447,7 +447,7 @@
     if (b.starting != null) return Number(b.starting);
     var a = (cloud && cloud.allocation) || allocCfg || {};
     if (quote === "USDC") return Number(a.book_usdc != null ? a.book_usdc : 5000);
-    return Number(a.book_usdt != null ? a.book_usdt : bookUsdt() || 10000);
+    return Number(a.book_usdt != null ? a.book_usdt : bookUsdt() || 5000);
   }
 
   /** Holdings for one quote book (USDT or USDC). */

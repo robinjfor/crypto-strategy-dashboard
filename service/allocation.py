@@ -45,11 +45,11 @@ FAMILY_ALIASES = {
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
 }
 MAX_LEVERAGE = 3.0
-MAX_BOOK_USDT = 10000.0
+MAX_BOOK_USDT = 5000.0
 MAX_BOOK_USDC = 5000.0
 SUPPORTED_QUOTE_ASSETS = frozenset({"USDT", "USDC"})
 
-DEFAULT_BOOK = 10000.0
+DEFAULT_BOOK = 5000.0
 DEFAULT_BOOK_USDC = 5000.0
 DEFAULT_MAX_ORDER = 1500.0
 DEFAULT_MAX_ORDER_USDC = 1500.0
@@ -237,7 +237,7 @@ def validate_allocation(
     """Return list of error strings; empty means OK.
 
     USDT and USDC books are separate: enabled notionals for each quote must
-    not exceed that quote's book (book_usdt default 10000 / book_usdc default 5000).
+    not exceed that quote's book (book_usdt / book_usdc, default 5000 each).
     """
     errors: list[str] = []
     if not isinstance(doc, dict):
@@ -297,6 +297,12 @@ def validate_allocation(
 
         if quote not in SUPPORTED_QUOTE_ASSETS:
             errors.append(f"slots[{i}].quote_currency 不支援：{quote}（僅 USDT / USDC）")
+        # Futures Demo is USD-M (USDT-margined) only — do not fake USDC book for perps
+        if quote == "USDC" and family in FUTURES_FAMILIES:
+            errors.append(
+                f"slots[{i}] family={family} 是合約路徑，Demo 僅 USD-M(USDT)；"
+                f"不可掛在 USDC 帳本（尚無 USDC-M）。請用 spot *USDC 或等 USDC-M。"
+            )
 
         if symbol:
             sym = str(symbol).upper()

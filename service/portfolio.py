@@ -7,7 +7,7 @@ from typing import Any
 log = logging.getLogger("trader.portfolio")
 
 MAX_LEVERAGE = 3.0
-MAX_BOOK_USDT = 10000.0
+MAX_BOOK_USDT = 5000.0
 DEFAULT_UNIVERSE = ["SOL", "ETH", "AVAX", "LINK", "ARB", "FET", "DOT", "OP", "NEAR", "INJ"]
 
 

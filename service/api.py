@@ -840,7 +840,7 @@ def _books_overview(
     positions: list,
     closed_trades: list,
     *,
-    book_usdt: float = 10000.0,
+    book_usdt: float = 5000.0,
     book_usdc: float = 5000.0,
 ) -> dict:
     """Separate USDT / USDC books: starting, live equity, realized, unrealized.
@@ -850,7 +850,7 @@ def _books_overview(
     (capacity view). Starting capital defaults to 5000 per book.
     """
     out = {}
-    for quote, starting in (("USDT", float(book_usdt or 10000)), ("USDC", float(book_usdc or 5000))):
+    for quote, starting in (("USDT", float(book_usdt or 5000)), ("USDC", float(book_usdc or 5000))):
         cash = float(bals_map.get(quote) or 0)
         pos_rows = [p for p in (positions or []) if _quote_of_symbol(p.get("symbol") or p.get("raw_symbol")) == quote]
         pos_mv = 0.0
@@ -974,7 +974,7 @@ def build_status() -> dict:
         _doc = {}
     books = _books_overview(
         bals_map, positions, closed_norm,
-        book_usdt=float((_doc or {}).get("book_usdt") or (alloc_pub or {}).get("book_usdt") or 10000),
+        book_usdt=float((_doc or {}).get("book_usdt") or (alloc_pub or {}).get("book_usdt") or 5000),
         book_usdc=float((_doc or {}).get("book_usdc") or (alloc_pub or {}).get("book_usdc") or 5000),
     )
     return {
