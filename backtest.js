@@ -605,6 +605,40 @@
   var restoredFamilies = {}; // family_id -> meta (restored from gate-fail archive)
   var reviewTab = "pending"; // approved | pending | archived
 
+  function refreshApprovedFamilies(status) {
+    approvedFamilies = {};
+    var list = (status && status.approved_families) || [];
+    (list || []).forEach(function (f) { approvedFamilies[f] = true; });
+    archivedFamilies = {};
+    var arch = (status && status.archived_families) || {};
+    Object.keys(arch || {}).forEach(function (f) { archivedFamilies[f] = arch[f] || true; });
+    restoredFamilies = {};
+    var rest = (status && status.restored_families) || {};
+    Object.keys(rest || {}).forEach(function (f) { restoredFamilies[f] = rest[f] || true; });
+  }
+
+  function familyApproved(familyId) {
+    return !!approvedFamilies[familyId];
+  }
+
+  function familyManuallyArchived(familyId) {
+    return !!archivedFamilies[familyId];
+  }
+
+  function familyRestored(familyId) {
+    return !!restoredFamilies[familyId];
+  }
+
+  /** Tab bucket for a family card. */
+  function familyReviewBucket(g) {
+    var fid = g.family_id || g.key;
+    if (familyManuallyArchived(fid)) return "archived";
+    if (familyApproved(fid)) return "approved";
+    var hasPass = familyHasPass3y(g);
+    if (!hasPass && !familyRestored(fid)) return "archived"; // auto: failed gate
+    return "pending";
+  }
+
   function familyCreatedAt(g) {
     var fid = g.family_id || g.key || "";
     return g.created_at || FAMILY_CREATED_AT[fid] || "";
