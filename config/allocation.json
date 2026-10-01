@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-02T00:59:55+08:00",
+  "updated_at": "2026-10-02T05:05:02+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -178,7 +178,7 @@
       "symbol": "NEARUSDT",
       "timeframe": "4h",
       "notional_usdt": 750,
-      "enabled": true,
+      "enabled": false,
       "params": {
         "donch_n": 20,
         "stop_atr_mult": 2.0,
@@ -191,7 +191,29 @@
         "check_liq": true,
         "regime_scale": "none"
       },
-      "note": "rotation 2026-10-01：ARB ls stale +18.1%→NEAR ls（距離~5.6%<8%；lev1.0×notional=名目 750；vt0.03）。原 ls_arb_4h 下線。"
+      "note": "rotation 2026-10-02：stale +13.9%→OP ls（距離~10.1%；score 23.6／lev1.0×vt0.03）。原 ls_near_4h 下線。"
+    },
+    {
+      "slot": "ls_op_4h",
+      "family": "ls_donch_btc_regime_perp",
+      "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS",
+      "symbol": "OPUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
+        "max_hold_bars": 36,
+        "atr_mode": "wilder",
+        "btc_regime": true,
+        "leverage": 1.0,
+        "vol_target": 0.03,
+        "check_liq": true,
+        "regime_scale": "none"
+      },
+      "note": "rotation 2026-10-02：NEAR ls stale +13.9%→OP ls（距離~10.1%<NEAR；同家族無<8%標，取最近合格；score 23.6／gate+robust ok）。原 ls_near_4h 下線。"
     }
   ],
   "book_usdc": 5000,
