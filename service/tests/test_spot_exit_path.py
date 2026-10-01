@@ -55,13 +55,20 @@ class FakeSpot:
     def market_buy(self, symbol, quote, coid):
         raise AssertionError("no buys in exit test")
 
-    def stop_loss_limit(self, symbol, qty, stop, limit, coid):
+    def stop_loss(self, symbol, qty, stop, coid=""):
+        return self.stop_loss_limit(symbol, qty, stop, None, coid)
+
+    def stop_loss_limit(self, symbol, qty, stop, limit=None, coid="", slip_pct=0.03):
         self.calls.append(("stop", symbol, qty, stop))
         if qty > self.free + 1e-12:
             raise RuntimeError("insufficient balance")
         self.free -= qty
         self.locked += qty
-        return {"orderId": 5, "clientOrderId": coid}
+        return {"orderId": 5, "clientOrderId": coid, "type": "STOP_LOSS"}
+
+    def cancel_replace_stop_loss(self, symbol, qty, stop, cancel_order_id, coid=""):
+        self.calls.append(("cancelReplace", symbol, qty, stop, cancel_order_id))
+        return {"newOrderResponse": {"orderId": 6, "clientOrderId": coid, "type": "STOP_LOSS"}}
 
 
 def _state(qty=719.23):

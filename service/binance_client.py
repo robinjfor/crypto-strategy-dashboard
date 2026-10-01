@@ -189,6 +189,29 @@ class BinanceClient:
     def cancel_open_orders(self, symbol: str) -> Any:
         return self._signed("DELETE", "/api/v3/openOrders", {"symbol": symbol})
 
+    def stop_loss(
+        self,
+        symbol: str,
+        qty: float,
+        stop_price: float,
+        client_order_id: str = "",
+    ) -> dict:
+        """Hard exchange stop-market (STOP_LOSS). Fills at market when stopPrice
+        is touched — preferred so intraday wicks cannot leave an unfilled limit."""
+        f = self.load_filters(symbol)
+        q = self.round_step(qty, f["stepSize"])
+        sp = self.round_price(symbol, stop_price)
+        params = {
+            "symbol": symbol,
+            "side": "SELL",
+            "type": "STOP_LOSS",
+            "quantity": f"{q}",
+            "stopPrice": f"{sp}",
+        }
+        if client_order_id:
+            params["newClientOrderId"] = client_order_id[:36]
+        return self._signed("POST", "/api/v3/order", params)
+
     def stop_loss_limit(
         self,
         symbol: str,
@@ -196,12 +219,16 @@ class BinanceClient:
         stop_price: float,
         limit_price: float | None = None,
         client_order_id: str = "",
+        *,
+        slip_pct: float = 0.03,
     ) -> dict:
-        """Hard exchange stop (STOP_LOSS_LIMIT). Spot only."""
+        """Fallback hard stop (STOP_LOSS_LIMIT). Default limit is stop*(1-slip)
+        (3% below) so a brief wick still fills; old 0.5% was too tight."""
         f = self.load_filters(symbol)
         q = self.round_step(qty, f["stepSize"])
         sp = self.round_price(symbol, stop_price)
-        lp = self.round_price(symbol, limit_price if limit_price is not None else stop_price * 0.995)
+        raw_lp = limit_price if limit_price is not None else stop_price * (1.0 - float(slip_pct))
+        lp = self.round_price(symbol, raw_lp)
         params = {
             "symbol": symbol,
             "side": "SELL",
@@ -214,6 +241,32 @@ class BinanceClient:
         if client_order_id:
             params["newClientOrderId"] = client_order_id[:36]
         return self._signed("POST", "/api/v3/order", params)
+
+    def cancel_replace_stop_loss(
+        self,
+        symbol: str,
+        qty: float,
+        stop_price: float,
+        cancel_order_id: int,
+        client_order_id: str = "",
+    ) -> dict:
+        """Atomically cancel old stop + place STOP_LOSS (STOP_ON_FAILURE).
+        If the new order is rejected, Binance keeps the old stop resting."""
+        f = self.load_filters(symbol)
+        q = self.round_step(qty, f["stepSize"])
+        sp = self.round_price(symbol, stop_price)
+        params: dict[str, Any] = {
+            "symbol": symbol,
+            "side": "SELL",
+            "type": "STOP_LOSS",
+            "cancelReplaceMode": "STOP_ON_FAILURE",
+            "cancelOrderId": int(cancel_order_id),
+            "quantity": f"{q}",
+            "stopPrice": f"{sp}",
+        }
+        if client_order_id:
+            params["newClientOrderId"] = client_order_id[:36]
+        return self._signed("POST", "/api/v3/order/cancelReplace", params)
 
     def nonzero_balances(self, account: dict | None = None) -> list[dict]:
         acct = account or self.account()

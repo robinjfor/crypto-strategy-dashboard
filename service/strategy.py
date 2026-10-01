@@ -613,6 +613,12 @@ def _enrich_signal(res: dict, slot: dict) -> dict:
         res.setdefault("leverage", slot.get("leverage") or 1)
     if res.get("action") == "enter" and not res.get("quote_usdt") and slot.get("quote_usdt"):
         res["quote_usdt"] = slot.get("quote_usdt")
+    if slot.get("stop_atr_mult") is not None:
+        res.setdefault("stop_atr_mult", slot.get("stop_atr_mult"))
+    if slot.get("trail_atr_mult") is not None:
+        res.setdefault("trail_atr_mult", slot.get("trail_atr_mult"))
+    if slot.get("quote_asset"):
+        res.setdefault("quote_asset", slot.get("quote_asset"))
     return res
 
 

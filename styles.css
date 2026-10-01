@@ -756,3 +756,31 @@ table.scores tr.fail:hover td.col-approve {
   background: rgba(59, 130, 246, 0.18);
 }
 .badge.muted { background: #334155; color: #cbd5e1; }
+
+/* Dual USDT / USDC book cards */
+.books-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.book-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+}
+.book-card h3 { margin: 0; font-size: 1.05rem; }
+.book-card h4 { margin: 0; font-size: 0.92rem; color: var(--text-muted); }
+.kpi-grid-book {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+.book-pie { margin-top: 8px; }
+.book-math-hint {
+  margin: 12px 4px 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

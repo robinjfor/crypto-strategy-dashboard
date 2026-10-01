@@ -219,12 +219,17 @@ def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dic
                 "chase_pct": round((mark / close - 1.0) * 100.0, 4)}
     if stop and mark <= stop:
         return {"ok": False, "skip": "mark_at_or_below_stop", "mark": mark, "stop": stop}
-    # Force enter shape
+    # Force enter shape; recompute stop from live mark so backfill matches
+    # backtest (entry − stop_m × ATR), not a stale signal-bar suggested_stop.
     forced = dict(sig)
     forced["action"] = "enter"
     forced["reason"] = "backfill_breakout"
     forced["backfill"] = True
     forced["mark"] = mark
+    atr = float(sig.get("atr") or 0)
+    stop_m = float(sig.get("stop_atr_mult") or 2.0)
+    if atr > 0 and stop_m > 0:
+        forced["suggested_stop"] = round(mark - stop_m * atr, 8)
     return {"ok": True, "sig": forced, "mark": mark}
 
 
@@ -365,7 +370,14 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 px = float(order.get("price") or sig["close"])
                 qty = qty or (quote / px if px else 0)
             atr = float(sig.get("atr") or 0)
-            stop = float(sig.get("suggested_stop") or (px - 2 * atr))
+            # Match backtest: stop = entry_px - stop_m * ATR (same-bar ATR).
+            # Never keep a stale suggested_stop from an earlier signal/close when
+            # the live fill (esp. backfill) is a different price.
+            stop_m = float(sig.get("stop_atr_mult") or 2.0)
+            if atr > 0 and stop_m > 0:
+                stop = px - stop_m * atr
+            else:
+                stop = float(sig.get("suggested_stop") or 0)
             positions[slot_id] = {
                 "status": "FILLED",
                 "symbol": sig["symbol"],
@@ -525,8 +537,9 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     replace_trail_stop(client, pos, new_stop, slot_id)
                     pos.pop("stop_error", None)
                 except Exception as e:  # noqa: BLE001
+                    # cancelReplace STOP_ON_FAILURE keeps the old resting stop —
+                    # do NOT advance state stop (would desync from exchange).
                     log.error("trail_replace_fail slot=%s err=%s", slot_id, e)
-                    pos["stop"] = new_stop  # still update state stop target
                     pos["stop_error"] = str(e)
             else:
                 pos["stop"] = max(new_stop, float(pos.get("stop") or 0))

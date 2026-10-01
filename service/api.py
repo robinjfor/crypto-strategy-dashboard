@@ -828,6 +828,65 @@ def _approved_public(state: dict | None = None) -> dict:
 
 
 
+def _quote_of_symbol(symbol: str | None) -> str:
+    sym = str(symbol or "").upper()
+    if sym.endswith("USDC"):
+        return "USDC"
+    return "USDT"
+
+
+def _books_overview(
+    bals_map: dict,
+    positions: list,
+    closed_trades: list,
+    *,
+    book_usdt: float = 5000.0,
+    book_usdc: float = 5000.0,
+) -> dict:
+    """Separate USDT / USDC books: starting, live equity, realized, unrealized.
+
+    equity = quote cash (free+locked) + mark value of positions quoted in that asset.
+    used = sum of open position market values; remaining_book = starting - used
+    (capacity view). Starting capital defaults to 5000 per book.
+    """
+    out = {}
+    for quote, starting in (("USDT", float(book_usdt or 5000)), ("USDC", float(book_usdc or 5000))):
+        cash = float(bals_map.get(quote) or 0)
+        pos_rows = [p for p in (positions or []) if _quote_of_symbol(p.get("symbol") or p.get("raw_symbol")) == quote]
+        pos_mv = 0.0
+        unreal = 0.0
+        for p in pos_rows:
+            mv = p.get("market_value")
+            if mv is None:
+                try:
+                    mv = float(p.get("qty") or 0) * float(p.get("mark") or p.get("mark_price") or 0)
+                except Exception:  # noqa: BLE001
+                    mv = 0.0
+            pos_mv += float(mv or 0)
+            if p.get("unrealized_pnl") is not None:
+                unreal += float(p["unrealized_pnl"])
+        realized = 0.0
+        for t in closed_trades or []:
+            if _quote_of_symbol(t.get("symbol")) != quote:
+                continue
+            if t.get("pnl_usdt") is not None:
+                realized += float(t["pnl_usdt"])
+        equity = cash + pos_mv
+        out[quote.lower()] = {
+            "quote": quote,
+            "starting": starting,
+            "cash": round(cash, 4),
+            "positions_mv": round(pos_mv, 4),
+            "equity": round(equity, 4),
+            "realized_pnl": round(realized, 4),
+            "unrealized_pnl": round(unreal, 4),
+            "open_positions": len(pos_rows),
+            "used": round(pos_mv, 4),
+            "remaining": round(max(0.0, starting - pos_mv), 4),
+        }
+    return out
+
+
 def build_status() -> dict:
     store = StateStore()
     state = store.load()
@@ -908,6 +967,16 @@ def build_status() -> dict:
     for trade in closed_norm:
         if not trade.get("code"):
             trade["code"] = code_for_symbol(trade.get("symbol"), all_known_slots())
+    alloc_pub = state.get("allocation_public") or _allocation_public(state)
+    try:
+        _doc, _ = resolve_allocation()
+    except Exception:  # noqa: BLE001
+        _doc = {}
+    books = _books_overview(
+        bals_map, positions, closed_norm,
+        book_usdt=float((_doc or {}).get("book_usdt") or (alloc_pub or {}).get("book_usdt") or 5000),
+        book_usdc=float((_doc or {}).get("book_usdc") or (alloc_pub or {}).get("book_usdc") or 5000),
+    )
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -917,7 +986,9 @@ def build_status() -> dict:
         "health": _health(meta, paused),
         "balances": bals,
         "balances_map": bals_map,
-        "equity_usdt": bals_map.get("USDT"),
+        "equity_usdt": (books.get("usdt") or {}).get("equity", bals_map.get("USDT")),
+        "equity_usdc": (books.get("usdc") or {}).get("equity", bals_map.get("USDC")),
+        "books": books,
         "positions": positions,
         "open_positions": positions,
         "armed_slots": armed,
@@ -1136,6 +1207,7 @@ def _allocation_public(state: dict) -> dict:
         "updated_at": doc.get("updated_at"),
         "updated_by": doc.get("updated_by"),
         "book_usdt": doc.get("book_usdt"),
+        "book_usdc": doc.get("book_usdc"),
         "slots": doc.get("slots") or [],
         "live_slots": live,
         "approved_families": fams,

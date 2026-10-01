@@ -92,10 +92,7 @@ def spot_market_exit(client: BinanceClient, symbol: str, pos_qty: float | None, 
     return order, q
 
 
-def place_hard_stop(client: BinanceClient, symbol: str, qty: float, stop: float, slot_id: str) -> dict:
-    """Cancel existing opens for symbol then place STOP_LOSS_LIMIT on the free
-    balance (≤ qty) — never more than the account actually holds."""
-    cancel_symbol_orders(client, symbol)
+def _stop_qty(client: BinanceClient, symbol: str, qty: float) -> float:
     try:
         q = sellable_qty(client, symbol, qty)
     except Exception as e:  # noqa: BLE001
@@ -103,24 +100,84 @@ def place_hard_stop(client: BinanceClient, symbol: str, qty: float, stop: float,
         q = qty
     if q <= 0:
         raise RuntimeError(f"stop qty 0 for {symbol}")
+    return q
+
+
+def _new_order_from_cancel_replace(resp: dict) -> dict:
+    """Normalize cancelReplace response → order dict with orderId."""
+    if not isinstance(resp, dict):
+        return {}
+    for key in ("newOrderResponse", "newOrderResult", "order"):
+        o = resp.get(key)
+        if isinstance(o, dict) and (o.get("orderId") is not None or o.get("status")):
+            return o
+    if resp.get("orderId") is not None:
+        return resp
+    return resp
+
+
+def place_hard_stop(client: BinanceClient, symbol: str, qty: float, stop: float, slot_id: str) -> dict:
+    """Place a resting exchange stop-market (STOP_LOSS) on free balance (≤ qty).
+
+    Cancels leftover opens first only when there is no known prior stop to
+    atomically replace — callers that trail should use replace_trail_stop so
+    the position is never left unprotected between cancel and place.
+    Prefers STOP_LOSS (fills at market when touched). Falls back to
+    STOP_LOSS_LIMIT with 3% slippage room if stop-market is rejected.
+    """
+    cancel_symbol_orders(client, symbol)
+    q = _stop_qty(client, symbol, qty)
     coid = client_order_id(slot_id, "stop")
-    limit = stop * 0.995
-    order = client.stop_loss_limit(symbol, q, stop, limit, coid)
-    log.info("hard_stop_placed symbol=%s qty=%s stop=%s orderId=%s", symbol, q, stop, order.get("orderId"))
+    try:
+        order = client.stop_loss(symbol, q, stop, coid)
+    except Exception as e:  # noqa: BLE001
+        log.warning("stop_loss_market_fail symbol=%s err=%s → limit fallback", symbol, e)
+        order = client.stop_loss_limit(symbol, q, stop, None, coid, slip_pct=0.03)
+    log.info(
+        "hard_stop_placed symbol=%s qty=%s stop=%s type=%s orderId=%s",
+        symbol, q, stop, order.get("type") or "STOP_LOSS", order.get("orderId"),
+    )
     return order
 
 
 def replace_trail_stop(client: BinanceClient, pos: dict, new_stop: float, slot_id: str) -> dict:
-    """Ratchet: only raise stop; cancel+replace exchange stop."""
+    """Ratchet: only raise stop; atomically cancelReplace when a stop is resting.
+
+    Never cancel-without-replace: if cancelReplace fails, the old stop stays
+    (STOP_ON_FAILURE). Only when no stop_order_id exists do we place fresh.
+    """
     old = float(pos.get("stop") or 0)
     if new_stop <= old:
         return {"skipped": "not_higher", "stop": old}
     symbol = pos["symbol"]
     qty = float(pos["qty"])
-    order = place_hard_stop(client, symbol, qty, new_stop, slot_id)
+    old_oid = pos.get("stop_order_id")
+    coid = client_order_id(slot_id, "trail")
+    if old_oid:
+        # Qty is still locked by the resting stop; sellable free balance is ~0.
+        # cancelReplace frees + re-locks atomically — use position qty (LOT_SIZE).
+        try:
+            px = float(client.ticker_price(symbol))
+            q = client.round_qty(symbol, qty, px) or float(qty)
+        except Exception:  # noqa: BLE001
+            f = client.load_filters(symbol)
+            q = client.round_step(qty, f["stepSize"])
+        if q <= 0:
+            raise RuntimeError(f"stop qty 0 for {symbol}")
+        try:
+            resp = client.cancel_replace_stop_loss(symbol, q, new_stop, int(old_oid), coid)
+            order = _new_order_from_cancel_replace(resp)
+            if not order.get("orderId"):
+                raise RuntimeError(f"cancelReplace missing new orderId: {resp!r}"[:240])
+        except Exception as e:  # noqa: BLE001
+            # Old stop should still be resting (STOP_ON_FAILURE). Do NOT wipe it.
+            log.error("trail_cancel_replace_fail slot=%s old=%s err=%s", slot_id, old_oid, e)
+            raise
+    else:
+        order = place_hard_stop(client, symbol, qty, new_stop, slot_id)
     pos["stop"] = new_stop
     pos["stop_order_id"] = order.get("orderId")
-    pos["stop_client_order_id"] = order.get("clientOrderId")
+    pos["stop_client_order_id"] = order.get("clientOrderId") or order.get("newClientOrderId")
     pos["stop_updated_at"] = now_iso_taipei()
     return order
 

@@ -393,7 +393,7 @@
     openPositions().forEach(function (p) {
       if (p.status && p.status !== "FILLED" && p.status !== "OPEN") return;
       var sym = String(p.symbol || p.raw_symbol || "").toUpperCase();
-      var asset = String(p.asset || sym.replace(/USDT$/i, "")).toUpperCase();
+      var asset = String(p.asset || sym.replace(/USDT$/i, "").replace(/USDC$/i, "")).toUpperCase();
       var rawQty = Number(p.qty != null ? p.qty : (p.quantity != null ? p.quantity : p.position_amt)) || 0;
       var qty = Math.abs(rawQty);
       var entry = Number(p.entry != null ? p.entry : (p.entry_price != null ? p.entry_price : (p.avg_entry_price != null ? p.avg_entry_price : p.avgPrice))) || 0;
@@ -433,72 +433,141 @@
     return rows;
   }
 
-  /** Pie: filled position MVs + USDT cash. Exclude USDC. Dust < 1 USDT ignored. */
-  function actualPieParts() {
-    var holds = actualHoldings();
-    var parts = holds.map(function (h) {
-      return { label: h.asset, value: h.market_value, symbol: h.symbol, kind: "pos" };
+  function quoteOfSymbol(sym) {
+    var s = String(sym || "").toUpperCase();
+    if (s.indexOf("USDC") >= 0 && s.indexOf("USDT") < 0) return "USDC";
+    if (/USDC$/.test(s)) return "USDC";
+    return "USDT";
+  }
+
+  function bookStarting(quote) {
+    var books = (cloud && cloud.books) || {};
+    var b = books[String(quote).toLowerCase()] || {};
+    if (b.starting != null) return Number(b.starting);
+    var a = (cloud && cloud.allocation) || allocCfg || {};
+    if (quote === "USDC") return Number(a.book_usdc != null ? a.book_usdc : 5000);
+    return Number(a.book_usdt != null ? a.book_usdt : bookUsdt() || 5000);
+  }
+
+  /** Holdings for one quote book (USDT or USDC). */
+  function holdingsForQuote(quote) {
+    return actualHoldings().filter(function (h) {
+      return quoteOfSymbol(h.symbol || h.asset) === quote;
     });
-    var usdt = Number((bals().USDT != null ? bals().USDT : 0)) || 0;
+  }
+
+  /** Pie parts for one quote: position MVs + that quote's cash. Never mixes books. */
+  function piePartsForQuote(quote) {
+    var dust = DUST_USDT;
+    var holds = holdingsForQuote(quote);
+    var parts = holds.map(function (h) {
+      return { label: h.asset, value: Number(h.market_value) || 0, symbol: h.symbol, kind: "pos" };
+    });
+    var cash = Number((bals()[quote] != null ? bals()[quote] : 0)) || 0;
     if (!holds.length) {
-      return [{ label: "現金", value: Math.max(usdt, 1), symbol: "USDT", kind: "cash" }];
+      parts = [{ label: "現金", value: Math.max(cash, 0.01), symbol: quote, kind: "cash" }];
+    } else if (cash >= dust) {
+      parts.push({ label: "現金", value: cash, symbol: quote, kind: "cash" });
     }
-    if (usdt >= DUST_USDT) {
-      parts.push({ label: "現金", value: usdt, symbol: "USDT", kind: "cash" });
+    return parts.filter(function (p) { return p.value >= dust || p.kind === "cash"; });
+  }
+
+  function actualPieParts() {
+    return piePartsForQuote("USDT");
+  }
+
+  function bookStats(quote) {
+    var books = (cloud && cloud.books) || {};
+    var remote = books[String(quote).toLowerCase()] || null;
+    var holds = holdingsForQuote(quote);
+    var cash = Number((bals()[quote] != null ? bals()[quote] : 0)) || 0;
+    var posMv = 0, unreal = 0, cost = 0;
+    holds.forEach(function (h) {
+      posMv += Number(h.market_value) || 0;
+      if (h.unrealized != null) unreal += Number(h.unrealized);
+      if (h.entry_cost > 0) cost += Number(h.entry_cost);
+    });
+    var realized = 0;
+    var closed = (cloud && cloud.closed_trades) || [];
+    closed.forEach(function (t) {
+      if (quoteOfSymbol(t.symbol) !== quote) return;
+      if (t.pnl_usdt != null) realized += Number(t.pnl_usdt);
+    });
+    var starting = bookStarting(quote);
+    var equity = remote && remote.equity != null ? Number(remote.equity) : (cash + posMv);
+    if (remote) {
+      if (remote.realized_pnl != null) realized = Number(remote.realized_pnl);
+      if (remote.unrealized_pnl != null) unreal = Number(remote.unrealized_pnl);
+      if (remote.cash != null) cash = Number(remote.cash);
+      if (remote.positions_mv != null) posMv = Number(remote.positions_mv);
+      if (remote.starting != null) starting = Number(remote.starting);
     }
-    return parts.filter(function (p) { return p.value >= DUST_USDT; });
+    return {
+      quote: quote,
+      starting: starting,
+      cash: cash,
+      positions_mv: posMv,
+      equity: equity,
+      realized: realized,
+      unrealized: unreal,
+      unrealized_pct: cost > 0 ? (unreal / cost) * 100 : null,
+      open_n: holds.length,
+      used: posMv,
+      remaining: Math.max(0, starting - posMv)
+    };
   }
 
   function unrealizedSummary() {
-    var rows = actualHoldings();
-    var pnl = 0, cost = 0, count = 0;
-    rows.forEach(function (r) {
-      if (r.unrealized == null) return;
-      pnl += Number(r.unrealized);
-      if (r.entry_cost > 0) cost += Number(r.entry_cost);
-      count++;
-    });
-    if (!count) return { pnl: null, cost: null, pct: null };
-    return { pnl: pnl, cost: cost, pct: cost > 0 ? (pnl / cost) * 100 : null };
+    var u = bookStats("USDT");
+    return { pnl: u.unrealized, cost: null, pct: u.unrealized_pct };
   }
 
-  function renderAccount() {
-    var b = bals();
-    var usdt = b.USDT, usdc = b.USDC;
-    var total = (usdt != null && usdc != null) ? usdt + usdc
-      : (book && book.equity_total_stable != null ? Number(book.equity_total_stable) : null);
-    var equity = cloud && cloud.equity_usdt != null ? Number(cloud.equity_usdt)
-      : (positions && positions.virtual_equity != null) ? Number(positions.virtual_equity)
-      : (book && book.equity_usdt != null ? Number(book.equity_usdt) : usdt);
-    var holds = actualHoldings();
-    var openN = holds.length;
-    var upnl = unrealizedSummary();
-    var upnlValue = '<span class="' + signedCls(upnl.pnl) + '">' + formatPnl(upnl.pnl, upnl.pct) + '</span>';
-    pieParts = actualPieParts();
-    var sum = pieParts.reduce(function (s, p) { return s + p.value; }, 0) || 1;
-    var legend = pieParts.map(function (p) {
+  function renderBookCard(st) {
+    var q = st.quote;
+    var upnl = '<span class="' + signedCls(st.unrealized) + '">' +
+      (st.unrealized == null ? "—" : formatPnl(st.unrealized, st.unrealized_pct)) + "</span>";
+    var rpnl = '<span class="' + signedCls(st.realized) + '">' +
+      (st.realized == null ? "—" : signedNum(st.realized, 2) + " " + q) + "</span>";
+    var pieId = "allocPie" + q;
+    var legendId = "pieLegend" + q;
+    var parts = piePartsForQuote(q);
+    var sum = parts.reduce(function (s, p) { return s + p.value; }, 0) || 1;
+    var legend = parts.map(function (p) {
       var pct = (p.value / sum) * 100;
       return '<div class="pie-legend-row" data-pie-label="' + esc(p.label) + '">' +
         "<strong>" + esc(p.label) + "</strong> " +
-        num(pct, 1) + "% · " + num(p.value, 2) + " USDT</div>";
+        num(pct, 1) + "% · " + num(p.value, 2) + " " + q + "</div>";
     }).join("");
+    return '<div class="book-card" data-quote="' + q + '">' +
+      '<div class="section-head"><h3>' + q + ' 帳本</h3>' +
+      '<span class="hint">與另一帳本完全分開 · 上限 ' + num(st.starting, 0) + '</span></div>' +
+      '<div class="kpi-grid kpi-grid-book">' +
+      '<div class="kpi"><div class="label">原本餘額</div><div class="value">' + num(st.starting, 2) + '</div><div class="sublabel">起始 ' + q + '</div></div>' +
+      '<div class="kpi kpi-emphasis"><div class="label">現在餘額</div><div class="value">' + num(st.equity, 2) + '</div><div class="sublabel">現金 + 持倉市值</div></div>' +
+      '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計</div></div>' +
+      '<div class="kpi"><div class="label">未實現損益</div><div class="value">' + upnl + '</div><div class="sublabel">持倉市價</div></div>' +
+      '<div class="kpi"><div class="label">現金</div><div class="value">' + num(st.cash, 2) + '</div><div class="sublabel">可用 + 鎖定</div></div>' +
+      '<div class="kpi"><div class="label">已用 / 剩餘</div><div class="value">' + num(st.used, 2) + ' / ' + num(st.remaining, 2) + '</div><div class="sublabel">持倉市值 vs 原本</div></div>' +
+      '</div>' +
+      '<div class="holdings-pie-panel book-pie">' +
+      '<div class="section-head"><h4>' + q + ' 分布</h4>' +
+      '<span class="hint">僅此帳本 · 現金 + 持倉</span></div>' +
+      '<div class="pie-panel-body">' +
+      '<div class="alloc-pie-wrap"><canvas id="' + pieId + '" width="180" height="180"></canvas></div>' +
+      '<div class="pie-legend" id="' + legendId + '">' + legend + "</div></div></div></div>";
+  }
+
+  function renderAccount() {
+    var usdt = bookStats("USDT");
+    var usdc = bookStats("USDC");
+    pieParts = piePartsForQuote("USDT");
     return '<section class="section" id="sec-account">' +
       '<div class="section-head"><h2>帳戶總覽</h2><span class="hint">' +
-      esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") + "</span></div>" +
-      '<div class="overview-row"><div class="kpi-grid kpi-grid-demo">' +
-      '<div class="kpi"><div class="label">USDT</div><div class="value">' + num(usdt, 2) + '</div><div class="sublabel">可用餘額</div></div>' +
-      '<div class="kpi"><div class="label">USDC</div><div class="value">' + num(usdc, 2) + '</div><div class="sublabel">不計入圓餅</div></div>' +
-      '<div class="kpi kpi-emphasis"><div class="label">穩定幣合計</div><div class="value">' + num(total, 2) + '</div><div class="sublabel">USDT + USDC</div></div>' +
-      '<div class="kpi"><div class="label">USDT 側權益</div><div class="value">' + num(equity, 2) + '</div><div class="sublabel">雲端即時</div></div>' +
-      '<div class="kpi"><div class="label">未實現損益合計</div><div class="value">' + upnlValue + '</div><div class="sublabel">按進場成本計算</div></div>' +
-      '<div class="kpi"><div class="label">實際持倉數</div><div class="value">' + num(openN, 0) + '</div><div class="sublabel">' +
-      (openN === 0 ? "目前空倉（全現金）" : "已成交部位") + "</div></div></div></div>" +
-      '<div class="holdings-pie-panel">' +
-      '<div class="section-head"><h2>實際持倉分布</h2>' +
-      '<span class="hint">以 USDT 帳戶計；不含 USDC · 與下方實際持倉同一資料</span></div>' +
-      '<div class="pie-panel-body">' +
-      '<div class="alloc-pie-wrap"><canvas id="allocPie" width="180" height="180"></canvas></div>' +
-      '<div class="pie-legend" id="pieLegend">' + legend + "</div></div></div></section>";
+      esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") +
+      " · USDT / USDC 分開記帳</span></div>" +
+      '<div class="books-row">' + renderBookCard(usdt) + renderBookCard(usdc) + "</div>" +
+      '<p class="book-math-hint">驗算：現在餘額 ≈ 原本 + 已實現 + 未實現（若有入金／出金或手續費幣種差異，數字可能不完全對上）。</p>' +
+      "</section>";
   }
 
   function tradeRow(r) {
@@ -858,9 +927,10 @@
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
-  function mountPie(parts) {
-    var canvas = $("allocPie");
+  function mountPie(parts, canvasId, quote) {
+    var canvas = $(canvasId || "allocPie");
     if (!canvas || typeof Chart === "undefined") return;
+    var q = quote || "USDT";
     var data = (parts || []).filter(function (p) { return p.value > 0; });
     if (!data.length) data = [{ label: "現金", value: 1 }];
     var sum = data.reduce(function (s, p) { return s + p.value; }, 0) || 1;
@@ -871,7 +941,7 @@
       data: {
         labels: data.map(function (d) {
           var pct = (d.value / sum) * 100;
-          return d.label + "  " + pct.toFixed(1) + "%  ·  " + Number(d.value).toFixed(2) + " USDT";
+          return d.label + "  " + pct.toFixed(1) + "%  ·  " + Number(d.value).toFixed(2) + " " + q;
         }),
         datasets: [{
           data: data.map(function (d) { return d.value; }),
@@ -900,6 +970,11 @@
         }
       }
     });
+  }
+
+  function mountAllPies() {
+    mountPie(piePartsForQuote("USDT"), "allocPieUSDT", "USDT");
+    mountPie(piePartsForQuote("USDC"), "allocPieUSDC", "USDC");
   }
 
   function openPinModal(opts) {
@@ -1149,7 +1224,7 @@
     pieParts = actualPieParts();
     main.innerHTML = renderHealth() + renderAccount() +
       renderActual() + renderPlanned() + renderStrategies() + renderTrades() + renderChanges();
-    mountPie(pieParts);
+    mountAllPies();
     bindControls();
     var pending = plannedList();
     enrichPlannedMarkets(pending).then(function () {

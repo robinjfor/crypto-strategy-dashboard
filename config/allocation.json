@@ -174,5 +174,7 @@
       },
       "note": "rotation 2026-10-01：ARB ls stale +18.1%→NEAR ls（距離~5.6%<8%；lev1.0×notional=名目 750；vt0.03）。原 ls_arb_4h 下線。"
     }
-  ]
+  ],
+  "book_usdc": 5000,
+  "max_notional_per_order_usdc": 1500
 }

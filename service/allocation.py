@@ -46,9 +46,13 @@ FAMILY_ALIASES = {
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
+MAX_BOOK_USDC = 5000.0
+SUPPORTED_QUOTE_ASSETS = frozenset({"USDT", "USDC"})
 
 DEFAULT_BOOK = 5000.0
+DEFAULT_BOOK_USDC = 5000.0
 DEFAULT_MAX_ORDER = 1500.0
+DEFAULT_MAX_ORDER_USDC = 1500.0
 REPO_ALLOC_PATH = Path(__file__).resolve().parents[1] / "config" / "allocation.json"
 GCS_OBJECT = "trader/allocation.json"
 
@@ -175,20 +179,52 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
 
 
 
-def fetch_usdt_symbols() -> set[str] | None:
-    """Return Binance spot USDT symbols, or None if network failed (skip soft-check)."""
+def fetch_quote_symbols(quote: str = "USDT") -> set[str] | None:
+    """Return Binance spot symbols for a quote asset, or None on network fail."""
+    quote = str(quote or "USDT").upper()
     url = os.environ.get("BINANCE_EXCHANGE_INFO_URL") or "https://api.binance.com/api/v3/exchangeInfo"
     try:
         with urllib.request.urlopen(url, timeout=20) as resp:  # noqa: S310
             data = json.loads(resp.read().decode())
         out = set()
         for s in data.get("symbols") or []:
-            if s.get("status") == "TRADING" and s.get("quoteAsset") == "USDT":
+            if s.get("status") == "TRADING" and str(s.get("quoteAsset") or "").upper() == quote:
                 out.add(s.get("symbol"))
         return out
     except Exception as e:  # noqa: BLE001
-        log.warning("exchangeInfo_fail err=%s", e)
+        log.warning("exchangeInfo_fail quote=%s err=%s", quote, e)
         return None
+
+
+def fetch_usdt_symbols() -> set[str] | None:
+    """Backward-compat wrapper."""
+    return fetch_quote_symbols("USDT")
+
+
+def infer_quote_asset(slot: dict) -> str:
+    """Per-slot quote: explicit quote_currency / quote_asset, else symbol suffix."""
+    for k in ("quote_currency", "quote_asset"):
+        v = slot.get(k)
+        if v:
+            return str(v).upper()
+    sym = str(slot.get("symbol") or "").upper()
+    for q in ("USDT", "USDC"):
+        if sym.endswith(q):
+            return q
+    return "USDT"
+
+
+def slot_notional(slot: dict, quote: str | None = None) -> float:
+    """Notional in the slot's quote currency."""
+    q = (quote or infer_quote_asset(slot)).upper()
+    if q == "USDC":
+        raw = slot.get("notional_usdc", slot.get("notional_usdt", slot.get("notional")))
+    else:
+        raw = slot.get("notional_usdt", slot.get("notional"))
+    try:
+        return float(raw or 0)
+    except Exception:  # noqa: BLE001
+        return 0.0
 
 
 def validate_allocation(
@@ -196,13 +232,24 @@ def validate_allocation(
     *,
     check_binance: bool = True,
     usdt_symbols: set[str] | None = None,
+    usdc_symbols: set[str] | None = None,
 ) -> list[str]:
-    """Return list of error strings; empty means OK."""
+    """Return list of error strings; empty means OK.
+
+    USDT and USDC books are separate: enabled notionals for each quote must
+    not exceed that quote's book (book_usdt / book_usdc, default 5000 each).
+    """
     errors: list[str] = []
     if not isinstance(doc, dict):
         return ["allocation 必須是 JSON object"]
-    book = float(doc.get("book_usdt") or DEFAULT_BOOK)
-    max_order = float(doc.get("max_notional_per_order_usdt") or DEFAULT_MAX_ORDER)
+    book_usdt = float(doc.get("book_usdt") or DEFAULT_BOOK)
+    book_usdc = float(doc.get("book_usdc") or DEFAULT_BOOK_USDC)
+    max_order_usdt = float(doc.get("max_notional_per_order_usdt") or DEFAULT_MAX_ORDER)
+    max_order_usdc = float(
+        doc.get("max_notional_per_order_usdc")
+        or doc.get("max_notional_per_order_usdt")
+        or DEFAULT_MAX_ORDER_USDC
+    )
     slots = doc.get("slots")
     if not isinstance(slots, list) or not slots:
         return ["slots 必須是非空陣列"]
@@ -210,10 +257,13 @@ def validate_allocation(
     seen_slot: set[str] = set()
     seen_sid: set[str] = set()
     seen_sym_enabled: set[str] = set()
-    total_enabled = 0.0
+    total_usdt = 0.0
+    total_usdc = 0.0
 
     if check_binance and usdt_symbols is None:
-        usdt_symbols = fetch_usdt_symbols()
+        usdt_symbols = fetch_quote_symbols("USDT")
+    if check_binance and usdc_symbols is None:
+        usdc_symbols = fetch_quote_symbols("USDC")
 
     for i, slot in enumerate(slots):
         if not isinstance(slot, dict):
@@ -224,9 +274,11 @@ def validate_allocation(
         sid = _require(slot, "strategy_id", errors, i)
         symbol = _require(slot, "symbol", errors, i)
         tf = _require(slot, "timeframe", errors, i)
-        notion = slot.get("notional_usdt")
         enabled = slot.get("enabled")
         params = slot.get("params")
+        quote = infer_quote_asset(slot)
+        notion_f = slot_notional(slot, quote)
+        max_order = max_order_usdc if quote == "USDC" else max_order_usdt
 
         if slot_id:
             if slot_id in seen_slot:
@@ -239,16 +291,23 @@ def validate_allocation(
 
         is_en = enabled is True
 
+        if quote not in SUPPORTED_QUOTE_ASSETS:
+            errors.append(f"slots[{i}].quote_currency 不支援：{quote}（僅 USDT / USDC）")
+
         if symbol:
             sym = str(symbol).upper()
-            if not sym.endswith("USDT"):
-                errors.append(f"slots[{i}].symbol 必須是 USDT 交易對：{symbol}")
-            # 僅對 enabled slot 檢查重複／交易所存在（候選可暫列同幣）
+            if not (sym.endswith("USDT") or sym.endswith("USDC")):
+                errors.append(f"slots[{i}].symbol 必須是 USDT 或 USDC 現貨對：{symbol}")
+            elif quote == "USDT" and not sym.endswith("USDT"):
+                errors.append(f"slots[{i}] quote_currency=USDT 但 symbol 不是 *USDT：{symbol}")
+            elif quote == "USDC" and not sym.endswith("USDC"):
+                errors.append(f"slots[{i}] quote_currency=USDC 但 symbol 不是 *USDC：{symbol}")
             if is_en:
                 if sym in seen_sym_enabled:
                     errors.append(f"重複 symbol（enabled）：{sym}")
                 seen_sym_enabled.add(sym)
-                if usdt_symbols is not None and sym not in usdt_symbols:
+                pool = usdc_symbols if quote == "USDC" else usdt_symbols
+                if pool is not None and sym not in pool:
                     errors.append(f"Binance 現貨找不到或未交易：{sym}")
 
         if tf is not None and str(tf).lower() not in {"1h", "4h", "1d"}:
@@ -257,19 +316,21 @@ def validate_allocation(
         if not isinstance(enabled, bool):
             errors.append(f"slots[{i}].enabled 必須是 boolean")
 
-        try:
-            notion_f = float(notion)
-        except Exception:  # noqa: BLE001
-            errors.append(f"slots[{i}].notional_usdt 必須是數字")
-            notion_f = 0.0
+        # Accept notional_usdt (USDT book) or notional_usdc (USDC book)
+        has_notion = any(slot.get(k) is not None for k in ("notional_usdt", "notional_usdc", "notional"))
+        if not has_notion:
+            errors.append(f"slots[{i}] 缺少 notional_usdt / notional_usdc")
         if notion_f <= 0:
-            errors.append(f"slots[{i}].notional_usdt 必須 > 0")
+            errors.append(f"slots[{i}] notional 必須 > 0")
         if notion_f > max_order + 1e-9:
             errors.append(
-                f"slots[{i}].notional_usdt {notion_f} 超過單筆上限 {max_order}"
+                f"slots[{i}] notional {notion_f} 超過單筆上限 {max_order} ({quote})"
             )
         if is_en:
-            total_enabled += max(notion_f, 0.0)
+            if quote == "USDC":
+                total_usdc += max(notion_f, 0.0)
+            else:
+                total_usdt += max(notion_f, 0.0)
 
         if family:
             if family not in RUNNER_FAMILIES:
@@ -277,9 +338,13 @@ def validate_allocation(
             else:
                 validate_params(family, params if isinstance(params, dict) else {}, errors, i)
 
-    if total_enabled > book + 1e-6:
+    if total_usdt > book_usdt + 1e-6:
         errors.append(
-            f"enabled notional 加總 {total_enabled:.2f} 超過 book_usdt {book:.2f}"
+            f"enabled USDT notional 加總 {total_usdt:.2f} 超過 book_usdt {book_usdt:.2f}"
+        )
+    if total_usdc > book_usdc + 1e-6:
+        errors.append(
+            f"enabled USDC notional 加總 {total_usdc:.2f} 超過 book_usdc {book_usdc:.2f}"
         )
 
     return errors
@@ -384,6 +449,8 @@ def slot_to_runtime(slot: dict) -> dict:
     trail = params.get("trail_atr_mult", params.get("trail_m"))
     max_hold = params.get("max_hold_bars", params.get("max_hold"))
     reset = params.get("require_reset_below_hi", params.get("reset_below_hi", False))
+    quote_asset = infer_quote_asset(slot)
+    notion = slot_notional(slot, quote_asset)
     return {
         "id": slot.get("slot"),
         "strategy_id": slot.get("strategy_id"),
@@ -396,7 +463,9 @@ def slot_to_runtime(slot: dict) -> dict:
         "stop_atr_mult": stop,
         "trail_atr_mult": trail,
         "max_hold_bars": max_hold,
-        "quote_usdt": float(slot.get("notional_usdt") or 0),
+        "quote_asset": quote_asset,
+        "quote_currency": quote_asset,
+        "quote_usdt": float(notion),  # notional in quote_asset (name kept for compat)
         "require_reset_below_hi": bool(reset),
         "atr_mode": _atr_mode,
         "btc_regime": bool(params.get("btc_regime", False)),
