@@ -1,9 +1,9 @@
 {
   "version": 1,
   "book_usdt": 10000,
-  "max_notional_per_order_usdt": 1500,
+  "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-01T19:45:10+08:00",
+  "updated_at": "2026-10-01T22:58:38+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -173,8 +173,38 @@
         "regime_scale": "none"
       },
       "note": "rotation 2026-10-01：ARB ls stale +18.1%→NEAR ls（距離~5.6%<8%；lev1.0×notional=名目 750；vt0.03）。原 ls_arb_4h 下線。"
+    },
+    {
+      "slot": "port_univ10_lev2",
+      "family": "ls_univ_portfolio_perp",
+      "strategy_id": "port_ew_univ10_lev2.0_vtNone",
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1500,
+      "enabled": true,
+      "params": {
+        "universe": [
+          "SOL",
+          "ETH",
+          "AVAX",
+          "LINK",
+          "ARB",
+          "FET",
+          "DOT",
+          "OP",
+          "NEAR",
+          "INJ"
+        ],
+        "mode": "ew",
+        "leverage": 2.0,
+        "vol_target": null,
+        "btc_regime": true,
+        "check_liq": true,
+        "kind": "ls_donch"
+      },
+      "note": "USDC/激進資金：10幣 LS 等權 lev2（CAGR~116% MaxDD~-42%）；家族 ls_univ_portfolio_perp 已批准。symbol=BTCUSDT 占位（不與現役槽重複）；實盤下單走 params.universe。"
     }
   ],
   "book_usdc": 5000,
-  "max_notional_per_order_usdc": 1500
+  "max_notional_per_order_usdc": 1500.0
 }
