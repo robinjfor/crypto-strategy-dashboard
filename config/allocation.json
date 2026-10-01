@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-01T23:33:57+08:00",
+  "updated_at": "2026-10-02T00:59:55+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -43,13 +43,32 @@
       "note": "現行 live（衛星 C）；reset 對齊回測"
     },
     {
+      "slot": "sat_arb_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian_breakout_atr__ARB__4h",
+      "symbol": "ARBUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1250,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": false,
+        "btc_regime": false,
+        "atr_mode": "sma"
+      },
+      "note": "rotation 2026-10-02：FET 4h stale +14.2%→ARB 4h（距離~7.6%<8%；score 35.5／CAGR 77%／OOS 5/6）。原 sat_fet_4h 下線。"
+    },
+    {
       "slot": "sat_fet_4h",
       "family": "donchian_atr",
       "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
       "symbol": "FETUSDT",
       "timeframe": "4h",
       "notional_usdt": 1250,
-      "enabled": true,
+      "enabled": false,
       "params": {
         "donch_n": 55,
         "stop_atr_mult": 2.0,
@@ -58,7 +77,7 @@
         "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "live（衛星 A）：3y 過關 +78%／DD -36%／OOS 4/6；取代 FET 1h"
+      "note": "live（衛星 A）：3y 過關 +78%／DD -36%／OOS 4/6；取代 FET 1h；rotation 2026-10-02：stale +14.2%→ARB 4h，本槽停用"
     },
     {
       "slot": "sat_fil_1h",
