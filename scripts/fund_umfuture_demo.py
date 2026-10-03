@@ -29,7 +29,7 @@ def _signed(base: str, method: str, path: str, params: dict | None = None) -> di
     key = (os.environ.get("BINANCE_DEMO_API_KEY") or "").strip()
     sec = (os.environ.get("BINANCE_DEMO_API_SECRET") or "").strip()
     if not key or not sec:
-        raise SystemExit("missing demo api key/secret")
+        raise RuntimeError("missing demo api key/secret")
     params = dict(params or {})
     params["timestamp"] = int(time.time() * 1000)
     params["recvWindow"] = 5000
@@ -61,6 +61,25 @@ def _usdt_futures(fut_base: str) -> tuple[float, float]:
     return wallet, avail
 
 
+def _record(payload: dict) -> None:
+    """Stash result on state.meta.futures_order_probe.fund_umfuture (visible in /status)."""
+    try:
+        from state_store import StateStore
+        store = StateStore()
+        st = store.load()
+        meta = st.setdefault("meta", {})
+        probe = meta.get("futures_order_probe")
+        if not isinstance(probe, dict):
+            probe = {}
+        probe["fund_umfuture"] = payload
+        meta["futures_order_probe"] = probe
+        store.save(st)
+        payload["recorded"] = True
+    except Exception as e:  # noqa: BLE001
+        payload["recorded"] = False
+        payload["record_error"] = str(e)[:300]
+
+
 def main() -> int:
     spot_base = os.environ.get("BINANCE_BASE_URL", "https://demo-api.binance.com")
     fut_base = os.environ.get("BINANCE_FUTURES_DEMO_BASE_URL", "https://demo-fapi.binance.com")
@@ -84,7 +103,9 @@ def main() -> int:
     }
     print(json.dumps({"phase": "before", **before}), flush=True)
     if amt < 1.0:
-        print(json.dumps({"phase": "done", "transferred": 0, "reason": "futures_margin_sufficient_or_spot_floor"}), flush=True)
+        done = {"phase": "done", "transferred": 0, "reason": "futures_margin_sufficient_or_spot_floor", **before}
+        _record(done)
+        print(json.dumps(done), flush=True)
         return 0
     amount = f"{amt:.2f}"
     err1 = None
@@ -106,7 +127,7 @@ def main() -> int:
     time.sleep(1.5)
     spot2 = _usdt_spot(spot_base)
     wallet2, avail2 = _usdt_futures(fut_base)
-    print(json.dumps({
+    after = {
         "phase": "after",
         "via": via,
         "fallback_error": err1,
@@ -116,9 +137,23 @@ def main() -> int:
         "futures_wallet": round(wallet2, 4),
         "futures_available": round(avail2, 4),
         "transferred": amt,
-    }), flush=True)
+        "before": before,
+    }
+    _record(after)
+    print(json.dumps(after), flush=True)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as e:  # noqa: BLE001
+        err = {"phase": "error", "error": str(e)[:500]}
+        try:
+            _record(err)
+        except Exception:
+            pass
+        print(json.dumps(err), flush=True)
+        raise SystemExit(0)
