@@ -1,0 +1,95 @@
+# Manual only. Moves Demo spot USDT → USD-M futures for ls_op_4h margin.
+# Does not place orders and does not run the trader loop (FIL untouched).
+name: fund-umfuture
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: asia-east1
+  JOB_NAME: crypto-trader
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Snapshot job command (restore later)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs describe "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --format=json > /tmp/job.json
+          python3 - << 'PY'
+          import json
+          j=json.load(open("/tmp/job.json"))
+          c=j["spec"]["template"]["spec"]["template"]["spec"]["containers"][0]
+          print("command", c.get("command"))
+          print("args", c.get("args"))
+          names=sorted(e.get("name") for e in (c.get("env") or []))
+          print("env_names", names)
+          PY
+
+      - name: Transfer shortfall spot to USD-M
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B64=$(python3 -c 'import base64,pathlib; print(base64.b64encode(pathlib.Path("scripts/fund_umfuture_demo.py").read_bytes()).decode())')
+          # Custom delimiter so base64 padding "=" is not parsed as extra pairs.
+          gcloud run jobs execute "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["FUND_B64"]).decode())' \
+            --update-env-vars="^@^FUND_B64=${B64}" \
+            --wait
+          echo "--- fund logs ---"
+          gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME} AND textPayload:phase" \
+            --project="${PROJECT}" --limit=20 --freshness=15m \
+            --format='value(textPayload)' || true
+
+      - name: Restore job command and drop FUND_B64
+        if: always()
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          python3 - << 'PY'
+          import json, os
+          j=json.load(open("/tmp/job.json"))
+          c=j["spec"]["template"]["spec"]["template"]["spec"]["containers"][0]
+          cmd=c.get("command") or ["python"]
+          args=c.get("args") or ["-u","main.py","run"]
+          open("/tmp/restore_cmd","w").write(",".join(cmd))
+          open("/tmp/restore_args","w").write(",".join(args))
+          print("restore", cmd, args)
+          PY
+          gcloud run jobs update "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --command="$(cat /tmp/restore_cmd)" \
+            --args="$(cat /tmp/restore_args)" \
+            --remove-env-vars=FUND_B64 || \
+          gcloud run jobs update "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --command="$(cat /tmp/restore_cmd)" \
+            --args="$(cat /tmp/restore_args)"
+          echo "--- job after restore ---"
+          gcloud run jobs describe "${JOB_NAME}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --format='yaml(spec.template.spec.template.spec.containers[0].command,spec.template.spec.template.spec.containers[0].args)'
