@@ -84,15 +84,15 @@ jobs:
           gcloud run jobs executions describe crypto-trader-gpbdx \
             --project="${PROJECT}" --region="${REGION}" --format=json > /tmp/ex.json
           python3 << 'PY'
-import json
-j=json.load(open("/tmp/ex.json"))
-st=j.get("status") or {}
-print("succeeded", st.get("succeededCount"), "failed", st.get("failedCount"))
-print("logUri", st.get("logUri"))
-for c in st.get("conditions") or []:
-    msg = (c.get("message") or "")[:1000]
-    print("cond", c.get("type"), c.get("status"), msg)
-PY
+          import json
+          j=json.load(open("/tmp/ex.json"))
+          st=j.get("status") or {}
+          print("succeeded", st.get("succeededCount"), "failed", st.get("failedCount"))
+          print("logUri", st.get("logUri"))
+          for c in st.get("conditions") or []:
+              msg = (c.get("message") or "")[:1000]
+              print("cond", c.get("type"), c.get("status"), msg)
+          PY
           gcloud run jobs executions tasks list --execution=crypto-trader-gpbdx \
             --project="${PROJECT}" --region="${REGION}" --format=yaml || true
       - name: Restore job command and drop FUND_B64
