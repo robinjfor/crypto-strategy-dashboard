@@ -101,6 +101,7 @@ def main() -> int:
         "notional": NOTIONAL,
         "leverage": LEVERAGE,
     }
+    _record({"phase": "before", **before})
     print(json.dumps({"phase": "before", **before}), flush=True)
     if amt < 1.0:
         done = {"phase": "done", "transferred": 0, "reason": "futures_margin_sufficient_or_spot_floor", **before}
@@ -108,30 +109,36 @@ def main() -> int:
         print(json.dumps(done), flush=True)
         return 0
     amount = f"{amt:.2f}"
-    err1 = None
+    candidates = [
+        (spot_base, "/sapi/v1/asset/transfer", {"type": "MAIN_UMFUTURE", "asset": "USDT", "amount": amount}, "MAIN_UMFUTURE"),
+        (spot_base, "/sapi/v1/futures/transfer", {"asset": "USDT", "amount": amount, "type": 1}, "futures_transfer_type1"),
+        (fut_base, "/fapi/v1/transfer", {"asset": "USDT", "amount": amount, "type": 1}, "fapi_transfer_type1"),
+        (fut_base, "/sapi/v1/asset/transfer", {"type": "MAIN_UMFUTURE", "asset": "USDT", "amount": amount}, "fapi_host_MAIN_UMFUTURE"),
+    ]
+    attempts = []
     resp = None
-    try:
-        resp = _signed(
-            spot_base, "POST", "/sapi/v1/asset/transfer",
-            {"type": "MAIN_UMFUTURE", "asset": "USDT", "amount": amount},
-        )
-        via = "MAIN_UMFUTURE"
-    except Exception as e:  # noqa: BLE001
-        err1 = str(e)[:300]
-        # type 1 = spot → USDT-M
-        resp = _signed(
-            spot_base, "POST", "/sapi/v1/futures/transfer",
-            {"asset": "USDT", "amount": amount, "type": 1},
-        )
-        via = "futures_transfer_type1"
+    via = None
+    for base, path, params, name in candidates:
+        try:
+            resp = _signed(base, "POST", path, params)
+            via = name
+            attempts.append({"via": name, "ok": True})
+            break
+        except Exception as e:  # noqa: BLE001
+            attempts.append({"via": name, "ok": False, "error": str(e)[:220]})
+            resp = None
+    if resp is None:
+        fail = {"phase": "error", "transferred": 0, "attempts": attempts, "before": before}
+        _record(fail)
+        print(json.dumps(fail), flush=True)
+        return 0
     time.sleep(1.5)
     spot2 = _usdt_spot(spot_base)
     wallet2, avail2 = _usdt_futures(fut_base)
     after = {
         "phase": "after",
         "via": via,
-        "fallback_error": err1,
-        "transfer_resp_keys": sorted(list(resp.keys())) if isinstance(resp, dict) else type(resp).__name__,
+        "attempts": attempts,
         "tranId": (resp.get("tranId") if isinstance(resp, dict) else None),
         "spot_usdt_free": round(spot2, 4),
         "futures_wallet": round(wallet2, 4),
