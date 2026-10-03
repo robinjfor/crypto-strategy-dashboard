@@ -81,10 +81,12 @@ jobs:
         run: |
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
-          gcloud logging read \
-            'resource.type="cloud_run_job" AND resource.labels.job_name="crypto-trader"' \
-            --project="${PROJECT}" --limit=40 --freshness=30m \
-            --format='value(timestamp,textPayload)'
+          gcloud run jobs executions describe crypto-trader-gpbdx \
+            --project="${PROJECT}" --region="${REGION}" --format=json > /tmp/ex.json
+          python3 -c 'import json;j=json.load(open("/tmp/ex.json"));st=j.get("status") or {};print("succeeded",st.get("succeededCount"),"failed",st.get("failedCount"));print("logUri",st.get("logUri"));
+[print("cond",c.get("type"),c.get("status"),(c.get("message") or "")[:1000]) for c in (st.get("conditions") or [])]'
+          gcloud run jobs executions tasks list --execution=crypto-trader-gpbdx \
+            --project="${PROJECT}" --region="${REGION}" --format=yaml || true
       - name: Restore job command and drop FUND_B64
         if: always()
         run: |
