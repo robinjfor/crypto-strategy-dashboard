@@ -4,6 +4,11 @@ name: fund-umfuture
 
 on:
   workflow_dispatch:
+    inputs:
+      only_logs:
+        description: "Only print recent job logs; do not transfer"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -49,22 +54,37 @@ jobs:
           PY
 
       - name: Transfer shortfall spot to USD-M
+        if: ${{ inputs.only_logs != true }}
         run: |
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           B64=$(python3 -c 'import base64,pathlib; print(base64.b64encode(pathlib.Path("scripts/fund_umfuture_demo.py").read_bytes()).decode())')
           # Custom delimiter so base64 padding "=" is not parsed as extra pairs.
+          set +e
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
             --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["FUND_B64"]).decode())' \
             --update-env-vars="^@^FUND_B64=${B64}" \
             --wait
+          EC=$?
+          set -e
+          echo "execute_exit=${EC}"
           echo "--- fund logs ---"
           gcloud logging read \
-            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME} AND textPayload:phase" \
-            --project="${PROJECT}" --limit=20 --freshness=15m \
+            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME}" \
+            --project="${PROJECT}" --limit=40 --freshness=20m \
             --format='value(textPayload)' || true
+          exit ${EC}
 
+      - name: Read recent job logs
+        if: ${{ inputs.only_logs == true }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud logging read \
+            'resource.type="cloud_run_job" AND resource.labels.job_name="crypto-trader"' \
+            --project="${PROJECT}" --limit=40 --freshness=30m \
+            --format='value(timestamp,textPayload)'
       - name: Restore job command and drop FUND_B64
         if: always()
         run: |
