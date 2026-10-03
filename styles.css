@@ -831,3 +831,9 @@ table.scores tr.fail:hover td.col-approve {
   color: #94a3b8;
   letter-spacing: 0.02em;
 }
+
+/* Homepage strategy cards: collapsed until click (same idea as backtest family cards) */
+.strategy-card .sc-head { cursor: pointer; user-select: none; }
+.strategy-card .chevron { margin-left: 6px; color: #8b9bb0; flex-shrink: 0; }
+.strategy-card.collapsed .sc-body { display: none; }
+.strategy-card .sc-body { margin-top: 4px; }

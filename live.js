@@ -33,6 +33,7 @@
   let countdown = 30;
   let timerId = null;
   let pieParts = [];
+  var expandedStrategyKeys = {};
 
   function $(id) { return document.getElementById(id); }
 
@@ -883,20 +884,25 @@
       var stZh = src.status_zh || a.label_zh || "已核准 · 上線待命";
       var tf = src.tf || "";
       var notion = a.notional_usdt || src.quote_usdt || "";
-      return '<article class="strategy-card active">' +
+      var key = String(a.strategy_id || a.slot || title);
+      var open = !!expandedStrategyKeys[key];
+      return '<article class="strategy-card active' + (open ? " open" : " collapsed") + '" data-key="' + esc(key) + '">' +
+        '<div class="sc-head" data-toggle-key="' + esc(key) + '">' +
         '<div class="sc-top"><strong class="sc-title" title="' + esc(a.strategy_id || "") + '">' +
         esc((code ? code + " " : "") + title) + (tf ? " · " + esc(tf) : "") + "</strong>" +
-        '<span class="badge ok">' + esc(stZh) + "</span></div>" +
+        '<span class="badge ok">' + esc(stZh) + "</span>" +
+        '<span class="chevron" aria-hidden="true">' + (open ? "▾" : "▸") + "</span></div>" +
         '<p class="sc-sum">' + esc(a.strategy_id || "") + "</p>" +
-        '<div class="sc-meta">進場計畫見「預計持倉」</div>' +
-        '<div class="sc-rules">' +
+        '<div class="sc-meta">' + (open ? "點擊收合" : "點擊展開進場／觸發") + "</div></div>" +
+        '<div class="sc-body"><div class="sc-rules">' +
         '<div><span class="lbl">進場</span> ' + esc(src.entry_condition || "—") + "</div>" +
         '<div><span class="lbl">觸發</span> ' + (src.trigger != null ? num(src.trigger, 4) : "—") +
         " · 現價 " + (src.mark != null ? num(src.mark, 4) : "—") +
         (src.trigger != null && src.mark != null ? " · 距 " + num(Number(src.trigger) - Number(src.mark), 4) : "") +
         "</div>" +
         '<div><span class="lbl">狀態</span> ' + esc(stZh) + "</div>" +
-        "</div></article>";
+        (notion ? '<div><span class="lbl">名義</span> ' + esc(String(notion)) + " USDT</div>" : "") +
+        "</div></div></article>";
     }
     var cards = approved.length
       ? approved.map(enrich).join("")
@@ -1158,6 +1164,24 @@
     if (mc) mc.onclick = closeModal;
     var backdrop = document.querySelector("#strategyModal .modal-backdrop");
     if (backdrop) backdrop.onclick = closeModal;
+    // Homepage strategy cards looked clickable but had no handler (details always shown).
+    document.querySelectorAll("#sec-strategies .sc-head[data-toggle-key]").forEach(function (head) {
+      head.onclick = function (ev) {
+        if (ev.target.closest("button, a, input, label")) return;
+        var key = head.getAttribute("data-toggle-key");
+        if (!key) return;
+        expandedStrategyKeys[key] = !expandedStrategyKeys[key];
+        var card = head.closest(".strategy-card");
+        if (!card) return;
+        var open = !!expandedStrategyKeys[key];
+        card.classList.toggle("collapsed", !open);
+        card.classList.toggle("open", open);
+        var ch = card.querySelector(".chevron");
+        if (ch) ch.textContent = open ? "▾" : "▸";
+        var meta = card.querySelector(".sc-meta");
+        if (meta) meta.textContent = open ? "點擊收合" : "點擊展開進場／觸發";
+      };
+    });
   }
 
   async function enrichPlannedMarkets(list) {
