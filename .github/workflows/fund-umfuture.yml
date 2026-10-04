@@ -9,6 +9,10 @@ on:
         description: "Only print recent job logs; do not transfer"
         type: boolean
         default: false
+      read_only:
+        description: "Read futures/spot USDT only; do not transfer"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,12 +63,14 @@ jobs:
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           B64=$(python3 -c 'import base64,pathlib; print(base64.b64encode(pathlib.Path("scripts/fund_umfuture_demo.py").read_bytes()).decode())')
+          READONLY="${{ inputs.read_only }}"
+          if [ "${READONLY}" = "true" ]; then READONLY=1; else READONLY=0; fi
           # Custom delimiter so base64 padding "=" is not parsed as extra pairs.
           set +e
           gcloud run jobs execute "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
             --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["FUND_B64"]).decode())' \
-            --update-env-vars="^@^FUND_B64=${B64}" \
+            --update-env-vars="^@^FUND_B64=${B64}@FUND_READONLY=${READONLY}" \
             --wait
           EC=$?
           set -e
@@ -114,7 +120,7 @@ jobs:
             --project="${PROJECT}" --region="${REGION}" \
             --command="$(cat /tmp/restore_cmd)" \
             --args="$(cat /tmp/restore_args)" \
-            --remove-env-vars=FUND_B64 || \
+            --remove-env-vars=FUND_B64,FUND_READONLY || \
           gcloud run jobs update "${JOB_NAME}" \
             --project="${PROJECT}" --region="${REGION}" \
             --command="$(cat /tmp/restore_cmd)" \

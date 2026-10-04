@@ -50,15 +50,22 @@ def _usdt_spot(spot_base: str) -> float:
     return 0.0
 
 
-def _usdt_futures(fut_base: str) -> tuple[float, float]:
+def _usdt_futures(fut_base: str) -> dict:
     acct = _signed(fut_base, "GET", "/fapi/v2/account")
-    wallet = avail = 0.0
+    out = {
+        "wallet": 0.0,
+        "available": 0.0,
+        "margin_balance": 0.0,
+        "total_wallet": float(acct.get("totalWalletBalance") or 0),
+        "available_account": float(acct.get("availableBalance") or 0),
+    }
     for a in acct.get("assets") or []:
         if a.get("asset") == "USDT":
-            wallet = float(a.get("walletBalance") or 0)
-            avail = float(a.get("availableBalance") or 0)
+            out["wallet"] = float(a.get("walletBalance") or 0)
+            out["available"] = float(a.get("availableBalance") or 0)
+            out["margin_balance"] = float(a.get("marginBalance") or 0)
             break
-    return wallet, avail
+    return out
 
 
 def _record(payload: dict) -> None:
@@ -84,7 +91,8 @@ def main() -> int:
     spot_base = os.environ.get("BINANCE_BASE_URL", "https://demo-api.binance.com")
     fut_base = os.environ.get("BINANCE_FUTURES_DEMO_BASE_URL", "https://demo-fapi.binance.com")
     spot = _usdt_spot(spot_base)
-    wallet, avail = _usdt_futures(fut_base)
+    fut = _usdt_futures(fut_base)
+    wallet, avail = fut["wallet"], fut["available"]
     short = max(0.0, REQUIRED - avail)
     amt = math.ceil(short * 100) / 100.0
     amt = min(amt, MAX_TRANSFER)
@@ -95,12 +103,19 @@ def main() -> int:
         "spot_usdt_free": round(spot, 4),
         "futures_wallet": round(wallet, 4),
         "futures_available": round(avail, 4),
+        "futures_margin_balance": round(fut["margin_balance"], 4),
+        "futures_total_wallet": round(fut["total_wallet"], 4),
         "required_available": round(REQUIRED, 4),
         "transfer_usdt": amt,
         "slot": "ls_op_4h",
         "notional": NOTIONAL,
         "leverage": LEVERAGE,
     }
+    if os.environ.get("FUND_READONLY", "").strip().lower() in ("1", "true", "yes"):
+        done = {"phase": "readonly", "transferred": 0, "reason": "read_only", **before}
+        _record(done)
+        print(json.dumps(done), flush=True)
+        return 0
     _record({"phase": "before", **before})
     print(json.dumps({"phase": "before", **before}), flush=True)
     if amt < 1.0:
@@ -134,7 +149,8 @@ def main() -> int:
         return 0
     time.sleep(1.5)
     spot2 = _usdt_spot(spot_base)
-    wallet2, avail2 = _usdt_futures(fut_base)
+    fut2 = _usdt_futures(fut_base)
+    wallet2, avail2 = fut2["wallet"], fut2["available"]
     after = {
         "phase": "after",
         "via": via,
