@@ -35,6 +35,6 @@ jobs:
             --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["SNAP_B64"]).decode())' \
             --update-env-vars="^@^SNAP_B64=${B64}" --wait --format='value(metadata.name)')
           echo "execution=${EX}"
-          sleep 15
-          gcloud logging read "resource.type=cloud_run_job AND labels.\"run.googleapis.com/execution_name\"=\"${EX}\" AND textPayload:SNAPSHOT_JSON" \
-            --project="${PROJECT}" --limit=5 --freshness=30m --format='value(textPayload)'
+          BUCKET=$(gcloud run jobs describe "${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" --format=json | python3 -c 'import json,sys;c=json.load(sys.stdin)["spec"]["template"]["spec"]["template"]["spec"]["containers"][0];print(next(e["value"] for e in c["env"] if e["name"]=="GCS_BUCKET"))')
+          gcloud storage cat "gs://${BUCKET}/trader/snapshots/account_snapshot.json" > snap.json
+          echo "SNAPSHOT_JSON $(cat snap.json)"

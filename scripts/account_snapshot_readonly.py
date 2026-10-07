@@ -59,7 +59,13 @@ def main():
         out["alloc_slots"] = [{"slot": s.get("slot"), "enabled": s.get("enabled"), "family": s.get("family"), "sid": s.get("strategy_id"), "notional": s.get("notional_usdt")} for s in doc.get("slots") or []]
     except Exception as e:  # noqa: BLE001
         out["alloc_error"] = str(e)[:200]
-    print("SNAPSHOT_JSON " + json.dumps(out, separators=(",", ":")))
+    out["taken_at_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    body = json.dumps(out, separators=(",", ":"))
+    print("SNAPSHOT_JSON " + body)
+    bucket = os.environ.get("GCS_BUCKET") or ""
+    if bucket:  # write snapshot only to a dedicated object (not trader state)
+        from google.cloud import storage
+        storage.Client().bucket(bucket).blob("trader/snapshots/account_snapshot.json").upload_from_string(body, content_type="application/json")
 
 
 main()
