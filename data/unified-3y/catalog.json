@@ -395,7 +395,7 @@
           },
           "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
+          "gate_pass_both": false,
           "gate_fail_reasons": [
             "neighbor 42.3% < 50%"
           ],
@@ -841,7 +841,7 @@
           },
           "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
+          "gate_pass_both": false,
           "gate_fail_reasons": [
             "neighbor 26.9% < 50%"
           ],
@@ -1789,7 +1789,7 @@
           },
           "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
+          "gate_pass_both": false,
           "gate_fail_reasons": [
             "neighbor 22.22% < 50%"
           ],
@@ -1876,7 +1876,7 @@
           },
           "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
+          "gate_pass_both": false,
           "gate_fail_reasons": [
             "ret (-9.2403) <= bh (7.958)",
             "neighbor 0.0% < 50%"
@@ -1964,7 +1964,7 @@
           },
           "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
+          "gate_pass_both": false,
           "gate_fail_reasons": [
             "ret (-8.0161) <= bh (7.958)",
             "neighbor 22.22% < 50%"
