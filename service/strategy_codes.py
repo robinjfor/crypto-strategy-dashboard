@@ -66,12 +66,19 @@ def family_code(family: str | None) -> str | None:
     return entry.get("code") if isinstance(entry, dict) else None
 
 
-def code_for_symbol(symbol: str | None, slots: list[dict[str, Any]]) -> str | None:
+def code_for_symbol(symbol: str | None, slots: list[dict[str, Any]], venue: str | None = None) -> str | None:
+    """Code from a slot trading this symbol. With venue given, only slots on that
+    venue match and there is NO token fallback (a spot fill must never be tagged
+    with a perp strategy code, e.g. manual NEAR spot ≠ A6 ls__NEAR__)."""
     sym = str(symbol or "").upper().replace("USDT", "")
     for slot in slots:
         ss = str(slot.get("symbol") or "").upper().replace("USDT", "")
+        if venue and str(slot.get("venue") or "spot") != venue:
+            continue
         if ss == sym:
             return code_for(slot.get("strategy_id"), slot.get("family"))
+    if venue:
+        return None
     # Closed trades may predate strategy_id; use the unique symbol token in
     # the variant id as a deterministic fallback (e.g. ls__NEAR__...).
     token = f"__{sym}__"

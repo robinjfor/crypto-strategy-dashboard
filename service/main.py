@@ -26,7 +26,7 @@ import sys
 from datetime import datetime, timezone
 
 from binance_client import BinanceClient
-from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop, spot_market_exit, net_filled_qty
+from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop, spot_market_exit, net_filled_qty, fee_usdt_from_rows, finalize_closed_pnl
 from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, slot_by_id, all_known_slots, FUTURES_FAMILIES, venue_for_family, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
 from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
 from slots import ensure_approved_families
@@ -306,6 +306,12 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     "filled_at": now_iso_taipei(),
                     "notional_usdt": opened["notional_usdt"],
                 }
+                try:
+                    _ut = [t for t in (fc.user_trades(sig["symbol"], limit=20) or [])
+                           if str(t.get("orderId")) == str(order.get("orderId"))]
+                    positions[slot_id]["entry_fee_usdt"] = fee_usdt_from_rows(_ut, sig["symbol"])
+                except Exception as e:  # noqa: BLE001
+                    log.warning("entry_fee_lookup_fail slot=%s err=%s", slot_id, e)
                 if stop:
                     try:
                         stop_ord = place_stop_reduce_only(
@@ -354,6 +360,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 "client_order_id": coid,
                 "order_id": order.get("orderId"),
                 "filled_at": now_iso_taipei(),
+                "entry_fee_usdt": fee_usdt_from_rows(fills, sig["symbol"]),
             }
             # Hard exchange stop immediately after fill (spot STOP_LOSS_LIMIT)
             try:
@@ -412,6 +419,14 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     "side": pos.get("side"), "venue": "futures",
                     "closed_at": now_iso_taipei(), "order_id": order.get("orderId"),
                 }
+                _xf = None
+                try:
+                    _ut = [t for t in (fc.user_trades(sig["symbol"], limit=20) or [])
+                           if str(t.get("orderId")) == str(order.get("orderId"))]
+                    _xf = fee_usdt_from_rows(_ut, sig["symbol"])
+                except Exception as e:  # noqa: BLE001
+                    log.warning("exit_fee_lookup_fail slot=%s err=%s", slot_id, e)
+                finalize_closed_pnl(closed, pos, _xf)
                 state.setdefault("closed_trades", []).append(closed)
                 state["closed_trades"] = state["closed_trades"][-200:]
                 positions.pop(slot_id, None)
@@ -443,6 +458,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 "closed_at": now_iso_taipei(),
                 "order_id": order.get("orderId"),
             }
+            finalize_closed_pnl(closed, pos, fee_usdt_from_rows(fills, sig["symbol"]))
             state.setdefault("closed_trades", []).append(closed)
             state["closed_trades"] = state["closed_trades"][-200:]
             positions.pop(slot_id, None)

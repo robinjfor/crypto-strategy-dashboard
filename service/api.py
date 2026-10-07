@@ -882,11 +882,17 @@ def _books_overview(
             if p.get("unrealized_pnl") is not None:
                 unreal += float(p["unrealized_pnl"])
         realized = 0.0
+        fees_known = 0.0
+        n_fee_missing = 0
         for t in closed_trades or []:
             if _quote_of_symbol(t.get("symbol")) != quote:
                 continue
             if t.get("pnl_usdt") is not None:
-                realized += float(t["pnl_usdt"])
+                realized += float(t["pnl_usdt"])  # net of fees when fee_usdt known
+            if t.get("fee_usdt") is not None:
+                fees_known += float(t["fee_usdt"])
+            if not t.get("fees_complete"):
+                n_fee_missing += 1
         equity = cash + pos_mv
         out[quote.lower()] = {
             "quote": quote,
@@ -895,6 +901,11 @@ def _books_overview(
             "positions_mv": round(pos_mv, 4),
             "equity": round(equity, 4),
             "realized_pnl": round(realized, 4),
+            "fees_usdt": round(fees_known, 4),
+            "trades_fee_missing": n_fee_missing,
+            # equity − starting − realized − unrealized: cash effect not in closed_trades
+            # (mostly fees on older trades recorded gross, or manual/untracked trades)
+            "unattributed_usdt": round(equity - starting - realized - unreal, 4),
             "unrealized_pnl": round(unreal, 4),
             "open_positions": len(pos_rows),
             "used": round(pos_mv, 4),
@@ -923,7 +934,7 @@ def build_status() -> dict:
                 recent_fills.append(
                     {
                         "symbol": sym,
-                        "code": code_for_symbol(sym, all_known_slots()),
+                        "code": code_for_symbol(sym, all_known_slots(), venue="spot"),
                         "id": t.get("id"),
                         "orderId": t.get("orderId"),
                         "commissionAsset": t.get("commissionAsset"),
@@ -979,10 +990,20 @@ def build_status() -> dict:
             store.mutate(_persist_fa)
         except Exception as e:  # noqa: BLE001
             log.warning("family_approved_at_persist_skip err=%s", e)
+    # Attribute by the slot that traded it (e.g. 9/27 OP = sat_op_4h → C3, not A7 ls_op).
+    _known = {str(x.get("id")): x for x in all_known_slots() if x.get("id")}
+    for t in closed_norm:
+        if t.get("slot") and not t.get("strategy_id"):
+            _rt = slot_by_id(str(t["slot"])) or _known.get(str(t["slot"])) or {}
+            if _rt.get("strategy_id"):
+                t["strategy_id"] = _rt["strategy_id"]
+                t["family"] = t.get("family") or _rt.get("family")
+                t.pop("code", None)
     closed_norm = [add_code(t, t.get("strategy_id"), t.get("family")) for t in closed_norm]
     for trade in closed_norm:
-        if not trade.get("code"):
-            trade["code"] = code_for_symbol(trade.get("symbol"), all_known_slots())
+        if not trade.get("code") and trade.get("slot"):
+            trade["code"] = code_for_symbol(trade.get("symbol"), all_known_slots(),
+                                            venue=str(trade.get("venue") or "spot"))
     alloc_pub = state.get("allocation_public") or _allocation_public(state)
     try:
         _doc, _ = resolve_allocation()

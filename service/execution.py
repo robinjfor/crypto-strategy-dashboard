@@ -58,6 +58,43 @@ def net_filled_qty(order: dict, symbol: str) -> float:
     return max(0.0, qty - fee)
 
 
+def fee_usdt_from_rows(rows, symbol: str) -> float | None:
+    """Commission in quote terms from spot fills / myTrades / futures userTrades.
+    Base-asset fee is valued at the fill price. Unknown asset (e.g. BNB) → None."""
+    if not rows:
+        return None
+    base = base_asset(symbol)
+    quote = symbol[len(base):] if symbol.startswith(base) else "USDT"
+    total = 0.0
+    for f in rows:
+        c = float(f.get("commission") or 0)
+        a = str(f.get("commissionAsset") or "").upper()
+        if c == 0:
+            continue
+        if a == quote:
+            total += c
+        elif a == base:
+            total += c * float(f.get("price") or 0)
+        else:
+            return None
+    return round(total, 6)
+
+
+def finalize_closed_pnl(closed: dict, pos: dict, exit_fee: float | None) -> dict:
+    """pnl_usdt becomes NET of entry+exit fees when known (gross kept separately)."""
+    gross = closed.get("pnl_usdt")
+    closed["pnl_gross_usdt"] = gross
+    fees = [pos.get("entry_fee_usdt"), exit_fee]
+    known = [float(f) for f in fees if f is not None]
+    closed["entry_fee_usdt"] = pos.get("entry_fee_usdt")
+    closed["exit_fee_usdt"] = exit_fee
+    closed["fee_usdt"] = round(sum(known), 6) if known else None
+    closed["fees_complete"] = all(f is not None for f in fees)
+    if gross is not None and known:
+        closed["pnl_usdt"] = round(float(gross) - sum(known), 4)
+    return closed
+
+
 def cancel_symbol_orders(client: BinanceClient, symbol: str) -> None:
     try:
         client.cancel_open_orders(symbol)
@@ -246,6 +283,7 @@ def market_close_slot(
         "closed_at": now_iso_taipei(),
         "order_id": order.get("orderId"),
     }
+    finalize_closed_pnl(closed, pos, fee_usdt_from_rows(fills, symbol))
     state.setdefault("closed_trades", []).append(closed)
     state["closed_trades"] = state["closed_trades"][-200:]
     positions.pop(slot_id, None)
@@ -294,7 +332,8 @@ def _entry_ms(pos: dict) -> int:
 
 
 def _record_exchange_close(state: dict, slot_id: str, pos: dict, *, qty: float, price: float | None,
-                           time_ms, order_id, reason: str, venue: str, tf: str | None) -> dict:
+                           time_ms, order_id, reason: str, venue: str, tf: str | None,
+                           exit_fee_usdt: float | None = None) -> dict:
     entry = float(pos.get("entry") or 0)
     is_long = str(pos.get("side") or "LONG").upper() == "LONG"
     pnl = None
@@ -307,6 +346,7 @@ def _record_exchange_close(state: dict, slot_id: str, pos: dict, *, qty: float, 
         "order_id": order_id, "strategy_id": pos.get("strategy_id"),
         "detected_at": now_iso_taipei(), "source": "exchange_reconcile",
     }
+    finalize_closed_pnl(closed, pos, exit_fee_usdt)
     if venue == "futures":
         closed["side"] = pos.get("side")
     state.setdefault("closed_trades", []).append(closed)
@@ -360,7 +400,7 @@ def _spot_closed_info(client, slot_id: str, pos: dict) -> dict | None:
         quote = sum(float(t.get("quoteQty") or float(t["qty"]) * float(t["price"])) for t in rows)
         reason = "stop" if (sid and str(last_oid) == str(sid)) or not sid else "external_sell"
         return {"qty": q, "price": quote / q if q else None, "time_ms": rows[-1].get("time"),
-                "order_id": last_oid, "reason": reason}
+                "order_id": last_oid, "reason": reason, "exit_fee_usdt": fee_usdt_from_rows(rows, symbol)}
     return {"qty": float(pos.get("qty") or 0), "price": None, "time_ms": None,
             "order_id": None, "reason": "position_gone"}
 
@@ -382,7 +422,7 @@ def _futures_closed_info(fc, slot_id: str, pos: dict) -> dict | None:
         q = sum(float(t["qty"]) for t in rs)
         quote = sum(float(t.get("quoteQty") or float(t["qty"]) * float(t["price"])) for t in rs)
         return {"qty": q, "price": quote / q if q else None, "time_ms": rs[-1].get("time"),
-                "order_id": last_oid, "reason": "stop"}
+                "order_id": last_oid, "reason": "stop", "exit_fee_usdt": fee_usdt_from_rows(rs, symbol)}
     return {"qty": float(pos.get("qty") or 0), "price": None, "time_ms": None,
             "order_id": None, "reason": "position_gone"}
 
