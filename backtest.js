@@ -18,6 +18,7 @@
     donchian_long_short_btc_regime: "donchian_long_short_btc_regime",
     ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp",
     ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
+    portfolio_core_satellite_perp: null, // runner not built yet → 準備中
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",
     ema_trend_hold: null,
@@ -527,6 +528,9 @@
           oos_wins: r.oos_wins_3y != null ? r.oos_wins_3y : r.oos_wins,
           oos_total: r.oos_total_3y != null ? r.oos_total_3y : (r.oos_total || 6),
           n_trades: r.n_trades_3y != null ? r.n_trades_3y : r.n_trades,
+          robust_neighbor_pct: r.robust_neighbor_pct,
+          backtest_code: r.backtest_code || "",
+          report: r.report || "",
           gate_pass: r.gate_pass_3y != null ? r.gate_pass_3y : r.gate_pass,
           gate_pass_3y: r.gate_pass_3y != null ? r.gate_pass_3y : r.gate_pass,
           gate_pass_both: r.gate_pass_both,
@@ -592,6 +596,10 @@
       " · MaxDD " + pctPts(fp.maxdd) + " · OOS " + esc(fp.oos_pass || "—") +
       (fp.gate_pass_full != null ? (" · 全期門檻 " + (fp.gate_pass_full ? "過" : "未過") + "（參考）") : "") +
       "</div>" +
+      "<div><span class=\"lbl\">其他</span> 交易數 " + (r.n_trades != null ? esc(String(r.n_trades)) : "—") +
+      " · 鄰居穩健 " + (r.robust_neighbor_pct != null ? esc(String(r.robust_neighbor_pct)) + "%" : "—") +
+      (r.backtest_code ? " · 程式 " + esc(String(r.backtest_code).split("/").slice(-3).join("/")) : "") +
+      (r.report ? " · 報告 " + esc(String(r.report).split("/").slice(-2).join("/")) : "") + "</div>" +
       (reasons ? '<div class="fail-reason">3年未過：' + esc(reasons) + "</div>" : "") +
       "</div>" +
       '<canvas id="eq-' + esc(r.strategy_id) + '" height="180"></canvas>' +

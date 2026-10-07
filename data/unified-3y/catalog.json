@@ -35,10 +35,10 @@
       ]
     },
     "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
-    "generated_at": "2026-09-25 00:38:47 CST",
-    "n_strategies": 16,
-    "n_rows": 112,
-    "n_gate_pass_3y": 82,
+    "generated_at": "2026-10-07 18:05:47 CST",
+    "n_strategies": 17,
+    "n_rows": 122,
+    "n_gate_pass_3y": 92,
     "n_gate_pass_both": 8,
     "notes": [
       "Overlapping rows with scores.json copy metrics verbatim; catalog score rescored across all gate_pass_3y in this catalog.",
@@ -47,7 +47,9 @@
       "review=PENDING_EMILY for all rows.",
       "high_return append +45 gate passers (2026-09-24); scores rescored across full catalog gate pool.",
       "news_driven merge +21 robust rows; cloud_supported=false; scores rescored.",
-      "cagr70 merge +10 rows (real funding, next-open); cloud_supported=false"
+      "cagr70 merge +10 rows (real funding, next-open); cloud_supported=false",
+      "liquidity fields added; approval_excluded for illiquid; score rescored among liquidity-ok gate passers only",
+      "portfolio118 append port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb (+family portfolio_core_satellite_perp) and A1-A4 enrichment (2026-10-07 18:05:47 CST); rescored."
     ],
     "inconsistencies_vs_scores_json": [
       {
@@ -311,7 +313,19 @@
       "port_ew_univ10_lev2.0_vtNone",
       "port_ew_univ10_lev2.0_vt0.03",
       "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS"
-    ]
+    ],
+    "liquidity_rule": {
+      "rule": "vol_only_A",
+      "description": "永續日成交額 ≥5000萬美元的天數 >50%（3y）；不看市值排名。",
+      "volume_threshold_usd": 50000000,
+      "vol_days_pct_min": 50,
+      "mcap_rank_required": false,
+      "ruling_note": "2026-09-25 Asia/Taipei 控管裁定：主規則改為門檻 A。含 ICP/LSK 列 illiquid＋approval_excluded；其餘 ok。"
+    },
+    "n_gate_pass_3y_liquidity_ok": 89,
+    "n_liquidity_ok": 110,
+    "n_liquidity_illiquid": 2,
+    "aggressive_refresh": "2026-10-01: extended window + lev≤3 grid; new rows from aggressive/"
   },
   "strategies": [
     {
@@ -382,9 +396,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 35.3361,
+          "score": 35.4662,
           "data_short": false,
-          "code": "C1"
+          "code": "C1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 51,
+            "vol_days_pct": 78.76,
+            "median_vol_usd": 108881975.84,
+            "symbols": [
+              "ARB"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
@@ -432,9 +457,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 32.0557,
+          "score": 32.1042,
           "data_short": false,
-          "code": "C2"
+          "code": "C2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
@@ -481,9 +517,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 24.7159,
+          "score": 24.7749,
           "data_short": false,
-          "code": "C3"
+          "code": "C3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
@@ -531,9 +578,26 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 23.3012,
+          "score": 23.3433,
           "data_short": false,
-          "code": "C4"
+          "code": "C4",
+          "liquidity": {
+            "status": "illiquid",
+            "mcap_rank": 38,
+            "vol_days_pct": 35.28,
+            "median_vol_usd": 35618314.7,
+            "symbols": [
+              "ICP"
+            ],
+            "rule": "vol_only_A",
+            "bad_symbols": [
+              "ICP"
+            ],
+            "reasons": [
+              "ICP:vol_days_pct=35.28<=50"
+            ]
+          },
+          "approval_excluded": true
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
@@ -582,9 +646,20 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 23.3005,
+          "score": 23.3388,
           "data_short": false,
-          "code": "C5"
+          "code": "C5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
@@ -633,9 +708,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 18.4799,
+          "score": 18.5306,
           "data_short": false,
-          "code": "C6"
+          "code": "C6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__LSK__4h",
@@ -684,9 +770,26 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 16.2745,
+          "score": 16.2921,
           "data_short": false,
-          "code": "C7"
+          "code": "C7",
+          "liquidity": {
+            "status": "illiquid",
+            "mcap_rank": 209,
+            "vol_days_pct": 5.44,
+            "median_vol_usd": 2899535.42,
+            "symbols": [
+              "LSK"
+            ],
+            "rule": "vol_only_A",
+            "bad_symbols": [
+              "LSK"
+            ],
+            "reasons": [
+              "LSK:vol_days_pct=5.44<=50"
+            ]
+          },
+          "approval_excluded": true
         },
         {
           "strategy_id": "donchian55_breakout_atr__APT__1h",
@@ -734,9 +837,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 12.2226,
+          "score": 12.239,
           "data_short": false,
-          "code": "C8"
+          "code": "C8",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 79,
+            "vol_days_pct": 74.66,
+            "median_vol_usd": 90428617.1,
+            "symbols": [
+              "APT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian_breakout_atr__NEAR__4h",
@@ -790,7 +904,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C9"
+          "code": "C9",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 23,
+            "vol_days_pct": 95.62,
+            "median_vol_usd": 142196825.34,
+            "symbols": [
+              "NEAR"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian_breakout_wide__NEAR__4h",
@@ -843,7 +968,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C10"
+          "code": "C10",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 23,
+            "vol_days_pct": 95.62,
+            "median_vol_usd": 142196825.34,
+            "symbols": [
+              "NEAR"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian_breakout_atr__SUI__4h",
@@ -896,7 +1032,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C11"
+          "code": "C11",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 30,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "SUI"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 22
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_s2.5_t3.5__CAKE__4h",
@@ -949,7 +1097,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C12"
+          "code": "C12",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 61,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "CAKE"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 51
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__ADA__4h",
@@ -1002,7 +1162,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C13"
+          "code": "C13",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 19,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ADA"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 12
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
@@ -1055,7 +1227,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C14"
+          "code": "C14",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian_breakout_atr__AAVE__4h",
@@ -1111,7 +1294,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C15"
+          "code": "C15",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 35,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "AAVE"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 27
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_breakout_atr__UNI__4h",
@@ -1164,7 +1359,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C16"
+          "code": "C16",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 24,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "UNI"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 17
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__INJ__1h",
@@ -1221,7 +1428,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C17"
+          "code": "C17",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 65,
+            "vol_days_pct": 71.1,
+            "median_vol_usd": 81936846.77,
+            "symbols": [
+              "INJ"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_breakout_atr__WLD__4h",
@@ -1277,7 +1495,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C18"
+          "code": "C18",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 63,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "WLD"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 53
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_breakout_atr__ONDO__4h",
@@ -1331,7 +1561,19 @@
           ],
           "score": 0.0,
           "data_short": true,
-          "code": "C19"
+          "code": "C19",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 40,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ONDO"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 32
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__AVAX__4h",
@@ -1388,7 +1630,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "C20"
+          "code": "C20",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 27,
+            "vol_days_pct": 98.91,
+            "median_vol_usd": 236167870.32,
+            "symbols": [
+              "AVAX"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__STRK__4h",
@@ -1444,7 +1697,19 @@
           ],
           "score": 0.0,
           "data_short": true,
-          "code": "C21"
+          "code": "C21",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 146,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "STRK"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 134
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 8,
@@ -1517,9 +1782,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 17.4173,
+          "score": 17.4596,
           "data_short": false,
-          "code": "J1"
+          "code": "J1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",
@@ -1568,9 +1844,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 13.4574,
+          "score": 13.4899,
           "data_short": false,
-          "code": "J2"
+          "code": "J2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5_btcRegimeD__FET__4h",
@@ -1619,9 +1906,20 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 13.0348,
+          "score": 13.0663,
           "data_short": false,
-          "code": "J3"
+          "code": "J3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
@@ -1675,7 +1973,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "J4"
+          "code": "J4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 7,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 2666615832.46,
+            "symbols": [
+              "SOL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 3,
@@ -1754,7 +2063,18 @@
           "score": 0.0,
           "data_short": false,
           "cloud_supported": false,
-          "code": "K1"
+          "code": "K1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 7,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 2666615832.46,
+            "symbols": [
+              "SOL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -1831,9 +2151,20 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 26.0068,
+          "score": 26.1503,
           "data_short": false,
-          "code": "F1"
+          "code": "F1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 7,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 2666615832.46,
+            "symbols": [
+              "SOL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__AR__4h",
@@ -1889,7 +2220,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "F2"
+          "code": "F2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 107,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "AR"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 96
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ema9_21_s2.5_t3.5__HYPE__4h",
@@ -1947,7 +2290,19 @@
           ],
           "score": 0.0,
           "data_short": true,
-          "code": "F3"
+          "code": "F3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 9,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "HYPE"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 7
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__ENA__4h",
@@ -2003,7 +2358,19 @@
           ],
           "score": 0.0,
           "data_short": true,
-          "code": "F4"
+          "code": "F4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 45,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ENA"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 37
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ema_cross_atr__RAY__1h",
@@ -2063,7 +2430,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "F5"
+          "code": "F5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 83,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "RAY"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 73
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 1,
@@ -2141,7 +2520,19 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "L1"
+          "code": "L1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 12,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "DOGE"
+            ],
+            "rule": "vol_only_A",
+            "mcap_rank_ex_stable_wrapped": 9
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2218,7 +2609,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "M1"
+          "code": "M1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 7,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 2666615832.46,
+            "symbols": [
+              "SOL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2288,7 +2690,16 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "N1"
+          "code": "N1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2361,7 +2772,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O1"
+          "code": "O1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "SMH"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm5__0050_TW__1d",
@@ -2412,7 +2834,16 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O2"
+          "code": "O2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm5__TQQQ__1d",
@@ -2464,7 +2895,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O3"
+          "code": "O3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "TQQQ"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm5__BTC__1d",
@@ -2516,7 +2958,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O4"
+          "code": "O4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 1,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 13877840027.72,
+            "symbols": [
+              "BTC"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm3__QQQ__1d",
@@ -2567,7 +3020,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O5"
+          "code": "O5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "QQQ"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm5__SPY__1d",
@@ -2618,7 +3082,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O6"
+          "code": "O6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "SPY"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "sma200_confirm5__ETH__1d",
@@ -2670,7 +3145,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "O7"
+          "code": "O7",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 2,
+            "vol_days_pct": 100.0,
+            "median_vol_usd": 8965170896.13,
+            "symbols": [
+              "ETH"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2745,7 +3231,18 @@
           ],
           "score": 0.0,
           "data_short": false,
-          "code": "P1"
+          "code": "P1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "SPY"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2815,11 +3312,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 22.4975,
+          "score": 22.5687,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D13"
+          "code": "D13",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -2861,11 +3369,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 26.9767,
+          "score": 27.0395,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D6"
+          "code": "D6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -2907,11 +3426,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.6449,
+          "score": 24.7166,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D9"
+          "code": "D9",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -2953,11 +3483,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.0297,
+          "score": 23.1015,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D12"
+          "code": "D12",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.02",
@@ -2999,11 +3540,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 26.5425,
+          "score": 26.6169,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D7"
+          "code": "D7",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03",
@@ -3045,11 +3597,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.5442,
+          "score": 23.6277,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D10"
+          "code": "D10",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5",
@@ -3091,11 +3654,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.7159,
+          "score": 24.7749,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D8"
+          "code": "D8",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5",
@@ -3137,11 +3711,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.747,
+          "score": 20.7886,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D14"
+          "code": "D14",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -3183,11 +3768,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.3093,
+          "score": 20.3487,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D17"
+          "code": "D17",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -3229,11 +3825,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.7281,
+          "score": 20.7698,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D16"
+          "code": "D16",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -3275,11 +3882,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.747,
+          "score": 20.7886,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D15"
+          "code": "D15",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5",
@@ -3321,11 +3939,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.3005,
+          "score": 23.3388,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D11"
+          "code": "D11",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.02",
@@ -3367,11 +3996,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.1517,
+          "score": 19.2141,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D18"
+          "code": "D18",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0",
@@ -3413,11 +4053,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 18.4799,
+          "score": 18.5306,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D19"
+          "code": "D19",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5",
@@ -3459,11 +4110,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4284,
+          "score": 33.4819,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D1"
+          "code": "D1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.02",
@@ -3505,11 +4167,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.9281,
+          "score": 29.9748,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D5"
+          "code": "D5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.03",
@@ -3551,11 +4224,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4284,
+          "score": 33.4819,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D2"
+          "code": "D2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.04",
@@ -3597,11 +4281,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4284,
+          "score": 33.4819,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D3"
+          "code": "D3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5",
@@ -3643,11 +4338,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 32.0557,
+          "score": 32.1042,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "D4"
+          "code": "D4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 71,
+            "vol_days_pct": 93.71,
+            "median_vol_usd": 129898744.27,
+            "symbols": [
+              "FIL"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 19,
@@ -3713,11 +4419,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 21.9047,
+          "score": 21.9775,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H6"
+          "code": "H6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -3757,11 +4474,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.6721,
+          "score": 24.7498,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H1"
+          "code": "H1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -3801,7 +4529,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.1159,
+          "score": 20.211,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -3811,7 +4539,18 @@
             "cagr_3y_median": 40.337
           },
           "source": "high_return",
-          "code": "H7"
+          "code": "H7",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -3851,7 +4590,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.2827,
+          "score": 24.3872,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -3861,7 +4600,18 @@
             "cagr_3y_median": 46.5247
           },
           "source": "high_return",
-          "code": "H2"
+          "code": "H2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS",
@@ -3901,11 +4651,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.9796,
+          "score": 20.032,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H8"
+          "code": "H8",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -3945,11 +4706,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.884,
+          "score": 19.9357,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H9"
+          "code": "H9",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -3989,11 +4761,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.579,
+          "score": 16.645,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H10"
+          "code": "H10",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -4033,11 +4816,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.4246,
+          "score": 16.4896,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H11"
+          "code": "H11",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS",
@@ -4077,11 +4871,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.0274,
+          "score": 23.1011,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H5"
+          "code": "H5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS",
@@ -4121,11 +4926,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.1698,
+          "score": 23.2359,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H4"
+          "code": "H4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS",
@@ -4165,11 +4981,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.4998,
+          "score": 23.5868,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "H3"
+          "code": "H3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 11,
@@ -4235,11 +5062,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.6211,
+          "score": 17.6599,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E8"
+          "code": "E8",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fggt25",
@@ -4281,11 +5119,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 14.9479,
+          "score": 14.9911,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E13"
+          "code": "E13",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fglt75",
@@ -4327,11 +5176,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 28.3794,
+          "score": 28.4578,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E2"
+          "code": "E2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -4373,7 +5233,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.2418,
+          "score": 29.34,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -4383,7 +5243,18 @@
             "cagr_3y_median": 6.5168
           },
           "source": "high_return",
-          "code": "E1"
+          "code": "E1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -4425,11 +5296,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 21.5949,
+          "score": 21.6508,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E3"
+          "code": "E3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fgmid25_75",
@@ -4471,11 +5353,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.0697,
+          "score": 19.1355,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E6"
+          "code": "E6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fggt25",
@@ -4517,11 +5410,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 15.3623,
+          "score": 15.3853,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E12"
+          "code": "E12",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fglt75",
@@ -4563,11 +5467,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.8934,
+          "score": 17.9166,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E7"
+          "code": "E7",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -4609,11 +5524,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 14.4155,
+          "score": 14.4361,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E14"
+          "code": "E14",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -4655,11 +5581,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 11.3386,
+          "score": 11.3479,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E15"
+          "code": "E15",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 37,
+            "vol_days_pct": 90.7,
+            "median_vol_usd": 124600077.99,
+            "symbols": [
+              "DOT"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fggt25",
@@ -4701,11 +5638,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.9188,
+          "score": 19.9773,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E5"
+          "code": "E5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fggt25",
@@ -4747,11 +5695,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.3011,
+          "score": 20.3779,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E4"
+          "code": "E4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fglt75",
@@ -4793,11 +5752,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.7926,
+          "score": 16.8463,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E10"
+          "code": "E10",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fgmid25_75",
@@ -4839,11 +5809,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.2922,
+          "score": 17.3539,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E9"
+          "code": "E9",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fgmid25_75",
@@ -4885,11 +5866,22 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.7118,
+          "score": 16.7827,
           "data_short": false,
           "robust": null,
           "source": "high_return",
-          "code": "E11"
+          "code": "E11",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 78,
+            "vol_days_pct": 70.01,
+            "median_vol_usd": 79120525.43,
+            "symbols": [
+              "FET"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
         }
       ],
       "n_gate_pass_3y": 15,
@@ -4941,9 +5933,9 @@
           "initial": 10000.0,
           "final": 159128.28,
           "ret_3y": 1491.2828,
-          "cagr_3y": 151.4376,
+          "cagr_3y": 149.9362,
           "ret_1y": 197.9213,
-          "bh_ret_3y": -73.4664,
+          "bh_ret_3y": -75.5168,
           "maxdd_3y": -32.7002,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
@@ -4962,19 +5954,44 @@
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 91.67,
-            "ret_3y_median": 1722.1798,
-            "cagr_3y_median": 162.9086,
             "fragile": false
           },
           "data_short": false,
-          "score": 57.1741,
+          "score": 57.2149,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A3"
+          "code": "A3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 51,
+            "vol_days_pct": 78.76,
+            "median_vol_usd": 108881975.84,
+            "symbols": [
+              "ARB"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false,
+          "n_trades": 84,
+          "oos_pass": "5/6",
+          "maxdd": -32.7002,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 91.67,
+          "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
+          "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
+          "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
+          "report_portfolio118": "/workspace/strategy-v-p118-arb-a3/SPEC.md",
+          "portfolio118_check": {
+            "ret_3y": 1491.2828,
+            "cagr_3y": 151.2615,
+            "maxdd_daily": -30.1633,
+            "ret_1y": 197.9213,
+            "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          }
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -5000,9 +6017,9 @@
           "initial": 10000.0,
           "final": 118320.02,
           "ret_3y": 1083.2002,
-          "cagr_3y": 127.7981,
+          "cagr_3y": 126.5832,
           "ret_1y": 149.7406,
-          "bh_ret_3y": -73.4664,
+          "bh_ret_3y": -75.5168,
           "maxdd_3y": -30.9983,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
@@ -5021,19 +6038,44 @@
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 100.0,
-            "ret_3y_median": 1411.9659,
-            "cagr_3y_median": 146.4346,
             "fragile": false
           },
           "data_short": false,
-          "score": 49.5362,
+          "score": 49.5817,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A4"
+          "code": "A4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 51,
+            "vol_days_pct": 78.76,
+            "median_vol_usd": 108881975.84,
+            "symbols": [
+              "ARB"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false,
+          "n_trades": 84,
+          "oos_pass": "5/6",
+          "maxdd": -30.9983,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 100.0,
+          "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
+          "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
+          "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
+          "report_portfolio118": "/workspace/strategy-v-p118-arb-a4/SPEC.md",
+          "portfolio118_check": {
+            "ret_3y": 1083.2002,
+            "cagr_3y": 127.6557,
+            "maxdd_daily": -30.1633,
+            "ret_1y": 149.7406,
+            "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          }
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
@@ -5059,9 +6101,9 @@
           "initial": 10000.0,
           "final": 442915.86,
           "ret_3y": 4329.1586,
-          "cagr_3y": 253.6431,
+          "cagr_3y": 250.7535,
           "ret_1y": 319.4646,
-          "bh_ret_3y": -73.4664,
+          "bh_ret_3y": -75.5168,
           "maxdd_3y": -44.6747,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
@@ -5080,8 +6122,6 @@
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 75.0,
-            "ret_3y_median": 2828.6934,
-            "cagr_3y_median": 207.0415,
             "fragile": false
           },
           "data_short": false,
@@ -5092,7 +6132,34 @@
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A1"
+          "code": "A1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 51,
+            "vol_days_pct": 78.76,
+            "median_vol_usd": 108881975.84,
+            "symbols": [
+              "ARB"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false,
+          "n_trades": 84,
+          "oos_pass": "5/6",
+          "maxdd": -44.6747,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 75.0,
+          "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
+          "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
+          "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
+          "report_portfolio118": "/workspace/strategy-v-p118-arb-a1/SPEC.md",
+          "portfolio118_check": {
+            "ret_3y": 4329.1586,
+            "cagr_3y": 253.3039,
+            "maxdd_daily": -42.1574,
+            "ret_1y": 319.4646,
+            "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          }
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS",
@@ -5118,9 +6185,9 @@
           "initial": 10000.0,
           "final": 300741.22,
           "ret_3y": 2907.4122,
-          "cagr_3y": 210.8449,
+          "cagr_3y": 208.5634,
           "ret_1y": 235.3389,
-          "bh_ret_3y": -73.4664,
+          "bh_ret_3y": -75.5168,
           "maxdd_3y": -43.1007,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
@@ -5139,19 +6206,44 @@
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 100.0,
-            "ret_3y_median": 1738.684,
-            "cagr_3y_median": 160.851,
             "fragile": false
           },
           "data_short": false,
-          "score": 67.6648,
+          "score": 67.6857,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A2"
+          "code": "A2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 51,
+            "vol_days_pct": 78.76,
+            "median_vol_usd": 108881975.84,
+            "symbols": [
+              "ARB"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false,
+          "n_trades": 84,
+          "oos_pass": "5/6",
+          "maxdd": -43.1007,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 100.0,
+          "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
+          "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
+          "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
+          "report_portfolio118": "/workspace/strategy-v-p118-arb-a2/SPEC.md",
+          "portfolio118_check": {
+            "ret_3y": 2907.4122,
+            "cagr_3y": 210.5772,
+            "maxdd_daily": -42.0042,
+            "ret_1y": 235.3389,
+            "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          }
         },
         {
           "strategy_id": "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -5177,9 +6269,9 @@
           "initial": 10000.0,
           "final": 68885.13,
           "ret_3y": 588.8513,
-          "cagr_3y": 90.2442,
+          "cagr_3y": 89.4327,
           "ret_1y": 49.6633,
-          "bh_ret_3y": 293.1706,
+          "bh_ret_3y": 360.1239,
           "maxdd_3y": -44.1788,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
@@ -5198,19 +6290,32 @@
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 58.33,
-            "ret_3y_median": 1054.9387,
-            "cagr_3y_median": 125.2824,
             "fragile": false
           },
           "data_short": false,
-          "score": 27.3769,
+          "score": 27.2653,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A6"
+          "code": "A6",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 23,
+            "vol_days_pct": 95.62,
+            "median_vol_usd": 142196825.34,
+            "symbols": [
+              "NEAR"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false,
+          "n_trades": 89,
+          "oos_pass": "4/6",
+          "maxdd": -44.1788,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS",
@@ -5262,14 +6367,448 @@
             "fragile": false
           },
           "data_short": false,
-          "score": 29.1845,
+          "score": 29.3171,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": 0,
-          "code": "A5"
+          "code": "A5",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": 119,
+            "vol_days_pct": 76.3,
+            "median_vol_usd": 94911977.71,
+            "symbols": [
+              "OP"
+            ],
+            "rule": "vol_only_A"
+          },
+          "approval_excluded": false
+        },
+        {
+          "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS",
+          "symbol": "OP",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 20,
+            "stop_m": 1.5,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.5,
+            "vol_target": 0.03,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 54.3372,
+          "ret_3y": 270.9578,
+          "ret_1y": 24.3437,
+          "bh_ret_3y": -89.8957,
+          "maxdd_3y": -38.7596,
+          "maxdd": -38.7596,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "final": 37095.78,
+          "n_trades": 82,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
+          },
+          "score": 16.0207,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "OP"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A8"
+        },
+        {
+          "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS",
+          "symbol": "FET",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 55,
+            "stop_m": 2.0,
+            "trail_m": 3.0,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 2.0,
+            "vol_target": 0.03,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 49.8238,
+          "ret_3y": 239.1467,
+          "ret_1y": 6.2077,
+          "bh_ret_3y": 7.958,
+          "maxdd_3y": -42.7431,
+          "maxdd": -42.7431,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "final": 33914.67,
+          "n_trades": 44,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 75.0,
+            "fragile": false
+          },
+          "score": 12.0778,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "FET"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A14"
+        },
+        {
+          "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS",
+          "symbol": "OP",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 20,
+            "stop_m": 1.5,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.5,
+            "vol_target": null,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 49.5447,
+          "ret_3y": 237.242,
+          "ret_1y": 16.7325,
+          "bh_ret_3y": -89.8957,
+          "maxdd_3y": -44.5632,
+          "maxdd": -44.5632,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "final": 33724.2,
+          "n_trades": 82,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 91.67,
+            "fragile": false
+          },
+          "score": 12.5218,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "OP"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A13"
+        },
+        {
+          "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS",
+          "symbol": "FET",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 55,
+            "stop_m": 2.0,
+            "trail_m": 3.0,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.5,
+            "vol_target": null,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 47.092,
+          "ret_3y": 220.8088,
+          "ret_1y": 16.7913,
+          "bh_ret_3y": 7.958,
+          "maxdd_3y": -44.2581,
+          "maxdd": -44.2581,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "final": 32080.88,
+          "n_trades": 44,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 58.33,
+            "fragile": false
+          },
+          "score": 12.0532,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "FET"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A15"
+        },
+        {
+          "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS",
+          "symbol": "FET",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 55,
+            "stop_m": 2.0,
+            "trail_m": 3.0,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.5,
+            "vol_target": 0.03,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 39.7972,
+          "ret_3y": 175.1165,
+          "ret_1y": 6.408,
+          "bh_ret_3y": 7.958,
+          "maxdd_3y": -34.0097,
+          "maxdd": -34.0097,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "final": 27511.65,
+          "n_trades": 44,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 91.67,
+            "fragile": false
+          },
+          "score": 13.8153,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "FET"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A12"
+        },
+        {
+          "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS",
+          "symbol": "OP",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 20,
+            "stop_m": 1.5,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.0,
+            "vol_target": 0.03,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 37.2559,
+          "ret_3y": 160.2845,
+          "ret_1y": 18.562,
+          "bh_ret_3y": -89.8957,
+          "maxdd_3y": -27.9125,
+          "maxdd": -27.9125,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "final": 26028.45,
+          "n_trades": 82,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
+          },
+          "score": 16.9661,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "OP"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A7"
+        },
+        {
+          "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__LS",
+          "symbol": "OP",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 20,
+            "stop_m": 1.5,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.0,
+            "vol_target": null,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 35.0111,
+          "ret_3y": 147.6365,
+          "ret_1y": 14.2393,
+          "bh_ret_3y": -89.8957,
+          "maxdd_3y": -32.4299,
+          "maxdd": -32.4299,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "final": 24763.65,
+          "n_trades": 82,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 91.67,
+            "fragile": false
+          },
+          "score": 14.6107,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "OP"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A10"
+        },
+        {
+          "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__LS",
+          "symbol": "FET",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 55,
+            "stop_m": 2.0,
+            "trail_m": 3.0,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.0,
+            "vol_target": null,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 33.4597,
+          "ret_3y": 139.1401,
+          "ret_1y": 12.8019,
+          "bh_ret_3y": 7.958,
+          "maxdd_3y": -31.4326,
+          "maxdd": -31.4326,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "final": 23914.01,
+          "n_trades": 44,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 83.33,
+            "fragile": false
+          },
+          "score": 14.4005,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "FET"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A11"
+        },
+        {
+          "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS",
+          "symbol": "FET",
+          "timeframe": "4h",
+          "params": {
+            "donch_n": 55,
+            "stop_m": 2.0,
+            "trail_m": 3.0,
+            "max_hold": 36,
+            "atr_mode": "wilder",
+            "btc_regime": true,
+            "leverage": 1.0,
+            "vol_target": 0.03,
+            "check_liq": true,
+            "regime_scale": "none"
+          },
+          "gate_pass_3y": true,
+          "cagr_3y": 27.9379,
+          "ret_3y": 110.484,
+          "ret_1y": 5.4338,
+          "bh_ret_3y": 7.958,
+          "maxdd_3y": -24.1003,
+          "maxdd": -24.1003,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "final": 21048.4,
+          "n_trades": 44,
+          "robust": {
+            "n_neighbors": 12,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
+          },
+          "score": 15.6358,
+          "cloud_supported": true,
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "FET"
+            ],
+            "note": "universe/components all rule-A liquid at last check"
+          },
+          "approval_excluded": false,
+          "source": "aggressive_2026-10-01",
+          "n_liquidations": 0,
+          "code": "A9"
         }
       ],
       "n_gate_pass_3y": 6,
@@ -5318,13 +6857,13 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 63383.6,
-          "ret_3y": 533.836,
-          "cagr_3y": 85.0396,
-          "ret_1y": 48.865,
-          "bh_ret_3y": 220.8914,
+          "final": 63127.4,
+          "ret_3y": 531.274,
+          "cagr_3y": 84.0713,
+          "ret_1y": 48.2633,
+          "bh_ret_3y": 217.9486,
           "maxdd_3y": -32.8378,
-          "oos_pass_3y": "5/6",
+          "oos_pass_3y": "4/6",
           "oos_wins_3y": 5,
           "n_trades_3y": null,
           "gate_pass_3y": true,
@@ -5339,21 +6878,105 @@
           ],
           "funding_source": "binance_usdtm_historical",
           "robust": {
-            "n_neighbors": 6,
-            "gate_pass_3y_rate_pct": 66.67,
-            "ret_3y_median": 489.8725,
-            "fragile": false,
-            "note": "neighbors=same mode across pre-fixed lev×vt grid"
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
           },
           "data_short": false,
-          "score": 32.4754,
+          "score": 32.4368,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": null,
-          "code": "B3"
+          "code": "B3",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ARB",
+              "AVAX",
+              "DOT",
+              "ETH",
+              "FET",
+              "INJ",
+              "LINK",
+              "NEAR",
+              "OP",
+              "SOL"
+            ],
+            "rule": "vol_only_A",
+            "per_symbol": {
+              "ARB": {
+                "status": "ok",
+                "mcap_rank": 51,
+                "vol_days_pct": 78.76,
+                "median_vol_usd": 108881975.84
+              },
+              "AVAX": {
+                "status": "ok",
+                "mcap_rank": 27,
+                "vol_days_pct": 98.91,
+                "median_vol_usd": 236167870.32
+              },
+              "DOT": {
+                "status": "ok",
+                "mcap_rank": 37,
+                "vol_days_pct": 90.7,
+                "median_vol_usd": 124600077.99
+              },
+              "ETH": {
+                "status": "ok",
+                "mcap_rank": 2,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 8965170896.13
+              },
+              "FET": {
+                "status": "ok",
+                "mcap_rank": 78,
+                "vol_days_pct": 70.01,
+                "median_vol_usd": 79120525.43
+              },
+              "INJ": {
+                "status": "ok",
+                "mcap_rank": 65,
+                "vol_days_pct": 71.1,
+                "median_vol_usd": 81936846.77
+              },
+              "LINK": {
+                "status": "ok",
+                "mcap_rank": 20,
+                "vol_days_pct": 99.09,
+                "median_vol_usd": 235424880.03
+              },
+              "NEAR": {
+                "status": "ok",
+                "mcap_rank": 23,
+                "vol_days_pct": 95.62,
+                "median_vol_usd": 142196825.34
+              },
+              "OP": {
+                "status": "ok",
+                "mcap_rank": 119,
+                "vol_days_pct": 76.3,
+                "median_vol_usd": 94911977.71
+              },
+              "SOL": {
+                "status": "ok",
+                "mcap_rank": 7,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 2666615832.46
+              }
+            }
+          },
+          "approval_excluded": false,
+          "n_trades": null,
+          "oos_pass": "4/6",
+          "maxdd": -32.8378,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
         },
         {
           "strategy_id": "port_ew_univ10_lev1.5_vt0.03",
@@ -5380,11 +7003,11 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 54590.89,
-          "ret_3y": 445.9089,
-          "cagr_3y": 76.0559,
-          "ret_1y": 40.7304,
-          "bh_ret_3y": 220.8914,
+          "final": 54370.26,
+          "ret_3y": 443.7026,
+          "cagr_3y": 75.19,
+          "ret_1y": 40.1616,
+          "bh_ret_3y": 217.9486,
           "maxdd_3y": -33.0523,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
@@ -5401,21 +7024,105 @@
           ],
           "funding_source": "binance_usdtm_historical",
           "robust": {
-            "n_neighbors": 6,
-            "gate_pass_3y_rate_pct": 66.67,
-            "ret_3y_median": 489.8725,
-            "fragile": false,
-            "note": "neighbors=same mode across pre-fixed lev×vt grid"
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
           },
           "data_short": false,
-          "score": 28.6406,
+          "score": 28.6065,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": null,
-          "code": "B4"
+          "code": "B4",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ARB",
+              "AVAX",
+              "DOT",
+              "ETH",
+              "FET",
+              "INJ",
+              "LINK",
+              "NEAR",
+              "OP",
+              "SOL"
+            ],
+            "rule": "vol_only_A",
+            "per_symbol": {
+              "ARB": {
+                "status": "ok",
+                "mcap_rank": 51,
+                "vol_days_pct": 78.76,
+                "median_vol_usd": 108881975.84
+              },
+              "AVAX": {
+                "status": "ok",
+                "mcap_rank": 27,
+                "vol_days_pct": 98.91,
+                "median_vol_usd": 236167870.32
+              },
+              "DOT": {
+                "status": "ok",
+                "mcap_rank": 37,
+                "vol_days_pct": 90.7,
+                "median_vol_usd": 124600077.99
+              },
+              "ETH": {
+                "status": "ok",
+                "mcap_rank": 2,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 8965170896.13
+              },
+              "FET": {
+                "status": "ok",
+                "mcap_rank": 78,
+                "vol_days_pct": 70.01,
+                "median_vol_usd": 79120525.43
+              },
+              "INJ": {
+                "status": "ok",
+                "mcap_rank": 65,
+                "vol_days_pct": 71.1,
+                "median_vol_usd": 81936846.77
+              },
+              "LINK": {
+                "status": "ok",
+                "mcap_rank": 20,
+                "vol_days_pct": 99.09,
+                "median_vol_usd": 235424880.03
+              },
+              "NEAR": {
+                "status": "ok",
+                "mcap_rank": 23,
+                "vol_days_pct": 95.62,
+                "median_vol_usd": 142196825.34
+              },
+              "OP": {
+                "status": "ok",
+                "mcap_rank": 119,
+                "vol_days_pct": 76.3,
+                "median_vol_usd": 94911977.71
+              },
+              "SOL": {
+                "status": "ok",
+                "mcap_rank": 7,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 2666615832.46
+              }
+            }
+          },
+          "approval_excluded": false,
+          "n_trades": null,
+          "oos_pass": "4/6",
+          "maxdd": -33.0523,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vtNone",
@@ -5442,13 +7149,13 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 102667.0,
-          "ret_3y": 926.67,
-          "cagr_3y": 117.3035,
-          "ret_1y": 63.1521,
-          "bh_ret_3y": 220.8914,
+          "final": 102108.13,
+          "ret_3y": 921.0813,
+          "cagr_3y": 115.8453,
+          "ret_1y": 62.264,
+          "bh_ret_3y": 217.9486,
           "maxdd_3y": -41.6834,
-          "oos_pass_3y": "5/6",
+          "oos_pass_3y": "4/6",
           "oos_wins_3y": 5,
           "n_trades_3y": null,
           "gate_pass_3y": true,
@@ -5463,21 +7170,105 @@
           ],
           "funding_source": "binance_usdtm_historical",
           "robust": {
-            "n_neighbors": 6,
-            "gate_pass_3y_rate_pct": 66.67,
-            "ret_3y_median": 489.8725,
-            "fragile": false,
-            "note": "neighbors=same mode across pre-fixed lev×vt grid"
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
           },
           "data_short": false,
-          "score": 35.613,
+          "score": 35.5231,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": null,
-          "code": "B1"
+          "code": "B1",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ARB",
+              "AVAX",
+              "DOT",
+              "ETH",
+              "FET",
+              "INJ",
+              "LINK",
+              "NEAR",
+              "OP",
+              "SOL"
+            ],
+            "rule": "vol_only_A",
+            "per_symbol": {
+              "ARB": {
+                "status": "ok",
+                "mcap_rank": 51,
+                "vol_days_pct": 78.76,
+                "median_vol_usd": 108881975.84
+              },
+              "AVAX": {
+                "status": "ok",
+                "mcap_rank": 27,
+                "vol_days_pct": 98.91,
+                "median_vol_usd": 236167870.32
+              },
+              "DOT": {
+                "status": "ok",
+                "mcap_rank": 37,
+                "vol_days_pct": 90.7,
+                "median_vol_usd": 124600077.99
+              },
+              "ETH": {
+                "status": "ok",
+                "mcap_rank": 2,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 8965170896.13
+              },
+              "FET": {
+                "status": "ok",
+                "mcap_rank": 78,
+                "vol_days_pct": 70.01,
+                "median_vol_usd": 79120525.43
+              },
+              "INJ": {
+                "status": "ok",
+                "mcap_rank": 65,
+                "vol_days_pct": 71.1,
+                "median_vol_usd": 81936846.77
+              },
+              "LINK": {
+                "status": "ok",
+                "mcap_rank": 20,
+                "vol_days_pct": 99.09,
+                "median_vol_usd": 235424880.03
+              },
+              "NEAR": {
+                "status": "ok",
+                "mcap_rank": 23,
+                "vol_days_pct": 95.62,
+                "median_vol_usd": 142196825.34
+              },
+              "OP": {
+                "status": "ok",
+                "mcap_rank": 119,
+                "vol_days_pct": 76.3,
+                "median_vol_usd": 94911977.71
+              },
+              "SOL": {
+                "status": "ok",
+                "mcap_rank": 7,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 2666615832.46
+              }
+            }
+          },
+          "approval_excluded": false,
+          "n_trades": null,
+          "oos_pass": "4/6",
+          "maxdd": -41.6834,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vt0.03",
@@ -5504,13 +7295,13 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 85614.19,
-          "ret_3y": 756.1419,
-          "cagr_3y": 104.5397,
-          "ret_1y": 52.2228,
-          "bh_ret_3y": 220.8914,
+          "final": 85148.21,
+          "ret_3y": 751.4821,
+          "cagr_3y": 103.2453,
+          "ret_1y": 51.3943,
+          "bh_ret_3y": 217.9486,
           "maxdd_3y": -41.8992,
-          "oos_pass_3y": "5/6",
+          "oos_pass_3y": "4/6",
           "oos_wins_3y": 5,
           "n_trades_3y": null,
           "gate_pass_3y": true,
@@ -5525,26 +7316,354 @@
           ],
           "funding_source": "binance_usdtm_historical",
           "robust": {
-            "n_neighbors": 6,
-            "gate_pass_3y_rate_pct": 66.67,
-            "ret_3y_median": 489.8725,
-            "fragile": false,
-            "note": "neighbors=same mode across pre-fixed lev×vt grid"
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false
           },
           "data_short": false,
-          "score": 32.516,
+          "score": 32.437,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
           "bh_final": null,
           "n_liquidations": null,
-          "code": "B2"
+          "code": "B2",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ARB",
+              "AVAX",
+              "DOT",
+              "ETH",
+              "FET",
+              "INJ",
+              "LINK",
+              "NEAR",
+              "OP",
+              "SOL"
+            ],
+            "rule": "vol_only_A",
+            "per_symbol": {
+              "ARB": {
+                "status": "ok",
+                "mcap_rank": 51,
+                "vol_days_pct": 78.76,
+                "median_vol_usd": 108881975.84
+              },
+              "AVAX": {
+                "status": "ok",
+                "mcap_rank": 27,
+                "vol_days_pct": 98.91,
+                "median_vol_usd": 236167870.32
+              },
+              "DOT": {
+                "status": "ok",
+                "mcap_rank": 37,
+                "vol_days_pct": 90.7,
+                "median_vol_usd": 124600077.99
+              },
+              "ETH": {
+                "status": "ok",
+                "mcap_rank": 2,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 8965170896.13
+              },
+              "FET": {
+                "status": "ok",
+                "mcap_rank": 78,
+                "vol_days_pct": 70.01,
+                "median_vol_usd": 79120525.43
+              },
+              "INJ": {
+                "status": "ok",
+                "mcap_rank": 65,
+                "vol_days_pct": 71.1,
+                "median_vol_usd": 81936846.77
+              },
+              "LINK": {
+                "status": "ok",
+                "mcap_rank": 20,
+                "vol_days_pct": 99.09,
+                "median_vol_usd": 235424880.03
+              },
+              "NEAR": {
+                "status": "ok",
+                "mcap_rank": 23,
+                "vol_days_pct": 95.62,
+                "median_vol_usd": 142196825.34
+              },
+              "OP": {
+                "status": "ok",
+                "mcap_rank": 119,
+                "vol_days_pct": 76.3,
+                "median_vol_usd": 94911977.71
+              },
+              "SOL": {
+                "status": "ok",
+                "mcap_rank": 7,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 2666615832.46
+              }
+            }
+          },
+          "approval_excluded": false,
+          "n_trades": null,
+          "oos_pass": "4/6",
+          "maxdd": -41.8992,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
         }
       ],
       "n_gate_pass_3y": 4,
       "cloud_supported": false,
       "code": "B"
+    },
+    {
+      "strategy_family_id": "portfolio_core_satellite_perp",
+      "name_zh": "核心＋衛星組合：10 幣多空 2 倍＋ARB 多空",
+      "description_zh": "80% 資金放 10 幣等權多空組合（2 倍槓桿，B1），20% 放 ARB 4 小時 Donchian 多空（1 倍，A3），每月把比例調回 80/20。永續合約，含真實資金費率與強平檢查。",
+      "entry_zh": "兩部分各自照原規則進場：BTC 在 200 日均線上方時，幣價收盤突破過去 20 根 K 棒最高點就做多；BTC 在均線下方時，收盤跌破過去 20 根最低點就做空。收盤出訊號，下一根開盤成交。",
+      "exit_zh": "出現反向訊號、移動停利被觸發，或持倉滿 36 根 K 棒就出場。每月月初把核心和衛星的資金比例調回 80% / 20%。",
+      "stop_zh": "每筆進場設停損：進場價往不利方向 2 倍 ATR；之後用 3 倍 ATR 的移動停利跟著鎖利。核心用 2 倍槓桿，會檢查強平（回測 3 年 0 次強平）。",
+      "params_schema": {
+        "core": "B1 參數",
+        "satellite": "A3 參數",
+        "weights": "核心/衛星權重",
+        "rebalance": "再平衡頻率"
+      },
+      "source_dirs": [
+        "/workspace/strategy-v-portfolio118"
+      ],
+      "cloud_supported": false,
+      "rows": [
+        {
+          "strategy_id": "port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb",
+          "suggested_code": "Q1",
+          "symbol": "MULTI",
+          "symbols": [
+            "SOL",
+            "ETH",
+            "AVAX",
+            "LINK",
+            "ARB",
+            "FET",
+            "DOT",
+            "OP",
+            "NEAR",
+            "INJ"
+          ],
+          "timeframe": "4h/1d",
+          "name_zh": "10 幣多空 2 倍 80%＋ARB 多空 20%（月調）",
+          "entry_zh": "兩部分各自照原規則進場：BTC 在 200 日均線上方時，幣價收盤突破過去 20 根 K 棒最高點就做多；BTC 在均線下方時，收盤跌破過去 20 根最低點就做空。收盤出訊號，下一根開盤成交。",
+          "exit_zh": "出現反向訊號、移動停利被觸發，或持倉滿 36 根 K 棒就出場。每月月初把核心和衛星的資金比例調回 80% / 20%。",
+          "stop_zh": "每筆進場設停損：進場價往不利方向 2 倍 ATR；之後用 3 倍 ATR 的移動停利跟著鎖利。核心用 2 倍槓桿，會檢查強平（回測 3 年 0 次強平）。",
+          "params": {
+            "core": {
+              "ref": "port_ew_univ10_lev2.0_vtNone (B1)",
+              "universe": [
+                "SOL",
+                "ETH",
+                "AVAX",
+                "LINK",
+                "ARB",
+                "FET",
+                "DOT",
+                "OP",
+                "NEAR",
+                "INJ"
+              ],
+              "mode": "ew",
+              "leverage": 2.0,
+              "vol_target": null,
+              "btc_regime": true
+            },
+            "satellite": {
+              "ref": "ls__ARB__4h__n20__s2.0__t3.0__LS (A3)",
+              "symbol": "ARB",
+              "tf": "4h",
+              "donch_n": 20,
+              "stop_m": 2.0,
+              "trail_m": 3.0,
+              "max_hold": 36,
+              "atr_mode": "sma",
+              "leverage": 1.0,
+              "vol_target": null,
+              "btc_regime": true
+            },
+            "weights": {
+              "core": 0.8,
+              "satellite": 0.2
+            },
+            "rebalance": "monthly"
+          },
+          "params_source": "portfolio118",
+          "status": "待 Emily 批准",
+          "review": "PENDING_EMILY",
+          "approval_status": "awaiting_emily_approval",
+          "initial": 10000.0,
+          "final": 121423.17,
+          "ret_3y": 1114.2317,
+          "cagr_3y": 129.6265,
+          "ret_1y": 91.411,
+          "bh_ret_3y": 71.34116402114947,
+          "bh_final": 17134.12,
+          "buy_hold": {
+            "benchmark": "univ10 equal-weight buy&hold (SOL,ETH,AVAX,LINK,ARB,FET,DOT,OP,NEAR,INJ)",
+            "ret_3y": 71.34116402114947,
+            "btc_bh_ret_3y": 217.9486,
+            "note": "portfolio has no single own coin; EW B&H of its 10 coins (ARB included) used as own-coin benchmark; BTC B&H shown for reference"
+          },
+          "maxdd_3y": -35.3346,
+          "maxdd": -35.3346,
+          "maxdd_note": "daily-sampled equity (portfolio118); bar-level DD may be slightly deeper",
+          "sharpe": 1.87,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "oos_wins_3y": 5,
+          "n_trades_3y": null,
+          "n_trades": null,
+          "n_trades_note": "sum of component trades (B1+A3) if available; rebalances not counted",
+          "trades": [],
+          "n_liquidations": 0,
+          "full_period": {
+            "start": "2023-09-24",
+            "end": "2026-09-24",
+            "ret": 1114.2317,
+            "bh_ret": 71.34116402114947,
+            "maxdd": -35.3346,
+            "oos_pass": "5/6",
+            "note": "portfolio only backtested on 3y window (ARB perp listed 2023-03); full_period = 3y"
+          },
+          "gate_pass_3y": true,
+          "gate_pass_full": true,
+          "gate_pass_both": true,
+          "gate_fail_reasons": [],
+          "robust": {
+            "n_neighbors": 30,
+            "gate_pass_3y_rate_pct": 83.3,
+            "fragile": false
+          },
+          "robust_neighbor_pct": 83.3,
+          "monthly": {
+            "pct_months_ge_6p7": 41.7,
+            "median_month": 3.44,
+            "worst_month": -14.03,
+            "best_month": 64.01,
+            "max_consec_loss_months": 5,
+            "n_months": 36
+          },
+          "selection_bias_note": "replace ARB satellite with other univ10 coins: CAGR median 98.1% (94-120%); forward expectation ~100%",
+          "liquidity": {
+            "status": "ok",
+            "mcap_rank": null,
+            "vol_days_pct": null,
+            "median_vol_usd": null,
+            "symbols": [
+              "ARB",
+              "AVAX",
+              "DOT",
+              "ETH",
+              "FET",
+              "INJ",
+              "LINK",
+              "NEAR",
+              "OP",
+              "SOL"
+            ],
+            "rule": "vol_only_A",
+            "per_symbol": {
+              "ARB": {
+                "status": "ok",
+                "mcap_rank": 51,
+                "vol_days_pct": 78.76,
+                "median_vol_usd": 108881975.84
+              },
+              "AVAX": {
+                "status": "ok",
+                "mcap_rank": 27,
+                "vol_days_pct": 98.91,
+                "median_vol_usd": 236167870.32
+              },
+              "DOT": {
+                "status": "ok",
+                "mcap_rank": 37,
+                "vol_days_pct": 90.7,
+                "median_vol_usd": 124600077.99
+              },
+              "ETH": {
+                "status": "ok",
+                "mcap_rank": 2,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 8965170896.13
+              },
+              "FET": {
+                "status": "ok",
+                "mcap_rank": 78,
+                "vol_days_pct": 70.01,
+                "median_vol_usd": 79120525.43
+              },
+              "INJ": {
+                "status": "ok",
+                "mcap_rank": 65,
+                "vol_days_pct": 71.1,
+                "median_vol_usd": 81936846.77
+              },
+              "LINK": {
+                "status": "ok",
+                "mcap_rank": 20,
+                "vol_days_pct": 99.09,
+                "median_vol_usd": 235424880.03
+              },
+              "NEAR": {
+                "status": "ok",
+                "mcap_rank": 23,
+                "vol_days_pct": 95.62,
+                "median_vol_usd": 142196825.34
+              },
+              "OP": {
+                "status": "ok",
+                "mcap_rank": 119,
+                "vol_days_pct": 76.3,
+                "median_vol_usd": 94911977.71
+              },
+              "SOL": {
+                "status": "ok",
+                "mcap_rank": 7,
+                "vol_days_pct": 100.0,
+                "median_vol_usd": 2666615832.46
+              }
+            }
+          },
+          "data_short": false,
+          "approval_excluded": false,
+          "cloud_supported": false,
+          "requires": [
+            "perp_futures",
+            "leverage",
+            "short",
+            "funding",
+            "liq_monitor",
+            "next_open_fill",
+            "monthly_rebalance"
+          ],
+          "equity_csv": "/workspace/strategy-unified-3y/equity/port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb.csv",
+          "backtest_code": "/workspace/strategy-v-portfolio118/code/run2.py",
+          "export_code": "/workspace/strategy-v-portfolio118/code/export.py",
+          "report": "/workspace/strategy-v-portfolio118/REPORT.md",
+          "source": "portfolio118",
+          "generated_at": "2026-10-07 18:05:47 CST",
+          "cost": {
+            "one_way_bps": 20,
+            "funding": "binance_usdtm_historical"
+          },
+          "score": 43.0024,
+          "code": "Q1"
+        }
+      ],
+      "code": "Q"
     }
   ]
 }

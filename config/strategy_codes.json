@@ -27,6 +27,42 @@
         "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS": {
           "code": "A6",
           "active": true
+        },
+        "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS": {
+          "code": "A7",
+          "active": true
+        },
+        "ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS": {
+          "code": "A8",
+          "active": true
+        },
+        "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS": {
+          "code": "A9",
+          "active": true
+        },
+        "ls__OP__4h__n20__s1.5__t1.5__LS": {
+          "code": "A10",
+          "active": true
+        },
+        "ls__FET__4h__n55__s2.0__t3.0__LS": {
+          "code": "A11",
+          "active": true
+        },
+        "ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS": {
+          "code": "A12",
+          "active": true
+        },
+        "ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS": {
+          "code": "A13",
+          "active": true
+        },
+        "ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS": {
+          "code": "A14",
+          "active": true
+        },
+        "ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS": {
+          "code": "A15",
+          "active": true
         }
       },
       "active": true,
@@ -580,6 +616,18 @@
       "active": true,
       "created_at": "2026-09-24",
       "created_at_iso": "2026-09-24T16:16:25+08:00"
+    },
+    "portfolio_core_satellite_perp": {
+      "code": "Q",
+      "rows": {
+        "port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb": {
+          "code": "Q1",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-07",
+      "created_at_iso": "2026-10-07T18:05:00+08:00"
     }
   }
 }
