@@ -662,6 +662,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             "last_cross_bar_ts": sig.get("last_cross_bar_ts"),
             "last_entry_edge_bar_ts": sig.get("last_entry_edge_bar_ts"),
             "btc_regime_on": sig.get("btc_regime_on"),
+            "donch_state": sig.get("donch_state"),
             "allowed_direction": sig.get("allowed_direction"),
             "dist_hi_pct": sig.get("dist_hi_pct") if sig.get("dist_hi_pct") is not None else _pct(sig.get("donch_hi"), sig.get("mark") or sig.get("close")),
             "dist_lo_pct": sig.get("dist_lo_pct") if sig.get("dist_lo_pct") is not None else _pct(sig.get("donch_lo"), sig.get("mark") or sig.get("close")),
