@@ -393,10 +393,12 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
           "gate_pass_both": true,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "neighbor 42.3% < 50%"
+          ],
           "score": 72.3149,
           "data_short": false,
           "code": "C1",
@@ -410,7 +412,8 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "neighbor_pct_live_reval": 42.3
         },
         {
           "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
@@ -471,7 +474,8 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "neighbor_pct_live_reval": 88.5
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
@@ -660,7 +664,8 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "neighbor_pct_live_reval": 92.3
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
@@ -834,10 +839,12 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
           "gate_pass_both": true,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "neighbor 26.9% < 50%"
+          ],
           "score": 13.5069,
           "data_short": false,
           "code": "C8",
@@ -851,7 +858,8 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "neighbor_pct_live_reval": 26.9
         },
         {
           "strategy_id": "donchian_breakout_atr__NEAR__4h",
@@ -2225,10 +2233,12 @@
               "maxdd -45.4713 > 45% abs"
             ]
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": false,
           "gate_pass_both": false,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "neighbor 26.9% < 50%"
+          ],
           "score": 51.3024,
           "data_short": false,
           "code": "F1",
@@ -2242,7 +2252,8 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "neighbor_pct_live_reval": 26.9
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__AR__4h",

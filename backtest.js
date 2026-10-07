@@ -671,6 +671,7 @@
   /** Tab bucket for a family card. */
   function familyReviewBucket(g) {
     var fid = g.family_id || g.key;
+    if (g._failSplit) return "archived"; // 資金控管: every gate_pass_3y=false row → 封存
     if (familyManuallyArchived(fid)) return "archived";
     if (familyApproved(fid)) return "approved";
     var hasPass = familyHasPass3y(g);
@@ -705,6 +706,11 @@
     var sample = (g.rows && g.rows[0]) || {};
     var hasPass = familyHasPass3y(g);
     var bucket = familyReviewBucket(g);
+    if (g._failSplit) {
+      return '<div class="fam-approve-bar" onclick="event.stopPropagation()"><span class="badge bad">未過關 · 封存</span>' +
+        (g._parentBucket === "approved" ? ' <span class="badge muted">家族仍為已批准（未撤銷）</span>' : "") +
+        '<span class="fam-pass-info">' + (g.rows || []).length + " 列未過關" + (g.code ? (" · 代碼 " + esc(g.code)) : "") + "</span></div>";
+    }
     var rf = runnerFamilyId(familyId, sample);
     var onRunner = !!(rf && RUNNER_FAMILIES[rf]);
     var famLock = null;
@@ -797,6 +803,7 @@
       return '<tr class="score-row' + rowCls + '" data-sid="' + esc(r.strategy_id) + '">' +
         "<td><strong>" + esc(rowTitle) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
+        (!passBoth ? ' <span class="badge bad row-fail">未過關</span>' : "") +
         lookaheadNote(r) +
         (rowFlag(r.strategy_id) ? " " + flagBadge(rowFlag(r.strategy_id)) + flagNote(rowFlag(r.strategy_id)) : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
@@ -864,8 +871,24 @@
       "</div>";
   }
 
+  // 資金控管 ruling 2026-10-07: failed-gate rows always live in 封存 (approve hidden),
+  // even inside approved/pending families. Approval state itself is untouched.
+  function splitFailedRows(groups) {
+    var out = [];
+    groups.forEach(function (g) {
+      var rows = g.rows || [];
+      var fail = rows.filter(function (r) { return !gatePass3y(r); });
+      var pass = rows.filter(function (r) { return gatePass3y(r); });
+      var b = familyReviewBucket(g);
+      if (b === "archived" || !fail.length) { out.push(g); return; }
+      if (pass.length) out.push(Object.assign({}, g, { rows: pass }));
+      out.push(Object.assign({}, g, { rows: fail, key: g.key + "__fail", _failSplit: true, _parentBucket: b }));
+    });
+    return out;
+  }
+
   function renderGroups(groups) {
-    groups = sortGroupsNewestFirst(groups || []);
+    groups = splitFailedRows(sortGroupsNewestFirst(groups || []));
     var counts = { approved: 0, pending: 0, archived: 0 };
     groups.forEach(function (g) { counts[familyReviewBucket(g)] = (counts[familyReviewBucket(g)] || 0) + 1; });
     var filtered = groups.filter(function (g) { return familyReviewBucket(g) === reviewTab; });
