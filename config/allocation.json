@@ -31,7 +31,7 @@
       "symbol": "DOTUSDT",
       "timeframe": "4h",
       "notional_usdt": 750,
-      "enabled": false,
+      "enabled": true,
       "params": {
         "donch_n": 20,
         "stop_atr_mult": 1.5,
@@ -40,7 +40,7 @@
         "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "現行 live（衛星 C）；reset 對齊回測 | 2026-10-07 23:58 TPT 資金控管 audit: paused (live entry ≠ backtest state machine)"
+      "note": "現行 live（衛星 C）；reset 對齊回測"
     },
     {
       "slot": "sat_arb_4h",
@@ -49,7 +49,7 @@
       "symbol": "ARBUSDT",
       "timeframe": "4h",
       "notional_usdt": 1250,
-      "enabled": false,
+      "enabled": true,
       "params": {
         "donch_n": 20,
         "stop_atr_mult": 2.0,
@@ -59,7 +59,7 @@
         "btc_regime": false,
         "atr_mode": "sma"
       },
-      "note": "rotation 2026-10-02：FET 4h stale +14.2%→ARB 4h（距離~7.6%<8%；score 35.5／CAGR 77%／OOS 5/6）。原 sat_fet_4h 下線。 | 2026-10-07 23:58 TPT 資金控管 audit: paused (live entry ≠ backtest state machine)"
+      "note": "rotation 2026-10-02：FET 4h stale +14.2%→ARB 4h（距離~7.6%<8%；score 35.5／CAGR 77%／OOS 5/6）。原 sat_fet_4h 下線。"
     },
     {
       "slot": "sat_fet_4h",
@@ -86,7 +86,7 @@
       "symbol": "FILUSDT",
       "timeframe": "1h",
       "notional_usdt": 750,
-      "enabled": false,
+      "enabled": true,
       "params": {
         "donch_n": 55,
         "stop_atr_mult": 1.5,
@@ -95,7 +95,7 @@
         "require_reset_below_hi": true,
         "btc_regime": false
       },
-      "note": "live（衛星 D）：3y 過關 +71.8%／DD -27.2%／OOS 5/6／62 分 | 2026-10-07 23:58 TPT 資金控管 audit: paused (live entry ≠ backtest state machine)"
+      "note": "live（衛星 D）：3y 過關 +71.8%／DD -27.2%／OOS 5/6／62 分"
     },
     {
       "slot": "sat_icp_4h",
