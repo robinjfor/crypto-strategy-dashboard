@@ -1,0 +1,40 @@
+# Manual only. READ-ONLY Demo account snapshot via the asia-east1 Cloud Run job.
+# Uses per-execution overrides (does not modify the job). GET requests only.
+name: account-snapshot
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: asia-east1
+  JOB_NAME: crypto-trader
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Execute read-only snapshot (per-execution override)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B64=$(base64 -w0 scripts/account_snapshot_readonly.py)
+          EX=$(gcloud run jobs execute "${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" \
+            --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["SNAP_B64"]).decode())' \
+            --update-env-vars="^@^SNAP_B64=${B64}" --wait --format='value(metadata.name)')
+          echo "execution=${EX}"
+          sleep 15
+          gcloud logging read "resource.type=cloud_run_job AND labels.\"run.googleapis.com/execution_name\"=\"${EX}\" AND textPayload:SNAPSHOT_JSON" \
+            --project="${PROJECT}" --limit=5 --freshness=30m --format='value(textPayload)'
