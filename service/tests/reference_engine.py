@@ -191,3 +191,46 @@ def run_donchian_engine(
     return BTResult(equity=pd.Series({t: v for t, v in equity}), trades=trades, n_liquidations=n_liq)
 
 
+
+
+# --- vendored from strategy-unified-3y/lookahead_fix/live_reval/reval_fill.py (next-open fills) ---
+def run_next_open(df,signal,stop_m,trail_m,max_hold,init=INIT,reset_below_hi=False,leverage=1.0,funding_ann=0.0,check_liq=False,risk_frac=1.0):
+    data=df.dropna(subset=["atr","donch_hi","donch_lo"]).copy()
+    sig=signal.reindex(data.index).fillna(0).astype(int).values
+    cash=init;shares=0.0;entry_px=0.0;entry_i=0;stop=0.0;entry_ts=None
+    eqs=[];trades=[];need_reset=False;pend_entry=None;pend_exit=None
+    idx=data.index;O,C,H,L=data["Open"].values,data["Close"].values,data["High"].values,data["Low"].values
+    A,HI=data["atr"].values,data["donch_hi"].values
+    def close_pos(ts,ref,reason):
+        nonlocal cash,shares,entry_px,stop,need_reset
+        px=ref*(1-COST);cash+=shares*px
+        trades.append({"entry":str(entry_ts),"exit":str(ts),"entry_px":entry_px,"exit_px":px,"pnl":shares*(px-entry_px),"pnl_pct":(px/entry_px-1)*100,"reason":reason})
+        shares=0.0;entry_px=0.0;stop=0.0
+        if reset_below_hi: need_reset=True
+    for i in range(len(data)):
+        ts=idx[i];o,c,lo,atr=O[i],C[i],L[i],A[i]
+        if pend_exit and shares>0:
+            close_pos(ts,o,pend_exit);pend_exit=None
+        if pend_entry is not None and shares==0:
+            px=o*(1+COST);shares=cash*leverage/px;cash-=shares*px
+            entry_px=px;entry_i=i;entry_ts=ts;stop=(px-stop_m*pend_entry) if stop_m>0 else 0.0
+        pend_entry=None
+        if shares>0:
+            if stop_m>0 and lo<=stop: close_pos(ts,min(o,stop),"stop_loss")
+            else:
+                if trail_m>0:
+                    t=c-trail_m*atr
+                    if t>stop: stop=t
+                if sig[i]==0 or (i-entry_i)>=max_hold: pend_exit="signal_exit" if sig[i]==0 else "max_hold"
+        can=shares==0 and i>0
+        if reset_below_hi and need_reset:
+            if c<HI[i]: need_reset=False
+            else: can=False
+        if can and sig[i]==1 and sig[i-1]==0 and atr>0 and not np.isnan(atr) and i+1<len(data):
+            pend_entry=atr
+        eqs.append((ts,cash+shares*c))
+    if shares>0:
+        px=C[-1]*(1-COST);cash+=shares*px
+        trades.append({"entry":str(entry_ts),"exit":str(idx[-1]),"pnl":shares*(px-entry_px),"reason":"eod_flat"});eqs[-1]=(idx[-1],cash)
+    return BTResult(equity=pd.Series({t:v for t,v in eqs}),trades=trades,n_liquidations=0)
+
