@@ -374,6 +374,16 @@
     modal.setAttribute("aria-hidden", "true");
   }
 
+  // Displayed status: live approval / gate win over the catalog's free-text status,
+  // which can be stale (e.g. C2 FIL 1h said 已淘汰 while live and passing the gate).
+  function displayStatus(r) {
+    var ap = approvedMap[r.strategy_id];
+    if (ap && ap.approved !== false && ap.mode !== "signal_only") return "現役";
+    if (!gatePass3y(r)) return "未過關";
+    if (/淘汰/.test(String(r.status || ""))) return "候選";
+    return r.status;
+  }
+
   function statusBadge(st) {
     var s = String(st || "—");
     var cls = "muted";
@@ -817,7 +827,7 @@
         "<td>" + esc(oos) + "</td>" +
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(r.score, 2) + "</td>" +
-        "<td>" + statusBadge(r.status) + "</td>" +
+        "<td>" + statusBadge(displayStatus(r)) + "</td>" +
         "</tr>" +
         '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="11">' +
         expandHtml(r) + "</td></tr>";
