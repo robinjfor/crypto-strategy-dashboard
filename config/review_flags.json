@@ -1,0 +1,35 @@
+{
+  "_comment": "Review flags for the backtest page. Set active=false (or remove the flag) to clear. UI-only: does NOT touch approvals, allocation or the runner.",
+  "flags": [
+    {
+      "id": "btc_daily_lookahead_2026-10-07",
+      "active": true,
+      "created_at_iso": "2026-10-07T18:31:00+08:00",
+      "badge_zh": "數字待修正、勿批准",
+      "note_zh": "回測有前視偏差（4h bar 提前使用當日 BTC 日線收盤），分析師正在重跑；修正後 ARB 1x/1.25x/1.5x CAGR 約 72%/88%/102%。",
+      "block_approve": true,
+      "families": [
+        "ls_donch_btc_regime_perp",
+        "portfolio_core_satellite_perp"
+      ],
+      "strategy_ids": [
+        "ls__ARB__4h__n20__s2.0__t3.0__LS",
+        "ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS",
+        "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
+        "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS",
+        "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS",
+        "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS",
+        "ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS",
+        "ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS",
+        "ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS",
+        "ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS",
+        "ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS",
+        "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS",
+        "ls__OP__4h__n20__s1.5__t1.5__LS",
+        "ls__FET__4h__n55__s2.0__t3.0__LS",
+        "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS",
+        "port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb"
+      ]
+    }
+  ]
+}

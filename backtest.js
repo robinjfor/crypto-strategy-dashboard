@@ -30,6 +30,25 @@
   // Emily 2026-09-25: news families retired — never render on backtest page
   var HIDDEN_FAMILIES = { news_burst_confirm: true, news_filter_donchian: true };
   var LOCK_PREP = "準備中";
+  // Review flags (config/review_flags.json): UI warning + block approve; never revokes.
+  var REVIEW_FLAGS = [];
+  function activeFlags() { return REVIEW_FLAGS.filter(function (f) { return f && f.active !== false; }); }
+  function rowFlag(sid) {
+    var a = activeFlags();
+    for (var i = 0; i < a.length; i++) if ((a[i].strategy_ids || []).indexOf(sid) >= 0) return a[i];
+    return null;
+  }
+  function familyFlag(fid) {
+    var a = activeFlags();
+    for (var i = 0; i < a.length; i++) if ((a[i].families || []).indexOf(fid) >= 0) return a[i];
+    return null;
+  }
+  function flagBadge(f) {
+    return f ? '<span class="badge bad review-flag" title="' + esc(f.note_zh || "") + '">' + esc(f.badge_zh || "數字待修正、勿批准") + "</span>" : "";
+  }
+  function flagNote(f) {
+    return f ? '<div class="review-flag-note">' + esc(f.note_zh || "") + "</div>" : "";
+  }
   var LOCK_NO_PASS = "未過關，不開放批准";
   // Family letter + created_at from strategy_codes.json
   // created_at = first appearance in data/unified-3y/catalog.json (git history, TPT date).
@@ -383,6 +402,8 @@
       bits.push('<span class="badge muted">' + esc(lockReason) + "</span>");
     }
     var prefix = bits.length ? bits.join(" ") + " " : "";
+    var rowRf = rowFlag(sid);
+    if (rowRf && rowRf.block_approve) locked = true;
     if (locked) {
       return prefix + '<button type="button" class="btn-approve" disabled title="' + esc(title) + '">批准</button>';
     }
@@ -703,7 +724,8 @@
     } else {
       // pending: approve only if unlocked; always allow archive
       // 準備中 / locked families are NOT approvable: hide 批准家族 entirely (keep 封存)
-      if (supported) {
+      var rfFlag = familyFlag(familyId);
+      if (supported && !(rfFlag && rfFlag.block_approve)) {
         btns.push('<button type="button" class="btn-fam-approve" data-family="' + esc(familyId) + '">批准家族</button>');
       }
       btns.push('<button type="button" class="btn-fam-archive" data-family="' + esc(familyId) + '">封存</button>');
@@ -765,6 +787,7 @@
       return '<tr class="score-row' + rowCls + '" data-sid="' + esc(r.strategy_id) + '">' +
         "<td><strong>" + esc(rowTitle) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
+        (rowFlag(r.strategy_id) ? " " + flagBadge(rowFlag(r.strategy_id)) + flagNote(rowFlag(r.strategy_id)) : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
         '<td class="num">' + num(r.initial, 0) + "</td>" +
         '<td class="num">' + num(r.final, 2) + "</td>" +
@@ -788,11 +811,13 @@
       '<span class="ssc-created" title="建立日期（TPT）">' + esc(familyCreatedAt(g) || "—") + "</span>" +
       "<h3>" + esc((g.code ? g.code + " " : "") + (g.name_zh || g.key)) + "</h3>" +
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
+      (familyFlag(familyId) ? " " + flagBadge(familyFlag(familyId)) : "") +
       familyControls(g) +
       '<span class="ssc-params">' + (g.rows || []).length + " 列 · 過關 " + nBoth +
       " · 最佳 " + num(best, 1) + "</span>" +
       '<span class="chevron">' + (open ? "▾" : "▸") + "</span>" +
       "</div>" +
+      (familyFlag(familyId) ? flagNote(familyFlag(familyId)) : "") +
       (desc ? '<p class="ssc-one-liner dim">' + esc(desc) + "</p>" : "") +
       '<div class="ssc-body">' +
       '<div class="ssc-rules"><div class="lbl">規則說明</div><ul>' + rulesHtml + "</ul></div>" +
@@ -933,6 +958,8 @@
 
     document.querySelectorAll(".btn-fam-approve").forEach(function (btn) {
       if (btn.disabled) return;
+      var famF = familyFlag(btn.getAttribute("data-family") || "");
+      if (famF && famF.block_approve) { btn.remove(); return; }
       btn.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
@@ -1156,6 +1183,10 @@
             if (meta.created_at_iso) FAMILY_CREATED_AT_ISO[fid] = meta.created_at_iso;
           });
         } catch (eCodes) { /* optional */ }
+        try {
+          var rfDoc = await getJSON("./config/review_flags.json");
+          REVIEW_FLAGS = (rfDoc && rfDoc.flags) || [];
+        } catch (eRf) { REVIEW_FLAGS = []; }
         try { catalog = await getJSON(CATALOG_URL); } catch (e) { catalog = null; }
       }
       var groups = groupsFromCatalog(catalog) || groupsFromScores(scores);

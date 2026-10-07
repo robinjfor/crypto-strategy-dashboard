@@ -837,3 +837,7 @@ table.scores tr.fail:hover td.col-approve {
 .strategy-card .chevron { margin-left: 6px; color: #8b9bb0; flex-shrink: 0; }
 .strategy-card.collapsed .sc-body { display: none; }
 .strategy-card .sc-body { margin-top: 4px; }
+
+/* review flags (config/review_flags.json) */
+.badge.review-flag { background: #c62828; color: #fff; font-weight: 700; }
+.review-flag-note { color: #e53935; font-size: 12px; margin: 4px 0; }
