@@ -19,7 +19,8 @@ os.environ.setdefault("CONTROL_PIN_HASH", "a" * 64)
 os.environ["ALLOW_HTTP_PIN"] = "1"
 os.environ.setdefault("SESSION_HMAC_SECRET", "test-session-secret-for-unit-tests")
 
-ALLOC = json.loads((ROOT.parent / "config" / "allocation.json").read_text(encoding="utf-8"))
+# Frozen fixture (see conftest.py), not the live config/allocation.json.
+ALLOC = json.loads((ROOT / "tests" / "fixtures" / "allocation.json").read_text(encoding="utf-8"))
 ENABLED = [s for s in ALLOC["slots"] if s.get("enabled")]
 FUTURES_FAMS = {"ls_donch_btc_regime_perp", "ls_univ_portfolio_perp",
                 "donchian_long_short_btc_regime", "donchian_lev_vol"}
@@ -63,9 +64,14 @@ class FakeSpot:
         return {"orderId": 1, "executedQty": str(quote / 120.0),
                 "fills": [{"price": "120", "qty": str(quote / 120.0)}]}
 
-    def stop_loss_limit(self, symbol, qty, stop, limit, coid):
+    def stop_loss(self, symbol, qty, stop, coid=""):
+        # execution.place_hard_stop prefers STOP_LOSS (stop-market)
         self.stops.append((symbol, qty, stop))
-        return {"orderId": 2, "clientOrderId": coid}
+        return {"orderId": 2, "clientOrderId": coid, "type": "STOP_LOSS"}
+
+    def stop_loss_limit(self, symbol, qty, stop, limit, coid, slip_pct=0.03):
+        self.stops.append((symbol, qty, stop))
+        return {"orderId": 2, "clientOrderId": coid, "type": "STOP_LOSS_LIMIT"}
 
     def cancel_open_orders(self, symbol):
         return []

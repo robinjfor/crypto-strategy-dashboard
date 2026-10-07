@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "book_usdt": 5000,
+  "max_notional_per_order_usdt": 1500,
+  "updated_by": "strategy-analyst",
+  "updated_at": "2026-09-25T11:45:17+08:00",
+  "slots": [
+    {
+      "slot": "sat_op_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
+      "symbol": "OPUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "現行 live（衛星 B）"
+    },
+    {
+      "slot": "sat_dot_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
+      "symbol": "DOTUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "現行 live（衛星 C）；reset 對齊回測"
+    },
+    {
+      "slot": "sat_fet_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
+      "symbol": "FETUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1250,
+      "enabled": true,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "live（衛星 A）：3y 過關 +78%／DD -36%／OOS 4/6；取代 FET 1h"
+    },
+    {
+      "slot": "sat_fil_1h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
+      "symbol": "FILUSDT",
+      "timeframe": "1h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 2.5,
+        "max_hold_bars": 192,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "live（衛星 D）：3y 過關 +71.8%／DD -27.2%／OOS 5/6／62 分"
+    },
+    {
+      "slot": "sat_icp_4h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
+      "symbol": "ICPUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 1000,
+      "enabled": false,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.5,
+        "trail_atr_mult": 3.5,
+        "max_hold_bars": 36,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "候補（停用）：3y 過關 +52.8%／DD -39.8%／44 分；由 FIL 1h 取代"
+    },
+    {
+      "slot": "sat_fet_1h",
+      "family": "donchian_atr",
+      "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
+      "symbol": "FETUSDT",
+      "timeframe": "1h",
+      "notional_usdt": 1250,
+      "enabled": false,
+      "params": {
+        "donch_n": 55,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 192,
+        "require_reset_below_hi": false,
+        "btc_regime": false
+      },
+      "note": "停用：3y MaxDD -53.7% 未過；已由 FET 4h 取代"
+    },
+    {
+      "slot": "core_sol",
+      "family": "donchian_btc_regime",
+      "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "notional_usdt": 1500,
+      "enabled": false,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": null,
+        "trail_atr_mult": null,
+        "max_hold_bars": null,
+        "require_reset_below_hi": true,
+        "btc_regime": false
+      },
+      "note": "候選：家族 donchian_btc_regime 預設未批准 → 只算訊號"
+    },
+    {
+      "slot": "sat_sol_ema_1d",
+      "family": "ema_cross_atr",
+      "strategy_id": "ema12_26_atr_btcRegime__SOL__1d",
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "ema_fast": 12,
+        "ema_slow": 26,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 10000,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "require_reset_below_hi": false
+      },
+      "note": "ema_cross_atr 家族代表（Emily 已批家族）：3y CAGR 86.4%／DD -37.8%／OOS 4/6；現貨；core_sol 同幣但停用"
+    },
+    {
+      "slot": "ls_arb_4h",
+      "family": "ls_donch_btc_regime_perp",
+      "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
+      "symbol": "ARBUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "donch_n": 20,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 3.0,
+        "max_hold_bars": 36,
+        "atr_mode": "sma",
+        "btc_regime": true,
+        "leverage": 1.5,
+        "vol_target": null,
+        "check_liq": true,
+        "regime_scale": "none"
+      },
+      "note": "ls_donch_btc_regime_perp 家族代表：3y CAGR 253.6%／DD -44.7%／OOS 5/6／鄰近 75%。永續多空；notional=名目部位（runner 全名目下單，1.5x→保證金約 500）"
+    }
+  ]
+}
