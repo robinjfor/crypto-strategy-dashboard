@@ -12,7 +12,7 @@
       "symbol": "APTUSDT",
       "timeframe": "1h",
       "notional_usdt": 750,
-      "enabled": true,
+      "enabled": false,
       "params": {
         "donch_n": 55,
         "stop_atr_mult": 2.0,
@@ -22,7 +22,7 @@
         "btc_regime": false,
         "atr_mode": "sma"
       },
-      "note": "rotation 2026-10-01：OP 4h stale +16.6%→APT 1h（距離~11%，同家族唯一更近合格標；CAGR 偏低但過門檻）。原 sat_op_4h 下線。"
+      "note": "rotation 2026-10-01：OP 4h stale +16.6%→APT 1h（距離~11%，同家族唯一更近合格標；CAGR 偏低但過門檻）。原 sat_op_4h 下線。 ｜2026-10-07 資本控管裁示：停用（C8），槽位留現金；APT 已於 10/7 09:58 停損出場，repo 狀態無 APT 持倉。"
     },
     {
       "slot": "sat_dot_4h",
