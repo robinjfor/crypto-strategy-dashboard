@@ -602,7 +602,7 @@
       '<div class="kpi kpi-emphasis"><div class="label">現在餘額</div><div class="value">' + num(st.equity, 2) + '</div><div class="sublabel">現金 + 持倉市值</div></div>' +
       '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計（扣手續費' + (st.fees != null ? " " + num(st.fees, 2) : "") + '）' +
         (st.unattributed != null && Math.abs(st.unattributed) >= 0.01
-          ? '<br><span class="dim">未歸屬差額 ' + signedNum(st.unattributed, 2) + " " + q + '（≈舊交易未記錄的手續費）</span>' : "") +
+          ? '<br><span class="dim">未歸屬差額 ' + signedNum(st.unattributed, 2) + " " + q + '（未進 closed_trades 的現金差：手動交易（如 NEAR 9/18–9/24）＋舊交易未記錄手續費）</span>' : "") +
         '</div></div>' +
       '<div class="kpi"><div class="label">未實現損益</div><div class="value">' + upnl + '</div><div class="sublabel">持倉市價</div></div>' +
       '<div class="kpi"><div class="label">現金</div><div class="value">' + num(st.cash, 2) + '</div><div class="sublabel">可用 + 鎖定</div></div>' +
