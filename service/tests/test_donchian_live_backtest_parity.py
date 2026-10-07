@@ -53,7 +53,8 @@ def _live(df, p, tf):
         win = df.iloc[t - WINDOW:t]
         r = evaluate_donchian_slot(slot, win, pos, meta)
         if pos is None and r.get("action") == "enter":
-            pos = {"status": "FILLED", "entry": r["close"] * (1 + ref.COST), "entry_bar_ts": r["bar_ts"]}
+            pos = {"status": "FILLED", "entry": r["close"] * (1 + ref.COST), "entry_bar_ts": r["bar_ts"],
+                   "fill_bar_ts": r["bar_ts"]}  # fill-at-close model: fill bar == signal bar
             meta["last_acted_bar_ts"] = r["bar_ts"]
         elif pos is not None and r.get("action") == "exit":
             reason = {"stop": "stop_loss", "donch_lo": "signal_exit", "max_hold": "max_hold"}[r["reason"]]

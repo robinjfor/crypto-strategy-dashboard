@@ -50,16 +50,7 @@ def _live_next_open(df, p, tf):
     return trades
 
 
-# Known gap (re-audit 2026-10-08, NOT changed in live — needs Emily's call):
-# live counts max_hold from the signal bar (entry_bar_ts), the next-open backtest
-# from the fill bar, so under next-open fills live's max_hold exit is 1 bar early.
-# Only C1 hits max_hold in the fixture window.
-KNOWN_MAX_HOLD_GAP = {"C1_ARB_4h"}
-
-
-@pytest.mark.parametrize("case", [
-    pytest.param(c, marks=pytest.mark.xfail(strict=True, reason="live max_hold counts from signal bar (1 bar early vs next-open)"))
-    if c in KNOWN_MAX_HOLD_GAP else c for c in CASES])
+@pytest.mark.parametrize("case", list(CASES))
 def test_live_matches_next_open_backtest(case):
     name, tf, p = CASES[case]
     df = _load(name)

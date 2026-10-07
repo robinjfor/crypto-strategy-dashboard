@@ -144,10 +144,20 @@ def evaluate_donchian_slot(
         max_hold = int(slot.get("max_hold_bars") or 0)
         hold_exit = None
         if max_hold > 0 and position.get("entry_bar_ts"):
-            ets = pd.Timestamp(position["entry_bar_ts"])
-            if ets.tzinfo is None:
-                ets = ets.tz_localize("UTC")
-            post = ind.loc[ind.index >= ets]
+            # Backtest parity (next-open engine): max_hold counts from the FILL bar.
+            # Live decides on the closed signal bar (entry_bar_ts) and the market
+            # order fills during the next bar, so the fill bar is the first bar
+            # after entry_bar_ts unless the position records fill_bar_ts.
+            if position.get("fill_bar_ts"):
+                fts = pd.Timestamp(position["fill_bar_ts"])
+                if fts.tzinfo is None:
+                    fts = fts.tz_localize("UTC")
+                post = ind.loc[ind.index >= fts]
+            else:
+                ets = pd.Timestamp(position["entry_bar_ts"])
+                if ets.tzinfo is None:
+                    ets = ets.tz_localize("UTC")
+                post = ind.loc[ind.index > ets]
             if len(post) > max_hold:
                 exp = post.iloc[max_hold]
                 if exit_info is None or pd.Timestamp(exit_info["bar_ts"]) > exp.name:
@@ -167,6 +177,15 @@ def evaluate_donchian_slot(
                 reason="stop",
                 exit_ref=exit_info["exit_ref"],
                 exit_bar_ts=exit_info["bar_ts"],
+            )
+        elif lower_exit and (hold_exit is None or hold_exit["bar_ts"] >= lower_exit["bar_ts"]):
+            # Backtest parity: on the same bar the signal exit (close < donch_lo)
+            # takes precedence over max_hold (engine: "signal_exit" if sig==0 else "max_hold").
+            result.update(
+                action="exit",
+                reason="donch_lo",
+                exit_ref=lower_exit["exit_ref"],
+                exit_bar_ts=lower_exit["bar_ts"],
             )
         elif hold_exit:
             result.update(
