@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-02T05:05:02+08:00",
+  "updated_at": "2026-10-07T13:05:00+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -178,7 +178,7 @@
       "symbol": "NEARUSDT",
       "timeframe": "4h",
       "notional_usdt": 750,
-      "enabled": false,
+      "enabled": true,
       "params": {
         "donch_n": 20,
         "stop_atr_mult": 2.0,
@@ -191,7 +191,7 @@
         "check_liq": true,
         "regime_scale": "none"
       },
-      "note": "rotation 2026-10-02：stale +13.9%→OP ls（距離~10.1%；score 23.6／lev1.0×vt0.03）。原 ls_near_4h 下線。"
+      "note": "rotation 2026-10-07：OP ls stale +15.5%→NEAR ls（距離~8.6%；同家族無<8%，取最近合格；score 27.3／gate+robust 58% ok／lev1.0×vt0.03）。"
     },
     {
       "slot": "ls_op_4h",
@@ -200,7 +200,7 @@
       "symbol": "OPUSDT",
       "timeframe": "4h",
       "notional_usdt": 750,
-      "enabled": true,
+      "enabled": false,
       "params": {
         "donch_n": 20,
         "stop_atr_mult": 1.5,
@@ -213,7 +213,7 @@
         "check_liq": true,
         "regime_scale": "none"
       },
-      "note": "rotation 2026-10-02：NEAR ls stale +13.9%→OP ls（距離~10.1%<NEAR；同家族無<8%標，取最近合格；score 23.6／gate+robust ok）。原 ls_near_4h 下線。"
+      "note": "rotation 2026-10-07：stale（BTC 多頭只做多，距上軌 +15.5%≥12%）→NEAR ls（~8.6%，同家族最近合格；score 27.3／robust 58%）。本槽停用。"
     }
   ],
   "book_usdc": 5000,
