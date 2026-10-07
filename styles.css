@@ -843,3 +843,8 @@ table.scores tr.fail:hover td.col-approve {
 .review-flag-note { color: #e53935; font-size: 12px; margin: 4px 0; }
 
 .lookahead-note { color: #f9a825; font-size: 11px; margin-top: 2px; }
+
+/* data freshness (app-live.js freshnessHtml) */
+.stale-banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; background: rgba(220,38,38,0.15);
+  border: 1px solid rgba(220,38,38,0.55); color: #fca5a5; font-weight: 700; }
+body.data-stale #main { opacity: 0.85; }

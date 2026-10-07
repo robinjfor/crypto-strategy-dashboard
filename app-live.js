@@ -296,6 +296,54 @@
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
+  // Data freshness: never present cached/static data as live (資金控管 2026-10-08).
+  var STALE_MAX_MIN = 120; // runner is hourly; >2h old cloud data counts as stale
+  function dataTimestamp() {
+    var cands = [];
+    if (cloudOk && cloud) cands = [cloud.updated_at, cloud.last_job_run_at];
+    else cands = [
+      book && (book.updated_at || book.last_updated),
+      positions && positions.updated_at,
+      paper && (paper.updated_at_taipei || paper.updated_at),
+      health && (health.updated_at || health.checked_at)
+    ];
+    var best = null;
+    cands.forEach(function (v) {
+      if (!v) return;
+      var s = String(v);
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(s)) s += "+08:00"; // naive = TPT
+      var t = Date.parse(s);
+      if (!isNaN(t) && (best == null || t > best)) best = t;
+    });
+    return best;
+  }
+  function fmtTpt(ms) {
+    try { return new Date(ms).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }) + " TPT"; }
+    catch (e) { return new Date(ms).toISOString(); }
+  }
+  function freshnessHtml() {
+    var ts = dataTimestamp();
+    var ageMin = ts != null ? (Date.now() - ts) / 60000 : null;
+    var stale = !cloudOk || ageMin == null || ageMin > STALE_MAX_MIN;
+    var age = ageMin == null ? "時間未知"
+      : ageMin < 90 ? Math.round(ageMin) + " 分鐘前"
+      : ageMin < 48 * 60 ? (ageMin / 60).toFixed(1) + " 小時前"
+      : Math.floor(ageMin / 1440) + " 天前";
+    var src = cloudOk ? "雲端" : "快取／靜態（非即時）";
+    var el = $("staleBanner");
+    if (el) {
+      if (stale) {
+        el.classList.remove("hidden");
+        el.innerHTML = "⚠ 非即時資料：" + esc(src) + " · 資料時間 " + esc(ts != null ? fmtTpt(ts) : "未知") +
+          "（" + esc(age) + "）。帳戶、模式、成交可能與實際不同，請登入／重整取得雲端即時狀態。";
+      } else el.classList.add("hidden");
+    }
+    document.body.classList.toggle("data-stale", stale);
+    return "資料時間：<strong>" + esc(ts != null ? fmtTpt(ts) : "未知") + "</strong>（" + esc(age) + "）" +
+      " · " + esc(src) + (stale ? ' <span class="badge bad">過期</span>' : "") +
+      ' <span class="dim">· 頁面重整 ' + esc(nowLabel()) + "</span>";
+  }
+
   function nowLabel() {
     try { return new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }) + " CST"; }
     catch (e) { return new Date().toISOString(); }
@@ -1338,8 +1386,7 @@
       }
       renderAll();
       if ($("lastUpdated")) {
-        $("lastUpdated").innerHTML = "最後更新：<strong>" + esc(nowLabel()) + "</strong>" +
-          (cloudOk ? " · 雲端" : " · 快取");
+        $("lastUpdated").innerHTML = freshnessHtml();
       }
     } catch (e) {
       showErr("載入失敗：" + (e.message || e));
