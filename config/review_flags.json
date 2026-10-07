@@ -3,7 +3,7 @@
   "flags": [
     {
       "id": "btc_daily_lookahead_2026-10-07",
-      "active": true,
+      "active": false,
       "created_at_iso": "2026-10-07T18:31:00+08:00",
       "badge_zh": "數字待修正、勿批准",
       "note_zh": "回測有前視偏差（4h bar 提前使用當日 BTC 日線收盤），分析師正在重跑；修正後 ARB 1x/1.25x/1.5x CAGR 約 72%/88%/102%。",
@@ -29,7 +29,9 @@
         "ls__FET__4h__n55__s2.0__t3.0__LS",
         "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS",
         "port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb"
-      ]
+      ],
+      "cleared_at_iso": "2026-10-07T19:05:00+08:00",
+      "cleared_reason": "analyst re-ran with lookahead fix (catalog lookahead_fix)"
     }
   ]
 }

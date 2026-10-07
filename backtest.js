@@ -46,6 +46,15 @@
   function flagBadge(f) {
     return f ? '<span class="badge bad review-flag" title="' + esc(f.note_zh || "") + '">' + esc(f.badge_zh || "數字待修正、勿批准") + "</span>" : "";
   }
+  function lookaheadNote(r) {
+    var lf = r && r.lookahead_fix;
+    if (!lf) return "";
+    var b = lf.before_buggy || {};
+    var old = b.cagr_3y != null ? Number(b.cagr_3y).toFixed(1) + "%" : "—";
+    var oldDd = b.maxdd_3y != null ? Number(b.maxdd_3y).toFixed(1) + "%" : "—";
+    return '<div class="lookahead-note" title="' + esc(lf.note || "") + '">已修正前視 · 舊 CAGR ' + esc(old) +
+      " · 舊 MaxDD " + esc(oldDd) + (b.gate_pass_3y ? " · 舊：過關" : "") + "</div>";
+  }
   function flagNote(f) {
     return f ? '<div class="review-flag-note">' + esc(f.note_zh || "") + "</div>" : "";
   }
@@ -550,6 +559,7 @@
           oos_total: r.oos_total_3y != null ? r.oos_total_3y : (r.oos_total || 6),
           n_trades: r.n_trades_3y != null ? r.n_trades_3y : r.n_trades,
           robust_neighbor_pct: r.robust_neighbor_pct,
+          lookahead_fix: r.lookahead_fix || null,
           backtest_code: r.backtest_code || "",
           report: r.report || "",
           gate_pass: r.gate_pass_3y != null ? r.gate_pass_3y : r.gate_pass,
@@ -787,6 +797,7 @@
       return '<tr class="score-row' + rowCls + '" data-sid="' + esc(r.strategy_id) + '">' +
         "<td><strong>" + esc(rowTitle) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
+        lookaheadNote(r) +
         (rowFlag(r.strategy_id) ? " " + flagBadge(rowFlag(r.strategy_id)) + flagNote(rowFlag(r.strategy_id)) : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
         '<td class="num">' + num(r.initial, 0) + "</td>" +

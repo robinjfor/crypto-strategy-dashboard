@@ -841,3 +841,5 @@ table.scores tr.fail:hover td.col-approve {
 /* review flags (config/review_flags.json) */
 .badge.review-flag { background: #c62828; color: #fff; font-weight: 700; }
 .review-flag-note { color: #e53935; font-size: 12px; margin: 4px 0; }
+
+.lookahead-note { color: #f9a825; font-size: 11px; margin-top: 2px; }

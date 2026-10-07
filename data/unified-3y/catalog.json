@@ -35,10 +35,10 @@
       ]
     },
     "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
-    "generated_at": "2026-10-07 18:05:47 CST",
+    "generated_at": "2026-10-07 19:04:22 CST",
     "n_strategies": 17,
     "n_rows": 122,
-    "n_gate_pass_3y": 92,
+    "n_gate_pass_3y": 51,
     "n_gate_pass_both": 8,
     "notes": [
       "Overlapping rows with scores.json copy metrics verbatim; catalog score rescored across all gate_pass_3y in this catalog.",
@@ -49,7 +49,8 @@
       "news_driven merge +21 robust rows; cloud_supported=false; scores rescored.",
       "cagr70 merge +10 rows (real funding, next-open); cloud_supported=false",
       "liquidity fields added; approval_excluded for illiquid; score rescored among liquidity-ok gate passers only",
-      "portfolio118 append port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb (+family portfolio_core_satellite_perp) and A1-A4 enrichment (2026-10-07 18:05:47 CST); rescored."
+      "portfolio118 append port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb (+family portfolio_core_satellite_perp) and A1-A4 enrichment (2026-10-07 18:05:47 CST); rescored.",
+      "lookahead_fix 2026-10-07 19:04:22 CST: BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; rows J1,J2,J3,H6,H1,H7,H2,H8,H9,H10,H11,H5,H4,H3,A3,A4,A1,A2,A6,A5,A8,A14,A13,A15,A12,A7,A10,A11,A9,B3,B4,B1,B2,Q1"
     ],
     "inconsistencies_vs_scores_json": [
       {
@@ -396,7 +397,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 35.4662,
+          "score": 72.3149,
           "data_short": false,
           "code": "C1",
           "liquidity": {
@@ -457,7 +458,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 32.1042,
+          "score": 52.2488,
           "data_short": false,
           "code": "C2",
           "liquidity": {
@@ -517,7 +518,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 24.7749,
+          "score": 41.8095,
           "data_short": false,
           "code": "C3",
           "liquidity": {
@@ -578,7 +579,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 23.3433,
+          "score": 35.9253,
           "data_short": false,
           "code": "C4",
           "liquidity": {
@@ -646,7 +647,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 23.3388,
+          "score": 35.8761,
           "data_short": false,
           "code": "C5",
           "liquidity": {
@@ -708,7 +709,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 18.5306,
+          "score": 29.3812,
           "data_short": false,
           "code": "C6",
           "liquidity": {
@@ -770,7 +771,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 16.2921,
+          "score": 21.5862,
           "data_short": false,
           "code": "C7",
           "liquidity": {
@@ -837,7 +838,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 12.239,
+          "score": 13.5069,
           "data_short": false,
           "code": "C8",
           "liquidity": {
@@ -1756,11 +1757,11 @@
           "status": "衛星A候選（備選）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 15329.1,
-          "ret_3y": 53.291,
-          "cagr_3y": 15.2963,
+          "final": 11439.88,
+          "ret_3y": 14.3988,
+          "cagr_3y": 4.5807,
           "ret_1y": 1.8464,
-          "bh_ret_3y": -8.63,
+          "bh_ret_3y": 7.958,
           "bh_final": 9137.0,
           "maxdd_3y": -31.6736,
           "oos_pass_3y": "4/6",
@@ -1778,11 +1779,13 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
           "gate_pass_both": true,
-          "gate_fail_reasons": [],
-          "score": 17.4596,
+          "gate_fail_reasons": [
+            "neighbor 22.22% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
           "code": "J1",
           "liquidity": {
@@ -1795,7 +1798,30 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -31.6736,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 22.22,
+          "n_trades": 23,
+          "robust": {
+            "gate_pass_3y_rate_pct": 22.22,
+            "fragile": true
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 15.2963,
+              "ret_3y": 53.291,
+              "maxdd_3y": -31.6736,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 17.4596,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J1.csv"
+          }
         },
         {
           "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",
@@ -1818,13 +1844,13 @@
           "status": "候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 12725.22,
-          "ret_3y": 27.2522,
-          "cagr_3y": 8.3615,
+          "final": 9075.97,
+          "ret_3y": -9.2403,
+          "cagr_3y": -3.1766,
           "ret_1y": 8.7054,
-          "bh_ret_3y": -8.63,
+          "bh_ret_3y": 7.958,
           "bh_final": 9137.0,
-          "maxdd_3y": -41.5263,
+          "maxdd_3y": -43.0929,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 23,
@@ -1840,11 +1866,14 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
           "gate_pass_both": true,
-          "gate_fail_reasons": [],
-          "score": 13.4899,
+          "gate_fail_reasons": [
+            "ret (-9.2403) <= bh (7.958)",
+            "neighbor 0.0% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
           "code": "J2",
           "liquidity": {
@@ -1857,7 +1886,30 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -43.0929,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 0.0,
+          "n_trades": 23,
+          "robust": {
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 8.3615,
+              "ret_3y": 27.2522,
+              "maxdd_3y": -41.5263,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 13.4899,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J2.csv"
+          }
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5_btcRegimeD__FET__4h",
@@ -1880,11 +1932,11 @@
           "status": "候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 12505.5,
-          "ret_3y": 25.055,
-          "cagr_3y": 7.7345,
+          "final": 9198.39,
+          "ret_3y": -8.0161,
+          "cagr_3y": -2.7437,
           "ret_1y": -2.9267,
-          "bh_ret_3y": -8.63,
+          "bh_ret_3y": 7.958,
           "bh_final": 9137.0,
           "maxdd_3y": -39.6434,
           "oos_pass_3y": "4/6",
@@ -1902,11 +1954,14 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
           "gate_pass_both": true,
-          "gate_fail_reasons": [],
-          "score": 13.0663,
+          "gate_fail_reasons": [
+            "ret (-8.0161) <= bh (7.958)",
+            "neighbor 22.22% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
           "code": "J3",
           "liquidity": {
@@ -1919,7 +1974,30 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -39.6434,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 22.22,
+          "n_trades": 23,
+          "robust": {
+            "gate_pass_3y_rate_pct": 22.22,
+            "fragile": true
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 7.7345,
+              "ret_3y": 25.055,
+              "maxdd_3y": -39.6434,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 13.0663,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J3.csv"
+          }
         },
         {
           "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
@@ -2151,7 +2229,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 26.1503,
+          "score": 51.3024,
           "data_short": false,
           "code": "F1",
           "liquidity": {
@@ -3312,7 +3390,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 22.5687,
+          "score": 39.5916,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3369,7 +3447,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 27.0395,
+          "score": 46.3553,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3426,7 +3504,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.7166,
+          "score": 43.5419,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3483,7 +3561,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.1015,
+          "score": 40.6522,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3540,7 +3618,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 26.6169,
+          "score": 47.2729,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3597,7 +3675,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.6277,
+          "score": 43.3945,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3654,7 +3732,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.7749,
+          "score": 41.8095,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3711,7 +3789,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.7886,
+          "score": 31.5634,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3768,7 +3846,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.3487,
+          "score": 30.5717,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3825,7 +3903,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.7698,
+          "score": 31.5885,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3882,7 +3960,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.7886,
+          "score": 31.5634,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3939,7 +4017,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 23.3388,
+          "score": 35.8761,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3996,7 +4074,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.2141,
+          "score": 32.2928,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4053,7 +4131,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 18.5306,
+          "score": 29.3812,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4110,7 +4188,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4819,
+          "score": 54.7972,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4167,7 +4245,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.9748,
+          "score": 47.8049,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4224,7 +4302,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4819,
+          "score": 54.7972,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4281,7 +4359,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.4819,
+          "score": 54.7972,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4338,7 +4416,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 32.1042,
+          "score": 52.2488,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4404,13 +4482,13 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 25680.95,
-          "ret_3y": 156.8095,
-          "cagr_3y": 36.9323,
-          "ret_1y": 16.4475,
-          "bh_ret_3y": -90.3773,
+          "final": 12818.37,
+          "ret_3y": 28.1837,
+          "cagr_3y": 8.6184,
+          "ret_1y": -6.1633,
+          "bh_ret_3y": -89.8957,
           "bh_final": null,
-          "maxdd_3y": -31.7996,
+          "maxdd_3y": -33.7286,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 82,
@@ -4419,9 +4497,12 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 21.9775,
+          "score": 22.5986,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 50.0,
+            "fragile": false
+          },
           "source": "high_return",
           "code": "H6",
           "liquidity": {
@@ -4434,7 +4515,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -33.7286,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 50.0,
+          "n_trades": 82,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 36.9323,
+              "ret_3y": 156.8095,
+              "maxdd_3y": -31.7996,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 21.9775,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H6.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -4459,13 +4560,13 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 27654.13,
-          "ret_3y": 176.5413,
-          "cagr_3y": 40.3524,
-          "ret_1y": 23.694,
-          "bh_ret_3y": -90.3773,
+          "final": 15072.14,
+          "ret_3y": 50.7214,
+          "cagr_3y": 14.6368,
+          "ret_1y": 3.1128,
+          "bh_ret_3y": -89.8957,
           "bh_final": null,
-          "maxdd_3y": -27.3143,
+          "maxdd_3y": -27.7569,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 82,
@@ -4474,9 +4575,12 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.7498,
+          "score": 30.6097,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 55.56,
+            "fragile": false
+          },
           "source": "high_return",
           "code": "H1",
           "liquidity": {
@@ -4489,7 +4593,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -27.7569,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 55.56,
+          "n_trades": 82,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 40.3524,
+              "ret_3y": 176.5413,
+              "maxdd_3y": -27.3143,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 24.7498,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H1.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -4514,28 +4638,31 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 35550.28,
-          "ret_3y": 255.5028,
-          "cagr_3y": 52.6063,
-          "ret_1y": 20.0103,
-          "bh_ret_3y": -90.3773,
+          "final": 12600.69,
+          "ret_3y": 26.0069,
+          "cagr_3y": 8.0007,
+          "ret_1y": -13.0303,
+          "bh_ret_3y": -89.8957,
           "bh_final": null,
-          "maxdd_3y": -43.7767,
+          "maxdd_3y": -47.637,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 82,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 20.211,
+          "gate_fail_reasons": [
+            "maxdd -47.637 worse than -45%",
+            "neighbor 33.33% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
-            "gate_pass_3y_rate_pct": 58.33,
+            "gate_pass_3y_rate_pct": 33.33,
             "ret_3y_median": 176.7183,
-            "fragile": false,
+            "fragile": true,
             "cagr_3y_median": 40.337
           },
           "source": "high_return",
@@ -4550,7 +4677,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -47.637,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 33.33,
+          "n_trades": 82,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 52.6063,
+              "ret_3y": 255.5028,
+              "maxdd_3y": -43.7767,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 20.211,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H7.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -4575,13 +4722,13 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 40404.31,
-          "ret_3y": 304.0431,
-          "cagr_3y": 59.2562,
-          "ret_1y": 32.0326,
-          "bh_ret_3y": -90.3773,
+          "final": 16369.7,
+          "ret_3y": 63.697,
+          "cagr_3y": 17.8326,
+          "ret_1y": 0.7112,
+          "bh_ret_3y": -89.8957,
           "bh_final": null,
-          "maxdd_3y": -37.9454,
+          "maxdd_3y": -38.9651,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 82,
@@ -4590,11 +4737,11 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.3872,
+          "score": 24.3233,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
-            "gate_pass_3y_rate_pct": 88.89,
+            "gate_pass_3y_rate_pct": 52.78,
             "ret_3y_median": 214.7075,
             "fragile": false,
             "cagr_3y_median": 46.5247
@@ -4611,7 +4758,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -38.9651,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 52.78,
+          "n_trades": 82,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 59.2562,
+              "ret_3y": 304.0431,
+              "maxdd_3y": -37.9454,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 24.3872,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H2.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS",
@@ -4636,24 +4803,29 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 18372.83,
-          "ret_3y": 83.7283,
-          "cagr_3y": 22.4725,
-          "ret_1y": -3.3922,
-          "bh_ret_3y": -72.4253,
+          "final": 10404.77,
+          "ret_3y": 4.0477,
+          "cagr_3y": 1.3299,
+          "ret_1y": -17.9445,
+          "bh_ret_3y": -69.993,
           "bh_final": null,
-          "maxdd_3y": -31.1152,
-          "oos_pass_3y": "5/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -38.2622,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
           "n_trades_3y": 86,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 20.032,
+          "gate_fail_reasons": [
+            "neighbor 30.56% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 30.56,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H8",
           "liquidity": {
@@ -4666,7 +4838,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -38.2622,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 30.56,
+          "n_trades": 86,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 22.4725,
+              "ret_3y": 83.7283,
+              "maxdd_3y": -31.1152,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 20.032,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H8.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -4691,24 +4883,29 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 18159.17,
-          "ret_3y": 81.5917,
-          "cagr_3y": 21.996,
-          "ret_1y": -5.3241,
-          "bh_ret_3y": -72.4253,
+          "final": 10634.09,
+          "ret_3y": 6.3409,
+          "cagr_3y": 2.0681,
+          "ret_1y": -18.2823,
+          "bh_ret_3y": -69.993,
           "bh_final": null,
-          "maxdd_3y": -30.7279,
+          "maxdd_3y": -38.5164,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
           "n_trades_3y": 86,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 19.9357,
+          "gate_fail_reasons": [
+            "neighbor 36.11% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 36.11,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H9",
           "liquidity": {
@@ -4721,7 +4918,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -38.5164,
+          "oos_pass": "5/6",
+          "robust_neighbor_pct": 36.11,
+          "n_trades": 86,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 21.996,
+              "ret_3y": 81.5917,
+              "maxdd_3y": -30.7279,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 19.9357,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H9.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -4746,24 +4963,30 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 23035.47,
-          "ret_3y": 130.3547,
-          "cagr_3y": 32.0601,
-          "ret_1y": -7.5756,
-          "bh_ret_3y": -72.4253,
+          "final": 9786.57,
+          "ret_3y": -2.1343,
+          "cagr_3y": -0.7157,
+          "ret_1y": -27.558,
+          "bh_ret_3y": -69.993,
           "bh_final": null,
-          "maxdd_3y": -43.1375,
-          "oos_pass_3y": "5/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -52.1749,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
           "n_trades_3y": 86,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 16.645,
+          "gate_fail_reasons": [
+            "maxdd -52.1749 worse than -45%",
+            "neighbor 19.44% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 19.44,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H10",
           "liquidity": {
@@ -4776,7 +4999,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -52.1749,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 19.44,
+          "n_trades": 86,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 32.0601,
+              "ret_3y": 130.3547,
+              "maxdd_3y": -43.1375,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 16.645,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H10.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -4801,24 +5044,30 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 22670.32,
-          "ret_3y": 126.7032,
-          "cagr_3y": 31.3587,
-          "ret_1y": -10.2301,
-          "bh_ret_3y": -72.4253,
+          "final": 10136.88,
+          "ret_3y": 1.3688,
+          "cagr_3y": 0.4537,
+          "ret_1y": -27.9117,
+          "bh_ret_3y": -69.993,
           "bh_final": null,
-          "maxdd_3y": -42.6472,
+          "maxdd_3y": -52.4084,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
           "n_trades_3y": 86,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 16.4896,
+          "gate_fail_reasons": [
+            "maxdd -52.4084 worse than -45%",
+            "neighbor 27.78% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 27.78,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H11",
           "liquidity": {
@@ -4831,7 +5080,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -52.4084,
+          "oos_pass": "5/6",
+          "robust_neighbor_pct": 27.78,
+          "n_trades": 86,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 31.3587,
+              "ret_3y": 126.7032,
+              "maxdd_3y": -42.6472,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 16.4896,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H11.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS",
@@ -4856,24 +5125,31 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 25967.7,
-          "ret_3y": 159.677,
-          "cagr_3y": 37.4333,
-          "ret_1y": 16.1092,
-          "bh_ret_3y": -8.63,
+          "final": 8155.97,
+          "ret_3y": -18.4403,
+          "cagr_3y": -6.5616,
+          "ret_1y": -26.0772,
+          "bh_ret_3y": 7.958,
           "bh_final": null,
-          "maxdd_3y": -32.8921,
-          "oos_pass_3y": "5/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -51.1715,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
           "n_trades_3y": 44,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 23.1011,
+          "gate_fail_reasons": [
+            "ret (-18.4403) <= bh (7.958)",
+            "maxdd -51.1715 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H5",
           "liquidity": {
@@ -4886,7 +5162,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -51.1715,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 0.0,
+          "n_trades": 44,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 37.4333,
+              "ret_3y": 159.677,
+              "maxdd_3y": -32.8921,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 23.1011,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H5.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS",
@@ -4911,24 +5207,30 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 23063.57,
-          "ret_3y": 130.6357,
-          "cagr_3y": 32.1081,
-          "ret_1y": 10.5588,
-          "bh_ret_3y": -8.63,
+          "final": 10143.77,
+          "ret_3y": 1.4377,
+          "cagr_3y": 0.4764,
+          "ret_1y": -17.0675,
+          "bh_ret_3y": 7.958,
           "bh_final": null,
-          "maxdd_3y": -24.5163,
+          "maxdd_3y": -41.0926,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 44,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 23.2359,
+          "gate_fail_reasons": [
+            "ret (1.4377) <= bh (7.958)",
+            "neighbor 0.0% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H4",
           "liquidity": {
@@ -4941,7 +5243,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -41.0926,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 0.0,
+          "n_trades": 44,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 32.1081,
+              "ret_3y": 130.6357,
+              "maxdd_3y": -24.5163,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 23.2359,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H4.csv"
+          }
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS",
@@ -4966,24 +5288,31 @@
           "status": "高報酬研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 31686.34,
-          "ret_3y": 216.8634,
-          "cagr_3y": 46.8567,
-          "ret_1y": 14.1604,
-          "bh_ret_3y": -8.63,
+          "final": 9344.18,
+          "ret_3y": -6.5582,
+          "cagr_3y": -2.2332,
+          "ret_1y": -25.97,
+          "bh_ret_3y": 7.958,
           "bh_final": null,
-          "maxdd_3y": -34.8561,
-          "oos_pass_3y": "5/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -55.0143,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
           "n_trades_3y": 44,
           "full_period": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
-          "score": 23.5868,
+          "gate_fail_reasons": [
+            "ret (-6.5582) <= bh (7.958)",
+            "maxdd -55.0143 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "score": 0.0,
           "data_short": false,
-          "robust": null,
+          "robust": {
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
+          },
           "source": "high_return",
           "code": "H3",
           "liquidity": {
@@ -4996,7 +5325,27 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -55.0143,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 0.0,
+          "n_trades": 44,
+          "n_liquidations": 0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 46.8567,
+              "ret_3y": 216.8634,
+              "maxdd_3y": -34.8561,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 23.5868,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H3.csv"
+          }
         }
       ],
       "n_gate_pass_3y": 11,
@@ -5062,7 +5411,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.6599,
+          "score": 26.3143,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5119,7 +5468,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 14.9911,
+          "score": 22.1464,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5176,7 +5525,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 28.4578,
+          "score": 51.5626,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5233,7 +5582,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.34,
+          "score": 56.432,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -5296,7 +5645,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 21.6508,
+          "score": 36.0379,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5353,7 +5702,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.1355,
+          "score": 33.0312,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5410,7 +5759,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 15.3853,
+          "score": 19.9495,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5467,7 +5816,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.9166,
+          "score": 25.482,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5524,7 +5873,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 14.4361,
+          "score": 18.7771,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5581,7 +5930,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 11.3479,
+          "score": 12.3241,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5638,7 +5987,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.9773,
+          "score": 33.2504,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5695,7 +6044,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 20.3779,
+          "score": 36.769,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5752,7 +6101,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.8463,
+          "score": 26.892,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5809,7 +6158,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 17.3539,
+          "score": 29.0965,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5866,7 +6215,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 16.7827,
+          "score": 29.4411,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5931,16 +6280,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 159128.28,
-          "ret_3y": 1491.2828,
-          "cagr_3y": 149.9362,
-          "ret_1y": 197.9213,
+          "final": 51098.48,
+          "ret_3y": 410.9848,
+          "cagr_3y": 72.1341,
+          "ret_1y": 116.1959,
           "bh_ret_3y": -75.5168,
-          "maxdd_3y": -32.7002,
+          "maxdd_3y": -41.1767,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
           "n_trades_3y": 84,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -5953,15 +6302,17 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 91.67,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 41.67,
+            "fragile": true
           },
           "data_short": false,
-          "score": 57.2149,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "neighbor 41.67% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": 0,
           "code": "A3",
@@ -5978,9 +6329,9 @@
           "approval_excluded": false,
           "n_trades": 84,
           "oos_pass": "5/6",
-          "maxdd": -32.7002,
+          "maxdd": -41.1767,
           "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
-          "robust_neighbor_pct": 91.67,
+          "robust_neighbor_pct": 41.67,
           "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
           "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
           "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
@@ -5991,6 +6342,21 @@
             "maxdd_daily": -30.1633,
             "ret_1y": 197.9213,
             "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 149.9362,
+              "ret_3y": 1491.2828,
+              "maxdd_3y": -32.7002,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": 91.67,
+              "score": 57.2149,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A3.csv"
           }
         },
         {
@@ -6015,14 +6381,14 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 118320.02,
-          "ret_3y": 1083.2002,
-          "cagr_3y": 126.5832,
-          "ret_1y": 149.7406,
+          "final": 41364.81,
+          "ret_3y": 313.6481,
+          "cagr_3y": 60.4388,
+          "ret_1y": 87.7934,
           "bh_ret_3y": -75.5168,
-          "maxdd_3y": -30.9983,
-          "oos_pass_3y": "5/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -39.7516,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
           "n_trades_3y": 84,
           "gate_pass_3y": true,
           "cloud_supported": false,
@@ -6037,11 +6403,11 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 100.0,
+            "gate_pass_3y_rate_pct": 66.67,
             "fragile": false
           },
           "data_short": false,
-          "score": 49.5817,
+          "score": 57.4237,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
@@ -6061,10 +6427,10 @@
           },
           "approval_excluded": false,
           "n_trades": 84,
-          "oos_pass": "5/6",
-          "maxdd": -30.9983,
+          "oos_pass": "4/6",
+          "maxdd": -39.7516,
           "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
-          "robust_neighbor_pct": 100.0,
+          "robust_neighbor_pct": 66.67,
           "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
           "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
           "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
@@ -6075,6 +6441,21 @@
             "maxdd_daily": -30.1633,
             "ret_1y": 149.7406,
             "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 126.5832,
+              "ret_3y": 1083.2002,
+              "maxdd_3y": -30.9983,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": 100.0,
+              "score": 49.5817,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A4.csv"
           }
         },
         {
@@ -6099,16 +6480,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 442915.86,
-          "ret_3y": 4329.1586,
-          "cagr_3y": 250.7535,
-          "ret_1y": 319.4646,
+          "final": 82344.55,
+          "ret_3y": 723.4455,
+          "cagr_3y": 101.7734,
+          "ret_1y": 161.2557,
           "bh_ret_3y": -75.5168,
-          "maxdd_3y": -44.6747,
+          "maxdd_3y": -56.1922,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
           "n_trades_3y": 84,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -6121,15 +6502,18 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 75.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 33.33,
+            "fragile": true
           },
           "data_short": false,
-          "score": 83.3333,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "maxdd -56.1922 worse than -45%",
+            "neighbor 33.33% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": 0,
           "code": "A1",
@@ -6146,9 +6530,9 @@
           "approval_excluded": false,
           "n_trades": 84,
           "oos_pass": "5/6",
-          "maxdd": -44.6747,
+          "maxdd": -56.1922,
           "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
-          "robust_neighbor_pct": 75.0,
+          "robust_neighbor_pct": 33.33,
           "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
           "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
           "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
@@ -6159,6 +6543,21 @@
             "maxdd_daily": -42.1574,
             "ret_1y": 319.4646,
             "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 250.7535,
+              "ret_3y": 4329.1586,
+              "maxdd_3y": -44.6747,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": 75.0,
+              "score": 83.3333,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A1.csv"
           }
         },
         {
@@ -6183,16 +6582,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 300741.22,
-          "ret_3y": 2907.4122,
-          "cagr_3y": 208.5634,
-          "ret_1y": 235.3389,
+          "final": 63731.77,
+          "ret_3y": 537.3177,
+          "cagr_3y": 85.2734,
+          "ret_1y": 120.5132,
           "bh_ret_3y": -75.5168,
-          "maxdd_3y": -43.1007,
+          "maxdd_3y": -54.3498,
           "oos_pass_3y": "5/6",
           "oos_wins_3y": 5,
           "n_trades_3y": 84,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -6205,15 +6604,17 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 100.0,
+            "gate_pass_3y_rate_pct": 58.33,
             "fragile": false
           },
           "data_short": false,
-          "score": 67.6857,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "maxdd -54.3498 worse than -45%"
+          ],
           "bh_final": null,
           "n_liquidations": 0,
           "code": "A2",
@@ -6230,9 +6631,9 @@
           "approval_excluded": false,
           "n_trades": 84,
           "oos_pass": "5/6",
-          "maxdd": -43.1007,
+          "maxdd": -54.3498,
           "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
-          "robust_neighbor_pct": 100.0,
+          "robust_neighbor_pct": 58.33,
           "backtest_code": "/workspace/strategy-unified-3y/aggressive/code/run_aggressive.py",
           "engine_code": "/workspace/strategy-unified-3y/cagr70/code/ls70_engine.py",
           "report": "/workspace/strategy-unified-3y/aggressive/REPORT.md",
@@ -6243,6 +6644,21 @@
             "maxdd_daily": -42.0042,
             "ret_1y": 235.3389,
             "note": "p118 rerun: identical ret_3y; DD daily-sampled so shallower; catalog bar-level metrics retained"
+          },
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 208.5634,
+              "ret_3y": 2907.4122,
+              "maxdd_3y": -43.1007,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": 100.0,
+              "score": 67.6857,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A2.csv"
           }
         },
         {
@@ -6267,16 +6683,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 68885.13,
-          "ret_3y": 588.8513,
-          "cagr_3y": 89.4327,
-          "ret_1y": 49.6633,
+          "final": 30203.25,
+          "ret_3y": 202.0325,
+          "cagr_3y": 44.4893,
+          "ret_1y": 22.8869,
           "bh_ret_3y": 360.1239,
-          "maxdd_3y": -44.1788,
-          "oos_pass_3y": "4/6",
-          "oos_wins_3y": 4,
-          "n_trades_3y": 89,
-          "gate_pass_3y": true,
+          "maxdd_3y": -53.7121,
+          "oos_pass_3y": "3/6",
+          "oos_wins_3y": 3,
+          "n_trades_3y": 88,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -6289,15 +6705,20 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 58.33,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
           "data_short": false,
-          "score": 27.2653,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "ret (202.0325) <= bh (360.1239)",
+            "oos 3/6 < 4/6",
+            "maxdd -53.7121 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": 0,
           "code": "A6",
@@ -6312,10 +6733,26 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "n_trades": 89,
-          "oos_pass": "4/6",
-          "maxdd": -44.1788,
-          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
+          "n_trades": 88,
+          "oos_pass": "3/6",
+          "maxdd": -53.7121,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 0.0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 89.4327,
+              "ret_3y": 588.8513,
+              "maxdd_3y": -44.1788,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 27.2653,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A6.csv"
+          }
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS",
@@ -6339,12 +6776,12 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 57571.12,
-          "ret_3y": 475.7112,
-          "cagr_3y": 79.2024,
-          "ret_1y": 22.8969,
-          "bh_ret_3y": -90.3773,
-          "maxdd_3y": -30.529,
+          "final": 19937.14,
+          "ret_3y": 99.3714,
+          "cagr_3y": 25.827,
+          "ret_1y": -7.1735,
+          "bh_ret_3y": -89.8957,
+          "maxdd_3y": -32.0933,
           "oos_pass_3y": "4/6",
           "oos_wins_3y": 4,
           "n_trades_3y": 82,
@@ -6367,7 +6804,7 @@
             "fragile": false
           },
           "data_short": false,
-          "score": 29.3171,
+          "score": 31.3782,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
@@ -6385,7 +6822,26 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "maxdd": -32.0933,
+          "oos_pass": "4/6",
+          "robust_neighbor_pct": 100.0,
+          "n_trades": 82,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 79.2024,
+              "ret_3y": 475.7112,
+              "maxdd_3y": -30.529,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 29.3171,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A5.csv"
+          }
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS",
@@ -6404,22 +6860,22 @@
             "regime_scale": "none"
           },
           "gate_pass_3y": true,
-          "cagr_3y": 54.3372,
-          "ret_3y": 270.9578,
-          "ret_1y": 24.3437,
+          "cagr_3y": 14.6737,
+          "ret_3y": 50.8672,
+          "ret_1y": -5.4248,
           "bh_ret_3y": -89.8957,
-          "maxdd_3y": -38.7596,
-          "maxdd": -38.7596,
+          "maxdd_3y": -38.5942,
+          "maxdd": -38.5942,
           "oos_pass_3y": "4/6",
           "oos_pass": "4/6",
-          "final": 37095.78,
+          "final": 15086.72,
           "n_trades": 82,
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 100.0,
             "fragile": false
           },
-          "score": 16.0207,
+          "score": 22.2182,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6432,7 +6888,26 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A8"
+          "code": "A8",
+          "oos_wins_3y": 4,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "n_trades_3y": 82,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 54.3372,
+              "ret_3y": 270.9578,
+              "maxdd_3y": -38.7596,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 16.0207,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A8.csv"
+          }
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS",
@@ -6450,23 +6925,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 49.8238,
-          "ret_3y": 239.1467,
-          "ret_1y": 6.2077,
+          "gate_pass_3y": false,
+          "cagr_3y": -12.6043,
+          "ret_3y": -33.2778,
+          "ret_1y": -40.0075,
           "bh_ret_3y": 7.958,
-          "maxdd_3y": -42.7431,
-          "maxdd": -42.7431,
+          "maxdd_3y": -69.4919,
+          "maxdd": -69.4919,
           "oos_pass_3y": "5/6",
           "oos_pass": "5/6",
-          "final": 33914.67,
+          "final": 6672.22,
           "n_trades": 44,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 75.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "score": 12.0778,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6479,7 +6954,30 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A14"
+          "code": "A14",
+          "oos_wins_3y": 5,
+          "gate_fail_reasons": [
+            "ret (-33.2778) <= bh (7.958)",
+            "maxdd -69.4919 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "robust_neighbor_pct": 0.0,
+          "n_trades_3y": 44,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 49.8238,
+              "ret_3y": 239.1467,
+              "maxdd_3y": -42.7431,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 12.0778,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A14.csv"
+          }
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS",
@@ -6497,23 +6995,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 49.5447,
-          "ret_3y": 237.242,
-          "ret_1y": 16.7325,
+          "gate_pass_3y": false,
+          "cagr_3y": 6.645,
+          "ret_3y": 21.3158,
+          "ret_1y": -15.3336,
           "bh_ret_3y": -89.8957,
-          "maxdd_3y": -44.5632,
-          "maxdd": -44.5632,
+          "maxdd_3y": -47.5455,
+          "maxdd": -47.5455,
           "oos_pass_3y": "4/6",
           "oos_pass": "4/6",
-          "final": 33724.2,
+          "final": 12131.58,
           "n_trades": 82,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 91.67,
+            "gate_pass_3y_rate_pct": 66.67,
             "fragile": false
           },
-          "score": 12.5218,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6526,7 +7024,28 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A13"
+          "code": "A13",
+          "oos_wins_3y": 4,
+          "gate_fail_reasons": [
+            "maxdd -47.5455 worse than -45%"
+          ],
+          "robust_neighbor_pct": 66.67,
+          "n_trades_3y": 82,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 49.5447,
+              "ret_3y": 237.242,
+              "maxdd_3y": -44.5632,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 12.5218,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A13.csv"
+          }
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS",
@@ -6544,23 +7063,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 47.092,
-          "ret_3y": 220.8088,
-          "ret_1y": 16.7913,
+          "gate_pass_3y": false,
+          "cagr_3y": -18.1559,
+          "ret_3y": -45.2148,
+          "ret_1y": -41.1721,
           "bh_ret_3y": 7.958,
-          "maxdd_3y": -44.2581,
-          "maxdd": -44.2581,
+          "maxdd_3y": -71.7158,
+          "maxdd": -71.7158,
           "oos_pass_3y": "5/6",
           "oos_pass": "5/6",
-          "final": 32080.88,
+          "final": 5478.52,
           "n_trades": 44,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 58.33,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "score": 12.0532,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6573,7 +7092,30 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A15"
+          "code": "A15",
+          "oos_wins_3y": 5,
+          "gate_fail_reasons": [
+            "ret (-45.2148) <= bh (7.958)",
+            "maxdd -71.7158 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "robust_neighbor_pct": 0.0,
+          "n_trades_3y": 44,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 47.092,
+              "ret_3y": 220.8088,
+              "maxdd_3y": -44.2581,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 12.0532,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A15.csv"
+          }
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS",
@@ -6591,23 +7133,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 39.7972,
-          "ret_3y": 175.1165,
-          "ret_1y": 6.408,
+          "gate_pass_3y": false,
+          "cagr_3y": -6.9752,
+          "ret_3y": -19.5199,
+          "ret_1y": -30.5012,
           "bh_ret_3y": 7.958,
-          "maxdd_3y": -34.0097,
-          "maxdd": -34.0097,
+          "maxdd_3y": -57.2521,
+          "maxdd": -57.2521,
           "oos_pass_3y": "5/6",
           "oos_pass": "5/6",
-          "final": 27511.65,
+          "final": 8048.01,
           "n_trades": 44,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 91.67,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "score": 13.8153,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6620,7 +7162,30 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A12"
+          "code": "A12",
+          "oos_wins_3y": 5,
+          "gate_fail_reasons": [
+            "ret (-19.5199) <= bh (7.958)",
+            "maxdd -57.2521 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "robust_neighbor_pct": 0.0,
+          "n_trades_3y": 44,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 39.7972,
+              "ret_3y": 175.1165,
+              "maxdd_3y": -34.0097,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 13.8153,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A12.csv"
+          }
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS",
@@ -6639,22 +7204,22 @@
             "regime_scale": "none"
           },
           "gate_pass_3y": true,
-          "cagr_3y": 37.2559,
-          "ret_3y": 160.2845,
-          "ret_1y": 18.562,
+          "cagr_3y": 12.4406,
+          "ret_3y": 42.2144,
+          "ret_1y": -1.3502,
           "bh_ret_3y": -89.8957,
-          "maxdd_3y": -27.9125,
-          "maxdd": -27.9125,
+          "maxdd_3y": -27.4811,
+          "maxdd": -27.4811,
           "oos_pass_3y": "4/6",
           "oos_pass": "4/6",
-          "final": 26028.45,
+          "final": 14221.44,
           "n_trades": 82,
           "robust": {
             "n_neighbors": 12,
             "gate_pass_3y_rate_pct": 100.0,
             "fragile": false
           },
-          "score": 16.9661,
+          "score": 29.1372,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6667,7 +7232,26 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A7"
+          "code": "A7",
+          "oos_wins_3y": 4,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "n_trades_3y": 82,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 37.2559,
+              "ret_3y": 160.2845,
+              "maxdd_3y": -27.9125,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 16.9661,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A7.csv"
+          }
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__LS",
@@ -6686,22 +7270,22 @@
             "regime_scale": "none"
           },
           "gate_pass_3y": true,
-          "cagr_3y": 35.0111,
-          "ret_3y": 147.6365,
-          "ret_1y": 14.2393,
+          "cagr_3y": 7.6658,
+          "ret_3y": 24.8368,
+          "ret_1y": -7.8814,
           "bh_ret_3y": -89.8957,
-          "maxdd_3y": -32.4299,
-          "maxdd": -32.4299,
+          "maxdd_3y": -33.6586,
+          "maxdd": -33.6586,
           "oos_pass_3y": "4/6",
           "oos_pass": "4/6",
-          "final": 24763.65,
+          "final": 12483.68,
           "n_trades": 82,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 91.67,
+            "gate_pass_3y_rate_pct": 66.67,
             "fragile": false
           },
-          "score": 14.6107,
+          "score": 21.9667,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6714,7 +7298,26 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A10"
+          "code": "A10",
+          "oos_wins_3y": 4,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 66.67,
+          "n_trades_3y": 82,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 35.0111,
+              "ret_3y": 147.6365,
+              "maxdd_3y": -32.4299,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 14.6107,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A10.csv"
+          }
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__LS",
@@ -6732,23 +7335,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 33.4597,
-          "ret_3y": 139.1401,
-          "ret_1y": 12.8019,
+          "gate_pass_3y": false,
+          "cagr_3y": -9.9224,
+          "ret_3y": -26.9373,
+          "ret_1y": -28.1456,
           "bh_ret_3y": 7.958,
-          "maxdd_3y": -31.4326,
-          "maxdd": -31.4326,
+          "maxdd_3y": -54.3773,
+          "maxdd": -54.3773,
           "oos_pass_3y": "5/6",
           "oos_pass": "5/6",
-          "final": 23914.01,
+          "final": 7306.27,
           "n_trades": 44,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 83.33,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "score": 14.4005,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6761,7 +7364,30 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A11"
+          "code": "A11",
+          "oos_wins_3y": 5,
+          "gate_fail_reasons": [
+            "ret (-26.9373) <= bh (7.958)",
+            "maxdd -54.3773 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
+          "robust_neighbor_pct": 0.0,
+          "n_trades_3y": 44,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 33.4597,
+              "ret_3y": 139.1401,
+              "maxdd_3y": -31.4326,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 14.4005,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A11.csv"
+          }
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS",
@@ -6779,23 +7405,23 @@
             "check_liq": true,
             "regime_scale": "none"
           },
-          "gate_pass_3y": true,
-          "cagr_3y": 27.9379,
-          "ret_3y": 110.484,
-          "ret_1y": 5.4338,
+          "gate_pass_3y": false,
+          "cagr_3y": -2.7328,
+          "ret_3y": -7.9852,
+          "ret_1y": -20.5197,
           "bh_ret_3y": 7.958,
-          "maxdd_3y": -24.1003,
-          "maxdd": -24.1003,
-          "oos_pass_3y": "5/6",
-          "oos_pass": "5/6",
-          "final": 21048.4,
+          "maxdd_3y": -42.0173,
+          "maxdd": -42.0173,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "final": 9201.48,
           "n_trades": 44,
           "robust": {
             "n_neighbors": 12,
-            "gate_pass_3y_rate_pct": 100.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "score": 15.6358,
+          "score": 0.0,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6808,7 +7434,29 @@
           "approval_excluded": false,
           "source": "aggressive_2026-10-01",
           "n_liquidations": 0,
-          "code": "A9"
+          "code": "A9",
+          "oos_wins_3y": 4,
+          "gate_fail_reasons": [
+            "ret (-7.9852) <= bh (7.958)",
+            "neighbor 0.0% < 50%"
+          ],
+          "robust_neighbor_pct": 0.0,
+          "n_trades_3y": 44,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 27.9379,
+              "ret_3y": 110.484,
+              "maxdd_3y": -24.1003,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 15.6358,
+              "gate_fail_reasons": null
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A9.csv"
+          }
         }
       ],
       "n_gate_pass_3y": 6,
@@ -6857,16 +7505,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 63127.4,
-          "ret_3y": 531.274,
-          "cagr_3y": 84.0713,
-          "ret_1y": 48.2633,
+          "final": 16432.82,
+          "ret_3y": 64.3282,
+          "cagr_3y": 17.9837,
+          "ret_1y": 0.2378,
           "bh_ret_3y": 217.9486,
-          "maxdd_3y": -32.8378,
-          "oos_pass_3y": "4/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -50.8467,
+          "oos_pass_3y": "2/6",
+          "oos_wins_3y": 2,
           "n_trades_3y": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -6879,15 +7527,20 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 4,
-            "gate_pass_3y_rate_pct": 100.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
           "data_short": false,
-          "score": 32.4368,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "ret (64.3282) <= bh (217.9486)",
+            "oos 2/6 < 4/6",
+            "maxdd -50.8467 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": null,
           "code": "B3",
@@ -6974,9 +7627,25 @@
           },
           "approval_excluded": false,
           "n_trades": null,
-          "oos_pass": "4/6",
-          "maxdd": -32.8378,
-          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
+          "oos_pass": "2/6",
+          "maxdd": -50.8467,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 0.0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 84.0713,
+              "ret_3y": 531.274,
+              "maxdd_3y": -32.8378,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 32.4368,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B3.csv"
+          }
         },
         {
           "strategy_id": "port_ew_univ10_lev1.5_vt0.03",
@@ -7003,16 +7672,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 54370.26,
-          "ret_3y": 443.7026,
-          "cagr_3y": 75.19,
-          "ret_1y": 40.1616,
+          "final": 16812.77,
+          "ret_3y": 68.1277,
+          "cagr_3y": 18.8851,
+          "ret_1y": 0.4309,
           "bh_ret_3y": 217.9486,
-          "maxdd_3y": -33.0523,
-          "oos_pass_3y": "4/6",
-          "oos_wins_3y": 4,
+          "maxdd_3y": -47.6751,
+          "oos_pass_3y": "2/6",
+          "oos_wins_3y": 2,
           "n_trades_3y": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -7025,15 +7694,20 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 4,
-            "gate_pass_3y_rate_pct": 100.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
           "data_short": false,
-          "score": 28.6065,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "ret (68.1277) <= bh (217.9486)",
+            "oos 2/6 < 4/6",
+            "maxdd -47.6751 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": null,
           "code": "B4",
@@ -7120,9 +7794,25 @@
           },
           "approval_excluded": false,
           "n_trades": null,
-          "oos_pass": "4/6",
-          "maxdd": -33.0523,
-          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
+          "oos_pass": "2/6",
+          "maxdd": -47.6751,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 0.0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 75.19,
+              "ret_3y": 443.7026,
+              "maxdd_3y": -33.0523,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 28.6065,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B4.csv"
+          }
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vtNone",
@@ -7149,16 +7839,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 102108.13,
-          "ret_3y": 921.0813,
-          "cagr_3y": 115.8453,
-          "ret_1y": 62.264,
+          "final": 17181.64,
+          "ret_3y": 71.8164,
+          "cagr_3y": 19.7473,
+          "ret_1y": -3.3294,
           "bh_ret_3y": 217.9486,
-          "maxdd_3y": -41.6834,
-          "oos_pass_3y": "4/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -62.3319,
+          "oos_pass_3y": "2/6",
+          "oos_wins_3y": 2,
           "n_trades_3y": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -7171,15 +7861,20 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 4,
-            "gate_pass_3y_rate_pct": 100.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
           "data_short": false,
-          "score": 35.5231,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "ret (71.8164) <= bh (217.9486)",
+            "oos 2/6 < 4/6",
+            "maxdd -62.3319 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": null,
           "code": "B1",
@@ -7266,9 +7961,25 @@
           },
           "approval_excluded": false,
           "n_trades": null,
-          "oos_pass": "4/6",
-          "maxdd": -41.6834,
-          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
+          "oos_pass": "2/6",
+          "maxdd": -62.3319,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 0.0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 115.8453,
+              "ret_3y": 921.0813,
+              "maxdd_3y": -41.6834,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 35.5231,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B1.csv"
+          }
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vt0.03",
@@ -7295,16 +8006,16 @@
           "status": "CAGR70研究候選",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
-          "final": 85148.21,
-          "ret_3y": 751.4821,
-          "cagr_3y": 103.2453,
-          "ret_1y": 51.3943,
+          "final": 18022.46,
+          "ret_3y": 80.2246,
+          "cagr_3y": 21.6674,
+          "ret_1y": -2.4887,
           "bh_ret_3y": 217.9486,
-          "maxdd_3y": -41.8992,
-          "oos_pass_3y": "4/6",
-          "oos_wins_3y": 5,
+          "maxdd_3y": -59.0438,
+          "oos_pass_3y": "2/6",
+          "oos_wins_3y": 2,
           "n_trades_3y": null,
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "cloud_supported": false,
           "requires": [
             "perp_futures",
@@ -7317,15 +8028,20 @@
           "funding_source": "binance_usdtm_historical",
           "robust": {
             "n_neighbors": 4,
-            "gate_pass_3y_rate_pct": 100.0,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
           "data_short": false,
-          "score": 32.437,
+          "score": 0.0,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
-          "gate_fail_reasons": [],
+          "gate_fail_reasons": [
+            "ret (80.2246) <= bh (217.9486)",
+            "oos 2/6 < 4/6",
+            "maxdd -59.0438 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "bh_final": null,
           "n_liquidations": null,
           "code": "B2",
@@ -7412,9 +8128,25 @@
           },
           "approval_excluded": false,
           "n_trades": null,
-          "oos_pass": "4/6",
-          "maxdd": -41.8992,
-          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/"
+          "oos_pass": "2/6",
+          "maxdd": -59.0438,
+          "period_end_note": "metrics refreshed to 2026-10-01 in aggressive/",
+          "robust_neighbor_pct": 0.0,
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied",
+            "before_buggy": {
+              "cagr_3y": 103.2453,
+              "ret_3y": 751.4821,
+              "maxdd_3y": -41.8992,
+              "oos_pass_3y": "4/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": null,
+              "score": 32.437,
+              "gate_fail_reasons": []
+            },
+            "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B2.csv"
+          }
         }
       ],
       "n_gate_pass_3y": 4,
@@ -7504,10 +8236,10 @@
           "review": "PENDING_EMILY",
           "approval_status": "awaiting_emily_approval",
           "initial": 10000.0,
-          "final": 121423.17,
-          "ret_3y": 1114.2317,
-          "cagr_3y": 129.6265,
-          "ret_1y": 91.411,
+          "final": 22993.99,
+          "ret_3y": 129.9399,
+          "cagr_3y": 31.9474,
+          "ret_1y": 17.976,
           "bh_ret_3y": 71.34116402114947,
           "bh_final": 17134.12,
           "buy_hold": {
@@ -7516,13 +8248,13 @@
             "btc_bh_ret_3y": 217.9486,
             "note": "portfolio has no single own coin; EW B&H of its 10 coins (ARB included) used as own-coin benchmark; BTC B&H shown for reference"
           },
-          "maxdd_3y": -35.3346,
-          "maxdd": -35.3346,
+          "maxdd_3y": -55.0738,
+          "maxdd": -55.0738,
           "maxdd_note": "daily-sampled equity (portfolio118); bar-level DD may be slightly deeper",
-          "sharpe": 1.87,
-          "oos_pass_3y": "5/6",
-          "oos_pass": "5/6",
-          "oos_wins_3y": 5,
+          "sharpe": 0.79,
+          "oos_pass_3y": "3/6",
+          "oos_pass": "3/6",
+          "oos_wins_3y": 3,
           "n_trades_3y": null,
           "n_trades": null,
           "n_trades_note": "sum of component trades (B1+A3) if available; rebalances not counted",
@@ -7531,26 +8263,30 @@
           "full_period": {
             "start": "2023-09-24",
             "end": "2026-09-24",
-            "ret": 1114.2317,
+            "ret": 129.9399,
             "bh_ret": 71.34116402114947,
-            "maxdd": -35.3346,
-            "oos_pass": "5/6",
+            "maxdd": -55.0738,
+            "oos_pass": "3/6",
             "note": "portfolio only backtested on 3y window (ARB perp listed 2023-03); full_period = 3y"
           },
-          "gate_pass_3y": true,
-          "gate_pass_full": true,
-          "gate_pass_both": true,
-          "gate_fail_reasons": [],
+          "gate_pass_3y": false,
+          "gate_pass_full": false,
+          "gate_pass_both": false,
+          "gate_fail_reasons": [
+            "oos 3/6 < 4/6",
+            "maxdd -55.0738 worse than -45%",
+            "neighbor 0.0% < 50%"
+          ],
           "robust": {
             "n_neighbors": 30,
-            "gate_pass_3y_rate_pct": 83.3,
-            "fragile": false
+            "gate_pass_3y_rate_pct": 0.0,
+            "fragile": true
           },
-          "robust_neighbor_pct": 83.3,
+          "robust_neighbor_pct": 0.0,
           "monthly": {
-            "pct_months_ge_6p7": 41.7,
-            "median_month": 3.44,
-            "worst_month": -14.03,
+            "pct_months_ge_6p7": 27.8,
+            "median_month": -1.52,
+            "worst_month": -16.77,
             "best_month": 64.01,
             "max_consec_loss_months": 5,
             "n_months": 36
@@ -7659,8 +8395,28 @@
             "one_way_bps": 20,
             "funding": "binance_usdtm_historical"
           },
-          "score": 43.0024,
-          "code": "Q1"
+          "score": 0.0,
+          "code": "Q1",
+          "lookahead_fix": {
+            "fixed_at": "2026-10-07 19:04:22 CST",
+            "note": "BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; components B1/A3 strict",
+            "before_buggy": {
+              "cagr_3y": 129.6265,
+              "ret_3y": 1114.2317,
+              "maxdd_3y": -35.3346,
+              "oos_pass_3y": "5/6",
+              "gate_pass_3y": true,
+              "robust_neighbor_pct": 83.3,
+              "monthly": {
+                "pct_months_ge_6p7": 41.7,
+                "median_month": 3.44,
+                "worst_month": -14.03,
+                "best_month": 64.01,
+                "max_consec_loss_months": 5,
+                "n_months": 36
+              }
+            }
+          }
         }
       ],
       "code": "Q"
