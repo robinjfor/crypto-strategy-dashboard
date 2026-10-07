@@ -4,7 +4,7 @@
 
   const BOOK_URL = "./data/live_book.json";
 
-  const ALLOC_URL = "./data/book_allocation.json";
+  // book_allocation.json removed 2026-10-08 (stale OP/DOT 1000); books come from cloud /status.
   const SCORES_URL = "./data/unified-3y/scores.json";
   let allocCfg = null;
   let scoresById = {};
@@ -248,7 +248,9 @@
       var rows = f.rows || {};
       if (sid && rows[sid] && rows[sid].code) return rows[sid].code;
     }
-    var sym = String((t && t.symbol) || "").toUpperCase().replace(/USDT/g, "");
+    // No symbol-token guessing: manual/untracked fills (e.g. NEAR 9/18–9/24 spot)
+    // must not inherit a strategy code (A6 is a perp strategy).
+    var sym = "";
     if (sym) {
       var token = "__" + sym + "__";
       for (var fid2 in fams) {
@@ -552,6 +554,8 @@
       if (remote.positions_mv != null) posMv = Number(remote.positions_mv);
       if (remote.starting != null) starting = Number(remote.starting);
     }
+    var feesUsdt = remote && remote.fees_usdt != null ? Number(remote.fees_usdt) : null;
+    var unattributed = remote && remote.unattributed_usdt != null ? Number(remote.unattributed_usdt) : null;
     return {
       quote: quote,
       starting: starting,
@@ -563,7 +567,9 @@
       unrealized_pct: cost > 0 ? (unreal / cost) * 100 : null,
       open_n: holds.length,
       used: posMv,
-      remaining: Math.max(0, starting - posMv)
+      remaining: Math.max(0, starting - posMv),
+      fees: feesUsdt,
+      unattributed: unattributed
     };
   }
 
@@ -594,7 +600,10 @@
       '<div class="kpi-grid kpi-grid-book">' +
       '<div class="kpi"><div class="label">原本餘額</div><div class="value">' + num(st.starting, 2) + '</div><div class="sublabel">起始 ' + q + '</div></div>' +
       '<div class="kpi kpi-emphasis"><div class="label">現在餘額</div><div class="value">' + num(st.equity, 2) + '</div><div class="sublabel">現金 + 持倉市值</div></div>' +
-      '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計</div></div>' +
+      '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計（扣手續費' + (st.fees != null ? " " + num(st.fees, 2) : "") + '）' +
+        (st.unattributed != null && Math.abs(st.unattributed) >= 0.01
+          ? '<br><span class="dim">未歸屬差額 ' + signedNum(st.unattributed, 2) + " " + q + '（≈舊交易未記錄的手續費）</span>' : "") +
+        '</div></div>' +
       '<div class="kpi"><div class="label">未實現損益</div><div class="value">' + upnl + '</div><div class="sublabel">持倉市價</div></div>' +
       '<div class="kpi"><div class="label">現金</div><div class="value">' + num(st.cash, 2) + '</div><div class="sublabel">可用 + 鎖定</div></div>' +
       '<div class="kpi"><div class="label">已用 / 剩餘</div><div class="value">' + num(st.used, 2) + ' / ' + num(st.remaining, 2) + '</div><div class="sublabel">持倉市值 vs 原本</div></div>' +
@@ -1351,7 +1360,7 @@
       await loadCloud();
       showCloudBanner(!cloudOk);
       // ALWAYS_LOAD_SCORES
-      allocCfg = await getJSONOpt(ALLOC_URL);
+      allocCfg = null;
       strategyCodes = await getJSONOpt(CODES_URL);
       try {
         var sc = await getJSONOpt(SCORES_URL);

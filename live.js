@@ -4,7 +4,7 @@
 
   const BOOK_URL = "./data/live_book.json";
 
-  const ALLOC_URL = "./data/book_allocation.json";
+  // book_allocation.json removed 2026-10-08 (stale OP/DOT 1000); books come from cloud /status.
   const SCORES_URL = "./data/unified-3y/scores.json";
   let allocCfg = null;
   let scoresById = {};
@@ -248,7 +248,9 @@
       var rows = f.rows || {};
       if (sid && rows[sid] && rows[sid].code) return rows[sid].code;
     }
-    var sym = String((t && t.symbol) || "").toUpperCase().replace(/USDT/g, "");
+    // No symbol-token guessing: manual/untracked fills (e.g. NEAR 9/18–9/24 spot)
+    // must not inherit a strategy code (A6 is a perp strategy).
+    var sym = "";
     if (sym) {
       var token = "__" + sym + "__";
       for (var fid2 in fams) {
@@ -1303,7 +1305,7 @@
       await loadCloud();
       showCloudBanner(!cloudOk);
       // ALWAYS_LOAD_SCORES
-      allocCfg = await getJSONOpt(ALLOC_URL);
+      allocCfg = null;
       strategyCodes = await getJSONOpt(CODES_URL);
       try {
         var sc = await getJSONOpt(SCORES_URL);
