@@ -702,9 +702,8 @@
       btns.push('<button type="button" class="btn-fam-archive" data-family="' + esc(familyId) + '">封存</button>');
     } else {
       // pending: approve only if unlocked; always allow archive
-      if (!supported) {
-        btns.push('<button type="button" class="btn-fam-approve" disabled title="' + esc(famLock) + '">批准家族</button>');
-      } else {
+      // 準備中 / locked families are NOT approvable: hide 批准家族 entirely (keep 封存)
+      if (supported) {
         btns.push('<button type="button" class="btn-fam-approve" data-family="' + esc(familyId) + '">批准家族</button>');
       }
       btns.push('<button type="button" class="btn-fam-archive" data-family="' + esc(familyId) + '">封存</button>');
