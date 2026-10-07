@@ -300,7 +300,7 @@
   var STALE_MAX_MIN = 120; // runner is hourly; >2h old cloud data counts as stale
   function dataTimestamp() {
     var cands = [];
-    if (cloudOk && cloud) cands = [cloud.updated_at, cloud.last_job_run_at];
+    if (cloudOk && cloud) cands = [cloud.last_job_run_at || cloud.updated_at]; // runner data time, not API response time
     else cands = [
       book && (book.updated_at || book.last_updated),
       positions && positions.updated_at,
