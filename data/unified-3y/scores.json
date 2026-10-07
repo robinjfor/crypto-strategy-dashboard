@@ -1,4 +1,5 @@
 {
+  "lookahead_warning": "⚠️ LOOKAHEAD WARNING (2026-10-07 audit): figures in this file predate the BTC daily-regime lookahead fix (intraday bars used same-day BTC close) and/or the next-open fill correction. They are NOT current. Current values: /workspace/strategy-unified-3y/catalog.json (e.g. B1 corrected: CAGR 19.7%, MaxDD -62.3%, OOS 2/6, gate FAIL).",
   "meta": {
     "period": {
       "start_utc": "2023-09-24 00:00:00+00:00",

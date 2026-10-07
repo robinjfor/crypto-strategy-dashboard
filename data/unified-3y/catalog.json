@@ -35,10 +35,10 @@
       ]
     },
     "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
-    "generated_at": "2026-10-07 19:04:22 CST",
-    "n_strategies": 17,
-    "n_rows": 122,
-    "n_gate_pass_3y": 51,
+    "generated_at": "2026-10-07 23:58:50 CST",
+    "n_strategies": 16,
+    "n_rows": 110,
+    "n_gate_pass_3y": 50,
     "n_gate_pass_both": 8,
     "notes": [
       "Overlapping rows with scores.json copy metrics verbatim; catalog score rescored across all gate_pass_3y in this catalog.",
@@ -50,7 +50,8 @@
       "cagr70 merge +10 rows (real funding, next-open); cloud_supported=false",
       "liquidity fields added; approval_excluded for illiquid; score rescored among liquidity-ok gate passers only",
       "portfolio118 append port_univ10_lev2.0_w80__ls_ARB_4h_n20_s2.0_t3.0_w20__mreb (+family portfolio_core_satellite_perp) and A1-A4 enrichment (2026-10-07 18:05:47 CST); rescored.",
-      "lookahead_fix 2026-10-07 19:04:22 CST: BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; rows J1,J2,J3,H6,H1,H7,H2,H8,H9,H10,H11,H5,H4,H3,A3,A4,A1,A2,A6,A5,A8,A14,A13,A15,A12,A7,A10,A11,A9,B3,B4,B1,B2,Q1"
+      "lookahead_fix 2026-10-07 19:04:22 CST: BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; rows J1,J2,J3,H6,H1,H7,H2,H8,H9,H10,H11,H5,H4,H3,A3,A4,A1,A2,A6,A5,A8,A14,A13,A15,A12,A7,A10,A11,A9,B3,B4,B1,B2,Q1",
+      "rd_v3 (2026-10-07 23:58:50 CST): +family portfolio_ensemble_passers_perp rows R1-R3; equity_csv backfilled for 89 rows; rescored."
     ],
     "inconsistencies_vs_scores_json": [
       {
@@ -326,7 +327,8 @@
     "n_gate_pass_3y_liquidity_ok": 89,
     "n_liquidity_ok": 110,
     "n_liquidity_illiquid": 2,
-    "aggressive_refresh": "2026-10-01: extended window + lev≤3 grid; new rows from aggressive/"
+    "aggressive_refresh": "2026-10-01: extended window + lev≤3 grid; new rows from aggressive/",
+    "fill_rule_note": "2026-10-08: C/F engine filled at signal-bar close; reval under next-open fill in lookahead_fix/live_reval/*_nextopen.json. cagr and total_return_3y are separate fields (%)."
   },
   "strategies": [
     {
@@ -368,7 +370,7 @@
             "leverage": 1.0
           },
           "params_source": "selected",
-          "status": "已淘汰",
+          "status": "現役（live 觀察：鄰居穩健未過）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 55859.7,
@@ -399,7 +401,7 @@
           "gate_fail_reasons": [
             "neighbor 42.3% < 50%"
           ],
-          "score": 72.3149,
+          "score": 0.0,
           "data_short": false,
           "code": "C1",
           "liquidity": {
@@ -413,7 +415,25 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "neighbor_pct_live_reval": 42.3
+          "neighbor_pct_live_reval": 42.3,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian_breakout_atr__ARB__4h.csv",
+          "cagr": 77.3937,
+          "total_return_3y": 458.597,
+          "next_open_reval": {
+            "total_return_3y": 520.55,
+            "cagr": 83.64,
+            "maxdd": -45.51,
+            "oos": "5/6",
+            "neighbor_pct": 38.5,
+            "passed": false,
+            "fail": [
+              "maxdd -45.51 worse than -45%",
+              "neighbor 38.5% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c1_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 42.3
         },
         {
           "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
@@ -432,7 +452,7 @@
             "leverage": 1.0
           },
           "params_source": "selected",
-          "status": "已淘汰",
+          "status": "現役（live）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 17180.23,
@@ -461,7 +481,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 52.2488,
+          "score": 55.0883,
           "data_short": false,
           "code": "C2",
           "liquidity": {
@@ -475,7 +495,22 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "neighbor_pct_live_reval": 88.5
+          "neighbor_pct_live_reval": 88.5,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s1.5_t2.5__FIL__1h.csv",
+          "cagr": 19.7579,
+          "total_return_3y": 71.8023,
+          "next_open_reval": {
+            "total_return_3y": 72.04,
+            "cagr": 19.81,
+            "maxdd": -27.22,
+            "oos": "5/6",
+            "neighbor_pct": 88.5,
+            "passed": true,
+            "fail": [],
+            "file": "lookahead_fix/live_reval/c2_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 88.5
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
@@ -493,7 +528,7 @@
             "reset_below_hi": true
           },
           "params_source": "selected",
-          "status": "現役",
+          "status": "已下線（2026-10-01）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 20567.55,
@@ -522,7 +557,7 @@
           "gate_pass_full": true,
           "gate_pass_both": true,
           "gate_fail_reasons": [],
-          "score": 41.8095,
+          "score": 45.5327,
           "data_short": false,
           "code": "C3",
           "liquidity": {
@@ -535,7 +570,21 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 27.1658,
+          "total_return_3y": 105.6755,
+          "next_open_reval": {
+            "total_return_3y": 111.04,
+            "cagr": 28.23,
+            "maxdd": -28.73,
+            "oos": "5/6",
+            "neighbor_pct": 88.5,
+            "passed": true,
+            "fail": [],
+            "file": "lookahead_fix/live_reval/c3_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 88.5
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__ICP__4h",
@@ -583,7 +632,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 35.9253,
+          "score": 37.7701,
           "data_short": false,
           "code": "C4",
           "liquidity": {
@@ -602,7 +651,21 @@
               "ICP:vol_days_pct=35.28<=50"
             ]
           },
-          "approval_excluded": true
+          "approval_excluded": true,
+          "cagr": 15.1639,
+          "total_return_3y": 52.7535,
+          "next_open_reval": {
+            "total_return_3y": 35.52,
+            "cagr": 10.66,
+            "maxdd": -40.51,
+            "oos": "4/6",
+            "neighbor_pct": 73.1,
+            "passed": true,
+            "fail": [],
+            "file": "lookahead_fix/live_reval/c4_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 73.1
         },
         {
           "strategy_id": "donchian20_s1.5_t1.5__DOT__4h",
@@ -620,7 +683,7 @@
             "reset_below_hi": true
           },
           "params_source": "selected",
-          "status": "現役",
+          "status": "現役（live）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 14249.87,
@@ -651,7 +714,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 35.8761,
+          "score": 37.9275,
           "data_short": false,
           "code": "C5",
           "liquidity": {
@@ -665,7 +728,21 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "neighbor_pct_live_reval": 92.3
+          "neighbor_pct_live_reval": 92.3,
+          "cagr": 12.5275,
+          "total_return_3y": 42.4987,
+          "next_open_reval": {
+            "total_return_3y": 41.66,
+            "cagr": 12.29,
+            "maxdd": -28.29,
+            "oos": "5/6",
+            "neighbor_pct": 92.3,
+            "passed": true,
+            "fail": [],
+            "file": "lookahead_fix/live_reval/c5_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 92.3
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__4h",
@@ -685,7 +762,7 @@
             "label": "4h_s2.0_t3.0"
           },
           "params_source": "selected",
-          "status": "衛星A候選（首選）",
+          "status": "衛星A候選（首選）→未過關（次棒開盤成交後鄰居 23.1%）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 17798.05,
@@ -710,11 +787,14 @@
             "gate_pass_full": true,
             "gate_fail_reasons": []
           },
-          "gate_pass_3y": true,
+          "gate_pass_3y": false,
           "gate_pass_full": true,
-          "gate_pass_both": true,
-          "gate_fail_reasons": [],
-          "score": 29.3812,
+          "gate_pass_both": false,
+          "gate_fail_reasons": [
+            "neighbor 23.1% < 50%",
+            "(next-open fill)"
+          ],
+          "score": 0.0,
           "data_short": false,
           "code": "C6",
           "liquidity": {
@@ -727,7 +807,26 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s2.0_t3.0__FET__4h.csv",
+          "cagr": 21.1786,
+          "total_return_3y": 77.9805,
+          "next_open_reval": {
+            "total_return_3y": 50.59,
+            "cagr": 14.6,
+            "maxdd": -38.48,
+            "oos": "4/6",
+            "neighbor_pct": 23.1,
+            "passed": false,
+            "fail": [
+              "neighbor 23.1% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c6_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 50.0,
+          "gate_pass_3y_close_fill": true,
+          "score_close_fill": 31.9754
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__LSK__4h",
@@ -776,7 +875,7 @@
           "gate_pass_full": false,
           "gate_pass_both": false,
           "gate_fail_reasons": [],
-          "score": 21.5862,
+          "score": 21.9273,
           "data_short": false,
           "code": "C7",
           "liquidity": {
@@ -795,7 +894,21 @@
               "LSK:vol_days_pct=5.44<=50"
             ]
           },
-          "approval_excluded": true
+          "approval_excluded": true,
+          "cagr": -2.0743,
+          "total_return_3y": -6.0959,
+          "next_open_reval": {
+            "total_return_3y": -11.64,
+            "cagr": -4.04,
+            "maxdd": -34.22,
+            "oos": "4/6",
+            "neighbor_pct": 69.2,
+            "passed": true,
+            "fail": [],
+            "file": "lookahead_fix/live_reval/c7_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 80.8
         },
         {
           "strategy_id": "donchian55_breakout_atr__APT__1h",
@@ -845,7 +958,7 @@
           "gate_fail_reasons": [
             "neighbor 26.9% < 50%"
           ],
-          "score": 13.5069,
+          "score": 0.0,
           "data_short": false,
           "code": "C8",
           "liquidity": {
@@ -859,7 +972,24 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "neighbor_pct_live_reval": 26.9
+          "neighbor_pct_live_reval": 26.9,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_breakout_atr__APT__1h.csv",
+          "cagr": -2.8865,
+          "total_return_3y": -8.416,
+          "next_open_reval": {
+            "total_return_3y": -8.34,
+            "cagr": -2.86,
+            "maxdd": -44.61,
+            "oos": "5/6",
+            "neighbor_pct": 30.8,
+            "passed": false,
+            "fail": [
+              "neighbor 30.8% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c8_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 26.9
         },
         {
           "strategy_id": "donchian_breakout_atr__NEAR__4h",
@@ -924,7 +1054,9 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 159.9854,
+          "total_return_3y": 1658.4537
         },
         {
           "strategy_id": "donchian_breakout_wide__NEAR__4h",
@@ -988,7 +1120,9 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 106.9247,
+          "total_return_3y": 786.4484
         },
         {
           "strategy_id": "donchian_breakout_atr__SUI__4h",
@@ -1053,7 +1187,9 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 22
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 54.555,
+          "total_return_3y": 269.2993
         },
         {
           "strategy_id": "donchian20_s2.5_t3.5__CAKE__4h",
@@ -1118,7 +1254,25 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 51
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 37.1043,
+          "total_return_3y": 157.7786,
+          "next_open_reval": {
+            "total_return_3y": 139.16,
+            "cagr": 33.72,
+            "maxdd": -53.02,
+            "oos": "3/6",
+            "neighbor_pct": 15.4,
+            "passed": false,
+            "fail": [
+              "oos 3/6 < 4/6",
+              "maxdd -53.02 worse than -45%",
+              "neighbor 15.4% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c12_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 23.1
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__ADA__4h",
@@ -1183,7 +1337,25 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 12
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 37.0698,
+          "total_return_3y": 157.5839,
+          "next_open_reval": {
+            "total_return_3y": 158.51,
+            "cagr": 37.23,
+            "maxdd": -46.42,
+            "oos": "3/6",
+            "neighbor_pct": 3.8,
+            "passed": false,
+            "fail": [
+              "oos 3/6 < 4/6",
+              "maxdd -46.42 worse than -45%",
+              "neighbor 3.8% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c13_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 3.8
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__FET__1h",
@@ -1247,7 +1419,24 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 27.6453,
+          "total_return_3y": 108.0462,
+          "next_open_reval": {
+            "total_return_3y": 107.49,
+            "cagr": 27.52,
+            "maxdd": -53.81,
+            "oos": "4/6",
+            "neighbor_pct": 26.9,
+            "passed": false,
+            "fail": [
+              "maxdd -53.81 worse than -45%",
+              "neighbor 26.9% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/c14_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 26.9
         },
         {
           "strategy_id": "donchian_breakout_atr__AAVE__4h",
@@ -1315,7 +1504,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 27
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian_breakout_atr__AAVE__4h.csv",
+          "cagr": 14.0364,
+          "total_return_3y": 48.3185
         },
         {
           "strategy_id": "donchian55_breakout_atr__UNI__4h",
@@ -1380,7 +1572,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 17
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_breakout_atr__UNI__4h.csv",
+          "cagr": 9.9913,
+          "total_return_3y": 33.0828
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5__INJ__1h",
@@ -1448,7 +1643,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s2.5_t3.5__INJ__1h.csv",
+          "cagr": -4.0523,
+          "total_return_3y": -11.6764
         },
         {
           "strategy_id": "donchian55_breakout_atr__WLD__4h",
@@ -1516,7 +1714,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 53
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_breakout_atr__WLD__4h.csv",
+          "cagr": -6.544,
+          "total_return_3y": -18.3815
         },
         {
           "strategy_id": "donchian55_breakout_atr__ONDO__4h",
@@ -1582,7 +1783,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 32
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_breakout_atr__ONDO__4h.csv",
+          "cagr": -21.7343,
+          "total_return_3y": -29.5238
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__AVAX__4h",
@@ -1650,7 +1854,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian20_s2.0_t3.0__AVAX__4h.csv",
+          "cagr": -27.2382,
+          "total_return_3y": -61.4918
         },
         {
           "strategy_id": "donchian20_s2.0_t3.0__STRK__4h",
@@ -1718,7 +1925,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 134
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian20_s2.0_t3.0__STRK__4h.csv",
+          "cagr": -46.7303,
+          "total_return_3y": -80.3402
         }
       ],
       "n_gate_pass_3y": 8,
@@ -1829,7 +2039,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J1.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s2.0_t3.0_btcRegimeD__FET__4h.csv",
+          "cagr": 4.5807,
+          "total_return_3y": 14.3988
         },
         {
           "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",
@@ -1917,7 +2130,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J2.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s3.0_t4.0_btcRegimeD__FET__4h.csv",
+          "cagr": -3.1766,
+          "total_return_3y": -9.2403
         },
         {
           "strategy_id": "donchian55_s2.5_t3.5_btcRegimeD__FET__4h",
@@ -2005,7 +2221,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/J3.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s2.5_t3.5_btcRegimeD__FET__4h.csv",
+          "cagr": -2.7437,
+          "total_return_3y": -8.0161
         },
         {
           "strategy_id": "donchian20_atr_btcRegime__SOL__1d",
@@ -2070,7 +2289,9 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 75.0026,
+          "total_return_3y": 435.3457
         }
       ],
       "n_gate_pass_3y": 3,
@@ -2160,7 +2381,9 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 84.1091,
+          "total_return_3y": 523.2773
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2205,7 +2428,7 @@
             "reset_below_hi": false
           },
           "params_source": "selected",
-          "status": "候選",
+          "status": "現役（live 觀察：鄰居穩健未過）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 64693.84,
@@ -2239,7 +2462,7 @@
           "gate_fail_reasons": [
             "neighbor 26.9% < 50%"
           ],
-          "score": 51.3024,
+          "score": 0.0,
           "data_short": false,
           "code": "F1",
           "liquidity": {
@@ -2253,7 +2476,23 @@
             "rule": "vol_only_A"
           },
           "approval_excluded": false,
-          "neighbor_pct_live_reval": 26.9
+          "neighbor_pct_live_reval": 26.9,
+          "cagr": 86.4115,
+          "total_return_3y": 546.9384,
+          "next_open_reval": {
+            "total_return_3y": 546.28,
+            "cagr": 86.24,
+            "maxdd": -37.82,
+            "oos": "4/6",
+            "neighbor_pct": 26.9,
+            "passed": false,
+            "fail": [
+              "neighbor 26.9% < 50%"
+            ],
+            "file": "lookahead_fix/live_reval/f1_nextopen.json",
+            "fill": "entry/exit at next bar open; stop at min(open,stop)"
+          },
+          "neighbor_pct_close_fill": 26.9
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__AR__4h",
@@ -2321,7 +2560,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 96
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ema12_26_s2.5_t3.5__AR__4h.csv",
+          "cagr": 38.0389,
+          "total_return_3y": 163.1262
         },
         {
           "strategy_id": "ema9_21_s2.5_t3.5__HYPE__4h",
@@ -2391,7 +2633,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 7
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ema9_21_s2.5_t3.5__HYPE__4h.csv",
+          "cagr": 5.8757,
+          "total_return_3y": 5.0391
         },
         {
           "strategy_id": "ema12_26_s2.5_t3.5__ENA__4h",
@@ -2459,7 +2704,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 37
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ema12_26_s2.5_t3.5__ENA__4h.csv",
+          "cagr": -1.5548,
+          "total_return_3y": -3.7896
         },
         {
           "strategy_id": "ema_cross_atr__RAY__1h",
@@ -2531,7 +2779,10 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 73
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ema_cross_atr__RAY__1h.csv",
+          "cagr": -4.4778,
+          "total_return_3y": -12.8467
         }
       ],
       "n_gate_pass_3y": 1,
@@ -2621,7 +2872,9 @@
             "rule": "vol_only_A",
             "mcap_rank_ex_stable_wrapped": 9
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 40.9434,
+          "total_return_3y": 180.0504
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2709,7 +2962,9 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 56.0386,
+          "total_return_3y": 280.0389
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2788,7 +3043,9 @@
             "symbols": [],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "cagr": 53.0056,
+          "total_return_3y": 257.8846
         }
       ],
       "n_gate_pass_3y": 0,
@@ -2872,7 +3129,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__SMH__1d.csv",
+          "cagr": 58.4299,
+          "total_return_3y": 296.7842
         },
         {
           "strategy_id": "sma200_confirm5__0050_TW__1d",
@@ -2932,7 +3192,10 @@
             "symbols": [],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__0050_TW__1d.csv",
+          "cagr": 54.7972,
+          "total_return_3y": 270.5953
         },
         {
           "strategy_id": "sma200_confirm5__TQQQ__1d",
@@ -2995,7 +3258,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__TQQQ__1d.csv",
+          "cagr": 46.6232,
+          "total_return_3y": 214.6386
         },
         {
           "strategy_id": "sma200_confirm5__BTC__1d",
@@ -3058,7 +3324,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__BTC__1d.csv",
+          "cagr": 33.1047,
+          "total_return_3y": 135.8659
         },
         {
           "strategy_id": "sma200_confirm3__QQQ__1d",
@@ -3120,7 +3389,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm3__QQQ__1d.csv",
+          "cagr": 21.5927,
+          "total_return_3y": 79.604
         },
         {
           "strategy_id": "sma200_confirm5__SPY__1d",
@@ -3182,7 +3454,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__SPY__1d.csv",
+          "cagr": 14.9827,
+          "total_return_3y": 51.9171
         },
         {
           "strategy_id": "sma200_confirm5__ETH__1d",
@@ -3245,7 +3520,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/sma200_confirm5__ETH__1d.csv",
+          "cagr": 6.0514,
+          "total_return_3y": 19.2798
         }
       ],
       "n_gate_pass_3y": 0,
@@ -3331,7 +3609,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/dual_ma_rsi_atr_trail__SPY__1d.csv",
+          "cagr": 1.8817,
+          "total_return_3y": 5.7427
         }
       ],
       "n_gate_pass_3y": 0,
@@ -3401,7 +3682,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 39.5916,
+          "score": 44.0862,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3416,7 +3697,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5.csv",
+          "cagr": 35.7702,
+          "total_return_3y": 150.3252
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -3458,7 +3742,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 46.3553,
+          "score": 50.418,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3473,7 +3757,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.02.csv",
+          "cagr": 29.8244,
+          "total_return_3y": 118.85
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -3515,7 +3802,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 43.5419,
+          "score": 48.1694,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3530,7 +3817,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03.csv",
+          "cagr": 36.0705,
+          "total_return_3y": 151.9901
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -3572,7 +3862,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 40.6522,
+          "score": 45.2188,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3587,7 +3877,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.04.csv",
+          "cagr": 36.2141,
+          "total_return_3y": 152.7892
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.02",
@@ -3629,7 +3922,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 47.2729,
+          "score": 52.1426,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3644,7 +3937,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.02.csv",
+          "cagr": 38.0008,
+          "total_return_3y": 162.8696
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03",
@@ -3686,7 +3982,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 43.3945,
+          "score": 48.8466,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3701,7 +3997,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03.csv",
+          "cagr": 44.4611,
+          "total_return_3y": 201.5519
         },
         {
           "strategy_id": "lev_donch__OP__4h__n20__s1.5__t1.5",
@@ -3743,7 +4042,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 41.8095,
+          "score": 45.5327,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3758,7 +4057,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__OP__4h__n20__s1.5__t1.5.csv",
+          "cagr": 27.1658,
+          "total_return_3y": 105.6755
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5",
@@ -3800,7 +4102,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 31.5634,
+          "score": 33.6669,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3815,7 +4117,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5.csv",
+          "cagr": 14.8319,
+          "total_return_3y": 51.4357
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.02",
@@ -3857,7 +4162,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 30.5717,
+          "score": 32.5411,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3872,7 +4177,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.02.csv",
+          "cagr": 13.2815,
+          "total_return_3y": 45.383
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03",
@@ -3914,7 +4222,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 31.5885,
+          "score": 33.7175,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3929,7 +4237,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03.csv",
+          "cagr": 14.9594,
+          "total_return_3y": 51.9408
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.04",
@@ -3971,7 +4282,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 31.5634,
+          "score": 33.6669,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -3986,7 +4297,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.04.csv",
+          "cagr": 14.8319,
+          "total_return_3y": 51.4357
         },
         {
           "strategy_id": "lev_donch__DOT__4h__n20__s1.5__t1.5",
@@ -4028,7 +4342,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 35.8761,
+          "score": 37.9275,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4043,7 +4357,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__DOT__4h__n20__s1.5__t1.5.csv",
+          "cagr": 12.5275,
+          "total_return_3y": 42.4987
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.02",
@@ -4085,7 +4402,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 32.2928,
+          "score": 35.7603,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4100,7 +4417,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.02.csv",
+          "cagr": 29.5244,
+          "total_return_3y": 117.3615
         },
         {
           "strategy_id": "lev_donch__FET__4h__n55__s2.0__t3.0",
@@ -4142,7 +4462,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.3812,
+          "score": 31.9754,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4157,7 +4477,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FET__4h__n55__s2.0__t3.0.csv",
+          "cagr": 21.1786,
+          "total_return_3y": 77.9805
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5",
@@ -4199,7 +4522,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 54.7972,
+          "score": 57.7987,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4214,7 +4537,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5.csv",
+          "cagr": 23.2447,
+          "total_return_3y": 87.2574
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.02",
@@ -4256,7 +4582,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 47.8049,
+          "score": 50.2796,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4271,7 +4597,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.02.csv",
+          "cagr": 18.4676,
+          "total_return_3y": 66.306
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.03",
@@ -4313,7 +4642,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 54.7972,
+          "score": 57.7987,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4328,7 +4657,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.03.csv",
+          "cagr": 23.2447,
+          "total_return_3y": 87.2574
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.04",
@@ -4370,7 +4702,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 54.7972,
+          "score": 57.7987,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4385,7 +4717,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FIL__1h__n55__s1.5__t2.5__lev1.5__vt0.04.csv",
+          "cagr": 23.2447,
+          "total_return_3y": 87.2574
         },
         {
           "strategy_id": "lev_donch__FIL__1h__n55__s1.5__t2.5",
@@ -4427,7 +4762,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 52.2488,
+          "score": 55.0883,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -4442,7 +4777,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/lev_donch__FIL__1h__n55__s1.5__t2.5.csv",
+          "cagr": 19.7579,
+          "total_return_3y": 71.8023
         }
       ],
       "n_gate_pass_3y": 19,
@@ -4508,7 +4846,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 22.5986,
+          "score": 24.2145,
           "data_short": false,
           "robust": {
             "gate_pass_3y_rate_pct": 50.0,
@@ -4546,7 +4884,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H6.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__OP__4h__n20__s1.5__t1.5__btcReg__LS.csv",
+          "cagr": 8.6184,
+          "total_return_3y": 28.1837
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -4586,7 +4927,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 30.6097,
+          "score": 32.9685,
           "data_short": false,
           "robust": {
             "gate_pass_3y_rate_pct": 55.56,
@@ -4624,7 +4965,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H1.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__OP__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS.csv",
+          "cagr": 14.6368,
+          "total_return_3y": 50.7214
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -4708,7 +5052,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H7.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS.csv",
+          "cagr": 8.0007,
+          "total_return_3y": 26.0069
         },
         {
           "strategy_id": "ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -4748,7 +5095,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 24.3233,
+          "score": 26.8447,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -4789,7 +5136,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H2.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS.csv",
+          "cagr": 17.8326,
+          "total_return_3y": 63.697
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS",
@@ -4869,7 +5219,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H8.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__DOT__4h__n20__s1.5__t1.5__btcReg__LS.csv",
+          "cagr": 1.3299,
+          "total_return_3y": 4.0477
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS",
@@ -4949,7 +5302,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H9.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__DOT__4h__n20__s1.5__t1.5__vt0.03__btcReg__LS.csv",
+          "cagr": 2.0681,
+          "total_return_3y": 6.3409
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS",
@@ -5030,7 +5386,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H10.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__btcReg__LS.csv",
+          "cagr": -0.7157,
+          "total_return_3y": -2.1343
         },
         {
           "strategy_id": "ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS",
@@ -5111,7 +5470,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H11.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__btcReg__LS.csv",
+          "cagr": 0.4537,
+          "total_return_3y": 1.3688
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS",
@@ -5193,7 +5555,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H5.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__FET__4h__n55__s2.0__t3.0__btcReg__LS.csv",
+          "cagr": -6.5616,
+          "total_return_3y": -18.4403
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS",
@@ -5274,7 +5639,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H4.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__FET__4h__n55__s2.0__t3.0__vt0.03__btcReg__LS.csv",
+          "cagr": 0.4764,
+          "total_return_3y": 1.4377
         },
         {
           "strategy_id": "ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS",
@@ -5356,7 +5724,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/H3.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__btcReg__LS.csv",
+          "cagr": -2.2332,
+          "total_return_3y": -6.5582
         }
       ],
       "n_gate_pass_3y": 11,
@@ -5422,7 +5793,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 26.3143,
+          "score": 28.3451,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5437,7 +5808,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__fggt25.csv",
+          "cagr": 12.8698,
+          "total_return_3y": 43.8032
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fggt25",
@@ -5479,7 +5853,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 22.1464,
+          "score": 24.3854,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5494,7 +5868,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fggt25.csv",
+          "cagr": 15.9919,
+          "total_return_3y": 56.0729
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fglt75",
@@ -5536,7 +5913,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 51.5626,
+          "score": 56.9525,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5551,7 +5928,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__fglt75.csv",
+          "cagr": 40.8119,
+          "total_return_3y": 179.2672
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -5593,7 +5973,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 56.432,
+          "score": 63.3954,
           "data_short": false,
           "robust": {
             "n_neighbors": 36,
@@ -5614,7 +5994,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75.csv",
+          "cagr": 54.7971,
+          "total_return_3y": 271.0379
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -5656,7 +6039,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 36.0379,
+          "score": 39.5209,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5671,7 +6054,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__fgmid25_75.csv",
+          "cagr": 24.9818,
+          "total_return_3y": 95.2568
         },
         {
           "strategy_id": "fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fgmid25_75",
@@ -5713,7 +6099,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.0312,
+          "score": 37.1516,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5728,7 +6114,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fgmid25_75.csv",
+          "cagr": 31.9552,
+          "total_return_3y": 129.8065
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fggt25",
@@ -5770,7 +6159,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 19.9495,
+          "score": 20.7544,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5785,7 +6174,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__DOT__4h__n20__s1.5__t1.5__fggt25.csv",
+          "cagr": 1.7278,
+          "total_return_3y": 5.2748
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fglt75",
@@ -5827,7 +6219,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 25.482,
+          "score": 26.3313,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5842,7 +6234,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__DOT__4h__n20__s1.5__t1.5__fglt75.csv",
+          "cagr": 1.8887,
+          "total_return_3y": 5.775
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75",
@@ -5884,7 +6279,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 18.7771,
+          "score": 19.2542,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5899,7 +6294,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__DOT__4h__n20__s1.5__t1.5__lev1.5__vt0.03__fglt75.csv",
+          "cagr": 0.0747,
+          "total_return_3y": 0.2243
         },
         {
           "strategy_id": "fg_donch__DOT__4h__n20__s1.5__t1.5__fgmid25_75",
@@ -5941,7 +6339,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 12.3241,
+          "score": 12.1066,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -5956,7 +6354,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__DOT__4h__n20__s1.5__t1.5__fgmid25_75.csv",
+          "cagr": -7.8899,
+          "total_return_3y": -21.8558
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fggt25",
@@ -5998,7 +6399,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 33.2504,
+          "score": 36.5283,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -6013,7 +6414,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__FET__4h__n55__s2.0__t3.0__fggt25.csv",
+          "cagr": 26.7048,
+          "total_return_3y": 103.4682
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fggt25",
@@ -6055,7 +6459,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 36.769,
+          "score": 41.4297,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -6070,7 +6474,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fggt25.csv",
+          "cagr": 39.6919,
+          "total_return_3y": 172.6964
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fglt75",
@@ -6112,7 +6519,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 26.892,
+          "score": 29.6762,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -6127,7 +6534,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__FET__4h__n55__s2.0__t3.0__fglt75.csv",
+          "cagr": 23.3892,
+          "total_return_3y": 87.9039
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__fgmid25_75",
@@ -6169,7 +6579,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.0965,
+          "score": 32.5335,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -6184,7 +6594,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__FET__4h__n55__s2.0__t3.0__fgmid25_75.csv",
+          "cagr": 29.0163,
+          "total_return_3y": 114.8127
         },
         {
           "strategy_id": "fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fgmid25_75",
@@ -6226,7 +6639,7 @@
           "gate_pass_full": null,
           "gate_pass_both": null,
           "gate_fail_reasons": [],
-          "score": 29.4411,
+          "score": 33.5262,
           "data_short": false,
           "robust": null,
           "source": "high_return",
@@ -6241,7 +6654,10 @@
             ],
             "rule": "vol_only_A"
           },
-          "approval_excluded": false
+          "approval_excluded": false,
+          "equity_csv": "/workspace/strategy-unified-3y/equity/fg_donch__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__fgmid25_75.csv",
+          "cagr": 35.4869,
+          "total_return_3y": 148.7953
         }
       ],
       "n_gate_pass_3y": 15,
@@ -6368,7 +6784,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A3.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__ARB__4h__n20__s2.0__t3.0__LS.csv",
+          "cagr": 72.1341,
+          "total_return_3y": 410.9848
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -6418,7 +6837,7 @@
             "fragile": false
           },
           "data_short": false,
-          "score": 57.4237,
+          "score": 64.8166,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
@@ -6467,7 +6886,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A4.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__ARB__4h__n20__s2.0__t3.0__vt0.03__LS.csv",
+          "cagr": 60.4388,
+          "total_return_3y": 313.6481
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS",
@@ -6569,7 +6991,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A1.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__ARB__4h__n20__s2.0__t3.0__lev1.5__LS.csv",
+          "cagr": 101.7734,
+          "total_return_3y": 723.4455
         },
         {
           "strategy_id": "ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS",
@@ -6670,7 +7095,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A2.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__ARB__4h__n20__s2.0__t3.0__lev1.5__vt0.03__LS.csv",
+          "cagr": 85.2734,
+          "total_return_3y": 537.3177
         },
         {
           "strategy_id": "ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS",
@@ -6763,7 +7191,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A6.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__NEAR__4h__n20__s2.0__t3.0__vt0.03__LS.csv",
+          "cagr": 44.4893,
+          "total_return_3y": 202.0325
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS",
@@ -6815,7 +7246,7 @@
             "fragile": false
           },
           "data_short": false,
-          "score": 31.3782,
+          "score": 34.8931,
           "full_period": null,
           "gate_pass_full": null,
           "gate_pass_both": null,
@@ -6852,7 +7283,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A5.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__OP__4h__n20__s1.5__t1.5__lev2.0__vt0.03__rsadx__LS.csv",
+          "cagr": 25.827,
+          "total_return_3y": 99.3714
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS",
@@ -6886,7 +7320,7 @@
             "gate_pass_3y_rate_pct": 100.0,
             "fragile": false
           },
-          "score": 22.2182,
+          "score": 24.403,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -6918,7 +7352,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A8.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__OP__4h__n20__s1.5__t1.5__lev1.5__vt0.03__LS.csv",
+          "cagr": 14.6737,
+          "total_return_3y": 50.8672
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS",
@@ -6988,7 +7425,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A14.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__FET__4h__n55__s2.0__t3.0__lev2.0__vt0.03__LS.csv",
+          "cagr": -12.6043,
+          "total_return_3y": -33.2778
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS",
@@ -7056,7 +7496,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A13.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__OP__4h__n20__s1.5__t1.5__lev1.5__LS.csv",
+          "cagr": 6.645,
+          "total_return_3y": 21.3158
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS",
@@ -7126,7 +7569,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A15.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__FET__4h__n55__s2.0__t3.0__lev1.5__LS.csv",
+          "cagr": -18.1559,
+          "total_return_3y": -45.2148
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS",
@@ -7196,7 +7642,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A12.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__FET__4h__n55__s2.0__t3.0__lev1.5__vt0.03__LS.csv",
+          "cagr": -6.9752,
+          "total_return_3y": -19.5199
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS",
@@ -7230,7 +7679,7 @@
             "gate_pass_3y_rate_pct": 100.0,
             "fragile": false
           },
-          "score": 29.1372,
+          "score": 31.264,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -7262,7 +7711,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A7.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__OP__4h__n20__s1.5__t1.5__vt0.03__LS.csv",
+          "cagr": 12.4406,
+          "total_return_3y": 42.2144
         },
         {
           "strategy_id": "ls__OP__4h__n20__s1.5__t1.5__LS",
@@ -7296,7 +7748,7 @@
             "gate_pass_3y_rate_pct": 66.67,
             "fragile": false
           },
-          "score": 21.9667,
+          "score": 23.4826,
           "cloud_supported": true,
           "liquidity": {
             "status": "ok",
@@ -7328,7 +7780,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A10.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__OP__4h__n20__s1.5__t1.5__LS.csv",
+          "cagr": 7.6658,
+          "total_return_3y": 24.8368
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__LS",
@@ -7398,7 +7853,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A11.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__FET__4h__n55__s2.0__t3.0__LS.csv",
+          "cagr": -9.9224,
+          "total_return_3y": -26.9373
         },
         {
           "strategy_id": "ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS",
@@ -7467,7 +7925,10 @@
               "gate_fail_reasons": null
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/A9.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/ls__FET__4h__n55__s2.0__t3.0__vt0.03__LS.csv",
+          "cagr": -2.7328,
+          "total_return_3y": -7.9852
         }
       ],
       "n_gate_pass_3y": 6,
@@ -7656,7 +8117,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B3.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/port_ew_univ10_lev1.5_vtNone.csv",
+          "cagr": 17.9837,
+          "total_return_3y": 64.3282
         },
         {
           "strategy_id": "port_ew_univ10_lev1.5_vt0.03",
@@ -7823,7 +8287,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B4.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/port_ew_univ10_lev1.5_vt0.03.csv",
+          "cagr": 18.8851,
+          "total_return_3y": 68.1277
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vtNone",
@@ -7990,7 +8457,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B1.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/port_ew_univ10_lev2.0_vtNone.csv",
+          "cagr": 19.7473,
+          "total_return_3y": 71.8164
         },
         {
           "strategy_id": "port_ew_univ10_lev2.0_vt0.03",
@@ -8157,7 +8627,10 @@
               "gate_fail_reasons": []
             },
             "strict_equity_csv": "/workspace/strategy-unified-3y/lookahead_fix/equity/B2.csv"
-          }
+          },
+          "equity_csv": "/workspace/strategy-unified-3y/equity/port_ew_univ10_lev2.0_vt0.03.csv",
+          "cagr": 21.6674,
+          "total_return_3y": 80.2246
         }
       ],
       "n_gate_pass_3y": 4,
@@ -8427,10 +8900,354 @@
                 "n_months": 36
               }
             }
-          }
+          },
+          "cagr": 31.9474,
+          "total_return_3y": 129.9399
         }
       ],
       "code": "Q"
+    },
+    {
+      "strategy_family_id": "portfolio_ensemble_passers_perp",
+      "name_zh": "已過關策略組合：ARB＋OP＋DOT 等權月調",
+      "description_zh": "把三支已過關、不同幣的策略（A4、A5、C5）等權放在一起，每月再平衡；可加 1–2 倍組合槓桿。靠分散降低回撤。",
+      "entry_zh": "三支已過關策略各自照原規則進出場：A4（ARB 4 小時多空 Donchian，BTC 在 200 日線上才做多、下方才做空，用前一天收盤判斷）、A5（OP 4 小時多空 Donchian＋RS/ADX 濾網）、C5（DOT 4 小時 Donchian 只做多）。收盤出訊號，下一根開盤成交。",
+      "exit_zh": "各子策略照原規則出場（反向訊號、移動停利或持倉到期）。每月月初把三支的資金調回各 1/3。",
+      "stop_zh": "子策略各自的 ATR 停損與移動停利照舊；組合層再乘上槓桿倍數，槓桿越高回撤越大，要盯強平。",
+      "params_schema": {
+        "codes": "成分",
+        "w": "權重",
+        "leverage": "組合槓桿",
+        "rebalance": "monthly"
+      },
+      "source_dirs": [
+        "/workspace/strategy-unified-3y/rd_v3"
+      ],
+      "cloud_supported": false,
+      "rows": [
+        {
+          "strategy_id": "v3_ens_arb_op_dot_ew__lev1.0",
+          "suggested_code": "R1",
+          "symbol": "MULTI",
+          "symbols": [
+            "ARB",
+            "OP",
+            "DOT"
+          ],
+          "timeframe": "4h/1d",
+          "name_zh": "A4＋A5＋C5 等權組合（月調，1 倍）",
+          "entry_zh": "三支已過關策略各自照原規則進出場：A4（ARB 4 小時多空 Donchian，BTC 在 200 日線上才做多、下方才做空，用前一天收盤判斷）、A5（OP 4 小時多空 Donchian＋RS/ADX 濾網）、C5（DOT 4 小時 Donchian 只做多）。收盤出訊號，下一根開盤成交。",
+          "exit_zh": "各子策略照原規則出場（反向訊號、移動停利或持倉到期）。每月月初把三支的資金調回各 1/3。",
+          "stop_zh": "子策略各自的 ATR 停損與移動停利照舊；組合層再乘上槓桿倍數，槓桿越高回撤越大，要盯強平。",
+          "params": {
+            "components": [
+              "A4",
+              "A5",
+              "C5"
+            ],
+            "weights": "equal 1/3",
+            "rebalance": "monthly",
+            "leverage": 1.0
+          },
+          "params_source": "rd_v3",
+          "status": "待 Emily 批准",
+          "review": "PENDING_EMILY",
+          "approval_status": "awaiting_emily_approval",
+          "initial": 10000.0,
+          "final": 25183.47,
+          "ret_3y": 151.8347,
+          "cagr_3y": 36.0044,
+          "ret_1y": 38.903479814845895,
+          "bh_ret_3y": -76.652,
+          "buy_hold": {
+            "benchmark": "EW buy&hold of ARB/OP/DOT",
+            "ret_3y": -76.652,
+            "btc_bh_ret_3y": 217.95,
+            "note": "組合未勝 BTC B&H（+218%）；勝自身成分幣 B&H 門檻偏寬鬆"
+          },
+          "maxdd_3y": -22.7422,
+          "maxdd": -22.7422,
+          "maxdd_note": "daily-sampled",
+          "sharpe": null,
+          "oos_pass_3y": "4/6",
+          "oos_pass": "4/6",
+          "oos_wins_3y": 4,
+          "trades": [],
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_pass_full": true,
+          "gate_pass_both": true,
+          "gate_fail_reasons": [],
+          "robust": {
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false,
+            "neighbors": "same set, leverage ±0.25, ew/iv weighting"
+          },
+          "robust_neighbor_pct": 100.0,
+          "monthly": {
+            "median_month": -1.18,
+            "best_month": 34.8,
+            "worst_month": -8.89,
+            "pct_months_pos": 44.4,
+            "pct_months_ge_6p7": 25.0,
+            "n_months": 36.0
+          },
+          "selection_bias_note": "成分是已過關策略（事後挑選）；組合槓桿為對子策略日報酬的合成槓桿（A5 本身已 2 倍），未逐筆模擬強平。",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "ARB",
+              "OP",
+              "DOT"
+            ],
+            "note": "ARB 78.8% / OP 76.3% / DOT 90.7% days ≥$50M perp vol"
+          },
+          "data_short": false,
+          "approval_excluded": false,
+          "cloud_supported": false,
+          "requires": [
+            "perp_futures",
+            "leverage",
+            "short",
+            "funding",
+            "monthly_rebalance"
+          ],
+          "equity_csv": "/workspace/strategy-unified-3y/equity/v3_ens_arb_op_dot_ew__lev1.0.csv",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_v3/code/ens_v3.py",
+          "report": "/workspace/strategy-unified-3y/rd_v3/REPORT.md",
+          "source": "rd_v3",
+          "generated_at": "2026-10-07 23:58:50 CST",
+          "cost": {
+            "one_way_bps": 20,
+            "funding": "binance_usdtm_historical",
+            "rebalance_cost": "5bps×lev per month proxy"
+          },
+          "lookahead_fix": {
+            "note": "components use lookahead-fixed equities (BTC regime prev-day close)"
+          },
+          "score": 53.7405,
+          "cagr": 36.0044,
+          "total_return_3y": 151.8347,
+          "code": "R3"
+        },
+        {
+          "strategy_id": "v3_ens_arb_op_dot_ew__lev1.5",
+          "suggested_code": "R2",
+          "symbol": "MULTI",
+          "symbols": [
+            "ARB",
+            "OP",
+            "DOT"
+          ],
+          "timeframe": "4h/1d",
+          "name_zh": "A4＋A5＋C5 等權組合（月調，1.5 倍）",
+          "entry_zh": "三支已過關策略各自照原規則進出場：A4（ARB 4 小時多空 Donchian，BTC 在 200 日線上才做多、下方才做空，用前一天收盤判斷）、A5（OP 4 小時多空 Donchian＋RS/ADX 濾網）、C5（DOT 4 小時 Donchian 只做多）。收盤出訊號，下一根開盤成交。",
+          "exit_zh": "各子策略照原規則出場（反向訊號、移動停利或持倉到期）。每月月初把三支的資金調回各 1/3。",
+          "stop_zh": "子策略各自的 ATR 停損與移動停利照舊；組合層再乘上槓桿倍數，槓桿越高回撤越大，要盯強平。",
+          "params": {
+            "components": [
+              "A4",
+              "A5",
+              "C5"
+            ],
+            "weights": "equal 1/3",
+            "rebalance": "monthly",
+            "leverage": 1.5
+          },
+          "params_source": "rd_v3",
+          "status": "待 Emily 批准",
+          "review": "PENDING_EMILY",
+          "approval_status": "awaiting_emily_approval",
+          "initial": 10000.0,
+          "final": 35714.28,
+          "ret_3y": 257.1428,
+          "cagr_3y": 52.7815,
+          "ret_1y": 59.36381998072719,
+          "bh_ret_3y": -76.652,
+          "buy_hold": {
+            "benchmark": "EW buy&hold of ARB/OP/DOT",
+            "ret_3y": -76.652,
+            "btc_bh_ret_3y": 217.95,
+            "note": "組合未勝 BTC B&H（+218%）；勝自身成分幣 B&H 門檻偏寬鬆"
+          },
+          "maxdd_3y": -32.2736,
+          "maxdd": -32.2736,
+          "maxdd_note": "daily-sampled",
+          "sharpe": null,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "oos_wins_3y": 5,
+          "trades": [],
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_pass_full": true,
+          "gate_pass_both": true,
+          "gate_fail_reasons": [],
+          "robust": {
+            "n_neighbors": 6,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false,
+            "neighbors": "same set, leverage ±0.25, ew/iv weighting"
+          },
+          "robust_neighbor_pct": 100.0,
+          "monthly": {
+            "median_month": -1.83,
+            "best_month": 55.1,
+            "worst_month": -13.17,
+            "pct_months_pos": 44.4,
+            "pct_months_ge_6p7": 30.6,
+            "n_months": 36.0
+          },
+          "selection_bias_note": "成分是已過關策略（事後挑選）；組合槓桿為對子策略日報酬的合成槓桿（A5 本身已 2 倍），未逐筆模擬強平。",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "ARB",
+              "OP",
+              "DOT"
+            ],
+            "note": "ARB 78.8% / OP 76.3% / DOT 90.7% days ≥$50M perp vol"
+          },
+          "data_short": false,
+          "approval_excluded": false,
+          "cloud_supported": false,
+          "requires": [
+            "perp_futures",
+            "leverage",
+            "short",
+            "funding",
+            "monthly_rebalance"
+          ],
+          "equity_csv": "/workspace/strategy-unified-3y/equity/v3_ens_arb_op_dot_ew__lev1.5.csv",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_v3/code/ens_v3.py",
+          "report": "/workspace/strategy-unified-3y/rd_v3/REPORT.md",
+          "source": "rd_v3",
+          "generated_at": "2026-10-07 23:58:50 CST",
+          "cost": {
+            "one_way_bps": 20,
+            "funding": "binance_usdtm_historical",
+            "rebalance_cost": "5bps×lev per month proxy"
+          },
+          "lookahead_fix": {
+            "note": "components use lookahead-fixed equities (BTC regime prev-day close)"
+          },
+          "score": 62.3876,
+          "cagr": 52.7815,
+          "total_return_3y": 257.1428,
+          "code": "R2"
+        },
+        {
+          "strategy_id": "v3_ens_arb_op_dot_ew__lev2.0",
+          "suggested_code": "R3",
+          "symbol": "MULTI",
+          "symbols": [
+            "ARB",
+            "OP",
+            "DOT"
+          ],
+          "timeframe": "4h/1d",
+          "name_zh": "A4＋A5＋C5 等權組合（月調，2 倍）",
+          "entry_zh": "三支已過關策略各自照原規則進出場：A4（ARB 4 小時多空 Donchian，BTC 在 200 日線上才做多、下方才做空，用前一天收盤判斷）、A5（OP 4 小時多空 Donchian＋RS/ADX 濾網）、C5（DOT 4 小時 Donchian 只做多）。收盤出訊號，下一根開盤成交。",
+          "exit_zh": "各子策略照原規則出場（反向訊號、移動停利或持倉到期）。每月月初把三支的資金調回各 1/3。",
+          "stop_zh": "子策略各自的 ATR 停損與移動停利照舊；組合層再乘上槓桿倍數，槓桿越高回撤越大，要盯強平。",
+          "params": {
+            "components": [
+              "A4",
+              "A5",
+              "C5"
+            ],
+            "weights": "equal 1/3",
+            "rebalance": "monthly",
+            "leverage": 2.0
+          },
+          "params_source": "rd_v3",
+          "status": "待 Emily 批准",
+          "review": "PENDING_EMILY",
+          "approval_status": "awaiting_emily_approval",
+          "initial": 10000.0,
+          "final": 47310.34,
+          "ret_3y": 373.1034,
+          "cagr_3y": 67.7757,
+          "ret_1y": 79.76371107730806,
+          "bh_ret_3y": -76.652,
+          "buy_hold": {
+            "benchmark": "EW buy&hold of ARB/OP/DOT",
+            "ret_3y": -76.652,
+            "btc_bh_ret_3y": 217.95,
+            "note": "組合未勝 BTC B&H（+218%）；勝自身成分幣 B&H 門檻偏寬鬆"
+          },
+          "maxdd_3y": -40.7379,
+          "maxdd": -40.7379,
+          "maxdd_note": "daily-sampled",
+          "sharpe": null,
+          "oos_pass_3y": "5/6",
+          "oos_pass": "5/6",
+          "oos_wins_3y": 5,
+          "trades": [],
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_pass_full": true,
+          "gate_pass_both": true,
+          "gate_fail_reasons": [],
+          "robust": {
+            "n_neighbors": 4,
+            "gate_pass_3y_rate_pct": 100.0,
+            "fragile": false,
+            "neighbors": "same set, leverage ±0.25, ew/iv weighting"
+          },
+          "robust_neighbor_pct": 100.0,
+          "monthly": {
+            "median_month": -2.51,
+            "best_month": 77.5,
+            "worst_month": -17.32,
+            "pct_months_pos": 44.4,
+            "pct_months_ge_6p7": 30.6,
+            "n_months": 36.0
+          },
+          "selection_bias_note": "成分是已過關策略（事後挑選）；組合槓桿為對子策略日報酬的合成槓桿（A5 本身已 2 倍），未逐筆模擬強平。",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "symbols": [
+              "ARB",
+              "OP",
+              "DOT"
+            ],
+            "note": "ARB 78.8% / OP 76.3% / DOT 90.7% days ≥$50M perp vol"
+          },
+          "data_short": false,
+          "approval_excluded": false,
+          "cloud_supported": false,
+          "requires": [
+            "perp_futures",
+            "leverage",
+            "short",
+            "funding",
+            "monthly_rebalance"
+          ],
+          "equity_csv": "/workspace/strategy-unified-3y/equity/v3_ens_arb_op_dot_ew__lev2.0.csv",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_v3/code/ens_v3.py",
+          "report": "/workspace/strategy-unified-3y/rd_v3/REPORT.md",
+          "source": "rd_v3",
+          "generated_at": "2026-10-07 23:58:50 CST",
+          "cost": {
+            "one_way_bps": 20,
+            "funding": "binance_usdtm_historical",
+            "rebalance_cost": "5bps×lev per month proxy"
+          },
+          "lookahead_fix": {
+            "note": "components use lookahead-fixed equities (BTC regime prev-day close)"
+          },
+          "score": 69.5188,
+          "cagr": 67.7757,
+          "total_return_3y": 373.1034,
+          "code": "R1"
+        }
+      ],
+      "code": "R"
     }
   ]
 }

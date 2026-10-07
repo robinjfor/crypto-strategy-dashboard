@@ -19,6 +19,7 @@
     ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp",
     ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
     portfolio_core_satellite_perp: null, // runner not built yet → 準備中
+    portfolio_ensemble_passers_perp: null, // R1–R3: runner not built → 準備中 (not approvable)
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",
     ema_trend_hold: null,
@@ -376,18 +377,22 @@
 
   // Displayed status: live approval / gate win over the catalog's free-text status,
   // which can be stale (e.g. C2 FIL 1h said 已淘汰 while live and passing the gate).
+  // 現役 follows the analyst catalog status (source of truth, 資金控管 2026-10-08):
+  // only rows whose catalog status starts with 現役 are 現役; 觀察 → 「現役 · 觀察中」.
+  function isLiveRow(r) { return /^現役/.test(String(r.status || "")); }
   function displayStatus(r) {
-    var ap = approvedMap[r.strategy_id];
-    if (ap && ap.approved !== false && ap.mode !== "signal_only") return "現役";
+    var st = String(r.status || "");
+    if (isLiveRow(r)) return /觀察/.test(st) ? "現役 · 觀察中" : "現役";
     if (!gatePass3y(r)) return "未過關";
-    if (/淘汰/.test(String(r.status || ""))) return "候選";
-    return r.status;
+    return st || "—";
   }
+  function displayScore(r) { return gatePass3y(r) ? r.score : 0; }
 
   function statusBadge(st) {
     var s = String(st || "—");
     var cls = "muted";
     if (s === "現役") cls = "ok";
+    else if (/^現役/.test(s)) cls = "warn";
     else if (/候選|候補/.test(s)) cls = "warn";
     else if (/待替換|未過/.test(s)) cls = "bad";
     return '<span class="badge ' + cls + '">' + esc(s) + "</span>";
@@ -765,7 +770,7 @@
     var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
     var rows = g.rows || [];
     if (filterBothOnly) {
-      rows = rows.filter(function (r) { return gatePass3y(r); });
+      rows = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r); }); // never hide live rows
     }
     if (filterBothOnly && !rows.length) return "";
 
@@ -826,7 +831,7 @@
         (fp.maxdd != null ? '<div class="dim">全期 ' + pctPts(fp.maxdd) + "</div>" : "") + "</td>" +
         "<td>" + esc(oos) + "</td>" +
         "<td>" + dualBadge(r) + "</td>" +
-        '<td class="num">' + num(r.score, 2) + "</td>" +
+        '<td class="num">' + num(displayScore(r), 2) + "</td>" +
         "<td>" + statusBadge(displayStatus(r)) + "</td>" +
         "</tr>" +
         '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="11">' +

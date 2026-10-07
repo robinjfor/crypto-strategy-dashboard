@@ -628,6 +628,26 @@
       "active": true,
       "created_at": "2026-10-07",
       "created_at_iso": "2026-10-07T18:05:00+08:00"
+    },
+    "portfolio_ensemble_passers_perp": {
+      "code": "R",
+      "rows": {
+        "v3_ens_arb_op_dot_ew__lev2.0": {
+          "code": "R1",
+          "active": true
+        },
+        "v3_ens_arb_op_dot_ew__lev1.5": {
+          "code": "R2",
+          "active": true
+        },
+        "v3_ens_arb_op_dot_ew__lev1.0": {
+          "code": "R3",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-08",
+      "created_at_iso": "2026-10-08T00:30:00+08:00"
     }
   }
 }
