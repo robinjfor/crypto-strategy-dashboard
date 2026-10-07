@@ -141,7 +141,8 @@ def needs_reset_below_hi(closed_ind: pd.DataFrame, exit_bar_ts: str | None) -> b
     ets = pd.Timestamp(exit_bar_ts)
     if ets.tzinfo is None:
         ets = ets.tz_localize("UTC")
-    post = closed_ind.loc[closed_ind.index > ets]
+    # Backtest (run_donchian_engine): need_reset is checked from the exit bar itself.
+    post = closed_ind.loc[closed_ind.index >= ets]
     if post.empty:
         return True
     for _, row in post.iterrows():

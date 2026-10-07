@@ -198,41 +198,6 @@ def slot_meta_venue(sig: dict) -> str:
     return venue_for_family(fam)
 
 
-def _backfill_enter_if_valid(client, state, sig, *, max_chase_pct: float) -> dict | None:
-    """Re-enter a missed breakout only if mark still above trigger and within chase cap."""
-    if sig.get("action") != "enter" and sig.get("reason") not in ("signal_only", "not_approved", None):
-        # Allow re-issue when prior run skipped for approval bug but signal still enter-shaped
-        pass
-    close = float(sig.get("close") or sig.get("mark") or 0)
-    trigger = float(sig.get("donch_hi") or sig.get("trigger") or 0)
-    stop = float(sig.get("suggested_stop") or 0)
-    if not close or not trigger:
-        return {"ok": False, "skip": "missing_close_or_trigger"}
-    try:
-        mark = float(client.ticker_price(sig["symbol"]))
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "skip": f"mark_fail:{e}"}
-    if mark < trigger:
-        return {"ok": False, "skip": "mark_below_breakout", "mark": mark, "trigger": trigger}
-    if close > 0 and (mark / close - 1.0) * 100.0 > max_chase_pct:
-        return {"ok": False, "skip": "chase_too_far", "mark": mark, "close": close,
-                "chase_pct": round((mark / close - 1.0) * 100.0, 4)}
-    if stop and mark <= stop:
-        return {"ok": False, "skip": "mark_at_or_below_stop", "mark": mark, "stop": stop}
-    # Force enter shape; recompute stop from live mark so backfill matches
-    # backtest (entry − stop_m × ATR), not a stale signal-bar suggested_stop.
-    forced = dict(sig)
-    forced["action"] = "enter"
-    forced["reason"] = "backfill_breakout"
-    forced["backfill"] = True
-    forced["mark"] = mark
-    atr = float(sig.get("atr") or 0)
-    stop_m = float(sig.get("stop_atr_mult") or 2.0)
-    if atr > 0 and stop_m > 0:
-        forced["suggested_stop"] = round(mark - stop_m * atr, 8)
-    return {"ok": True, "sig": forced, "mark": mark}
-
-
 def _reconcile_spot_qty(client, pos: dict, slot_id: str) -> None:
     """Saved qty must not exceed what the account holds (free+locked). Older
     positions were saved gross of the base-asset buy fee."""
@@ -728,35 +693,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
             log.warning("liq_monitor_fail slot=%s err=%s", pid, e)
     state["meta"]["last_decisions_at"] = now_iso_taipei()
 
-    # Optional one-shot backfill for a missed entry (Cloud Run Job env BACKFILL_SLOT)
-    bf_slot = (os.environ.get("BACKFILL_SLOT") or "").strip()
-    bf_chase = float(os.environ.get("BACKFILL_MAX_CHASE_PCT") or "3")
-    if bf_slot and live:
-        for i, sig in enumerate(list(signals)):
-            if str(sig.get("slot") or "") != bf_slot:
-                continue
-            # Prefer current signal; if approval previously stripped enter, rebuild enter from bars
-            base = dict(sig)
-            if base.get("action") != "enter":
-                # Still try validity on last known breakout fields from feed/meta
-                base["action"] = "enter"
-            chk = _backfill_enter_if_valid(client, state, base, max_chase_pct=bf_chase)
-            state.setdefault("meta", {})["backfill_check"] = {k: chk.get(k) for k in (chk or {}) if k != "sig"}
-            if not chk or not chk.get("ok"):
-                log.warning("backfill_skip slot=%s detail=%s", bf_slot, chk)
-                break
-            log.info("backfill_force_enter slot=%s mark=%s", bf_slot, chk.get("mark"))
-            forced = chk["sig"]
-            applied_bf = apply_signal(client, state, forced, live=True, allow_entries=True)
-            applied[i] = applied_bf
-            state["meta"]["backfill_result"] = {
-                "slot": bf_slot,
-                "executed": bool(applied_bf.get("executed")),
-                "reason": applied_bf.get("reason"),
-                "fill": applied_bf.get("fill"),
-            }
-            log.info("backfill_result %s", state["meta"]["backfill_result"])
-            break
+    # (catch-up "backfill" entry removed 2026-10-08: backtest never chases a missed bar)
 
     # --- SOL core ---
     sol_meta = state.setdefault("slots", {}).setdefault("core_sol", {})
@@ -889,7 +826,7 @@ def main(argv: list[str] | None = None) -> int:
         "--backfill-max-chase-pct",
         type=float,
         default=float(os.environ.get("BACKFILL_MAX_CHASE_PCT") or "3"),
-        help="Skip backfill if mark is more than this %% above signal close",
+        help="DEPRECATED: backfill removed (ignored)",
     )
     args = ap.parse_args(argv)
     client = BinanceClient()
@@ -911,9 +848,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "probe":
             return cmd_probe(client)
         if getattr(args, "backfill_slot", None):
-            os.environ["BACKFILL_SLOT"] = str(args.backfill_slot)
-        if getattr(args, "backfill_max_chase_pct", None) is not None:
-            os.environ["BACKFILL_MAX_CHASE_PCT"] = str(args.backfill_max_chase_pct)
+            log.warning("backfill_removed ignoring --backfill-slot=%s (no catch-up entries)", args.backfill_slot)
         if args.mode == "dry-run":
             return cmd_run(client, dry_run=True)
         return cmd_run(client, dry_run=(trader_mode() != "live"))

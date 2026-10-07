@@ -13,6 +13,7 @@ from indicators import (
     bar_ts_iso,
     needs_reset_below_hi,
     replay_stop_path,
+    signal_donchian_state,
     split_closed,
 )
 from slots import MAX_NOTIONAL_USDT, SLOTS
@@ -195,8 +196,18 @@ def evaluate_donchian_slot(
         if needs_reset_below_hi(ind, slot_meta.get("last_exit_bar_ts")):
             result.update(action="wait_reset", reason="need_close_below_donch_hi")
             return result
-    if not (float(bar["Close"]) > donch_hi):
-        result.update(action="armed", reason="waiting_breakout")
+    # Backtest parity (engine.signal_donchian + run_donchian_engine): a state
+    # machine goes 1 on close > donch_hi and back to 0 only on close < donch_lo;
+    # entries happen ONLY on the 0→1 bar. After a stop-out the state stays 1, so
+    # a new entry needs a close below the lower band first (then a fresh breakout).
+    state = signal_donchian_state(ind)
+    result["donch_state"] = int(state.iloc[-1])
+    edge = len(state) >= 2 and int(state.iloc[-1]) == 1 and int(state.iloc[-2]) == 0
+    if not edge:
+        if int(state.iloc[-1]) == 1:
+            result.update(action="armed", reason="state_on_wait_close_below_donch_lo")
+        else:
+            result.update(action="armed", reason="waiting_breakout")
         return result
 
     if slot.get("btc_regime"):
@@ -664,7 +675,9 @@ def evaluate_all(client, state: dict) -> list[dict]:
         try:
             donch_n = int(slot.get("donch_n") or 20)
             ema_slow = int(slot.get("ema_slow") or slot.get("slow") or 0)
-            limit = max(250, donch_n + 80, ema_slow + 80)
+            # 1000 bars (API max) so the Donchian state machine / Wilder ATR
+            # warm up like the full-history backtest.
+            limit = 1000 if str(slot.get("family") or "").startswith("donchian") else max(250, donch_n + 80, ema_slow + 80)
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
             res = evaluate_slot_dispatch(slot, kl, pos, meta)
             _enrich_signal(res, slot)

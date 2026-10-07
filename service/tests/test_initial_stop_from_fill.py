@@ -6,25 +6,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from main import _backfill_enter_if_valid  # noqa: E402
 
 
 class Px:
     def ticker_price(self, s):
         return 0.2289
-
-
-def test_backfill_recomputes_suggested_stop_from_mark():
-    sig = {
-        "slot": "sat_fet_4h", "symbol": "FETUSDT", "action": "enter",
-        "close": 0.2239, "donch_hi": 0.216, "atr": 0.009695,
-        "stop_atr_mult": 2.0, "suggested_stop": 0.204942,  # stale: close - 2*atr_breakout
-    }
-    out = _backfill_enter_if_valid(Px(), {}, sig, max_chase_pct=5.0)
-    assert out["ok"] is True
-    forced = out["sig"]
-    # mark 0.2289 - 2*0.009695 = 0.20951
-    assert abs(forced["suggested_stop"] - (0.2289 - 2 * 0.009695)) < 1e-6
 
 
 def test_fill_stop_math_matches_backtest():
