@@ -848,3 +848,4 @@ table.scores tr.fail:hover td.col-approve {
 .stale-banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; background: rgba(220,38,38,0.15);
   border: 1px solid rgba(220,38,38,0.55); color: #fca5a5; font-weight: 700; }
 body.data-stale #main { opacity: 0.85; }
+.site-note{font-size:11px;color:#b7791f;margin-top:2px;max-width:220px;white-space:normal}

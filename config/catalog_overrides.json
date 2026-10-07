@@ -1,0 +1,18 @@
+{
+  "_comment": "Applied by scripts/sync_unified_scores.sh after every catalog sync (資金控管 re-audit 2026-10-08). Site-side corrections of analyst text; remove an entry once the analyst catalog is fixed.",
+  "row_status": {
+    "donchian55_s2.0_t3.0_btcRegimeD__FET__4h": "已封存（J 家族 2026-10-01 封存；鄰居穩健 22.2% 未過。/approved 依 Emily 指示保留，FET 槽位未啟用）",
+    "donchian55_s2.0_t3.0__FET__4h": "未過關（次棒開盤成交後鄰居穩健 23.1% < 50%）"
+  },
+  "row_notes": {
+    "donchian_breakout_atr__ARB__4h": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線"
+  },
+  "family_text_replace": {
+    "donchian_atr": [
+      [
+        "（出場後須先跌回通道高點下方才可再進）",
+        "（停損後須先收破 Donchian 下軌才可再進；reset_below_hi 另要求出場後先收回上軌下方）"
+      ]
+    ]
+  }
+}

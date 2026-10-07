@@ -101,5 +101,56 @@ try:
     print(f"copied {_n} row equity curves (lookahead_fix / equity_csv)")
 except Exception as _e:  # noqa: BLE001
     print("row equity copy skipped:", _e)
+# --- site overrides (config/catalog_overrides.json) + scores.json from current catalog ---
+try:
+    import datetime as _dt
+    _root = dst_dir.parent.parent
+    _ov_p = _root / "config" / "catalog_overrides.json"
+    _ov = json.loads(_ov_p.read_text(encoding="utf-8")) if _ov_p.exists() else {}
+    _cat_p = dst_dir / "catalog.json"
+    _cat = json.loads(_cat_p.read_text(encoding="utf-8"))
+    _n_ov = 0
+    for _f in _cat.get("strategies") or []:
+        for _a, _b in (_ov.get("family_text_replace") or {}).get(_f.get("strategy_family_id"), []):
+            for _k, _v in list(_f.items()):
+                if isinstance(_v, str) and _a in _v:
+                    _f[_k] = _v.replace(_a, _b); _n_ov += 1
+        for _r in _f.get("rows") or []:
+            _sid = _r.get("strategy_id")
+            if _sid in (_ov.get("row_status") or {}):
+                _r["status_catalog"] = _r.get("status"); _r["status"] = _ov["row_status"][_sid]; _n_ov += 1
+            if _sid in (_ov.get("row_notes") or {}):
+                _r["site_note_zh"] = _ov["row_notes"][_sid]; _n_ov += 1
+    _cat_p.write_text(json.dumps(_cat, ensure_ascii=False, indent=2) + "\n")
+    # scores.json was a stale 9/24 export; rebuild it from the current catalog.
+    _old = json.loads((dst_dir / "scores.json").read_text()) if (dst_dir / "scores.json").exists() else {}
+    _meta = dict(_old.get("meta") or {})
+    _meta.update({"generated_from": "catalog.json (sync_unified_scores.sh)",
+                  "generated_at_taipei": _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))).isoformat(timespec="seconds"),
+                  "catalog_meta": _cat.get("meta")})
+    _rows = []
+    for _f in _cat.get("strategies") or []:
+        for _r in _f.get("rows") or []:
+            _p = _r.get("params") or {}
+            _rows.append({
+                "strategy_id": _r.get("strategy_id"), "code": _r.get("code"),
+                "family": _f.get("strategy_family_id"), "symbol": _r.get("symbol"), "timeframe": _r.get("timeframe"),
+                "status": _r.get("status"), "params": _p, "kind": _f.get("strategy_family_id"),
+                "initial": _r.get("initial"), "final": _r.get("final"),
+                "ret_3y": _r.get("ret_3y"), "total_return_3y": _r.get("total_return_3y"), "cagr_3y": _r.get("cagr_3y"),
+                "ret_1y": _r.get("ret_1y"), "bh_ret_3y": _r.get("bh_ret_3y"),
+                "maxdd": _r.get("maxdd_3y", _r.get("maxdd")), "oos_pass": _r.get("oos_pass_3y", _r.get("oos_pass")),
+                "n_trades": _r.get("n_trades_3y", _r.get("n_trades")),
+                "gate_pass": _r.get("gate_pass_3y"), "gate_pass_3y": _r.get("gate_pass_3y"),
+                "gate_pass_both": _r.get("gate_pass_both"), "gate_fail_reasons": _r.get("gate_fail_reasons"),
+                "score": _r.get("score") if _r.get("gate_pass_3y") else 0.0,
+                "full_period": _r.get("full_period"), "robust_neighbor_pct": _r.get("robust_neighbor_pct"),
+                "site_note_zh": _r.get("site_note_zh"),
+                "supported_by_runner": _f.get("cloud_supported", str(_f.get("strategy_family_id") or "").startswith("donchian")),
+            })
+    (dst_dir / "scores.json").write_text(json.dumps({"meta": _meta, "strategies": _rows}, ensure_ascii=False, indent=2) + "\n")
+    print(f"overrides applied {_n_ov}; scores.json rebuilt from catalog: {len(_rows)} rows")
+except Exception as _e:  # noqa: BLE001
+    print("overrides/scores rebuild FAILED:", _e); raise
 print("done")
 PY

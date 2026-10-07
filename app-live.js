@@ -556,6 +556,7 @@
     }
     var feesUsdt = remote && remote.fees_usdt != null ? Number(remote.fees_usdt) : null;
     var unattributed = remote && remote.unattributed_usdt != null ? Number(remote.unattributed_usdt) : null;
+    var feeMissing = remote && remote.trades_fee_missing != null ? Number(remote.trades_fee_missing) : 0;
     return {
       quote: quote,
       starting: starting,
@@ -569,7 +570,8 @@
       used: posMv,
       remaining: Math.max(0, starting - posMv),
       fees: feesUsdt,
-      unattributed: unattributed
+      unattributed: unattributed,
+      fee_missing: feeMissing
     };
   }
 
@@ -600,9 +602,7 @@
       '<div class="kpi-grid kpi-grid-book">' +
       '<div class="kpi"><div class="label">原本餘額</div><div class="value">' + num(st.starting, 2) + '</div><div class="sublabel">起始 ' + q + '</div></div>' +
       '<div class="kpi kpi-emphasis"><div class="label">現在餘額</div><div class="value">' + num(st.equity, 2) + '</div><div class="sublabel">現金 + 持倉市值</div></div>' +
-      '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計（扣手續費' + (st.fees != null ? " " + num(st.fees, 2) : "") + '）' +
-        (st.unattributed != null && Math.abs(st.unattributed) >= 0.01
-          ? '<br><span class="dim">未歸屬差額 ' + signedNum(st.unattributed, 2) + " " + q + '（未進 closed_trades 的現金差：手動交易（如 NEAR 9/18–9/24）＋舊交易未記錄手續費）</span>' : "") +
+      '<div class="kpi"><div class="label">已實現損益</div><div class="value">' + rpnl + '</div><div class="sublabel">closed_trades 合計' + feeLabel(st) + unattributedBreakdown(st, q) +
         '</div></div>' +
       '<div class="kpi"><div class="label">未實現損益</div><div class="value">' + upnl + '</div><div class="sublabel">持倉市價</div></div>' +
       '<div class="kpi"><div class="label">現金</div><div class="value">' + num(st.cash, 2) + '</div><div class="sublabel">可用 + 鎖定</div></div>' +
@@ -647,7 +647,7 @@
       "<td>" + esc(String(side)) + "</td>" +
       '<td class="num">' + num(qty, 4) + "</td>" +
       '<td class="num">' + num(px, 4) + "</td>" +
-      '<td class="num">' + (fee == null ? "—" : num(fee, 4)) + "</td>" +
+      '<td class="num">' + (fee == null || fee === "" ? '<span class="dim">無資料</span>' : num(fee, 4)) + "</td>" +
       '<td class="num ' + signedCls(pnl) + '">' + (pnl == null ? "—" : num(pnl, 2)) + "</td>" +
       "<td>" + esc(reason(r.reason || kind)) + "</td></tr>";
   }
@@ -864,6 +864,26 @@
       "<tbody>" + body + "</tbody></table></div></div></section>";
   }
 
+
+  // Known manual (non-strategy) cash movements, listed separately from fees (re-audit 2026-10-08)
+  var MANUAL_ADJUSTMENTS = [{ label: "NEAR 手動交易（9/18–9/24，非策略）", usdt: 680.86 }];
+  function feeLabel(st) {
+    if (st.fee_missing > 0) {
+      var known = st.fees != null && Math.abs(st.fees) >= 0.005 ? "已記錄 " + num(st.fees, 2) + "；" : "";
+      return "（手續費：" + known + st.fee_missing + " 筆舊交易無資料，以上為未扣手續費毛額）";
+    }
+    return st.fees != null ? "（已扣手續費 " + num(st.fees, 2) + "）" : "（手續費：無資料）";
+  }
+  function unattributedBreakdown(st, q) {
+    if (st.unattributed == null || Math.abs(st.unattributed) < 0.01) return "";
+    var manual = MANUAL_ADJUSTMENTS.reduce(function (a, m) { return a + m.usdt; }, 0);
+    var rest = st.unattributed - manual;
+    var lines = MANUAL_ADJUSTMENTS.map(function (m) {
+      return "<br><span class=\"dim\">" + m.label + " " + signedNum(m.usdt, 2) + " " + q + "</span>";
+    }).join("");
+    lines += "<br><span class=\"dim\">未記錄手續費（推估）" + signedNum(rest, 2) + " " + q + "（舊交易 fee 欄位為空，由餘額差推得）</span>";
+    return lines;
+  }
 
   function scoreFor(sid) {
     if (!sid) return null;

@@ -334,7 +334,7 @@
     {
       "strategy_family_id": "donchian_atr",
       "name_zh": "Donchian 突破＋ATR 停損／移動停利",
-      "description_zh": "收盤站上前 N 根 Donchian 高點做多；跌破 Donchian 低點、觸及 ATR 停損、移動停利或持倉達上限則出場。衛星族常用 Wilder ATR 與 reset_below_hi（出場後須先跌回通道高點下方才可再進）。對照族（breakout_atr）沿用 SMA ATR、無 reset。",
+      "description_zh": "收盤站上前 N 根 Donchian 高點做多；跌破 Donchian 低點、觸及 ATR 停損、移動停利或持倉達上限則出場。衛星族常用 Wilder ATR 與 reset_below_hi（停損後須先收破 Donchian 下軌才可再進；reset_below_hi 另要求出場後先收回上軌下方）。對照族（breakout_atr）沿用 SMA ATR、無 reset。",
       "entry_zh": "收盤價上破 Donchian(N) 高點（可選：須先曾收在高點下方再重新突破）。",
       "exit_zh": "收盤跌破 Donchian 低點，或持倉 bar 數達 max_hold。",
       "stop_zh": "初始停損 = 進場價 − stop_m×ATR；之後以 trail_m×ATR 上移停利。",
@@ -433,7 +433,8 @@
             "file": "lookahead_fix/live_reval/c1_nextopen.json",
             "fill": "entry/exit at next bar open; stop at min(open,stop)"
           },
-          "neighbor_pct_close_fill": 42.3
+          "neighbor_pct_close_fill": 42.3,
+          "site_note_zh": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線"
         },
         {
           "strategy_id": "donchian55_s1.5_t2.5__FIL__1h",
@@ -762,7 +763,7 @@
             "label": "4h_s2.0_t3.0"
           },
           "params_source": "selected",
-          "status": "衛星A候選（首選）→未過關（次棒開盤成交後鄰居 23.1%）",
+          "status": "未過關（次棒開盤成交後鄰居穩健 23.1% < 50%）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 17798.05,
@@ -826,7 +827,8 @@
           },
           "neighbor_pct_close_fill": 50.0,
           "gate_pass_3y_close_fill": true,
-          "score_close_fill": 31.9754
+          "score_close_fill": 31.9754,
+          "status_catalog": "衛星A候選（首選）→未過關（次棒開盤成交後鄰居 23.1%）"
         },
         {
           "strategy_id": "donchian55_s2.0_t3.0__LSK__4h",
@@ -1972,7 +1974,7 @@
             "label": "regime_4h_s2.0_t3.0"
           },
           "params_source": "selected",
-          "status": "衛星A候選（備選）",
+          "status": "已封存（J 家族 2026-10-01 封存；鄰居穩健 22.2% 未過。/approved 依 Emily 指示保留，FET 槽位未啟用）",
           "review": "PENDING_EMILY",
           "initial": 10000.0,
           "final": 11439.88,
@@ -2042,7 +2044,8 @@
           },
           "equity_csv": "/workspace/strategy-unified-3y/equity/donchian55_s2.0_t3.0_btcRegimeD__FET__4h.csv",
           "cagr": 4.5807,
-          "total_return_3y": 14.3988
+          "total_return_3y": 14.3988,
+          "status_catalog": "衛星A候選（備選）"
         },
         {
           "strategy_id": "donchian55_s3.0_t4.0_btcRegimeD__FET__4h",

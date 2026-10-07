@@ -832,7 +832,7 @@
         "<td>" + esc(oos) + "</td>" +
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(displayScore(r), 2) + "</td>" +
-        "<td>" + statusBadge(displayStatus(r)) + "</td>" +
+        "<td>" + statusBadge(displayStatus(r)) + (r.site_note_zh ? '<div class="site-note">⚠ ' + esc(r.site_note_zh) + "</div>" : "") + "</td>" +
         "</tr>" +
         '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="11">' +
         expandHtml(r) + "</td></tr>";
@@ -892,8 +892,9 @@
     var out = [];
     groups.forEach(function (g) {
       var rows = g.rows || [];
-      var fail = rows.filter(function (r) { return !gatePass3y(r); });
-      var pass = rows.filter(function (r) { return gatePass3y(r); });
+      // Live rows (C1/F1) stay in the family card even when they fail the gate.
+      var fail = rows.filter(function (r) { return !gatePass3y(r) && !isLiveRow(r); });
+      var pass = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r); });
       var b = familyReviewBucket(g);
       if (b === "archived" || !fail.length) { out.push(g); return; }
       if (pass.length) out.push(Object.assign({}, g, { rows: pass }));
@@ -1125,10 +1126,10 @@
         refresh(true);
       };
     });
-    var filt = $("filterPassOnly");
+    var filt = $("filterBothOnly");
     if (filt) {
       filt.onchange = function () {
-        filterPassOnly = !!filt.checked;
+        filterBothOnly = !!filt.checked;
         refresh(true);
       };
     }
