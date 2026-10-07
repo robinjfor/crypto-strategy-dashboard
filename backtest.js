@@ -920,6 +920,10 @@
     try {
       if (st) st.textContent = "載入 equity/" + sid + ".csv …";
       var res = await fetch(EQUITY_BASE + encodeURIComponent(sid) + ".csv?t=" + Date.now(), { cache: "no-store" });
+      if (res.status === 404) {
+        if (st) st.textContent = "尚無權益曲線（分析師未提供此列的 equity 檔）";
+        return;
+      }
       if (!res.ok) throw new Error("HTTP " + res.status);
       var text = await res.text();
       var lines = text.trim().split(/\r?\n/);

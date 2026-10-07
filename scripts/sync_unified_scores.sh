@@ -79,5 +79,27 @@ eq_src = src_dir / "equity"
 if eq_src.is_dir():
     for f in eq_src.glob("*.csv"):
         shutil.copy2(f, eq / f.name)
+# Lookahead-corrected curves live at lookahead_fix/equity/<CODE>.csv (catalog
+# row.lookahead_fix.strict_equity_csv). The page fetches equity/<strategy_id>.csv,
+# so copy them under the strategy_id name (overrides the pre-fix curve).
+try:
+    _cat = json.loads((dst_dir / "catalog.json").read_text(encoding="utf-8"))
+    _n = 0
+    for _f in _cat.get("strategies") or []:
+        for _r in _f.get("rows") or []:
+            _sid = _r.get("strategy_id")
+            _src = ((_r.get("lookahead_fix") or {}).get("strict_equity_csv")
+                    or _r.get("equity_csv"))
+            if not _sid or not _src:
+                continue
+            _sp = Path(_src)
+            if not _sp.is_absolute():
+                _sp = src_dir / _sp
+            if _sp.exists():
+                shutil.copy2(_sp, eq / f"{_sid}.csv")
+                _n += 1
+    print(f"copied {_n} row equity curves (lookahead_fix / equity_csv)")
+except Exception as _e:  # noqa: BLE001
+    print("row equity copy skipped:", _e)
 print("done")
 PY
