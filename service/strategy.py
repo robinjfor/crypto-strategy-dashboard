@@ -25,7 +25,8 @@ def btc_daily_regime_on(client) -> bool:
     try:
         import numpy as np
         kl = client.fetch_klines("BTCUSDT", "1d", limit=250, use_vision=True)
-        closes = kl["Close"].astype(float)
+        closed, _ = split_closed(kl, "1d")  # drop forming daily bar (no lookahead)
+        closes = closed["Close"].astype(float)
         if len(closes) < 200:
             return False
         sma = closes.rolling(200).mean().iloc[-1]
