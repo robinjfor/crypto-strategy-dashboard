@@ -345,6 +345,10 @@ def approval_mode(state: dict | None, strategy_id: str) -> str:
         if strategy_id in DEFAULT_SIGNAL_ONLY or strategy_id in DEFAULT_APPROVED or slot:
             return "signal_only"
         return "none"
+    # Explicit revoke (tombstone) → never live until re-approved
+    rv = (state or {}).get("revoked_strategies") if state else None
+    if isinstance(rv, dict) and strategy_id in rv:
+        return "signal_only"
     # Explicit per-strategy demotion in state.approved (rare)
     approved = (state or {}).get("approved") if state else None
     if isinstance(approved, dict) and strategy_id in approved:

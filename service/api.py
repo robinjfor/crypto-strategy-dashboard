@@ -708,12 +708,22 @@ def _ensure_approved(state: dict) -> dict:
     if not isinstance(approved, dict):
         approved = {}
     dirty = False
+    # Explicit revokes are tombstoned so seeding never resurrects them.
+    revoked = state.get("revoked_strategies") if isinstance(state.get("revoked_strategies"), dict) else {}
+    for sid in list(revoked):
+        if sid in approved:
+            approved.pop(sid, None)
+            dirty = True
     if not approved:
         for sid, meta in DEFAULT_APPROVED.items():
+            if sid in revoked:
+                continue
             approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
         dirty = True
     else:
         for sid, meta in DEFAULT_APPROVED.items():
+            if sid in revoked:
+                continue
             if sid not in approved:
                 approved[sid] = {**meta, "approved_at": now_iso_taipei(), "approved": True, "mode": "live"}
                 dirty = True
@@ -725,7 +735,7 @@ def _ensure_approved(state: dict) -> dict:
     monitored = state.get("signal_only") if isinstance(state.get("signal_only"), dict) else {}
     for sid, meta in DEFAULT_SIGNAL_ONLY.items():
         # Family+allocation live → promote out of signal_only
-        if is_approved_live(state, sid):
+        if is_approved_live(state, sid) and sid not in revoked:
             if sid in monitored:
                 monitored.pop(sid, None)
                 dirty = True
@@ -1418,6 +1428,9 @@ def approve():
     summary_holder: dict = {}
 
     def mut(st):
+        # Explicit re-approval clears a prior revoke tombstone.
+        if isinstance(st.get("revoked_strategies"), dict):
+            st["revoked_strategies"].pop(strategy_id, None)
         _ensure_approved(st)
         # Dynamic slot: if unknown, synthesize from body (ICP etc.)
         nonlocal_slot = slot
@@ -1501,6 +1514,7 @@ def revoke():
         approved = _ensure_approved(st)
         meta = approved.pop(strategy_id, None)
         st["approved"] = approved
+        st.setdefault("revoked_strategies", {})[strategy_id] = {"at": now_iso_taipei(), "by": "api"}
         slot_id = (meta or {}).get("slot") or (slot_by_strategy_id(strategy_id) or {}).get("id")
         pos = (st.get("positions") or {}).get(slot_id) if slot_id else None
         if pos and float(pos.get("qty") or 0) > 0:
