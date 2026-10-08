@@ -125,8 +125,11 @@ try:
     # scores.json was a stale 9/24 export; rebuild it from the current catalog.
     _old = json.loads((dst_dir / "scores.json").read_text()) if (dst_dir / "scores.json").exists() else {}
     _meta = dict(_old.get("meta") or {})
+    _now_tpe = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8)))
+    # REAUDIT2 E3: generated_at is the time of THIS sync (not the stale 9/24 export).
     _meta.update({"generated_from": "catalog.json (sync_unified_scores.sh)",
-                  "generated_at_taipei": _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))).isoformat(timespec="seconds"),
+                  "generated_at": _now_tpe.strftime("%Y-%m-%d %H:%M:%S CST"),
+                  "generated_at_taipei": _now_tpe.isoformat(timespec="seconds"),
                   "catalog_meta": _cat.get("meta")})
     _rows = []
     for _f in _cat.get("strategies") or []:
@@ -144,7 +147,11 @@ try:
                 "gate_pass": _r.get("gate_pass_3y"), "gate_pass_3y": _r.get("gate_pass_3y"),
                 "gate_pass_both": _r.get("gate_pass_both"), "gate_fail_reasons": _r.get("gate_fail_reasons"),
                 "score": _r.get("score") if _r.get("gate_pass_3y") else 0.0,
-                "full_period": _r.get("full_period"), "robust_neighbor_pct": _r.get("robust_neighbor_pct"),
+                "full_period": _r.get("full_period"),
+                "robust_neighbor_pct": _r.get("robust_neighbor_pct") if _r.get("robust_neighbor_pct") is not None
+                    else _r.get("neighbor_pct_close_fill", _r.get("neighbor_pct_live_reval")),
+                "maxdd_next_open": (_r.get("next_open_reval") or {}).get("maxdd"),
+                "neighbor_pct_next_open": (_r.get("next_open_reval") or {}).get("neighbor_pct"),
                 "site_note_zh": _r.get("site_note_zh"),
                 "supported_by_runner": _f.get("cloud_supported", str(_f.get("strategy_family_id") or "").startswith("donchian")),
             })

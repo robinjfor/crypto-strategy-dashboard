@@ -567,13 +567,20 @@
           ret_3y: r.ret_3y,
           ret_1y: r.ret_1y,
           bh_ret_3y: r.bh_ret_3y,
-          maxdd: r.maxdd_3y != null ? r.maxdd_3y : r.maxdd,
+          // REAUDIT2 E4: live fills at the next bar open → main MaxDD uses the
+          // analyst's next_open_reval figure when present; close-fill kept as maxdd_close.
+          maxdd: (r.next_open_reval && r.next_open_reval.maxdd != null) ? r.next_open_reval.maxdd
+            : (r.maxdd_3y != null ? r.maxdd_3y : r.maxdd),
+          maxdd_next_open: (r.next_open_reval && r.next_open_reval.maxdd != null) ? r.next_open_reval.maxdd : null,
+          maxdd_close: r.maxdd_3y != null ? r.maxdd_3y : r.maxdd,
           maxdd_3y: r.maxdd_3y != null ? r.maxdd_3y : r.maxdd,
           oos_pass: r.oos_pass_3y || r.oos_pass,
           oos_wins: r.oos_wins_3y != null ? r.oos_wins_3y : r.oos_wins,
           oos_total: r.oos_total_3y != null ? r.oos_total_3y : (r.oos_total || 6),
           n_trades: r.n_trades_3y != null ? r.n_trades_3y : r.n_trades,
-          robust_neighbor_pct: r.robust_neighbor_pct,
+          robust_neighbor_pct: r.robust_neighbor_pct != null ? r.robust_neighbor_pct
+            : (r.neighbor_pct_close_fill != null ? r.neighbor_pct_close_fill : r.neighbor_pct_live_reval),
+          neighbor_pct_next_open: r.next_open_reval && r.next_open_reval.neighbor_pct != null ? r.next_open_reval.neighbor_pct : null,
           lookahead_fix: r.lookahead_fix || null,
           backtest_code: r.backtest_code || "",
           report: r.report || "",
@@ -634,7 +641,7 @@
     var reasons = (failReasons(r)).map(gateReasonZh).join("；");
     return '<div class="equity-wrap">' +
       '<div class="fp-grid">' +
-      "<div><span class=\"lbl\">3 年（門檻）</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) +
+      "<div><span class=\"lbl\">3 年（門檻）</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) + (r.maxdd_next_open != null ? "（次棒開盤成交；收盤成交 " + pctPts(r.maxdd_close) + "）" : "") +
       " · OOS " + esc(r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + r.oos_total) : "—")) +
       " · 門檻 " + (gatePass3y(r) ? "過關" : "未過") + "</div>" +
       "<div><span class=\"lbl\">全期（參考）</span> " + esc((fp.start || "").slice(0, 10)) + " → " + esc((fp.end || "").slice(0, 10)) +
@@ -644,6 +651,7 @@
       "</div>" +
       "<div><span class=\"lbl\">其他</span> 交易數 " + (r.n_trades != null ? esc(String(r.n_trades)) : "—") +
       " · 鄰居穩健 " + (r.robust_neighbor_pct != null ? esc(String(r.robust_neighbor_pct)) + "%" : "—") +
+      (r.neighbor_pct_next_open != null && r.neighbor_pct_next_open !== r.robust_neighbor_pct ? "（次棒開盤成交 " + esc(String(r.neighbor_pct_next_open)) + "%）" : "") +
       (r.backtest_code ? " · 程式 " + esc(String(r.backtest_code).split("/").slice(-3).join("/")) : "") +
       (r.report ? " · 報告 " + esc(String(r.report).split("/").slice(-2).join("/")) : "") + "</div>" +
       (reasons ? '<div class="fail-reason">3年未過：' + esc(reasons) + "</div>" : "") +
@@ -684,9 +692,16 @@
   }
 
   /** Tab bucket for a family card. */
+  function familyHasLive(g) {
+    return (g.rows || []).some(function (r) { return isLiveRow(r); });
+  }
+
   function familyReviewBucket(g) {
     var fid = g.family_id || g.key;
     if (g._failSplit) return "archived"; // 資金控管: every gate_pass_3y=false row → 封存
+    // 資金控管 REAUDIT2 E2: a family with any live (現役) row is never 封存 — live
+    // implies an approved family, also on the public page (no approval data).
+    if (familyHasLive(g)) return "approved";
     if (familyManuallyArchived(fid)) return "archived";
     if (familyApproved(fid)) return "approved";
     var hasPass = familyHasPass3y(g);
@@ -742,7 +757,9 @@
           : '<span class="badge muted">已封存</span>')
       : (approved
           ? '<span class="badge ok">已批准</span>'
-          : '<span class="badge muted">待審核</span>');
+          : (familyHasLive(g)
+              ? '<span class="badge ok">現役中</span>'
+              : '<span class="badge muted">待審核</span>'));
     var info = '<span class="fam-pass-info">過關 ' + nPass + " / " + nAll +
       (g.code ? (" · 代碼 " + esc(g.code)) : "") + "</span>";
     var btns = [];
@@ -828,6 +845,7 @@
         '<td class="num ' + signedCls(r.ret_1y) + '">' + pctPts(r.ret_1y) + "</td>" +
         '<td class="num ' + signedCls(r.bh_ret_3y) + '">' + pctPts(r.bh_ret_3y) + "</td>" +
         '<td class="num ' + signedCls(r.maxdd) + '">' + pctPts(r.maxdd) +
+        (r.maxdd_next_open != null ? '<div class="dim">次棒開盤；收盤 ' + pctPts(r.maxdd_close) + "</div>" : "") +
         (fp.maxdd != null ? '<div class="dim">全期 ' + pctPts(fp.maxdd) + "</div>" : "") + "</td>" +
         "<td>" + esc(oos) + "</td>" +
         "<td>" + dualBadge(r) + "</td>" +

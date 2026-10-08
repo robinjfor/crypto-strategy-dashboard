@@ -32,7 +32,7 @@
       "notes": [],
       "notes_rescore": []
     },
-    "generated_at": "2026-09-24 16:01:10 CST",
+    "generated_at": "2026-10-08 11:44:21 CST",
     "n_strategies": 20,
     "n_gate_pass": 9,
     "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
@@ -51,7 +51,7 @@
     },
     "n_gate_pass_both": 5,
     "generated_from": "catalog.json (sync_unified_scores.sh)",
-    "generated_at_taipei": "2026-10-08T00:53:30+08:00",
+    "generated_at_taipei": "2026-10-08T11:44:21+08:00",
     "catalog_meta": {
       "period_3y": {
         "start": "2023-09-24",
@@ -434,7 +434,9 @@
         "gate_pass_full": true,
         "gate_fail_reasons": []
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 42.3,
+      "maxdd_next_open": -45.51,
+      "neighbor_pct_next_open": 38.5,
       "site_note_zh": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線",
       "supported_by_runner": true
     },
@@ -485,7 +487,9 @@
         "gate_pass_full": true,
         "gate_fail_reasons": []
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 88.5,
+      "maxdd_next_open": -27.22,
+      "neighbor_pct_next_open": 88.5,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -535,7 +539,9 @@
         "gate_pass_full": true,
         "gate_fail_reasons": []
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 88.5,
+      "maxdd_next_open": -28.73,
+      "neighbor_pct_next_open": 88.5,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -586,7 +592,9 @@
           "maxdd -50.1641 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 73.1,
+      "maxdd_next_open": -40.51,
+      "neighbor_pct_next_open": 73.1,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -638,7 +646,9 @@
           "maxdd -68.1595 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 92.3,
+      "maxdd_next_open": -28.29,
+      "neighbor_pct_next_open": 92.3,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -693,7 +703,9 @@
         "gate_pass_full": true,
         "gate_fail_reasons": []
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 50.0,
+      "maxdd_next_open": -38.48,
+      "neighbor_pct_next_open": 23.1,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -745,7 +757,9 @@
           "maxdd -68.0114 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 80.8,
+      "maxdd_next_open": -34.22,
+      "neighbor_pct_next_open": 69.2,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -798,7 +812,9 @@
         "gate_pass_full": true,
         "gate_fail_reasons": []
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 26.9,
+      "maxdd_next_open": -44.61,
+      "neighbor_pct_next_open": 30.8,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -854,6 +870,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -908,6 +926,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -962,6 +982,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1015,7 +1037,9 @@
           "maxdd -50.8004 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 23.1,
+      "maxdd_next_open": -53.02,
+      "neighbor_pct_next_open": 15.4,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1069,7 +1093,9 @@
           "maxdd -78.019 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 3.8,
+      "maxdd_next_open": -46.42,
+      "neighbor_pct_next_open": 3.8,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1123,7 +1149,9 @@
           "maxdd -53.6757 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 26.9,
+      "maxdd_next_open": -53.81,
+      "neighbor_pct_next_open": 26.9,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1181,6 +1209,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1235,6 +1265,8 @@
         "gate_fail_reasons": []
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1293,6 +1325,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1350,6 +1384,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1405,6 +1441,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1463,6 +1501,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1520,6 +1560,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1574,6 +1616,8 @@
         "gate_fail_reasons": []
       },
       "robust_neighbor_pct": 22.22,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1629,6 +1673,8 @@
         "gate_fail_reasons": []
       },
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1684,6 +1730,8 @@
         "gate_fail_reasons": []
       },
       "robust_neighbor_pct": 22.22,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1739,6 +1787,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -1797,6 +1847,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -1853,7 +1905,9 @@
           "maxdd -45.4713 > 45% abs"
         ]
       },
-      "robust_neighbor_pct": null,
+      "robust_neighbor_pct": 26.9,
+      "maxdd_next_open": -37.82,
+      "neighbor_pct_next_open": 26.9,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -1911,6 +1965,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -1970,6 +2026,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2027,6 +2085,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2088,6 +2148,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2145,6 +2207,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2204,6 +2268,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2254,6 +2320,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2306,6 +2374,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2358,6 +2428,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2411,6 +2483,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2464,6 +2538,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2516,6 +2592,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2568,6 +2646,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2621,6 +2701,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2676,6 +2758,8 @@
         ]
       },
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -2721,6 +2805,8 @@
       "score": 44.0862,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2766,6 +2852,8 @@
       "score": 50.418,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2811,6 +2899,8 @@
       "score": 48.1694,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2856,6 +2946,8 @@
       "score": 45.2188,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2901,6 +2993,8 @@
       "score": 52.1426,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2946,6 +3040,8 @@
       "score": 48.8466,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -2991,6 +3087,8 @@
       "score": 45.5327,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3036,6 +3134,8 @@
       "score": 33.6669,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3081,6 +3181,8 @@
       "score": 32.5411,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3126,6 +3228,8 @@
       "score": 33.7175,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3171,6 +3275,8 @@
       "score": 33.6669,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3216,6 +3322,8 @@
       "score": 37.9275,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3261,6 +3369,8 @@
       "score": 35.7603,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3306,6 +3416,8 @@
       "score": 31.9754,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3351,6 +3463,8 @@
       "score": 57.7987,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3396,6 +3510,8 @@
       "score": 50.2796,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3441,6 +3557,8 @@
       "score": 57.7987,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3486,6 +3604,8 @@
       "score": 57.7987,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3531,6 +3651,8 @@
       "score": 55.0883,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3574,6 +3696,8 @@
       "score": 24.2145,
       "full_period": null,
       "robust_neighbor_pct": 50.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3617,6 +3741,8 @@
       "score": 32.9685,
       "full_period": null,
       "robust_neighbor_pct": 55.56,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3663,6 +3789,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 33.33,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3706,6 +3834,8 @@
       "score": 26.8447,
       "full_period": null,
       "robust_neighbor_pct": 52.78,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3751,6 +3881,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 30.56,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3796,6 +3928,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 36.11,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3842,6 +3976,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 19.44,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3888,6 +4024,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 27.78,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3935,6 +4073,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -3981,6 +4121,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4028,6 +4170,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4073,6 +4217,8 @@
       "score": 28.3451,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4118,6 +4264,8 @@
       "score": 24.3854,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4163,6 +4311,8 @@
       "score": 56.9525,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4208,6 +4358,8 @@
       "score": 63.3954,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4253,6 +4405,8 @@
       "score": 39.5209,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4298,6 +4452,8 @@
       "score": 37.1516,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4343,6 +4499,8 @@
       "score": 20.7544,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4388,6 +4546,8 @@
       "score": 26.3313,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4433,6 +4593,8 @@
       "score": 19.2542,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4478,6 +4640,8 @@
       "score": 12.1066,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4523,6 +4687,8 @@
       "score": 36.5283,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4568,6 +4734,8 @@
       "score": 41.4297,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4613,6 +4781,8 @@
       "score": 29.6762,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4658,6 +4828,8 @@
       "score": 32.5335,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4703,6 +4875,8 @@
       "score": 33.5262,
       "full_period": null,
       "robust_neighbor_pct": null,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": true
     },
@@ -4747,6 +4921,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 41.67,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -4789,6 +4965,8 @@
       "score": 64.8166,
       "full_period": null,
       "robust_neighbor_pct": 66.67,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -4834,6 +5012,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 33.33,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -4878,6 +5058,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 58.33,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -4925,6 +5107,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -4967,6 +5151,8 @@
       "score": 34.8931,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5007,6 +5193,8 @@
       "score": 24.403,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5051,6 +5239,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5093,6 +5283,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 66.67,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5137,6 +5329,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5181,6 +5375,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5221,6 +5417,8 @@
       "score": 31.264,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5261,6 +5459,8 @@
       "score": 23.4826,
       "full_period": null,
       "robust_neighbor_pct": 66.67,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5305,6 +5505,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5348,6 +5550,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5398,6 +5602,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5448,6 +5654,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5498,6 +5706,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5548,6 +5758,8 @@
       "score": 0.0,
       "full_period": null,
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5627,6 +5839,8 @@
         "note": "portfolio only backtested on 3y window (ARB perp listed 2023-03); full_period = 3y"
       },
       "robust_neighbor_pct": 0.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5665,6 +5879,8 @@
       "score": 53.7405,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5703,6 +5919,8 @@
       "score": 62.3876,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     },
@@ -5741,6 +5959,8 @@
       "score": 69.5188,
       "full_period": null,
       "robust_neighbor_pct": 100.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
       "site_note_zh": null,
       "supported_by_runner": false
     }
