@@ -648,6 +648,76 @@
       "active": true,
       "created_at": "2026-10-08",
       "created_at_iso": "2026-10-08T00:30:00+08:00"
+    },
+    "short_trend_perp": {
+      "code": "S",
+      "rows": {
+        "sr_sema_ema20_50_s4.0_t4.0_fpos__GALA__4h": {
+          "code": "S1",
+          "active": true
+        },
+        "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h": {
+          "code": "S2",
+          "active": true
+        },
+        "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h": {
+          "code": "S3",
+          "active": true
+        },
+        "sr_sdon_n40_s1.0_t2.0_fpos__OP__4h": {
+          "code": "S4",
+          "active": true
+        },
+        "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h": {
+          "code": "S5",
+          "active": true
+        },
+        "sr_sema_ema12_26_s3.0_t5.0_fpos__1000SHIB__4h": {
+          "code": "S6",
+          "active": true
+        },
+        "sr_sema_ema12_26_s1.5_t4.0_btc200__LDO__4h": {
+          "code": "S7",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-08",
+      "created_at_iso": "2026-10-08T17:57:30+08:00",
+      "_note": "codes taken from analyst catalog"
+    },
+    "range_reversion_perp": {
+      "code": "G",
+      "rows": {
+        "sr_rsir_p21_lo35_s99_adx35_long__1000SHIB__4h": {
+          "code": "G1",
+          "active": true
+        },
+        "sr_bbr_n14_k2.0_s99_adx100_short_back__OP__1d": {
+          "code": "G2",
+          "active": true
+        },
+        "sr_bbr_n20_k1.5_s1.5_adx25_long_back__APT__1d": {
+          "code": "G3",
+          "active": true
+        },
+        "sr_rsir_p14_lo20_s2.5_adx100_long__DOT__4h": {
+          "code": "G4",
+          "active": true
+        },
+        "sr_rsir_p7_lo15_s99_adx25_ls__FIL__4h": {
+          "code": "G5",
+          "active": true
+        },
+        "sr_bbr_n14_k1.5_s2.5_adx35_short_back__GALA__1d": {
+          "code": "G6",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-08",
+      "created_at_iso": "2026-10-08T17:57:30+08:00",
+      "_note": "codes taken from analyst catalog (Emily named S1–S7 / G1–G6); letter G previously used by retired news_filter_donchian (inactive rows kept reserved below)"
     }
   }
 }

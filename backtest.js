@@ -20,6 +20,8 @@
     ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
     portfolio_core_satellite_perp: null, // runner not built yet → 準備中
     portfolio_ensemble_passers_perp: null, // R1–R3: runner not built → 準備中 (not approvable)
+    short_trend_perp: null, // S1–S7 (2026-10-08): no cloud order support yet → 準備中
+    range_reversion_perp: null, // G1–G6 (2026-10-08): no cloud order support yet → 準備中
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",
     ema_trend_hold: null,
@@ -563,8 +565,14 @@
           symbol: r.symbol,
           timeframe: r.timeframe || (r.params && (r.params.tf || r.params.timeframe)) || "",
           initial: r.initial != null ? r.initial : 10000,
-          final: r.final,
-          ret_3y: r.ret_3y,
+          // 資金控管 2026-10-08: final / 3y return on the next-open basis (same as MaxDD)
+          // when the catalog has next_open_reval; final = initial × (1 + next-open 3y return).
+          // The catalog has no next-open 1y figure → 1y stays close-fill (flagged in the cell).
+          final: nextOpen3y(r) != null ? (r.initial != null ? r.initial : 10000) * (1 + nextOpen3y(r) / 100) : r.final,
+          final_close: r.final,
+          ret_3y_close: r.ret_3y,
+          basis_next_open: nextOpen3y(r) != null,
+          ret_3y: nextOpen3y(r) != null ? nextOpen3y(r) : r.ret_3y,
           ret_1y: r.ret_1y,
           bh_ret_3y: r.bh_ret_3y,
           // REAUDIT2 E4: live fills at the next bar open → main MaxDD uses the
@@ -636,12 +644,17 @@
     return fp.gate_fail_reasons || fp.gate_fail_reasons || [];
   }
 
+  function nextOpen3y(r) {
+    var nr = r && r.next_open_reval;
+    return nr && nr.total_return_3y != null && !Number.isNaN(Number(nr.total_return_3y)) ? Number(nr.total_return_3y) : null;
+  }
+
   function expandHtml(r) {
     var fp = r.full_period || {};
     var reasons = (failReasons(r)).map(gateReasonZh).join("；");
     return '<div class="equity-wrap">' +
       '<div class="fp-grid">' +
-      "<div><span class=\"lbl\">3 年（門檻）</span> 報酬 " + pctPts(r.ret_3y) + " · MaxDD " + pctPts(r.maxdd) + (r.maxdd_next_open != null ? "（次棒開盤成交；收盤成交 " + pctPts(r.maxdd_close) + "）" : "") +
+      "<div><span class=\"lbl\">3 年（門檻）</span> 報酬 " + pctPts(r.ret_3y) + (r.basis_next_open ? "（次棒開盤成交；收盤成交 " + pctPts(r.ret_3y_close) + "）" : "") + " · MaxDD " + pctPts(r.maxdd) + (r.maxdd_next_open != null ? "（次棒開盤成交；收盤成交 " + pctPts(r.maxdd_close) + "）" : "") +
       " · OOS " + esc(r.oos_pass || ((r.oos_wins != null) ? (r.oos_wins + "/" + r.oos_total) : "—")) +
       " · 門檻 " + (gatePass3y(r) ? "過關" : "未過") + "</div>" +
       "<div><span class=\"lbl\">全期（參考）</span> " + esc((fp.start || "").slice(0, 10)) + " → " + esc((fp.end || "").slice(0, 10)) +
@@ -840,9 +853,12 @@
         (rowFlag(r.strategy_id) ? " " + flagBadge(rowFlag(r.strategy_id)) + flagNote(rowFlag(r.strategy_id)) : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
         '<td class="num">' + num(r.initial, 0) + "</td>" +
-        '<td class="num">' + num(r.final, 2) + "</td>" +
-        '<td class="num ' + signedCls(r.ret_3y) + '">' + pctPts(r.ret_3y) + "</td>" +
-        '<td class="num ' + signedCls(r.ret_1y) + '">' + pctPts(r.ret_1y) + "</td>" +
+        '<td class="num">' + num(r.final, 2) +
+        (r.basis_next_open ? '<div class="dim">次棒開盤；收盤 ' + num(r.final_close, 2) + "</div>" : "") + "</td>" +
+        '<td class="num ' + signedCls(r.ret_3y) + '">' + pctPts(r.ret_3y) +
+        (r.basis_next_open ? '<div class="dim">次棒開盤；收盤 ' + pctPts(r.ret_3y_close) + "</div>" : "") + "</td>" +
+        '<td class="num ' + signedCls(r.ret_1y) + '">' + pctPts(r.ret_1y) +
+        (r.basis_next_open ? '<div class="dim">收盤成交（無次棒數字）</div>' : "") + "</td>" +
         '<td class="num ' + signedCls(r.bh_ret_3y) + '">' + pctPts(r.bh_ret_3y) + "</td>" +
         '<td class="num ' + signedCls(r.maxdd) + '">' + pctPts(r.maxdd) +
         (r.maxdd_next_open != null ? '<div class="dim">次棒開盤；收盤 ' + pctPts(r.maxdd_close) + "</div>" : "") +
