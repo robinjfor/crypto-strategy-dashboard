@@ -234,3 +234,21 @@ def run_next_open(df,signal,stop_m,trail_m,max_hold,init=INIT,reset_below_hi=Fal
         trades.append({"entry":str(entry_ts),"exit":str(idx[-1]),"pnl":shares*(px-entry_px),"reason":"eod_flat"});eqs[-1]=(idx[-1],cash)
     return BTResult(equity=pd.Series({t:v for t,v in eqs}),trades=trades,n_liquidations=0)
 
+
+
+# --- EMA cross + BTC regime (engine.signal_ema / apply_btc_regime / add_ema) ---
+def add_ema_cols(df: pd.DataFrame, spans=(12, 26)) -> pd.DataFrame:
+    o = df.copy()
+    for span in spans:
+        o[f"ema_{span}"] = o["Close"].ewm(span=span, adjust=False).mean()
+    return o
+
+
+def signal_ema(df: pd.DataFrame, fast: int, slow: int) -> pd.Series:
+    return (df[f"ema_{fast}"] > df[f"ema_{slow}"]).astype(int)
+
+
+def apply_btc_regime(sig: pd.Series, btc: pd.DataFrame) -> pd.Series:
+    ok = (btc["Close"] > btc["sma_200"]).astype(int)
+    ok = ok.reindex(sig.index).ffill().fillna(0)
+    return (sig.astype(int) & ok.astype(int)).astype(int)

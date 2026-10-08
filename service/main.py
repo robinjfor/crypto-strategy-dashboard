@@ -788,6 +788,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
 
     state.setdefault("meta", {})["last_run_at"] = now_iso_taipei()
     state["meta"]["last_run_at_utc"] = datetime.now(timezone.utc).isoformat()
+    state["meta"]["last_run_runner_version"] = os.environ.get("RUNNER_VERSION") or "unknown"
     state["meta"]["last_mode"] = "dry-run" if (dry_run or not live) else "live"
     state["meta"]["last_live"] = live
     state["meta"]["last_ok"] = True
@@ -877,6 +878,7 @@ def main(argv: list[str] | None = None) -> int:
             st.setdefault("meta", {})["last_ok"] = False
             st["meta"]["last_error"] = str(e)
             st["meta"]["last_run_at"] = now_iso_taipei()
+            st["meta"]["last_run_runner_version"] = os.environ.get("RUNNER_VERSION") or "unknown"
             store.save(st)
         except Exception:  # noqa: BLE001
             pass

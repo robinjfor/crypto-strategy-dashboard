@@ -1033,6 +1033,10 @@ def build_status() -> dict:
         "closed_trades": closed_norm,
         "last_job_run_at": meta.get("last_run_at"),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
+        # Runner version (git commit baked into the image by deploy-trader):
+        # runner_version = the Job that produced last_decisions; api_version = this API.
+        "runner_version": meta.get("last_run_runner_version") or "unknown",
+        "api_version": os.environ.get("RUNNER_VERSION") or "unknown",
         "futures_order_probe": (state.get("meta") or {}).get("futures_order_probe"),
         "last_job_ok": meta.get("last_ok"),
         "last_mode": meta.get("last_mode"),

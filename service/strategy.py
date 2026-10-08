@@ -339,23 +339,31 @@ def evaluate_ema_slot(slot: dict, klines: pd.DataFrame, position: dict | None, s
         result["qty"] = position.get("qty")
         result["entry"] = position.get("entry")
         exit_info = replay.get("exit")
-        # signal exit when ema cross down
+        # Backtest parity (run_donchian_engine / run_next_open): on any bar the
+        # intrabar stop wins first (fills at min(open, stop)); only if the stop
+        # was not hit does a close-based exit apply: signal (EMA death cross /
+        # regime off) before max_hold.
+        if exit_info:
+            result.update(action="exit", reason="stop", exit_ref=exit_info["exit_ref"], exit_bar_ts=exit_info["bar_ts"])
+            return result
         if int(sig.iloc[-1]) == 0:
             result.update(action="exit", reason="signal_exit", exit_ref=float(bar["Close"]), exit_bar_ts=bar_ts)
             return result
         max_hold = int(slot.get("max_hold_bars") or slot.get("max_hold") or 0)
         if max_hold > 0 and position.get("entry_bar_ts"):
-            ets = pd.Timestamp(position["entry_bar_ts"])
-            if ets.tzinfo is None:
-                ets = ets.tz_localize("UTC")
-            post = ind.loc[ind.index >= ets]
+            # max_hold counts from the FILL bar (bar after the signal bar unless fill_bar_ts recorded)
+            if position.get("fill_bar_ts"):
+                fts = pd.Timestamp(position["fill_bar_ts"])
+                fts = fts.tz_localize("UTC") if fts.tzinfo is None else fts
+                post = ind.loc[ind.index >= fts]
+            else:
+                ets = pd.Timestamp(position["entry_bar_ts"])
+                ets = ets.tz_localize("UTC") if ets.tzinfo is None else ets
+                post = ind.loc[ind.index > ets]
             if len(post) > max_hold:
                 result.update(action="exit", reason="max_hold", exit_ref=float(bar["Close"]), exit_bar_ts=bar_ts)
                 return result
-        if exit_info:
-            result.update(action="exit", reason="stop", exit_ref=exit_info["exit_ref"], exit_bar_ts=exit_info["bar_ts"])
-        else:
-            result.update(action="manage", reason="trail_update")
+        result.update(action="manage", reason="trail_update")
         return result
 
     if not slot.get("armed", True):
