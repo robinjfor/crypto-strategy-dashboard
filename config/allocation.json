@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-07T19:10:00+08:00",
+  "updated_at": "2026-10-09T05:59:51+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -43,23 +43,23 @@
       "note": "現行 live（衛星 C）；reset 對齊回測"
     },
     {
-      "slot": "sat_arb_4h",
+      "slot": "sat_op_4h",
       "family": "donchian_atr",
-      "strategy_id": "donchian_breakout_atr__ARB__4h",
-      "symbol": "ARBUSDT",
+      "strategy_id": "donchian20_s1.5_t1.5__OP__4h",
+      "symbol": "OPUSDT",
       "timeframe": "4h",
       "notional_usdt": 1250,
       "enabled": true,
       "params": {
         "donch_n": 20,
-        "stop_atr_mult": 2.0,
-        "trail_atr_mult": 3.0,
+        "stop_atr_mult": 1.5,
+        "trail_atr_mult": 1.5,
         "max_hold_bars": 36,
-        "require_reset_below_hi": false,
+        "require_reset_below_hi": true,
         "btc_regime": false,
-        "atr_mode": "sma"
+        "atr_mode": "wilder"
       },
-      "note": "rotation 2026-10-02：FET 4h stale +14.2%→ARB 4h（距離~7.6%<8%；score 35.5／CAGR 77%／OOS 5/6）。原 sat_fet_4h 下線。"
+      "note": "rotation 2026-10-09：ARB 4h stale +23.2%→OP 4h n20（距離~19.2%，近 4pp；同家族唯一合格非重複；score 36.4／CAGR 27%／OOS 5/6／gate+liq ok；ARB catalog gate_pass_3y 已 False）。原 sat_arb_4h 下線。"
     },
     {
       "slot": "sat_fet_4h",
