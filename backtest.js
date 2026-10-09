@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -20,7 +20,7 @@
     ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
     portfolio_core_satellite_perp: null, // runner not built yet → 準備中
     portfolio_ensemble_passers_perp: null, // R1–R3: runner not built → 準備中 (not approvable)
-    short_trend_perp: null, // S1–S7 (2026-10-08): no cloud order support yet → 準備中
+    short_trend_perp: "short_trend_perp", // S (2026-10-09 ba9cac1, 資金控管 passed): only wf_pass rows (S2/S3/S5/S8) shown
     range_reversion_perp: null, // G1–G6 (2026-10-08): no cloud order support yet → 準備中
     trend_long_scan_perp: null, // T1–T9 (2026-10-09): perp long scan, not on runner → hidden
     vol_target_sized_passers_perp: null, // W1–W10 (2026-10-09): vol-target sizing not on runner → hidden
@@ -944,10 +944,14 @@
   // shown at all — on every tab and in the counts. Data stays in the repo; they appear
   // automatically once the runner supports them / the flag is cleared.
   // Never hidden: approved families, approved rows and live (現役) rows.
+  // Rows the analyst marks as failing the walk-forward re-check (wf_pass === false) stay hidden,
+  // even after their family is approved (資金控管 2026-10-09: only S2/S3/S5/S8 of S).
+  function rowWfFail(r) { return !!r && r.wf_pass === false; }
   function rowKeptAlways(r, fid) {
-    return isLiveRow(r) || !!approvedMap[r.strategy_id] || familyApproved(fid);
+    return isLiveRow(r) || !!approvedMap[r.strategy_id] || (familyApproved(fid) && !rowWfFail(r));
   }
   function rowUnapprovable(r, fid) {
+    if (rowWfFail(r)) return true;
     var rf = rowFlag(r.strategy_id);
     if (rf && rf.block_approve) return true;
     return !runnerSupports(r, fid);

@@ -335,7 +335,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     px = float(opened.get("avg_price") or px)
                     basis = stop_basis_from_fill(px)
                     stop = basis + float(sig.get("stop_atr_mult") or 0) * float(sig.get("stop_atr") or 0)
-                    s_extra = {"family": "short_trend_perp", "strategy_id": sig.get("strategy_id"),
+                    s_extra = {"family": "short_trend_perp", "strategy_id": sig.get("strategy_id"), "tf": sig.get("tf"),
                                "stop_basis": basis, "initial_stop": stop, "stop_working_type": STOP_WORKING_TYPE,
                                "filled_ms": int(time.time() * 1000)}
                 positions[slot_id] = {

@@ -2,6 +2,7 @@
 leverage caps, conflict flag. Existing families must be unaffected."""
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -23,15 +24,19 @@ def _s_slot(**over):
     return s
 
 
-def test_s_family_cannot_enter_allocation_or_be_approved():
+def test_s_family_approvable_but_approval_alone_opens_nothing(monkeypatch):
+    """資金控管 passed S (2026-10-09): approvable; live orders still need an enabled allocation slot."""
     doc = {"book_usdt": 5000, "slots": [_s_slot()]}
     errs = validate_allocation(doc, check_binance=False)
-    assert any("待資金控管審核" in e for e in errs)
-    assert not any("timeframe" in e for e in errs)  # 6h is a valid S timeframe
-    assert "short_trend_perp" not in allocation.RUNNER_FAMILIES
-    assert "short_trend_perp" not in slots.SUPPORTED_FAMILIES
-    with pytest.raises(ValueError):
-        slots.approve_family({}, "short_trend_perp", at="t")
+    assert errs == [], errs  # analyst can add S slots (6h valid, 1x)
+    assert "short_trend_perp" in allocation.RUNNER_FAMILIES and "short_trend_perp" in slots.SUPPORTED_FAMILIES
+    st: dict = {}
+    slots.approve_family(st, "short_trend_perp", at="t")
+    assert "short_trend_perp" in st["approved_families"]
+    # fixture allocation has no S slot -> approving the family yields no S trade slot / approved id
+    trade = main._iter_trade_slots(st)
+    assert not [x for x in trade if x.get("family") == "short_trend_perp"]
+    assert not [i for i in main._approved_ids(st) if "sema" in i]
 
 
 def test_existing_families_keep_1h_4h_1d_only():
@@ -244,3 +249,47 @@ def test_long_blocks_s_short_and_other_coins_unaffected(monkeypatch):
     # a non-FILLED (pending/closed) opposite position does not block
     state3 = {"positions": {"short_op_4h": {"status": "CLOSED", "symbol": "OPUSDT", "side": "SHORT"}}}
     assert "intended_order" in main.apply_signal(None, state3, _spot_enter(), live=False, allow_entries=True)
+
+
+def test_stale_protection_survives_slot_removed_from_allocation(monkeypatch):
+    """S slot removed from the allocation while holding a position: reconcile has no tf from the
+    allocation, so the position's own tf must floor the exit bar; the stale-signal rule still applies."""
+    import execution
+    from short_trend import evaluate_short_trend_slot
+
+    monkeypatch.setattr(futures_client, "FuturesDemoClient", lambda: object())
+    monkeypatch.setattr(futures_execution, "cancel_algo_stops", lambda fc, sym: 0)
+    stop_ms = int(pd.Timestamp("2026-10-09T13:30:00Z").timestamp() * 1000)  # inside the 12:00 UTC 4h bar
+    monkeypatch.setattr(execution, "_futures_closed_info", lambda fc, sid, pos: {
+        "qty": 1.0, "price": 1.0, "time_ms": stop_ms, "order_id": 1, "reason": "stop"})
+    state = {"positions": {"short_dot_4h": {"status": "FILLED", "venue": "futures", "symbol": "DOTUSDT", "side": "SHORT",
+                                            "qty": 1.0, "entry": 1.1, "family": "short_trend_perp", "tf": "4h"}}}
+    execution.reconcile_exchange_closes(None, state, tf_by_slot={})  # slot no longer in allocation
+    meta = state["slots"]["short_dot_4h"]
+    assert pd.Timestamp(meta["last_exit_bar_ts"]) == pd.Timestamp("2026-10-09T12:00:00Z")
+    # an edge on 08:00 (position open then) is stale; an edge on the 12:00 stop bar itself may enter
+    idx = pd.date_range(end="2026-10-09T12:00:00Z", periods=300, freq="4h", tz="UTC")
+    c = np.r_[np.linspace(1.0, 2.0, 298), [1.0, 0.5]]
+    kl = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c}, index=idx)
+    slot = {"id": "short_dot_4h", "symbol": "DOTUSDT", "tf": "4h", "family": "short_trend_perp", "signal": "sema",
+            "ema_fast": 9, "ema_slow": 21, "stop_atr_mult": 2.0, "trail_atr_mult": 4.0, "filter": "none", "quote_usdt": 750}
+    win_stale = kl.iloc[:-1]  # last closed bar 08:00 (hourly run inside the 12:00 bar)
+    assert evaluate_short_trend_slot(slot, win_stale, None, meta)["reason"] == "stale_signal_before_exit"
+    # same window without the exit record would have entered (proves the edge exists)
+    assert evaluate_short_trend_slot(slot, win_stale, None, {})["action"] == "enter"
+
+
+def test_s_entry_stores_tf_on_position(monkeypatch):
+    fc = _FakeFC()
+    fc.user_trades = lambda *a, **k: []
+    monkeypatch.setattr(futures_client, "FuturesDemoClient", lambda: fc)
+    monkeypatch.setattr(main, "_allow_entry_for_slot", lambda *a, **k: (True, ""))
+    monkeypatch.setattr(futures_execution, "open_market", lambda c, **kw: {
+        "order": {"orderId": 1}, "qty": 10.0, "mark": 1.0, "avg_price": 1.0, "side": "SELL", "leverage": 1, "notional_usdt": 10.0})
+    monkeypatch.setattr(futures_execution, "place_stop_reduce_only", lambda c, **kw: {"algoId": 2})
+    sig = {"slot": "short_dot_4h", "symbol": "DOTUSDT", "action": "enter", "family": "short_trend_perp", "venue": "futures",
+           "side": "SHORT", "quote_usdt": 750.0, "bar_ts": "2026-10-09T08:00:00+00:00", "tf": "4h", "stop_atr_mult": 2.0,
+           "stop_atr": 0.01}
+    state: dict = {}
+    main.apply_signal(None, state, sig, live=True, allow_entries=True)
+    assert state["positions"]["short_dot_4h"]["tf"] == "4h"

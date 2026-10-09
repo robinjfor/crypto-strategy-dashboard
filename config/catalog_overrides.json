@@ -6,7 +6,11 @@
   },
   "row_notes": {
     "donchian_breakout_atr__ARB__4h": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線",
-    "p118_elong_ema50_100_s2.0_t3.0_btcbull__XLM__4h__vt1.0_lmax3.0": "獲利集中在 2024/11 單月"
+    "p118_elong_ema50_100_s2.0_t3.0_btcbull__XLM__4h__vt1.0_lmax3.0": "獲利集中在 2024/11 單月",
+    "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 44.0% → 後半 53.6%（WF 參數 EMA9/21、停損 2×ATR、移動停利 5×ATR、濾網 資金費率>0；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證",
+    "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空",
+    "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證",
+    "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證"
   },
   "family_text_replace": {
     "donchian_atr": [

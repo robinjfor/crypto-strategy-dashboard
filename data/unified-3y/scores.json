@@ -32,7 +32,7 @@
       "notes": [],
       "notes_rescore": []
     },
-    "generated_at": "2026-10-09 21:57:35 CST",
+    "generated_at": "2026-10-09 23:24:55 CST",
     "n_strategies": 20,
     "n_gate_pass": 9,
     "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
@@ -51,7 +51,7 @@
     },
     "n_gate_pass_both": 5,
     "generated_from": "catalog.json (sync_unified_scores.sh)",
-    "generated_at_taipei": "2026-10-09T21:57:35+08:00",
+    "generated_at_taipei": "2026-10-09T23:24:55+08:00",
     "catalog_meta": {
       "period_3y": {
         "start": "2023-09-24",
@@ -6052,7 +6052,7 @@
       "robust_neighbor_pct": 70.6,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
-      "site_note_zh": null,
+      "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 44.0% → 後半 53.6%（WF 參數 EMA9/21、停損 2×ATR、移動停利 5×ATR、濾網 資金費率>0；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證",
       "supported_by_runner": false
     },
     {
@@ -6096,7 +6096,7 @@
       "robust_neighbor_pct": 100.0,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
-      "site_note_zh": null,
+      "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空",
       "supported_by_runner": false
     },
     {
@@ -6182,7 +6182,7 @@
       "robust_neighbor_pct": 65.4,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
-      "site_note_zh": null,
+      "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證",
       "supported_by_runner": false
     },
     {
@@ -6314,7 +6314,7 @@
       "robust_neighbor_pct": 57.7,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
-      "site_note_zh": null,
+      "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證",
       "supported_by_runner": false
     },
     {

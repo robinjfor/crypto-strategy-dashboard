@@ -9616,7 +9616,8 @@
           "wf_fail_reason": null,
           "wf_catalog_params_first_half_cagr": 42.75,
           "wf_catalog_params_second_half_cagr": 85.89,
-          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json",
+          "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 44.0% → 後半 53.6%（WF 參數 EMA9/21、停損 2×ATR、移動停利 5×ATR、濾網 資金費率>0；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證"
         },
         {
           "strategy_id": "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h",
@@ -9789,7 +9790,8 @@
           "wf_fail_reason": null,
           "wf_catalog_params_first_half_cagr": 43.68,
           "wf_catalog_params_second_half_cagr": 51.04,
-          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json",
+          "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空"
         },
         {
           "strategy_id": "sr_sdon_n40_s1.0_t2.0_fpos__OP__4h",
@@ -10133,7 +10135,8 @@
           "wf_fail_reason": null,
           "wf_catalog_params_first_half_cagr": 40.72,
           "wf_catalog_params_second_half_cagr": 40.97,
-          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json",
+          "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證"
         },
         {
           "strategy_id": "sr_sema_ema12_26_s3.0_t5.0_fpos__1000SHIB__4h",
@@ -10640,7 +10643,8 @@
           "wf_fail_reason": null,
           "wf_catalog_params_first_half_cagr": 37.84,
           "wf_catalog_params_second_half_cagr": 101.25,
-          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json",
+          "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無；上線用此組，與表列回測參數不同）· 風險：前半選幣、後半驗證"
         },
         {
           "strategy_id": "p118_sema_ema50_200_s4.0_t3.0_coin50__FIL__12h",

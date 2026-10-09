@@ -22,6 +22,9 @@ RUNNER_FAMILIES = frozenset({
     # CAGR70 long-short / 10-coin portfolio (signal parity + liq monitor)
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
+    # S short-trend perp (資金控管 passed ba9cac1, 2026-10-09). Orders need Emily's approval AND an
+    # enabled allocation slot added by the analyst.
+    "short_trend_perp",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
@@ -32,10 +35,9 @@ FUTURES_FAMILIES = frozenset({
     "ls_univ_portfolio_perp",
     "short_trend_perp",
 })
-# Families whose runner code exists but that must not enter the allocation until 資金控管 reviews
-# them and Emily approves (S short-trend perp, 2026-10-09). Not in RUNNER_FAMILIES, so any slot
-# with this family fails validation (no S slot can be enabled or even listed).
-PENDING_REVIEW_FAMILIES = frozenset({"short_trend_perp"})
+# Families whose runner code exists but that must not enter the allocation yet (none now; S was
+# here until 資金控管 passed it on 2026-10-09).
+PENDING_REVIEW_FAMILIES: frozenset = frozenset()
 # Timeframes per family: existing families keep 1h/4h/1d; S adds the perp 2h/6h/12h bars.
 BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
 FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"})}

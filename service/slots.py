@@ -124,7 +124,7 @@ SOL_SLOT = {
 }
 
 # Families the Cloud Run job can actually execute today
-SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr", "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp"})
+SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr", "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp", "short_trend_perp"})
 
 # Live-approved (may place Demo orders). OP + DOT only per 資金控管 ruling.
 DEFAULT_APPROVED: dict[str, dict] = {
@@ -203,8 +203,8 @@ FUTURES_FAMILIES = frozenset({
     "donchian_long_short_btc_regime",
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
-    # S short-trend perp (pending 資金控管 review + Emily approval; NOT in SUPPORTED_FAMILIES,
-    # so it cannot be approved, and allocation rejects it — see allocation.PENDING_REVIEW_FAMILIES)
+    # S short-trend perp (資金控管 passed 2026-10-09; approvable; live only once Emily approves AND
+    # the analyst adds an enabled allocation slot)
     "short_trend_perp",
 })
 
