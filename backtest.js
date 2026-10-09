@@ -937,8 +937,39 @@
     return out;
   }
 
+  // Emily 2026-10-09 (replaces the 「準備中」 cards): strategies that can't be approved
+  // (family/row not on the cloud runner, or a review flag with block_approve) are not
+  // shown at all — on every tab and in the counts. Data stays in the repo; they appear
+  // automatically once the runner supports them / the flag is cleared.
+  // Never hidden: approved families, approved rows and live (現役) rows.
+  function rowKeptAlways(r, fid) {
+    return isLiveRow(r) || !!approvedMap[r.strategy_id] || familyApproved(fid);
+  }
+  function rowUnapprovable(r, fid) {
+    var rf = rowFlag(r.strategy_id);
+    if (rf && rf.block_approve) return true;
+    return !runnerSupports(r, fid);
+  }
+  function hideUnapprovable(groups) {
+    var out = [];
+    (groups || []).forEach(function (g) {
+      var fid = g.family_id || g.key;
+      var sample = (g.rows && g.rows[0]) || {};
+      var rf = runnerFamilyId(fid, sample);
+      var ff = familyFlag(fid);
+      var famPrep = !(rf && RUNNER_FAMILIES[rf]) || !!(ff && ff.block_approve);
+      var rows = (g.rows || []).filter(function (r) {
+        if (rowKeptAlways(r, fid)) return true;
+        return !famPrep && !rowUnapprovable(r, fid);
+      });
+      if (!rows.length) return;
+      out.push(rows.length === (g.rows || []).length ? g : Object.assign({}, g, { rows: rows }));
+    });
+    return out;
+  }
+
   function renderGroups(groups) {
-    groups = splitFailedRows(sortGroupsNewestFirst(groups || []));
+    groups = splitFailedRows(sortGroupsNewestFirst(hideUnapprovable(groups || [])));
     var counts = { approved: 0, pending: 0, archived: 0 };
     groups.forEach(function (g) { counts[familyReviewBucket(g)] = (counts[familyReviewBucket(g)] || 0) + 1; });
     var filtered = groups.filter(function (g) { return familyReviewBucket(g) === reviewTab; });
@@ -1280,6 +1311,13 @@
       var groups = groupsFromCatalog(catalog) || groupsFromScores(scores);
       var srcHint = catalog ? "catalog.json（家族×幣別）" : "scores.json（依策略分組）";
       var meta = (catalog && catalog.meta) || (scores && scores.meta) || {};
+      // Counts reflect only what the page shows (unapprovable strategies are hidden).
+      var visG = hideUnapprovable(groups);
+      var visRows = [].concat.apply([], visG.map(function (g) { return g.rows || []; }));
+      meta = Object.assign({}, meta, {
+        n_strategies: visG.length, n_rows: visRows.length,
+        n_gate_pass_3y: visRows.filter(function (r) { return gatePass3y(r); }).length, n_gate_pass: undefined
+      });
       if (!keepUi) metaBox.innerHTML = renderMeta(meta, srcHint);
       main.innerHTML = renderGroups(groups);
       main.classList.remove("loading");
