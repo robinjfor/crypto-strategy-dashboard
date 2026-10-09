@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-INTERVAL_MS = {"1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}
+INTERVAL_MS = {"1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000, "6h": 21_600_000, "12h": 43_200_000, "1d": 86_400_000}
 
 
 def interval_ms(interval: str) -> int:

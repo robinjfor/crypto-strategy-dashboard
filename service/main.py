@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone
 
 from binance_client import BinanceClient
@@ -289,15 +290,28 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 from futures_client import FuturesDemoClient
                 from futures_execution import open_market, place_stop_reduce_only
                 fc = FuturesDemoClient()
+                is_s = sig.get("family") == "short_trend_perp"
                 opened = open_market(
                     fc, symbol=sig["symbol"], side=("BUY" if side == "LONG" else "SELL"),
                     notional_usdt=quote, leverage=sig.get("leverage") or 1,
                     client_order_id=coid,
+                    **({"leverage_cap": int(sig.get("leverage_cap") or 3)} if is_s else {}),
                 )
                 qty = float(opened["qty"])
                 px = float(opened["mark"])
                 order = opened["order"]
                 stop = float(sig.get("suggested_stop") or 0)
+                s_extra: dict = {}
+                if is_s:
+                    # S spec: stop0 = fill x (1 - 0.002) + stop_m x ATR(signal bar), recomputed after
+                    # the fill (not the close-based suggested_stop); trigger on last/contract price.
+                    from short_trend import STOP_WORKING_TYPE, stop_basis_from_fill
+                    px = float(opened.get("avg_price") or px)
+                    basis = stop_basis_from_fill(px)
+                    stop = basis + float(sig.get("stop_atr_mult") or 0) * float(sig.get("stop_atr") or 0)
+                    s_extra = {"family": "short_trend_perp", "strategy_id": sig.get("strategy_id"),
+                               "stop_basis": basis, "initial_stop": stop, "stop_working_type": STOP_WORKING_TYPE,
+                               "filled_ms": int(time.time() * 1000)}
                 positions[slot_id] = {
                     "status": "FILLED", "symbol": sig["symbol"], "qty": qty, "entry": px,
                     "entry_bar_ts": sig.get("bar_ts"), "stop": stop, "side": side,
@@ -305,6 +319,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     "client_order_id": coid, "order_id": order.get("orderId"),
                     "filled_at": now_iso_taipei(),
                     "notional_usdt": opened["notional_usdt"],
+                    **s_extra,
                 }
                 try:
                     _ut = [t for t in (fc.user_trades(sig["symbol"], limit=20) or [])
@@ -318,12 +333,15 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                             fc, symbol=sig["symbol"], is_long=(side == "LONG"),
                             stop_price=stop, qty=qty,
                             client_order_id=client_order_id(slot_id, "stop", bar_ts),
+                            **({"working_type": s_extra["stop_working_type"]} if is_s else {}),
                         )
                         positions[slot_id]["stop_order_id"] = stop_ord.get("algoId") or stop_ord.get("orderId")
                     except Exception as e:  # noqa: BLE001
                         log.error("futures_stop_fail slot=%s err=%s", slot_id, e)
                         positions[slot_id]["stop_error"] = str(e)
                 meta["last_acted_bar_ts"] = sig.get("bar_ts")
+                if is_s:
+                    meta["last_entry_bar_ts"] = sig.get("bar_ts")
                 out["executed"] = True
                 out["fill"] = {"qty": qty, "price": px, "orderId": order.get("orderId"), "venue": "futures"}
                 log.info("filled_enter_futures symbol=%s side=%s qty=%s px=%s lev=%s",
@@ -427,6 +445,10 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 except Exception as e:  # noqa: BLE001
                     log.warning("exit_fee_lookup_fail slot=%s err=%s", slot_id, e)
                 finalize_closed_pnl(closed, pos, _xf)
+                if pos.get("family") == "short_trend_perp" and pos.get("filled_ms"):
+                    # S spec item 10: exchange FUNDING_FEE income over the holding period
+                    from perp_market import funding_income_usdt
+                    closed["funding_usdt"] = funding_income_usdt(fc, sig["symbol"], int(pos["filled_ms"]))
                 state.setdefault("closed_trades", []).append(closed)
                 state["closed_trades"] = state["closed_trades"][-200:]
                 positions.pop(slot_id, None)
@@ -499,6 +521,7 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                             fc, symbol=pos["symbol"], is_long=is_long, stop_price=new_stop,
                             qty=float(pos.get("qty") or 0),
                             client_order_id=client_order_id(slot_id, "trail", str(sig.get("bar_ts") or "")),
+                            **({"working_type": pos["stop_working_type"]} if pos.get("stop_working_type") else {}),
                         )
                         old_id = pos.get("stop_order_id")
                         if old_id:

@@ -1,0 +1,74 @@
+[
+ {
+  "code": "S2",
+  "n_trades": 128,
+  "final": 32914.78,
+  "ret_3y": 229.148,
+  "cagr_3y": 48.694,
+  "maxdd": -38.716,
+  "oos_wins": 4,
+  "ret_h1": 72.715,
+  "ret_h2": 90.573,
+  "bh_ret_3y": -73.527,
+  "exit_reasons": {
+   "exit_signal": 77,
+   "stop_initial": 31,
+   "max_hold": 16,
+   "stop_trail": 4
+  }
+ },
+ {
+  "code": "S3",
+  "n_trades": 134,
+  "final": 22890.47,
+  "ret_3y": 128.905,
+  "cagr_3y": 31.755,
+  "maxdd": -39.837,
+  "oos_wins": 5,
+  "ret_h1": 80.549,
+  "ret_h2": 26.783,
+  "bh_ret_3y": -71.259,
+  "exit_reasons": {
+   "exit_signal": 76,
+   "stop_initial": 25,
+   "stop_trail": 18,
+   "max_hold": 15
+  }
+ },
+ {
+  "code": "S5",
+  "n_trades": 81,
+  "final": 28816.53,
+  "ret_3y": 188.165,
+  "cagr_3y": 42.253,
+  "maxdd": -33.582,
+  "oos_wins": 5,
+  "ret_h1": 113.588,
+  "ret_h2": 34.916,
+  "bh_ret_3y": -84.235,
+  "exit_reasons": {
+   "stop_trail": 62,
+   "exit_signal": 10,
+   "stop_initial": 6,
+   "max_hold": 3
+  }
+ },
+ {
+  "code": "S8",
+  "n_trades": 71,
+  "final": 32824.22,
+  "ret_3y": 228.242,
+  "cagr_3y": 48.562,
+  "maxdd": -36.858,
+  "oos_wins": 5,
+  "ret_h1": 79.304,
+  "ret_h2": 83.065,
+  "bh_ret_3y": -85.026,
+  "exit_reasons": {
+   "exit_signal": 39,
+   "max_hold": 25,
+   "stop_trail": 6,
+   "stop_initial": 1
+  }
+ }
+]

@@ -1,0 +1,474 @@
+[
+ {
+  "code": "S2",
+  "spec_strategy_id": "wf_sema_ema9_21_s2.0_t5.0_fpos__ARB__4h",
+  "catalog_strategy_id": "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h",
+  "params_note": "Params are the walk-forward (H1-only) selection; they DIFFER from the catalog row's params {\"pair\": 0, \"stop_m\": 2.0, \"trail_m\": 4.0, \"filt\": \"none\"}. Emily must confirm which set goes live.",
+  "status": "PENDING_EMILY",
+  "symbol": "ARBUSDT",
+  "venue": "binance_usdtm_perp",
+  "margin": "isolated",
+  "side": "short_only",
+  "timeframe": "4h",
+  "bar_alignment": "Binance kline open_time UTC (00,04,08,12,16,20)",
+  "data": {
+   "klines": "Binance USDT-M PERP klines ARBUSDT 4h (GET /fapi/v1/klines; backtest used data.binance.vision futures/um), closed bars only",
+   "daily": "Binance USDT-M PERP 1d klines (only needed for coin50/btc filters)",
+   "funding": "GET /fapi/v1/fundingRate (8h settlements 00/08/16 UTC for this symbol over the whole test)",
+   "warmup": "backtest computes EMAs/ATR from 2023-01-01 (or listing) onward; live needs >= max(250, 5*ema_slow) closed bars for EMA convergence"
+  },
+  "indicators": [
+   {
+    "name": "ema9",
+    "formula": "EMA of close, alpha=2/(9+1), seeded with first close (pandas ewm(span=9, adjust=False))"
+   },
+   {
+    "name": "ema21",
+    "formula": "EMA of close, alpha=2/(21+1), seeded with first close (pandas ewm(span=21, adjust=False))"
+   },
+   {
+    "name": "atr14",
+    "formula": "SMA ATR: TR(i)=max(H-L, |H-C(i-1)|, |L-C(i-1)|) (TR of first bar = H-L); ATR14(i) = simple mean of TR(i-13..i). NOT Wilder."
+   }
+  ],
+  "filter": {
+   "name": "fpos",
+   "formula": "favg9(i) > 0, favg9(i) = arithmetic mean of the last 9 Binance USDT-M funding-rate settlements (GET /fapi/v1/fundingRate, fundingTime floored to the minute) with fundingTime <= open_time of bar i",
+   "bar_used": "bar i = the signal bar; settlements at or before bar i's OPEN only (a settlement that happens exactly at bar i's close / bar i+1's open is NOT used for bar i's signal)",
+   "warmup": "fewer than 9 settlements -> filter false"
+  },
+  "entry": {
+   "state": "st(i) = (ema9(i) < ema21(i)) AND filter(i)",
+   "trigger": "entry edge at close of bar i iff st(i) AND NOT st(i-1)  (fires on the death cross while filter true, OR when the filter turns true while ema_fast already < ema_slow)",
+   "preconditions": "slot flat after bar i's own stop processing (a stop-out on bar i still allows an entry signal at bar i's close); no pending exit; ATR14(i) > 0; bar i >= 2023-09-24 in backtest",
+   "ignored_when_in_position": true
+  },
+  "fill": {
+   "entry": "SELL (open short) at OPEN of bar i+1; backtest fill price = open(i+1) * (1 - 0.0020)",
+   "signal_exit_or_max_hold": "BUY reduce-only at OPEN of the next bar; backtest fill = open * (1 + 0.0020)",
+   "stop": "BUY at max(open(j), stop) of the bar j where high(j) >= stop; backtest fill = max(open, stop) * (1 + 0.0020)"
+  },
+  "stop": {
+   "initial": "stop0 = entry_fill_price + 2.0 * ATR14(signal bar i), where entry_fill_price = open(i+1)*(1-0.0020) (cost-adjusted, as in engine)",
+   "active_from": "the fill bar itself (checked intrabar on bar i+1 using its High)",
+   "trail": "after each closed bar j in position that was NOT stopped (incl. the fill bar): stop = min(stop, close(j) + 5.0 * ATR14(j)); only ever moves down (never loosened); new level applies from bar j+1",
+   "trigger": "high(j) >= stop (last-price kline high; stop level as of close of bar j-1)",
+   "fill": "max(open(j), stop)"
+  },
+  "exit_signal": "close of bar j: ema9(j) > ema21(j) (strict) -> exit at open(j+1). Filter is NOT used for exit.",
+  "max_hold_bars": 60,
+  "max_hold_rule": "at close of bar j, if (j - fill_bar_index) >= 60 -> exit at open(j+1); fill bar = index 0, so max 61 bars in position",
+  "bar_processing_order": [
+   "1 funding settlement(s) mapped to this bar's open applied to open position",
+   "2 pending exit filled at open",
+   "3 pending entry filled at open (stop0 set)",
+   "4 stop check: high >= stop -> exit at max(open, stop)",
+   "5 liquidation check (isolated, maint 0.5%)",
+   "6 trail update with this bar's close/ATR",
+   "7 exit_signal, else max_hold -> pending exit",
+   "8 if flat & entry edge & ATR>0 -> pending entry"
+  ],
+  "cooldown": "none; after any exit a NEW entry edge (st false -> true) is required; st staying true after a stop-out does not re-enter",
+  "sizing": {
+   "leverage": 1.0,
+   "vol_target": null,
+   "live": "notional = 750 USDT per entry (fixed slot notional) x 1.0 leverage, isolated margin; qty = 750 / fill price, rounded to LOT_SIZE",
+   "backtest": "compounding: qty = sleeve_equity / (open*(1-0.002)), sleeve starts 10000; compare trades by price/time/reason/ret_pct, not qty"
+  },
+  "costs": {
+   "per_side_bps": 20,
+   "composition": "10 bps fee + 10 bps slippage, applied as price adjustment on every fill (entry, exit, stop)"
+  },
+  "funding": "each settlement (rate r, fundingTime t floored to minute) is mapped to the first bar with open_time >= t; if a position is open at that bar's open (before that bar's pending exit), pnl += qty * open(bar) * r (short RECEIVES when r>0, pays when r<0). Entry at that same open: not charged; exit at that same open: charged. For 4h bars settlements coincide with bar opens; for 6h bars 08:00->12:00 open, 16:00->18:00 open.",
+  "liquidation": "isolated: liquidated if cash + (-qty)*high <= 0.005*qty*high (needs ~+99% adverse move at 1x; never triggered)",
+  "end_of_data": "position open at last bar closed at last close (reason end_of_data) — backtest artefact only",
+  "walk_forward": {
+   "selection_window": "2023-09-24..2025-03-24",
+   "eval_window": "2025-03-24..2026-09-24",
+   "first_half_cagr": 44.04,
+   "second_half_cagr": 53.58,
+   "ret_h1_pct": 72.715,
+   "ret_h2_pct": 90.573,
+   "bh_h2_pct": -41.995,
+   "h1_neighbour_pct": 54.5,
+   "h1_coin_hit": 2
+  },
+  "backtest_full": {
+   "window": "2023-09-24..2026-09-24",
+   "final_from_10000": 32914.78,
+   "ret_3y_pct": 229.148,
+   "cagr_3y_pct": 48.694,
+   "maxdd_pct": -38.716,
+   "bh_ret_3y_pct": -73.527,
+   "oos_wins": "4/6",
+   "neighbour_pass_pct": 63.6,
+   "n_trades": 128,
+   "exit_reasons": {
+    "exit_signal": 77,
+    "stop_initial": 31,
+    "max_hold": 16,
+    "stop_trail": 4
+   },
+   "liquidity_vol_days_pct": 78.76
+  },
+  "parity": {
+   "trades_csv": "/workspace/strategy-unified-3y/s_family_spec/trades_S2.csv",
+   "bars_csv": "/workspace/strategy-unified-3y/s_family_spec/bars_S2.csv.gz",
+   "times": "UTC ISO (Z)"
+  },
+  "engine_ref": "/workspace/strategy-unified-3y/rd_p118v2/code/eng.py:bt2 (== rd_short_range/code/engine_sr.py:bt at lev=1) + rd_short_range/code/families.py:signals('sema')"
+ },
+ {
+  "code": "S3",
+  "spec_strategy_id": "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h",
+  "catalog_strategy_id": "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h",
+  "params_note": "Params are the walk-forward (H1-only) selection; they DIFFER from the catalog row's params {\"pair\": 0, \"stop_m\": 2.0, \"trail_m\": 4.0, \"filt\": \"fpos\"}. Emily must confirm which set goes live.",
+  "status": "PENDING_EMILY",
+  "symbol": "DOTUSDT",
+  "venue": "binance_usdtm_perp",
+  "margin": "isolated",
+  "side": "short_only",
+  "timeframe": "4h",
+  "bar_alignment": "Binance kline open_time UTC (00,04,08,12,16,20)",
+  "data": {
+   "klines": "Binance USDT-M PERP klines DOTUSDT 4h (GET /fapi/v1/klines; backtest used data.binance.vision futures/um), closed bars only",
+   "daily": "Binance USDT-M PERP 1d klines (only needed for coin50/btc filters)",
+   "funding": "GET /fapi/v1/fundingRate (8h settlements 00/08/16 UTC for this symbol over the whole test)",
+   "warmup": "backtest computes EMAs/ATR from 2023-01-01 (or listing) onward; live needs >= max(250, 5*ema_slow) closed bars for EMA convergence"
+  },
+  "indicators": [
+   {
+    "name": "ema9",
+    "formula": "EMA of close, alpha=2/(9+1), seeded with first close (pandas ewm(span=9, adjust=False))"
+   },
+   {
+    "name": "ema21",
+    "formula": "EMA of close, alpha=2/(21+1), seeded with first close (pandas ewm(span=21, adjust=False))"
+   },
+   {
+    "name": "atr14",
+    "formula": "SMA ATR: TR(i)=max(H-L, |H-C(i-1)|, |L-C(i-1)|) (TR of first bar = H-L); ATR14(i) = simple mean of TR(i-13..i). NOT Wilder."
+   }
+  ],
+  "filter": {
+   "name": "none",
+   "formula": "always true"
+  },
+  "entry": {
+   "state": "st(i) = (ema9(i) < ema21(i)) AND filter(i)",
+   "trigger": "entry edge at close of bar i iff st(i) AND NOT st(i-1)  (fires on the death cross while filter true, OR when the filter turns true while ema_fast already < ema_slow)",
+   "preconditions": "slot flat after bar i's own stop processing (a stop-out on bar i still allows an entry signal at bar i's close); no pending exit; ATR14(i) > 0; bar i >= 2023-09-24 in backtest",
+   "ignored_when_in_position": true
+  },
+  "fill": {
+   "entry": "SELL (open short) at OPEN of bar i+1; backtest fill price = open(i+1) * (1 - 0.0020)",
+   "signal_exit_or_max_hold": "BUY reduce-only at OPEN of the next bar; backtest fill = open * (1 + 0.0020)",
+   "stop": "BUY at max(open(j), stop) of the bar j where high(j) >= stop; backtest fill = max(open, stop) * (1 + 0.0020)"
+  },
+  "stop": {
+   "initial": "stop0 = entry_fill_price + 2.0 * ATR14(signal bar i), where entry_fill_price = open(i+1)*(1-0.0020) (cost-adjusted, as in engine)",
+   "active_from": "the fill bar itself (checked intrabar on bar i+1 using its High)",
+   "trail": "after each closed bar j in position that was NOT stopped (incl. the fill bar): stop = min(stop, close(j) + 4.0 * ATR14(j)); only ever moves down (never loosened); new level applies from bar j+1",
+   "trigger": "high(j) >= stop (last-price kline high; stop level as of close of bar j-1)",
+   "fill": "max(open(j), stop)"
+  },
+  "exit_signal": "close of bar j: ema9(j) > ema21(j) (strict) -> exit at open(j+1). Filter is NOT used for exit.",
+  "max_hold_bars": 60,
+  "max_hold_rule": "at close of bar j, if (j - fill_bar_index) >= 60 -> exit at open(j+1); fill bar = index 0, so max 61 bars in position",
+  "bar_processing_order": [
+   "1 funding settlement(s) mapped to this bar's open applied to open position",
+   "2 pending exit filled at open",
+   "3 pending entry filled at open (stop0 set)",
+   "4 stop check: high >= stop -> exit at max(open, stop)",
+   "5 liquidation check (isolated, maint 0.5%)",
+   "6 trail update with this bar's close/ATR",
+   "7 exit_signal, else max_hold -> pending exit",
+   "8 if flat & entry edge & ATR>0 -> pending entry"
+  ],
+  "cooldown": "none; after any exit a NEW entry edge (st false -> true) is required; st staying true after a stop-out does not re-enter",
+  "sizing": {
+   "leverage": 1.0,
+   "vol_target": null,
+   "live": "notional = 750 USDT per entry (fixed slot notional) x 1.0 leverage, isolated margin; qty = 750 / fill price, rounded to LOT_SIZE",
+   "backtest": "compounding: qty = sleeve_equity / (open*(1-0.002)), sleeve starts 10000; compare trades by price/time/reason/ret_pct, not qty"
+  },
+  "costs": {
+   "per_side_bps": 20,
+   "composition": "10 bps fee + 10 bps slippage, applied as price adjustment on every fill (entry, exit, stop)"
+  },
+  "funding": "each settlement (rate r, fundingTime t floored to minute) is mapped to the first bar with open_time >= t; if a position is open at that bar's open (before that bar's pending exit), pnl += qty * open(bar) * r (short RECEIVES when r>0, pays when r<0). Entry at that same open: not charged; exit at that same open: charged. For 4h bars settlements coincide with bar opens; for 6h bars 08:00->12:00 open, 16:00->18:00 open.",
+  "liquidation": "isolated: liquidated if cash + (-qty)*high <= 0.005*qty*high (needs ~+99% adverse move at 1x; never triggered)",
+  "end_of_data": "position open at last bar closed at last close (reason end_of_data) — backtest artefact only",
+  "walk_forward": {
+   "selection_window": "2023-09-24..2025-03-24",
+   "eval_window": "2025-03-24..2026-09-24",
+   "first_half_cagr": 48.37,
+   "second_half_cagr": 17.1,
+   "ret_h1_pct": 80.549,
+   "ret_h2_pct": 26.783,
+   "bh_h2_pct": -74.602,
+   "h1_neighbour_pct": 64.7,
+   "h1_coin_hit": 2
+  },
+  "backtest_full": {
+   "window": "2023-09-24..2026-09-24",
+   "final_from_10000": 22890.47,
+   "ret_3y_pct": 128.905,
+   "cagr_3y_pct": 31.755,
+   "maxdd_pct": -39.837,
+   "bh_ret_3y_pct": -71.259,
+   "oos_wins": "5/6",
+   "neighbour_pass_pct": 64.7,
+   "n_trades": 134,
+   "exit_reasons": {
+    "exit_signal": 76,
+    "stop_initial": 25,
+    "stop_trail": 18,
+    "max_hold": 15
+   },
+   "liquidity_vol_days_pct": 90.7
+  },
+  "parity": {
+   "trades_csv": "/workspace/strategy-unified-3y/s_family_spec/trades_S3.csv",
+   "bars_csv": "/workspace/strategy-unified-3y/s_family_spec/bars_S3.csv.gz",
+   "times": "UTC ISO (Z)"
+  },
+  "engine_ref": "/workspace/strategy-unified-3y/rd_p118v2/code/eng.py:bt2 (== rd_short_range/code/engine_sr.py:bt at lev=1) + rd_short_range/code/families.py:signals('sema')"
+ },
+ {
+  "code": "S5",
+  "spec_strategy_id": "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h",
+  "catalog_strategy_id": "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h",
+  "params_note": "Params are the walk-forward (H1-only) selection; they DIFFER from the catalog row's params {\"pair\": 1, \"stop_m\": 2.0, \"trail_m\": 2.0, \"filt\": \"fpos\"}. Emily must confirm which set goes live.",
+  "status": "PENDING_EMILY",
+  "symbol": "APTUSDT",
+  "venue": "binance_usdtm_perp",
+  "margin": "isolated",
+  "side": "short_only",
+  "timeframe": "4h",
+  "bar_alignment": "Binance kline open_time UTC (00,04,08,12,16,20)",
+  "data": {
+   "klines": "Binance USDT-M PERP klines APTUSDT 4h (GET /fapi/v1/klines; backtest used data.binance.vision futures/um), closed bars only",
+   "daily": "Binance USDT-M PERP 1d klines (only needed for coin50/btc filters)",
+   "funding": "GET /fapi/v1/fundingRate (8h settlements 00/08/16 UTC for this symbol over the whole test)",
+   "warmup": "backtest computes EMAs/ATR from 2023-01-01 (or listing) onward; live needs >= max(250, 5*ema_slow) closed bars for EMA convergence"
+  },
+  "indicators": [
+   {
+    "name": "ema12",
+    "formula": "EMA of close, alpha=2/(12+1), seeded with first close (pandas ewm(span=12, adjust=False))"
+   },
+   {
+    "name": "ema26",
+    "formula": "EMA of close, alpha=2/(26+1), seeded with first close (pandas ewm(span=26, adjust=False))"
+   },
+   {
+    "name": "atr14",
+    "formula": "SMA ATR: TR(i)=max(H-L, |H-C(i-1)|, |L-C(i-1)|) (TR of first bar = H-L); ATR14(i) = simple mean of TR(i-13..i). NOT Wilder."
+   }
+  ],
+  "filter": {
+   "name": "coin50",
+   "formula": "coin_close_1d(D-1) < SMA50(coin_close_1d)(D-1); daily = Binance USDT-M perp 1d klines (UTC day, labelled by 00:00 UTC open), SMA50 = simple mean of the last 50 daily closes incl. D-1",
+   "bar_used": "for an intraday bar with open_time t, D = UTC date of t; the flag computed from day D-1's CLOSE is used (previous completed daily candle; implemented as daily_flag.shift(1) then forward-filled onto intraday bars)",
+   "warmup": "<50 daily closes -> false"
+  },
+  "entry": {
+   "state": "st(i) = (ema12(i) < ema26(i)) AND filter(i)",
+   "trigger": "entry edge at close of bar i iff st(i) AND NOT st(i-1)  (fires on the death cross while filter true, OR when the filter turns true while ema_fast already < ema_slow)",
+   "preconditions": "slot flat after bar i's own stop processing (a stop-out on bar i still allows an entry signal at bar i's close); no pending exit; ATR14(i) > 0; bar i >= 2023-09-24 in backtest",
+   "ignored_when_in_position": true
+  },
+  "fill": {
+   "entry": "SELL (open short) at OPEN of bar i+1; backtest fill price = open(i+1) * (1 - 0.0020)",
+   "signal_exit_or_max_hold": "BUY reduce-only at OPEN of the next bar; backtest fill = open * (1 + 0.0020)",
+   "stop": "BUY at max(open(j), stop) of the bar j where high(j) >= stop; backtest fill = max(open, stop) * (1 + 0.0020)"
+  },
+  "stop": {
+   "initial": "stop0 = entry_fill_price + 2.0 * ATR14(signal bar i), where entry_fill_price = open(i+1)*(1-0.0020) (cost-adjusted, as in engine)",
+   "active_from": "the fill bar itself (checked intrabar on bar i+1 using its High)",
+   "trail": "after each closed bar j in position that was NOT stopped (incl. the fill bar): stop = min(stop, close(j) + 2.0 * ATR14(j)); only ever moves down (never loosened); new level applies from bar j+1",
+   "trigger": "high(j) >= stop (last-price kline high; stop level as of close of bar j-1)",
+   "fill": "max(open(j), stop)"
+  },
+  "exit_signal": "close of bar j: ema12(j) > ema26(j) (strict) -> exit at open(j+1). Filter is NOT used for exit.",
+  "max_hold_bars": 60,
+  "max_hold_rule": "at close of bar j, if (j - fill_bar_index) >= 60 -> exit at open(j+1); fill bar = index 0, so max 61 bars in position",
+  "bar_processing_order": [
+   "1 funding settlement(s) mapped to this bar's open applied to open position",
+   "2 pending exit filled at open",
+   "3 pending entry filled at open (stop0 set)",
+   "4 stop check: high >= stop -> exit at max(open, stop)",
+   "5 liquidation check (isolated, maint 0.5%)",
+   "6 trail update with this bar's close/ATR",
+   "7 exit_signal, else max_hold -> pending exit",
+   "8 if flat & entry edge & ATR>0 -> pending entry"
+  ],
+  "cooldown": "none; after any exit a NEW entry edge (st false -> true) is required; st staying true after a stop-out does not re-enter",
+  "sizing": {
+   "leverage": 1.0,
+   "vol_target": null,
+   "live": "notional = 750 USDT per entry (fixed slot notional) x 1.0 leverage, isolated margin; qty = 750 / fill price, rounded to LOT_SIZE",
+   "backtest": "compounding: qty = sleeve_equity / (open*(1-0.002)), sleeve starts 10000; compare trades by price/time/reason/ret_pct, not qty"
+  },
+  "costs": {
+   "per_side_bps": 20,
+   "composition": "10 bps fee + 10 bps slippage, applied as price adjustment on every fill (entry, exit, stop)"
+  },
+  "funding": "each settlement (rate r, fundingTime t floored to minute) is mapped to the first bar with open_time >= t; if a position is open at that bar's open (before that bar's pending exit), pnl += qty * open(bar) * r (short RECEIVES when r>0, pays when r<0). Entry at that same open: not charged; exit at that same open: charged. For 4h bars settlements coincide with bar opens; for 6h bars 08:00->12:00 open, 16:00->18:00 open.",
+  "liquidation": "isolated: liquidated if cash + (-qty)*high <= 0.005*qty*high (needs ~+99% adverse move at 1x; never triggered)",
+  "end_of_data": "position open at last bar closed at last close (reason end_of_data) — backtest artefact only",
+  "walk_forward": {
+   "selection_window": "2023-09-24..2025-03-24",
+   "eval_window": "2025-03-24..2026-09-24",
+   "first_half_cagr": 65.99,
+   "second_half_cagr": 22.05,
+   "ret_h1_pct": 113.588,
+   "ret_h2_pct": 34.916,
+   "bh_h2_pct": -85.842,
+   "h1_neighbour_pct": 80.8,
+   "h1_coin_hit": 2
+  },
+  "backtest_full": {
+   "window": "2023-09-24..2026-09-24",
+   "final_from_10000": 28816.53,
+   "ret_3y_pct": 188.165,
+   "cagr_3y_pct": 42.253,
+   "maxdd_pct": -33.582,
+   "bh_ret_3y_pct": -84.235,
+   "oos_wins": "5/6",
+   "neighbour_pass_pct": 69.2,
+   "n_trades": 81,
+   "exit_reasons": {
+    "stop_trail": 62,
+    "exit_signal": 10,
+    "stop_initial": 6,
+    "max_hold": 3
+   },
+   "liquidity_vol_days_pct": 74.66
+  },
+  "parity": {
+   "trades_csv": "/workspace/strategy-unified-3y/s_family_spec/trades_S5.csv",
+   "bars_csv": "/workspace/strategy-unified-3y/s_family_spec/bars_S5.csv.gz",
+   "times": "UTC ISO (Z)"
+  },
+  "engine_ref": "/workspace/strategy-unified-3y/rd_p118v2/code/eng.py:bt2 (== rd_short_range/code/engine_sr.py:bt at lev=1) + rd_short_range/code/families.py:signals('sema')"
+ },
+ {
+  "code": "S8",
+  "spec_strategy_id": "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h",
+  "catalog_strategy_id": "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h",
+  "params_note": "Params are the walk-forward (H1-only) selection; they DIFFER from the catalog row's params {\"pair\": 1, \"stop_m\": 2.5, \"trail_m\": 4.0, \"filt\": \"fpos\"}. Emily must confirm which set goes live.",
+  "status": "PENDING_EMILY",
+  "symbol": "GALAUSDT",
+  "venue": "binance_usdtm_perp",
+  "margin": "isolated",
+  "side": "short_only",
+  "timeframe": "6h",
+  "bar_alignment": "Binance kline open_time UTC (00,06,12,18)",
+  "data": {
+   "klines": "Binance USDT-M PERP klines GALAUSDT 6h (GET /fapi/v1/klines; backtest used data.binance.vision futures/um), closed bars only",
+   "daily": "Binance USDT-M PERP 1d klines (only needed for coin50/btc filters)",
+   "funding": "GET /fapi/v1/fundingRate (8h settlements 00/08/16 UTC for this symbol over the whole test)",
+   "warmup": "backtest computes EMAs/ATR from 2023-01-01 (or listing) onward; live needs >= max(250, 5*ema_slow) closed bars for EMA convergence"
+  },
+  "indicators": [
+   {
+    "name": "ema12",
+    "formula": "EMA of close, alpha=2/(12+1), seeded with first close (pandas ewm(span=12, adjust=False))"
+   },
+   {
+    "name": "ema26",
+    "formula": "EMA of close, alpha=2/(26+1), seeded with first close (pandas ewm(span=26, adjust=False))"
+   },
+   {
+    "name": "atr14",
+    "formula": "SMA ATR: TR(i)=max(H-L, |H-C(i-1)|, |L-C(i-1)|) (TR of first bar = H-L); ATR14(i) = simple mean of TR(i-13..i). NOT Wilder."
+   }
+  ],
+  "filter": {
+   "name": "none",
+   "formula": "always true"
+  },
+  "entry": {
+   "state": "st(i) = (ema12(i) < ema26(i)) AND filter(i)",
+   "trigger": "entry edge at close of bar i iff st(i) AND NOT st(i-1)  (fires on the death cross while filter true, OR when the filter turns true while ema_fast already < ema_slow)",
+   "preconditions": "slot flat after bar i's own stop processing (a stop-out on bar i still allows an entry signal at bar i's close); no pending exit; ATR14(i) > 0; bar i >= 2023-09-24 in backtest",
+   "ignored_when_in_position": true
+  },
+  "fill": {
+   "entry": "SELL (open short) at OPEN of bar i+1; backtest fill price = open(i+1) * (1 - 0.0020)",
+   "signal_exit_or_max_hold": "BUY reduce-only at OPEN of the next bar; backtest fill = open * (1 + 0.0020)",
+   "stop": "BUY at max(open(j), stop) of the bar j where high(j) >= stop; backtest fill = max(open, stop) * (1 + 0.0020)"
+  },
+  "stop": {
+   "initial": "stop0 = entry_fill_price + 3.0 * ATR14(signal bar i), where entry_fill_price = open(i+1)*(1-0.0020) (cost-adjusted, as in engine)",
+   "active_from": "the fill bar itself (checked intrabar on bar i+1 using its High)",
+   "trail": "after each closed bar j in position that was NOT stopped (incl. the fill bar): stop = min(stop, close(j) + 5.0 * ATR14(j)); only ever moves down (never loosened); new level applies from bar j+1",
+   "trigger": "high(j) >= stop (last-price kline high; stop level as of close of bar j-1)",
+   "fill": "max(open(j), stop)"
+  },
+  "exit_signal": "close of bar j: ema12(j) > ema26(j) (strict) -> exit at open(j+1). Filter is NOT used for exit.",
+  "max_hold_bars": 40,
+  "max_hold_rule": "at close of bar j, if (j - fill_bar_index) >= 40 -> exit at open(j+1); fill bar = index 0, so max 41 bars in position",
+  "bar_processing_order": [
+   "1 funding settlement(s) mapped to this bar's open applied to open position",
+   "2 pending exit filled at open",
+   "3 pending entry filled at open (stop0 set)",
+   "4 stop check: high >= stop -> exit at max(open, stop)",
+   "5 liquidation check (isolated, maint 0.5%)",
+   "6 trail update with this bar's close/ATR",
+   "7 exit_signal, else max_hold -> pending exit",
+   "8 if flat & entry edge & ATR>0 -> pending entry"
+  ],
+  "cooldown": "none; after any exit a NEW entry edge (st false -> true) is required; st staying true after a stop-out does not re-enter",
+  "sizing": {
+   "leverage": 1.0,
+   "vol_target": null,
+   "live": "notional = 750 USDT per entry (fixed slot notional) x 1.0 leverage, isolated margin; qty = 750 / fill price, rounded to LOT_SIZE",
+   "backtest": "compounding: qty = sleeve_equity / (open*(1-0.002)), sleeve starts 10000; compare trades by price/time/reason/ret_pct, not qty"
+  },
+  "costs": {
+   "per_side_bps": 20,
+   "composition": "10 bps fee + 10 bps slippage, applied as price adjustment on every fill (entry, exit, stop)"
+  },
+  "funding": "each settlement (rate r, fundingTime t floored to minute) is mapped to the first bar with open_time >= t; if a position is open at that bar's open (before that bar's pending exit), pnl += qty * open(bar) * r (short RECEIVES when r>0, pays when r<0). Entry at that same open: not charged; exit at that same open: charged. For 4h bars settlements coincide with bar opens; for 6h bars 08:00->12:00 open, 16:00->18:00 open.",
+  "liquidation": "isolated: liquidated if cash + (-qty)*high <= 0.005*qty*high (needs ~+99% adverse move at 1x; never triggered)",
+  "end_of_data": "position open at last bar closed at last close (reason end_of_data) — backtest artefact only",
+  "walk_forward": {
+   "selection_window": "2023-09-24..2025-03-24",
+   "eval_window": "2025-03-24..2026-09-24",
+   "first_half_cagr": 47.68,
+   "second_half_cagr": 49.52,
+   "ret_h1_pct": 79.304,
+   "ret_h2_pct": 83.065,
+   "bh_h2_pct": -88.803,
+   "h1_neighbour_pct": 58.8,
+   "h1_coin_hit": 3
+  },
+  "backtest_full": {
+   "window": "2023-09-24..2026-09-24",
+   "final_from_10000": 32824.22,
+   "ret_3y_pct": 228.242,
+   "cagr_3y_pct": 48.562,
+   "maxdd_pct": -36.858,
+   "bh_ret_3y_pct": -85.026,
+   "oos_wins": "5/6",
+   "neighbour_pass_pct": 64.7,
+   "n_trades": 71,
+   "exit_reasons": {
+    "exit_signal": 39,
+    "max_hold": 25,
+    "stop_trail": 6,
+    "stop_initial": 1
+   },
+   "liquidity_vol_days_pct": 61.26
+  },
+  "parity": {
+   "trades_csv": "/workspace/strategy-unified-3y/s_family_spec/trades_S8.csv",
+   "bars_csv": "/workspace/strategy-unified-3y/s_family_spec/bars_S8.csv.gz",
+   "times": "UTC ISO (Z)"
+  },
+  "engine_ref": "/workspace/strategy-unified-3y/rd_p118v2/code/eng.py:bt2 (== rd_short_range/code/engine_sr.py:bt at lev=1) + rd_short_range/code/families.py:signals('sema')"
+ }
+]

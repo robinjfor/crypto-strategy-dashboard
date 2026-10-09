@@ -30,7 +30,15 @@ FUTURES_FAMILIES = frozenset({
     "donchian_fear_greed",
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
+    "short_trend_perp",
 })
+# Families whose runner code exists but that must not enter the allocation until 資金控管 reviews
+# them and Emily approves (S short-trend perp, 2026-10-09). Not in RUNNER_FAMILIES, so any slot
+# with this family fails validation (no S slot can be enabled or even listed).
+PENDING_REVIEW_FAMILIES = frozenset({"short_trend_perp"})
+# Timeframes per family: existing families keep 1h/4h/1d; S adds the perp 2h/6h/12h bars.
+BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
+FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"})}
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
     "donchian": "donchian_atr",
@@ -43,6 +51,7 @@ FAMILY_ALIASES = {
     "donchian_lev": "donchian_lev",
     "ls_donch_btc_regime_perp": "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
+    "short_trend_perp": "short_trend_perp",
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
@@ -172,11 +181,45 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         if mode not in ("ew", "inv_vol", "invvol", "inverse_vol"):
             errors.append(f"slots[{idx}].params.mode 必須是 ew 或 inv_vol，收到：{p.get('mode')!r}")
 
+    elif family == "short_trend_perp":
+        _validate_short_trend(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
         errors.append(f"slots[{idx}].family 雲端尚未支援：{family}")
 
+
+
+def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
+    """S short_trend_perp params (analyst spec): sema EMA pair, stop/trail ATR mults, filter,
+    leverage cap 5x only when |MaxDD| <= 45% (else 3x)."""
+    from short_trend import EMA_PAIRS, FILTERS, leverage_cap
+    fast, slow = p.get("ema_fast", p.get("fast")), p.get("ema_slow", p.get("slow"))
+    sig = str(p.get("signal") or "sema").lower()
+    if sig == "sema":
+        try:
+            pair_ok = (int(fast), int(slow)) in EMA_PAIRS
+        except (TypeError, ValueError):
+            pair_ok = False
+        if not pair_ok:
+            errors.append(f"slots[{idx}].params.ema_fast/ema_slow 必須是分析師網格的組合：{fast}/{slow}")
+    elif sig == "sdon":
+        n = p.get("donch_n")
+        if not isinstance(n, (int, float)) or n < 5 or n > 200:
+            errors.append(f"slots[{idx}].params.donch_n 超出範圍（sdon）")
+    else:
+        errors.append(f"slots[{idx}].params.signal 必須是 sema 或 sdon：{sig!r}")
+    stop, trail = _stop_trail_keys(p)
+    for k, v in (("stop_atr_mult", stop), ("trail_atr_mult", trail)):
+        if not isinstance(v, (int, float)) or v <= 0:
+            errors.append(f"slots[{idx}].params.{k} 必填且 > 0（short_trend_perp）")
+    filt = str(p.get("filt", p.get("filter")) or "none").lower()
+    if filt not in FILTERS:
+        errors.append(f"slots[{idx}].params.filt 不支援：{filt}")
+    lev = float(p.get("leverage") or 1.0)
+    cap = leverage_cap(p.get("maxdd_pct"))
+    if lev > cap + 1e-9:
+        errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 {cap:g}（MaxDD {p.get('maxdd_pct')}）")
 
 
 def fetch_quote_symbols(quote: str = "USDT") -> set[str] | None:
@@ -320,7 +363,7 @@ def validate_allocation(
                 if pool is not None and sym not in pool:
                     errors.append(f"Binance 現貨找不到或未交易：{sym}")
 
-        if tf is not None and str(tf).lower() not in {"1h", "4h", "1d"}:
+        if tf is not None and str(tf).lower() not in FAMILY_TIMEFRAMES.get(normalize_family(family), BASE_TIMEFRAMES):
             errors.append(f"slots[{i}].timeframe 不支援：{tf}")
 
         if not isinstance(enabled, bool):
@@ -343,7 +386,9 @@ def validate_allocation(
                 total_usdt += max(notion_f, 0.0)
 
         if family:
-            if family not in RUNNER_FAMILIES:
+            if normalize_family(family) in PENDING_REVIEW_FAMILIES:
+                errors.append(f"slots[{i}].family {family} 待資金控管審核與 Emily 核准，尚不可加入 allocation")
+            elif family not in RUNNER_FAMILIES:
                 errors.append(f"slots[{i}].family 雲端尚未支援：{family}")
             else:
                 validate_params(family, params if isinstance(params, dict) else {}, errors, i)
@@ -461,7 +506,14 @@ def slot_to_runtime(slot: dict) -> dict:
     reset = params.get("require_reset_below_hi", params.get("reset_below_hi", False))
     quote_asset = infer_quote_asset(slot)
     notion = slot_notional(slot, quote_asset)
+    # short_trend_perp (S) only: signal kind, filter, analyst MaxDD (leverage cap 5x if |DD| <= 45%)
+    s_extra = {
+        "signal": str(params.get("signal") or "sema").lower(),
+        "filter": str(params.get("filt", params.get("filter")) or "none").lower(),
+        "maxdd_pct": params.get("maxdd_pct"),
+    } if fam == "short_trend_perp" else {}
     return {
+        **s_extra,
         "id": slot.get("slot"),
         "strategy_id": slot.get("strategy_id"),
         "family": fam,

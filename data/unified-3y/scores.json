@@ -32,7 +32,7 @@
       "notes": [],
       "notes_rescore": []
     },
-    "generated_at": "2026-10-09 15:18:46 CST",
+    "generated_at": "2026-10-09 21:57:35 CST",
     "n_strategies": 20,
     "n_gate_pass": 9,
     "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
@@ -51,7 +51,7 @@
     },
     "n_gate_pass_both": 5,
     "generated_from": "catalog.json (sync_unified_scores.sh)",
-    "generated_at_taipei": "2026-10-09T15:18:46+08:00",
+    "generated_at_taipei": "2026-10-09T21:57:35+08:00",
     "catalog_meta": {
       "period_3y": {
         "start": "2023-09-24",
@@ -106,7 +106,8 @@
         "lookahead_fix 2026-10-07 19:04:22 CST: BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; rows J1,J2,J3,H6,H1,H7,H2,H8,H9,H10,H11,H5,H4,H3,A3,A4,A1,A2,A6,A5,A8,A14,A13,A15,A12,A7,A10,A11,A9,B3,B4,B1,B2,Q1",
         "rd_v3 (2026-10-07 23:58:50 CST): +family portfolio_ensemble_passers_perp rows R1-R3; equity_csv backfilled for 89 rows; rescored.",
         "rd_short_range (2026-10-08 17:57:30 CST): +families short_trend_perp (S1-S7) and range_reversion_perp (G1-G6), status PENDING_EMILY; rescored (high_return method). allocation.json untouched.",
-        "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched."
+        "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched.",
+        "s_family_spec WF (2026-10-09 CST): S1-S16 walk-forward — params+coin chosen on 2023-09-24..2025-03-24 only (g1: ret_h1>B&H, DD_h1<=45, ret_h1>=39.8%; H1 neighbour>=50%; setting passes on >=2 coins; H1 liquidity), evaluated 2025-03-24..2026-09-24; pass = H2>0 + full hard gates. wf_pass/wf_first_half_cagr/wf_second_half_cagr added; wf_* refer to the WF-selected params (wf_params). Pass: S2,S3,S5,S8."
       ],
       "inconsistencies_vs_scores_json": [
         {

@@ -53,7 +53,8 @@
       "lookahead_fix 2026-10-07 19:04:22 CST: BTC daily regime now mapped with previous day's close on intraday bars (no lookahead); rerun 2023-09-24→2026-09-24, 20bps/side, init 10000; neighbor gate ≥50% applied; rows J1,J2,J3,H6,H1,H7,H2,H8,H9,H10,H11,H5,H4,H3,A3,A4,A1,A2,A6,A5,A8,A14,A13,A15,A12,A7,A10,A11,A9,B3,B4,B1,B2,Q1",
       "rd_v3 (2026-10-07 23:58:50 CST): +family portfolio_ensemble_passers_perp rows R1-R3; equity_csv backfilled for 89 rows; rescored.",
       "rd_short_range (2026-10-08 17:57:30 CST): +families short_trend_perp (S1-S7) and range_reversion_perp (G1-G6), status PENDING_EMILY; rescored (high_return method). allocation.json untouched.",
-      "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched."
+      "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched.",
+      "s_family_spec WF (2026-10-09 CST): S1-S16 walk-forward — params+coin chosen on 2023-09-24..2025-03-24 only (g1: ret_h1>B&H, DD_h1<=45, ret_h1>=39.8%; H1 neighbour>=50%; setting passes on >=2 coins; H1 liquidity), evaluated 2025-03-24..2026-09-24; pass = H2>0 + full hard gates. wf_pass/wf_first_half_cagr/wf_second_half_cagr added; wf_* refer to the WF-selected params (wf_params). Pass: S2,S3,S5,S8."
     ],
     "inconsistencies_vs_scores_json": [
       {
@@ -9433,7 +9434,16 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 55.7086
+          "score": 55.7086,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 16.39,
+          "wf_catalog_params_second_half_cagr": 187.51,
+          "wf_spec": null
         },
         {
           "strategy_id": "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h",
@@ -9592,7 +9602,21 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 32.7804
+          "score": 32.7804,
+          "wf_pass": true,
+          "wf_first_half_cagr": 44.04,
+          "wf_second_half_cagr": 53.58,
+          "wf_params": {
+            "pair": 0,
+            "stop_m": 2.0,
+            "trail_m": 5.0,
+            "filt": "fpos"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": null,
+          "wf_catalog_params_first_half_cagr": 42.75,
+          "wf_catalog_params_second_half_cagr": 85.89,
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
         },
         {
           "strategy_id": "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h",
@@ -9751,7 +9775,21 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 30.5533
+          "score": 30.5533,
+          "wf_pass": true,
+          "wf_first_half_cagr": 48.37,
+          "wf_second_half_cagr": 17.1,
+          "wf_params": {
+            "pair": 0,
+            "stop_m": 2.0,
+            "trail_m": 4.0,
+            "filt": "none"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": null,
+          "wf_catalog_params_first_half_cagr": 43.68,
+          "wf_catalog_params_second_half_cagr": 51.04,
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
         },
         {
           "strategy_id": "sr_sdon_n40_s1.0_t2.0_fpos__OP__4h",
@@ -9908,7 +9946,21 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 28.2764
+          "score": 28.2764,
+          "wf_pass": false,
+          "wf_first_half_cagr": 70.06,
+          "wf_second_half_cagr": -15.23,
+          "wf_params": {
+            "n": 40,
+            "stop_m": 1.5,
+            "trail_m": 1.0,
+            "filt": "none"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": "H2 return -22.0% <= 0",
+          "wf_catalog_params_first_half_cagr": 59.25,
+          "wf_catalog_params_second_half_cagr": 25.61,
+          "wf_spec": null
         },
         {
           "strategy_id": "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h",
@@ -10067,7 +10119,21 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 29.0937
+          "score": 29.0937,
+          "wf_pass": true,
+          "wf_first_half_cagr": 65.99,
+          "wf_second_half_cagr": 22.05,
+          "wf_params": {
+            "pair": 1,
+            "stop_m": 2.0,
+            "trail_m": 2.0,
+            "filt": "coin50"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": null,
+          "wf_catalog_params_first_half_cagr": 40.72,
+          "wf_catalog_params_second_half_cagr": 40.97,
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
         },
         {
           "strategy_id": "sr_sema_ema12_26_s3.0_t5.0_fpos__1000SHIB__4h",
@@ -10226,7 +10292,16 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 24.1997
+          "score": 24.1997,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 25.22,
+          "wf_catalog_params_second_half_cagr": 55.01,
+          "wf_spec": null
         },
         {
           "strategy_id": "sr_sema_ema12_26_s1.5_t4.0_btc200__LDO__4h",
@@ -10385,7 +10460,16 @@
             "funding": "binance_usdtm_historical",
             "fill": "signal at close → next bar open; stops min/max(open, stop)"
           },
-          "score": 23.1227
+          "score": 23.1227,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 13.34,
+          "wf_catalog_params_second_half_cagr": 58.62,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h",
@@ -10542,7 +10626,21 @@
           "robust_neighbor_pct": 57.7,
           "cross_coin_hit_rate_pct": 9.4,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 40.3104
+          "score": 40.3104,
+          "wf_pass": true,
+          "wf_first_half_cagr": 47.68,
+          "wf_second_half_cagr": 49.52,
+          "wf_params": {
+            "pair": 1,
+            "stop_m": 3.0,
+            "trail_m": 5.0,
+            "filt": "none"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": null,
+          "wf_catalog_params_first_half_cagr": 37.84,
+          "wf_catalog_params_second_half_cagr": 101.25,
+          "wf_spec": "/workspace/strategy-unified-3y/s_family_spec/spec.json"
         },
         {
           "strategy_id": "p118_sema_ema50_200_s4.0_t3.0_coin50__FIL__12h",
@@ -10699,7 +10797,16 @@
           "robust_neighbor_pct": 63.6,
           "cross_coin_hit_rate_pct": 9.4,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 34.3239
+          "score": 34.3239,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 68.97,
+          "wf_catalog_params_second_half_cagr": 37.16,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema20_50_s2.0_t5.0_fpos__DOT__2h",
@@ -10856,7 +10963,16 @@
           "robust_neighbor_pct": 70.6,
           "cross_coin_hit_rate_pct": 6.2,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 33.0614
+          "score": 33.0614,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 59.6,
+          "wf_catalog_params_second_half_cagr": 34.55,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema9_21_s2.5_t2.0_coin50__ARB__12h",
@@ -11013,7 +11129,21 @@
           "robust_neighbor_pct": 64.7,
           "cross_coin_hit_rate_pct": 6.2,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 29.5725
+          "score": 29.5725,
+          "wf_pass": false,
+          "wf_first_half_cagr": 72.92,
+          "wf_second_half_cagr": 0.65,
+          "wf_params": {
+            "pair": 5,
+            "stop_m": 4.0,
+            "trail_m": 3.0,
+            "filt": "coin50"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": "OOS 3/6; neighbour 0.0%",
+          "wf_catalog_params_first_half_cagr": 28.92,
+          "wf_catalog_params_second_half_cagr": 59.49,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema50_100_s1.5_t4.0_coin50__OP__12h",
@@ -11170,7 +11300,16 @@
           "robust_neighbor_pct": 58.8,
           "cross_coin_hit_rate_pct": 9.4,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 25.169
+          "score": 25.169,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 37.91,
+          "wf_catalog_params_second_half_cagr": 47.01,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema50_200_s1.5_t5.0_coin50__SEI__2h",
@@ -11327,7 +11466,16 @@
           "robust_neighbor_pct": 57.1,
           "cross_coin_hit_rate_pct": 6.2,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 30.2096
+          "score": 30.2096,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 14.48,
+          "wf_catalog_params_second_half_cagr": 50.33,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema50_100_s2.0_t5.0_btc50__AVAX__12h",
@@ -11484,7 +11632,16 @@
           "robust_neighbor_pct": 64.7,
           "cross_coin_hit_rate_pct": 12.5,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 30.5247
+          "score": 30.5247,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": 29.95,
+          "wf_catalog_params_second_half_cagr": 31.18,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema20_50_s4.0_t4.0_fpos__1000SHIB__6h",
@@ -11641,7 +11798,16 @@
           "robust_neighbor_pct": 70.6,
           "cross_coin_hit_rate_pct": 9.4,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 22.7676
+          "score": 22.7676,
+          "wf_pass": false,
+          "wf_first_half_cagr": null,
+          "wf_second_half_cagr": null,
+          "wf_params": null,
+          "wf_params_same_as_catalog": null,
+          "wf_fail_reason": "no H1 candidate for this coin/tf/family (H1 selection rule does not pick it)",
+          "wf_catalog_params_first_half_cagr": -1.43,
+          "wf_catalog_params_second_half_cagr": 63.53,
+          "wf_spec": null
         },
         {
           "strategy_id": "p118_sema_ema20_50_s2.0_t3.0_coin50__APT__6h",
@@ -11798,7 +11964,21 @@
           "robust_neighbor_pct": 73.1,
           "cross_coin_hit_rate_pct": 12.5,
           "selection_bias_note": "從 rd_p118v2 掃描（long: 2 家族×32 幣×6 週期=115,200 組；short 新週期 2h/6h/12h 172,800 組）事後挑出。walk-forward（同規則只用前 1.5 年挑）：做多組 14 支後 1.5 年平均 -11%、做空組 9 支平均 -7.6%。回測 CAGR 不能當預期報酬。",
-          "score": 26.4697
+          "score": 26.4697,
+          "wf_pass": false,
+          "wf_first_half_cagr": 69.88,
+          "wf_second_half_cagr": -26.5,
+          "wf_params": {
+            "pair": 0,
+            "stop_m": 2.0,
+            "trail_m": 2.0,
+            "filt": "coin50"
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_fail_reason": "H2 return -37.0% <= 0; MaxDD -48.7%; neighbour 47.1%",
+          "wf_catalog_params_first_half_cagr": 30.26,
+          "wf_catalog_params_second_half_cagr": 21.59,
+          "wf_spec": null
         }
       ],
       "n_gate_pass_3y": 16

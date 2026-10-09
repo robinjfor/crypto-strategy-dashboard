@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from futures_client import (
+    LEVERAGE_HARD_CAP,
     FuturesDemoClient,
     clamp_leverage,
     round_price_futures,
@@ -14,10 +15,10 @@ from futures_client import (
 log = logging.getLogger("trader.futures_exec")
 
 
-def prepare_symbol(client: FuturesDemoClient, symbol: str, leverage: float | int) -> dict:
-    lev = clamp_leverage(leverage)
+def prepare_symbol(client: FuturesDemoClient, symbol: str, leverage: float | int, cap: int = LEVERAGE_HARD_CAP) -> dict:
+    lev = clamp_leverage(leverage, cap)
     margin = client.set_margin_type(symbol, "ISOLATED")
-    lev_resp = client.set_leverage(symbol, lev)
+    lev_resp = client.set_leverage(symbol, lev, cap)
     return {"leverage": lev, "margin": margin, "leverage_resp": lev_resp}
 
 
@@ -34,9 +35,11 @@ def open_market(
     notional_usdt: float,
     leverage: float | int,
     client_order_id: str | None = None,
+    leverage_cap: int = LEVERAGE_HARD_CAP,
 ) -> dict[str, Any]:
-    """Open MARKET. Book counts full notional (not margin)."""
-    prep = prepare_symbol(client, symbol, leverage)
+    """Open MARKET. Book counts full notional (not margin). `avg_price` = exchange fill average when
+    the order response carries it (else None; `mark` is the pre-order ticker price)."""
+    prep = prepare_symbol(client, symbol, leverage, leverage_cap)
     info = client.exchange_info()
     mark = mark_price(client, symbol)
     raw_qty = float(notional_usdt) / mark if mark else 0.0
@@ -52,10 +55,15 @@ def open_market(
     if client_order_id:
         params["newClientOrderId"] = str(client_order_id)[:36]
     order = client.new_order(**params)
+    try:
+        avg = float(order.get("avgPrice") or 0) or None
+    except (TypeError, ValueError, AttributeError):
+        avg = None
     return {
         "order": order,
         "qty": qty,
         "mark": mark,
+        "avg_price": avg,
         "side": side.upper(),
         "leverage": prep["leverage"],
         "notional_usdt": qty * mark,
@@ -70,8 +78,13 @@ def place_stop_reduce_only(
     stop_price: float,
     qty: float,
     client_order_id: str | None = None,
+    working_type: str = "MARK_PRICE",
 ) -> dict:
-    """Conditional STOP via Algo Order API (classic STOP_MARKET retired from /order)."""
+    """Conditional STOP via Algo Order API (classic STOP_MARKET retired from /order).
+    working_type: MARK_PRICE (default, existing families) or CONTRACT_PRICE (last price; S family,
+    matching the backtest's kline-High trigger)."""
+    if working_type not in ("MARK_PRICE", "CONTRACT_PRICE"):
+        raise ValueError(f"workingType {working_type!r}")
     info = client.exchange_info()
     stop = round_price_futures(info, symbol, stop_price)
     q = round_qty_futures(info, symbol, abs(qty))
@@ -83,7 +96,7 @@ def place_stop_reduce_only(
         "triggerPrice": str(stop),
         "quantity": str(q),
         "reduceOnly": "true",
-        "workingType": "MARK_PRICE",
+        "workingType": working_type,
     }
     if client_order_id:
         params["clientAlgoId"] = str(client_order_id)[:36]

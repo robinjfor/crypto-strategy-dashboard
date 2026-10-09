@@ -485,6 +485,9 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
         return evaluate_long_short_slot(slot, klines, position, slot_meta)
     if fam == "ls_univ_portfolio_perp":
         return evaluate_portfolio_slot(slot, klines, position, slot_meta)
+    if fam == "short_trend_perp":
+        from short_trend import evaluate_short_trend_slot
+        return evaluate_short_trend_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev":
         return {
             "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
@@ -705,6 +708,12 @@ def evaluate_all(client, state: dict) -> list[dict]:
             # 1000 bars (API max) so the Donchian state machine / Wilder ATR
             # warm up like the full-history backtest.
             limit = 1000 if str(slot.get("family") or "").startswith("donchian") else max(250, donch_n + 80, ema_slow + 80)
+            if slot.get("family") == "short_trend_perp":
+                kl, eval_meta = _short_trend_inputs(slot, meta, positions)
+                res = evaluate_slot_dispatch(slot, kl, pos, eval_meta)
+                _enrich_signal(res, slot)
+                results.append(res)
+                continue
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
             res = evaluate_slot_dispatch(slot, kl, pos, meta)
             _enrich_signal(res, slot)
@@ -715,6 +724,31 @@ def evaluate_all(client, state: dict) -> list[dict]:
     return results
 
 
+
+
+def _short_trend_inputs(slot: dict, meta: dict, positions: dict) -> tuple[pd.DataFrame, dict]:
+    """S family inputs: USDT-M PERP klines (not spot), funding history, perp daily closes for the
+    coin/BTC filters, and the same-coin conflict flag. Transient keys go into a copy of the slot
+    meta so DataFrames never reach the persisted state."""
+    from perp_market import KLINES_MAX, fetch_funding, fetch_perp_klines
+    sym = slot["symbol"]
+    kl = fetch_perp_klines(sym, slot["tf"], limit=KLINES_MAX)
+    m = dict(meta)
+    filt = str(slot.get("filter") or "none").lower()
+    if "fpos" in filt:
+        m["_funding"] = fetch_funding(sym, limit=100)
+    if filt == "coin50":
+        m["_coin_daily"] = fetch_perp_klines(sym, "1d", limit=200)
+    if filt.startswith("btc"):
+        m["_btc_daily"] = fetch_perp_klines("BTCUSDT", "1d", limit=KLINES_MAX)
+    # one-way mode, no hedge: any open long on the same coin (any slot, any venue) blocks a new short
+    m["_opposite_open"] = any(
+        p and p.get("status") == "FILLED" and pid != slot["id"]
+        and str(p.get("symbol") or "").upper() == sym.upper()
+        and str(p.get("side") or "LONG").upper() != "SHORT"
+        for pid, p in (positions or {}).items()
+    )
+    return kl, m
 
 
 def evaluate_portfolio_slot(slot: dict, klines: pd.DataFrame, position: dict | None, slot_meta: dict) -> dict:

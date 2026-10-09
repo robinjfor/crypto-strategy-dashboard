@@ -203,6 +203,9 @@ FUTURES_FAMILIES = frozenset({
     "donchian_long_short_btc_regime",
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
+    # S short-trend perp (pending 資金控管 review + Emily approval; NOT in SUPPORTED_FAMILIES,
+    # so it cannot be approved, and allocation rejects it — see allocation.PENDING_REVIEW_FAMILIES)
+    "short_trend_perp",
 })
 
 _ALLOC_CACHE: dict = {"at": 0.0, "slots": None}

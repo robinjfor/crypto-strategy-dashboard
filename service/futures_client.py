@@ -19,6 +19,7 @@ FUTURES_DEMO_BASE = os.environ.get(
 )
 UA = {"User-Agent": "crypto-strategy-dashboard-trader/1.0"}
 LEVERAGE_HARD_CAP = 3
+LEVERAGE_HARD_CAP_LOW_DD = 5  # Emily: 5x only for strategies with |MaxDD| <= 45% (caller passes cap)
 
 
 class FuturesDemoClient:
@@ -74,8 +75,8 @@ class FuturesDemoClient:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/fapi/v2/positionRisk", params)
 
-    def set_leverage(self, symbol: str, leverage: int) -> dict:
-        lev = max(1, min(int(leverage), LEVERAGE_HARD_CAP))
+    def set_leverage(self, symbol: str, leverage: int, cap: int = LEVERAGE_HARD_CAP) -> dict:
+        lev = max(1, min(int(leverage), int(min(cap, LEVERAGE_HARD_CAP_LOW_DD))))
         return self._signed("POST", "/fapi/v1/leverage", {"symbol": symbol, "leverage": lev})
 
     def set_margin_type(self, symbol: str, margin_type: str = "ISOLATED") -> dict:
@@ -181,13 +182,13 @@ def probe_futures() -> dict:
     return out
 
 
-def clamp_leverage(requested: float | int | None) -> int:
+def clamp_leverage(requested: float | int | None, cap: int = LEVERAGE_HARD_CAP) -> int:
     """Integer leverage for Binance; floor so exchange lev never exceeds catalog; hard cap 3."""
     try:
         v = int(float(requested or 1))  # floor toward 0
     except (TypeError, ValueError):
         v = 1
-    return max(1, min(v, LEVERAGE_HARD_CAP))
+    return max(1, min(v, int(min(cap, LEVERAGE_HARD_CAP_LOW_DD))))
 
 
 def _filters(info: dict, symbol: str) -> dict:
