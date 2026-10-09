@@ -679,6 +679,42 @@
         "sr_sema_ema12_26_s1.5_t4.0_btc200__LDO__4h": {
           "code": "S7",
           "active": true
+        },
+        "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h": {
+          "code": "S8",
+          "active": true
+        },
+        "p118_sema_ema50_200_s4.0_t3.0_coin50__FIL__12h": {
+          "code": "S9",
+          "active": true
+        },
+        "p118_sema_ema20_50_s2.0_t5.0_fpos__DOT__2h": {
+          "code": "S10",
+          "active": true
+        },
+        "p118_sema_ema9_21_s2.5_t2.0_coin50__ARB__12h": {
+          "code": "S11",
+          "active": true
+        },
+        "p118_sema_ema50_100_s1.5_t4.0_coin50__OP__12h": {
+          "code": "S12",
+          "active": true
+        },
+        "p118_sema_ema50_200_s1.5_t5.0_coin50__SEI__2h": {
+          "code": "S13",
+          "active": true
+        },
+        "p118_sema_ema50_100_s2.0_t5.0_btc50__AVAX__12h": {
+          "code": "S14",
+          "active": true
+        },
+        "p118_sema_ema20_50_s4.0_t4.0_fpos__1000SHIB__6h": {
+          "code": "S15",
+          "active": true
+        },
+        "p118_sema_ema20_50_s2.0_t3.0_coin50__APT__6h": {
+          "code": "S16",
+          "active": true
         }
       },
       "active": true,
@@ -695,7 +731,8 @@
         },
         "sr_bbr_n14_k2.0_s99_adx100_short_back__OP__1d": {
           "code": "G2",
-          "active": true
+          "active": false,
+          "replaced_by": "sr_bbr_n14_k2.0_s4.0_adx100_short_back__OP__1d"
         },
         "sr_bbr_n20_k1.5_s1.5_adx25_long_back__APT__1d": {
           "code": "G3",
@@ -707,17 +744,122 @@
         },
         "sr_rsir_p7_lo15_s99_adx25_ls__FIL__4h": {
           "code": "G5",
-          "active": true
+          "active": false,
+          "replaced_by": "sr_rsir_p7_lo15_s2.0_adx25_ls__FIL__4h"
         },
         "sr_bbr_n14_k1.5_s2.5_adx35_short_back__GALA__1d": {
           "code": "G6",
           "active": true
+        },
+        "sr_bbr_n14_k2.0_s4.0_adx100_short_back__OP__1d": {
+          "code": "G2",
+          "active": true,
+          "replaces": "sr_bbr_n14_k2.0_s99_adx100_short_back__OP__1d"
+        },
+        "sr_rsir_p7_lo15_s2.0_adx25_ls__FIL__4h": {
+          "code": "G5",
+          "active": true,
+          "replaces": "sr_rsir_p7_lo15_s99_adx25_ls__FIL__4h"
         }
       },
       "active": true,
       "created_at": "2026-10-08",
       "created_at_iso": "2026-10-08T17:57:30+08:00",
       "_note": "codes taken from analyst catalog (Emily named S1–S7 / G1–G6); letter G previously used by retired news_filter_donchian (inactive rows kept reserved below)"
+    },
+    "trend_long_scan_perp": {
+      "code": "T",
+      "rows": {
+        "p118_elong_ema12_26_s2.0_t1.5_btcbull__WLD__12h": {
+          "code": "T1",
+          "active": true
+        },
+        "p118_elong_ema50_100_s2.0_t3.0_btcbull__XLM__4h": {
+          "code": "T2",
+          "active": true
+        },
+        "p118_elong_ema9_21_s1.5_t1.5_btcbull__ARB__4h": {
+          "code": "T3",
+          "active": true
+        },
+        "p118_dlong_n30_s1.0_t3.0_noreset__SEI__4h": {
+          "code": "T4",
+          "active": true
+        },
+        "p118_dlong_n40_s1.5_t2.0_noreset__GALA__2h": {
+          "code": "T5",
+          "active": true
+        },
+        "p118_elong_ema12_26_s1.5_t2.0_btcbull__AVAX__2h": {
+          "code": "T6",
+          "active": true
+        },
+        "p118_dlong_n55_s1.0_t2.0_reset__FET__2h": {
+          "code": "T7",
+          "active": true
+        },
+        "p118_dlong_n55_s1.0_t2.0_noreset__ADA__6h": {
+          "code": "T8",
+          "active": true
+        },
+        "p118_elong_ema30_80_s1.5_t2.0_btcbull__OP__2h": {
+          "code": "T9",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-09",
+      "created_at_iso": "2026-10-09T13:25:20+08:00",
+      "_note": "codes taken from analyst catalog (rd_p118v2)"
+    },
+    "vol_target_sized_passers_perp": {
+      "code": "W",
+      "rows": {
+        "p118_elong_ema50_100_s2.0_t3.0_btcbull__XLM__4h__vt1.0_lmax3.0": {
+          "code": "W1",
+          "active": true
+        },
+        "p118_elong_ema12_26_s2.0_t1.5_btcbull__WLD__12h__vt1.25_lmax2.0": {
+          "code": "W2",
+          "active": true
+        },
+        "p118_dlong_n55_s1.0_t2.0_noreset__ADA__6h__vt2.0_lmax5.0": {
+          "code": "W3",
+          "active": true
+        },
+        "sr_bbr_n20_k1.5_s1.5_adx25_long_back__APT__1d__vt2.0_lmax5.0": {
+          "code": "W4",
+          "active": true
+        },
+        "p118_sema_ema20_50_s4.0_t4.0_fpos__GALA__4h__vt1.0_lmax5.0": {
+          "code": "W5",
+          "active": true
+        },
+        "sr_rsir_p14_lo20_s2.5_adx100_long__DOT__4h__lev3.0": {
+          "code": "W6",
+          "active": true
+        },
+        "p118_elong_ema9_21_s1.5_t1.5_btcbull__ARB__4h__vt1.5_lmax5.0": {
+          "code": "W7",
+          "active": true
+        },
+        "p118_dlong_n40_s1.5_t2.0_noreset__GALA__2h__vt2.0_lmax5.0": {
+          "code": "W8",
+          "active": true
+        },
+        "p118_sema_ema50_200_s1.5_t5.0_coin50__SEI__2h__vt2.0_lmax5.0": {
+          "code": "W9",
+          "active": true
+        },
+        "p118_sema_ema50_200_s4.0_t3.0_coin50__FIL__12h__lev1.5": {
+          "code": "W10",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-09",
+      "created_at_iso": "2026-10-09T13:25:20+08:00",
+      "_note": "codes taken from analyst catalog (rd_p118v2)"
     }
   }
 }

@@ -22,6 +22,8 @@
     portfolio_ensemble_passers_perp: null, // R1–R3: runner not built → 準備中 (not approvable)
     short_trend_perp: null, // S1–S7 (2026-10-08): no cloud order support yet → 準備中
     range_reversion_perp: null, // G1–G6 (2026-10-08): no cloud order support yet → 準備中
+    trend_long_scan_perp: null, // T1–T9 (2026-10-09): perp long scan, not on runner → hidden
+    vol_target_sized_passers_perp: null, // W1–W10 (2026-10-09): vol-target sizing not on runner → hidden
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",
     ema_trend_hold: null,

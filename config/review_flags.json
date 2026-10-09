@@ -35,7 +35,7 @@
     },
     {
       "id": "range_reversion_short_no_hard_stop_2026-10-08",
-      "active": true,
+      "active": false,
       "created_at_iso": "2026-10-08T18:05:00+08:00",
       "badge_zh": "上線前需加緊急停損",
       "note_zh": "回測做空腿沒有硬停損（只靠回中軌／RSI 出場與持倉上限），有軋空風險；上線前必須加災難停損（分析師 catalog stop_zh）。",
@@ -44,7 +44,9 @@
       "strategy_ids": [
         "sr_bbr_n14_k2.0_s99_adx100_short_back__OP__1d",
         "sr_rsir_p7_lo15_s99_adx25_ls__FIL__4h"
-      ]
+      ],
+      "cleared_at_iso": "2026-10-09T15:25:00+08:00",
+      "cleared_reason": "analyst rd_p118v2 replaced G2/G5 with hard-stop versions (G2 4.0 ATR, G5 2.0 ATR) that pass"
     }
   ]
 }

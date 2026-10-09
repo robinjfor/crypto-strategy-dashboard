@@ -5,7 +5,8 @@
     "donchian55_s2.0_t3.0__FET__4h": "未過關（次棒開盤成交後鄰居穩健 23.1% < 50%）"
   },
   "row_notes": {
-    "donchian_breakout_atr__ARB__4h": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線"
+    "donchian_breakout_atr__ARB__4h": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線",
+    "p118_elong_ema50_100_s2.0_t3.0_btcbull__XLM__4h__vt1.0_lmax3.0": "獲利集中在 2024/11 單月"
   },
   "family_text_replace": {
     "donchian_atr": [
