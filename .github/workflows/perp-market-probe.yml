@@ -32,11 +32,17 @@ jobs:
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           B64=$(base64 -w0 scripts/perp_market_probe_readonly.py)
+          START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           EX=$(gcloud run jobs execute "${JOB_NAME}" --project="${PROJECT}" --region="${REGION}" \
             --args='^|^-c|exec(__import__("base64").b64decode(__import__("os").environ["PROBE_B64"]).decode())' \
             --update-env-vars="^@^PROBE_B64=${B64}" --wait --format='value(metadata.name)')
           echo "execution=${EX}"
-          sleep 20
-          gcloud logging read \
-            "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME} AND labels.\"run.googleapis.com/execution_name\"=${EX}" \
-            --project="${PROJECT}" --limit=50 --format='value(textPayload)' | grep -E "PERP_PROBE|Error|Traceback" || true
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 15
+            OUT=$(gcloud logging read \
+              "resource.type=cloud_run_job AND resource.labels.job_name=${JOB_NAME} AND textPayload:\"PERP_PROBE\" AND timestamp>=\"${START}\"" \
+              --project="${PROJECT}" --limit=5 --format='value(textPayload)' || true)
+            if [ -n "${OUT}" ]; then echo "${OUT}"; exit 0; fi
+          done
+          echo "PERP_PROBE line not found in logs" >&2
+          exit 1
