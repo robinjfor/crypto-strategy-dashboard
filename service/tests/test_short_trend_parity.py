@@ -192,16 +192,78 @@ def test_conflict_rule_blocks_short_when_long_open():
     assert (r["action"], r["reason"]) == ("skip", "opposite_position_open")
 
 
-def test_leverage_cap_rule():
-    assert leverage_cap(-36.858) == 5.0 and leverage_cap(45.0) == 5.0
-    assert leverage_cap(-48.7) == 3.0 and leverage_cap(None) == 3.0
-    s = slot_from_spec({**SPEC["S8"], "sizing": {"leverage": 9}})
-    assert s["leverage"] == 5.0
-    s = slot_from_spec({**SPEC["S8"], "sizing": {"leverage": 9}, "backtest_full": {"maxdd_pct": -50}})
-    assert s["leverage"] == 3.0
+def test_leverage_locked_1x():
+    assert leverage_cap(-36.858) == 1.0 and leverage_cap(-48.7) == 1.0 and leverage_cap(None) == 1.0
+    assert slot_from_spec({**SPEC["S8"], "sizing": {"leverage": 9}})["leverage"] == 1.0
+    slot, b = slot_from_spec(SPEC["S3"]), _bars("S3")
+    win = b[["Open", "High", "Low", "Close"]].iloc[-WINDOW:]
+    r = evaluate_short_trend_slot({**slot, "leverage": 5}, win, None, {})
+    assert r["leverage"] == 1.0 and r["leverage_cap"] == 1.0
 
 
 def test_missing_filter_data_never_enters():
     idx = pd.date_range("2024-01-01", periods=5, freq="4h", tz="UTC")
     assert not filter_on_bars("coin50", idx, "4h", {}).any()
     assert not filter_on_bars("fpos", idx, "4h", {}).any()
+
+
+def _live_hourly(code):
+    """Hourly runner: the exchange stop fills INSIDE bar t; the runner then reconciles and evaluates
+    mid-bar, when the last closed bar is t-1. An entry edge on t-1 (while the position was still open)
+    must not enter (stale signal); the bar-t close is evaluated normally at the next run."""
+    slot, b = slot_from_spec(SPEC[code]), _bars(code)
+    df = b[["Open", "High", "Low", "Close"]]
+    idx, O, H = df.index, df["Open"].values, df["High"].values
+    s0 = int(np.argmax(b["in_backtest_window"].values))
+    base, meta, pos, out, stale_blocked, stale_entered = _meta(slot), {}, None, [], [], []
+
+    def run(win, p):
+        return evaluate_short_trend_slot(slot, win, p, {**meta, **base})
+
+    for t in range(s0 + 1, len(df)):
+        win = df.iloc[max(0, t - WINDOW):t]
+        r = run(win, pos)  # run right after bar t-1 closes
+        if pos is not None and r["action"] == "exit":
+            assert not r["reason"].startswith("stop")  # stops are filled intrabar by the exchange here
+            n_f, f_sum = _funding_events(slot, idx, pos["fill_i"], t, O)
+            px = float(O[t]) * (1 + COST)
+            out.append((idx[pos["fill_i"]], idx[t], r["reason"], round(pos["stop_basis"], 10), round(px, 10)))
+            meta.update(last_acted_bar_ts=r["bar_ts"], last_exit_bar_ts=r["bar_ts"], last_exit_reason=r["reason"])
+            pos = None
+        elif pos is not None:
+            pos["stop"] = r["stop"]  # level effective for bar t
+        if pos is None and r["action"] == "enter":
+            raw = float(O[t])
+            basis = stop_basis_from_fill(raw)
+            pos = {"status": "FILLED", "entry": raw, "stop_basis": basis, "entry_bar_ts": r["bar_ts"], "fill_i": t,
+                   "stop": basis + slot["stop_atr_mult"] * r["stop_atr"]}
+            meta.update(last_acted_bar_ts=r["bar_ts"], last_entry_bar_ts=r["bar_ts"])
+        if pos is not None and H[t] >= pos["stop"]:  # exchange STOP fills inside bar t
+            px = max(float(O[t]), pos["stop"]) * (1 + COST)
+            out.append((idx[pos["fill_i"]], idx[t], "stop", round(pos["stop_basis"], 10), round(px, 10)))
+            pos = None
+            bar = idx[t].isoformat()  # reconcile: _bar_floor_iso(fill time) = bar t
+            meta.update(last_acted_bar_ts=bar, last_exit_bar_ts=bar, last_exit_reason="stop")
+            mid = run(win, None)  # hourly run inside bar t: last closed bar is still t-1
+            if mid["action"] == "enter":
+                stale_entered.append(mid["bar_ts"])
+            elif mid["reason"] == "stale_signal_before_exit":
+                stale_blocked.append(mid["bar_ts"])
+    return out, stale_blocked, stale_entered
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_hourly_runner_no_stale_signal_reentry(code):
+    out, blocked, entered = _live_hourly(code)
+    assert entered == [], f"{code}: stale re-entries on signal bars {entered}"
+    want = _trades(code)
+    got = [(e, x, ("stop" if r.startswith("stop") else r), p_in, p_out) for e, x, r, p_in, p_out in out]
+    exp = [(pd.Timestamp(a), pd.Timestamp(b), ("stop" if r.startswith("stop") else r), round(ein, 10), round(xf, 10))
+           for a, b, r, ein, xf in zip(want["entry_time"], want["exit_time"], want["exit_reason"],
+                                       want["entry_fill_price"], want["exit_fill_price"])]
+    assert len(got) == len(exp), (code, len(got), len(exp))
+    for g, w in zip(got, exp):
+        assert g[:3] == w[:3], (code, g, w)
+        assert g[3] == pytest.approx(w[3], rel=1e-8) and g[4] == pytest.approx(w[4], rel=1e-8), (code, g, w)
+    # the cases 資金控管 found over 3 years (edge while in position, stop inside the next bar): S2 x2, S5 x1
+    assert len(blocked) == {"S2": 2, "S3": 0, "S5": 1, "S8": 0}[code], (code, blocked)

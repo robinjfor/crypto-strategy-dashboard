@@ -41,9 +41,9 @@ def test_existing_families_keep_1h_4h_1d_only():
     assert any("timeframe 不支援" in e for e in validate_allocation(doc, check_binance=False))
 
 
-@pytest.mark.parametrize("lev,dd,ok", [(1.0, -36.9, True), (5.0, -36.9, True), (5.0, -45.0, True),
-                                       (5.0, -48.7, False), (3.0, -48.7, True), (6.0, -10, False)])
-def test_s_leverage_cap(lev, dd, ok):
+@pytest.mark.parametrize("lev,dd,ok", [(1.0, -36.9, True), (1.0, -48.7, True), (2.0, -36.9, False),
+                                       (5.0, -36.9, False), (0.5, -10, False)])
+def test_s_leverage_locked_1x(lev, dd, ok):
     errs: list[str] = []
     p = {**_s_slot()["params"], "leverage": lev, "maxdd_pct": dd}
     validate_params("short_trend_perp", p, errs, 0)
@@ -139,7 +139,7 @@ def test_apply_signal_s_entry_stop_from_fill(monkeypatch):
     fc.user_trades = lambda *a, **k: []
     sig = {"slot": "short_gala_6h", "symbol": "GALAUSDT", "action": "enter", "family": "short_trend_perp",
            "venue": "futures", "side": "SHORT", "quote_usdt": 750.0, "bar_ts": "2026-10-09T00:00:00+00:00",
-           "leverage": 1.0, "leverage_cap": 5.0, "stop_atr_mult": 3.0, "stop_atr": 0.001, "suggested_stop": 0.5,
+           "leverage": 3.0, "leverage_cap": 5.0, "stop_atr_mult": 3.0, "stop_atr": 0.001, "suggested_stop": 0.5,
            "close": 0.0199}
     state: dict = {}
     out = main.apply_signal(None, state, sig, live=True, allow_entries=True)
@@ -148,7 +148,7 @@ def test_apply_signal_s_entry_stop_from_fill(monkeypatch):
     assert pos["stop_basis"] == pytest.approx(0.02 * 0.998)
     assert pos["stop"] == pytest.approx(0.02 * 0.998 + 0.003) == seen["stop"]["stop_price"]
     assert seen["stop"]["working_type"] == "CONTRACT_PRICE" and seen["stop"]["is_long"] is False
-    assert seen["open"]["side"] == "SELL" and seen["open"]["leverage_cap"] == 5
+    assert seen["open"]["side"] == "SELL" and seen["open"]["leverage_cap"] == 1 and seen["open"]["leverage"] == 1
     assert state["slots"]["short_gala_6h"]["last_entry_bar_ts"] == sig["bar_ts"]
 
 
@@ -212,3 +212,35 @@ def test_runner_side_stop_reentry_follow_up(monkeypatch):
     except Exception:  # noqa: BLE001  (later bookkeeping may need real clients; the apply order is what we test)
         pass
     assert calls[:2] == ["exit", "enter"]
+
+
+def _spot_enter(slot="sat_op_4h", sym="OPUSDT", side=None):
+    sig = {"slot": slot, "symbol": sym, "action": "enter", "family": "donchian_atr", "venue": "spot",
+           "quote_usdt": 1000.0, "bar_ts": "2026-10-09T08:00:00+00:00", "close": 0.12}
+    if side:
+        sig["side"] = side
+    return sig
+
+
+@pytest.mark.parametrize("sym", ["OPUSDT", "OPUSDC"])
+def test_open_s_short_blocks_c_f_long_same_coin(monkeypatch, sym):
+    monkeypatch.setattr(main, "_allow_entry_for_slot", lambda *a, **k: (True, ""))
+    state = {"positions": {"short_op_4h": {"status": "FILLED", "symbol": "OPUSDT", "side": "SHORT", "venue": "futures"}}}
+    out = main.apply_signal(None, state, _spot_enter(sym=sym), live=False, allow_entries=True)
+    assert out["reason"] == "opposite_position_open" and out["blocked_by"] == "short_op_4h"
+    assert "intended_order" not in out and "sat_op_4h" not in state["positions"]
+
+
+def test_long_blocks_s_short_and_other_coins_unaffected(monkeypatch):
+    monkeypatch.setattr(main, "_allow_entry_for_slot", lambda *a, **k: (True, ""))
+    state = {"positions": {"sat_op_4h": {"status": "FILLED", "symbol": "OPUSDT", "qty": 1.0}}}  # spot long (no side)
+    s_sig = {**_spot_enter("short_op_4h"), "family": "short_trend_perp", "venue": "futures", "side": "SHORT"}
+    assert main.apply_signal(None, state, s_sig, live=False, allow_entries=True)["reason"] == "opposite_position_open"
+    # different coin, or same direction: not blocked (dry run -> intended order)
+    assert "intended_order" in main.apply_signal(None, state, _spot_enter("sat_dot_4h", "DOTUSDT"), live=False, allow_entries=True)
+    state2 = {"positions": {"short_op_4h": {"status": "FILLED", "symbol": "OPUSDT", "side": "SHORT"}}}
+    other = {**s_sig, "slot": "short_op_6h"}
+    assert "intended_order" in main.apply_signal(None, state2, other, live=False, allow_entries=True)
+    # a non-FILLED (pending/closed) opposite position does not block
+    state3 = {"positions": {"short_op_4h": {"status": "CLOSED", "symbol": "OPUSDT", "side": "SHORT"}}}
+    assert "intended_order" in main.apply_signal(None, state3, _spot_enter(), live=False, allow_entries=True)

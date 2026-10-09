@@ -20,9 +20,11 @@ Matches the analyst's engine (rd_short_range engine_sr.bt + families.sema/sdon; 
   * Stop basis: stop0 = fill x (1 - 0.002) + stop_m x ATR(signal bar) — the engine's cost-adjusted
     entry price (position["stop_basis"]); exchange stop is a reduce-only BUY STOP_MARKET triggered on
     the LAST/contract price (workingType=CONTRACT_PRICE), like the backtest's kline High.
-  * Leverage: the analyst spec trades 1x; hard cap 5x when the row's |MaxDD| <= 45%, else 3x (Emily).
+  * Leverage: locked at 1x (資金控管 review 2026-10-09; the analyst spec trades 1x).
   * Re-entry: no cooldown, but a NEW entry edge is required. A stop-out on bar i still allows an entry
-    edge at bar i's close (engine order: stop check before the entry check).
+    edge at bar i's close (engine order: stop check before the entry check). An edge on a bar EARLIER
+    than the exit bar never enters (the slot was in position then; the engine ignores it) — this
+    matters for hourly runs, where an exchange stop can fill inside the bar after the signal bar.
 Inputs: slot_meta["_funding"] (pd.Series rate by event time), ["_coin_daily"] / ["_btc_daily"]
 (DataFrames of daily klines, closed days)."""
 from __future__ import annotations
@@ -36,19 +38,15 @@ from indicators import bar_ts_iso, sma_atr, split_closed
 
 FAMILY = "short_trend_perp"
 MAXHOLD_BARS = {"1h": 240, "2h": 120, "4h": 60, "6h": 40, "12h": 20, "1d": 40}
-LEVERAGE_CAP = 3.0           # default cap
-LEVERAGE_CAP_LOW_DD = 5.0    # Emily: 5x allowed when |MaxDD| <= 45%
-LOW_DD_LIMIT_PCT = 45.0
+S_LEVERAGE = 1.0             # 資金控管 2026-10-09: S locked at 1x
 STOP_COST = 0.002            # engine per-side cost; stop basis = fill x (1 - STOP_COST)
 STOP_WORKING_TYPE = "CONTRACT_PRICE"
 STOP_REASONS = ("stop", "stop_loss", "stop_initial", "stop_trail")
 
 
-def leverage_cap(maxdd_pct) -> float:
-    try:
-        return LEVERAGE_CAP_LOW_DD if abs(float(maxdd_pct)) <= LOW_DD_LIMIT_PCT else LEVERAGE_CAP
-    except (TypeError, ValueError):
-        return LEVERAGE_CAP
+def leverage_cap(maxdd_pct=None) -> float:
+    """S leverage is locked at 1x regardless of MaxDD."""
+    return S_LEVERAGE
 
 
 def stop_basis_from_fill(fill_px: float) -> float:
@@ -178,8 +176,7 @@ def evaluate_short_trend_slot(slot: dict, klines: pd.DataFrame, position: dict |
         "side": "SHORT", "signal_kind": slot.get("signal"), "filter": slot.get("filter", "none"),
         "filter_on": bool(F[-1]), "bar_ts": bar_ts, "close": float(bar["Close"]), "mark": mark,
         "atr": float(atr[-1]), "checked_at": _now_iso(), "action": "hold", "reason": None,
-        "leverage": min(float(slot.get("leverage") or 1.0), leverage_cap(slot.get("maxdd_pct"))),
-        "leverage_cap": leverage_cap(slot.get("maxdd_pct")),
+        "leverage": S_LEVERAGE, "leverage_cap": S_LEVERAGE,
         "stop_atr_mult": stop_m, "stop_working_type": STOP_WORKING_TYPE, **extra,
     }
     if position and position.get("status") == "FILLED":
@@ -200,7 +197,8 @@ def evaluate_short_trend_slot(slot: dict, klines: pd.DataFrame, position: dict |
                 # stop before the entry edge, so the flat decision on this same closed bar is attached
                 # and applied by the runner right after the close executes.
                 res["after_stop"] = evaluate_short_trend_slot(
-                    slot, klines, None, {**slot_meta, "last_acted_bar_ts": ex["bar_ts"], "last_exit_reason": ex["reason"]})
+                    slot, klines, None, {**slot_meta, "last_acted_bar_ts": ex["bar_ts"], "last_exit_bar_ts": ex["bar_ts"],
+                                         "last_exit_reason": ex["reason"]})
         return res
     if not slot.get("armed", True):
         res.update(action="skip", reason="not_armed"); return res
@@ -211,6 +209,10 @@ def evaluate_short_trend_slot(slot: dict, klines: pd.DataFrame, position: dict |
             slot_meta.get("last_acted_bar_ts") == bar_ts
             and str(slot_meta.get("last_exit_reason") or "") not in STOP_REASONS):
         res.update(action="skip", reason="idempotent_same_bar"); return res
+    lx = slot_meta.get("last_exit_bar_ts")
+    if edge and lx and _ts(ind.index[-1]) < _ts(lx):
+        # stale: the signal bar is earlier than the exit bar (position was open at the signal bar)
+        res.update(action="skip", reason="stale_signal_before_exit"); return res
     if not edge:
         res.update(action="armed", reason="waiting_short_entry"); return res
     if not (atr[-1] > 0):
@@ -235,7 +237,7 @@ def slot_from_catalog_params(code: str, params: dict, quote_usdt: float = 750.0)
          "tf": params["tf"], "family": FAMILY, "signal": fam, "filter": params.get("filt", "none"),
          "stop_atr_mult": float(params["stop_m"]), "trail_atr_mult": float(params["trail_m"]),
          "max_hold_bars": int(params.get("max_hold") or MAXHOLD_BARS[params["tf"]]),
-         "leverage": min(float(params.get("leverage") or 1.0), leverage_cap(params.get("maxdd_pct"))),
+         "leverage": S_LEVERAGE,
          "maxdd_pct": params.get("maxdd_pct"), "quote_usdt": quote_usdt, "armed": True}
     if fam == "sema":
         from_pairs = [(9, 21), (12, 26), (20, 50), (30, 80), (50, 100), (50, 200)][int(params["pair"])]
@@ -262,5 +264,5 @@ def slot_from_spec(entry: dict, quote_usdt: float = 750.0) -> dict:
             "tf": tf, "family": FAMILY, "signal": "sema", "filter": filt, "ema_fast": int(fast), "ema_slow": int(slow),
             "stop_atr_mult": float(sm), "trail_atr_mult": float(tm),
             "max_hold_bars": int(entry.get("max_hold_bars") or MAXHOLD_BARS[tf]),
-            "leverage": min(float((entry.get("sizing") or {}).get("leverage") or 1.0), leverage_cap(maxdd)),
+            "leverage": S_LEVERAGE,
             "maxdd_pct": maxdd, "quote_usdt": quote_usdt, "armed": True}

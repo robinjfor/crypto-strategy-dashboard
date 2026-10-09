@@ -243,6 +243,25 @@ def _ensure_spot_stop(client, pos: dict, slot_id: str, sig: dict) -> None:
         log.error("hard_stop_restore_fail slot=%s err=%s", slot_id, e)
 
 
+def _base_asset(symbol: str) -> str:
+    sym = str(symbol or "").upper()
+    for q in ("USDT", "USDC"):
+        if sym.endswith(q):
+            return sym[: -len(q)]
+    return sym
+
+
+def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) -> str | None:
+    """Slot id of an open position on the same coin (any venue/quote) in the opposite direction."""
+    base, want = _base_asset(symbol), str(side or "LONG").upper()
+    for pid, p in (state.get("positions") or {}).items():
+        if pid == slot_id or not isinstance(p, dict) or p.get("status") != "FILLED":
+            continue
+        if _base_asset(p.get("symbol") or "") == base and str(p.get("side") or "LONG").upper() != want:
+            return pid
+    return None
+
+
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
     """Apply one satellite/SOL-shaped signal. Spot only. When paused, skip enters only."""
     slot_id = sig.get("slot")
@@ -262,6 +281,13 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
         if not allow_entries or not ok_entry:
             out["reason"] = why if not ok_entry else "paused_no_new_entries"
             log.info("skip_enter slot=%s reason=%s", slot_id, out["reason"])
+            return out
+        opp = opposite_position_slot(state, slot_id, str(sig.get("symbol") or ""), str(sig.get("side") or "LONG"))
+        if opp:
+            # Emily: one direction per coin (no hedge mode) — e.g. an open S short blocks C/F longs
+            out["reason"] = "opposite_position_open"
+            out["blocked_by"] = opp
+            log.info("skip_enter slot=%s reason=opposite_position_open by=%s", slot_id, opp)
             return out
         quote = min(float(sig.get("quote_usdt") or 0), MAX_NOTIONAL_USDT)
         bar_ts = str(sig.get("bar_ts") or "")
@@ -293,9 +319,9 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 is_s = sig.get("family") == "short_trend_perp"
                 opened = open_market(
                     fc, symbol=sig["symbol"], side=("BUY" if side == "LONG" else "SELL"),
-                    notional_usdt=quote, leverage=sig.get("leverage") or 1,
+                    notional_usdt=quote, leverage=(1 if is_s else (sig.get("leverage") or 1)),
                     client_order_id=coid,
-                    **({"leverage_cap": int(sig.get("leverage_cap") or 3)} if is_s else {}),
+                    **({"leverage_cap": 1} if is_s else {}),
                 )
                 qty = float(opened["qty"])
                 px = float(opened["mark"])

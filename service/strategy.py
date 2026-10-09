@@ -746,7 +746,7 @@ def _short_trend_inputs(slot: dict, meta: dict, positions: dict) -> tuple[pd.Dat
     # one-way mode, no hedge: any open long on the same coin (any slot, any venue) blocks a new short
     m["_opposite_open"] = any(
         p and p.get("status") == "FILLED" and pid != slot["id"]
-        and str(p.get("symbol") or "").upper() == sym.upper()
+        and str(p.get("symbol") or "").upper().removesuffix("USDT").removesuffix("USDC") == sym.upper().removesuffix("USDT")
         and str(p.get("side") or "LONG").upper() != "SHORT"
         for pid, p in (positions or {}).items()
     )

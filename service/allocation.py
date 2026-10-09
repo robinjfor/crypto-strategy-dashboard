@@ -192,7 +192,7 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
 
 def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
     """S short_trend_perp params (analyst spec): sema EMA pair, stop/trail ATR mults, filter,
-    leverage cap 5x only when |MaxDD| <= 45% (else 3x)."""
+    leverage locked at 1x (資金控管 2026-10-09)."""
     from short_trend import EMA_PAIRS, FILTERS, leverage_cap
     fast, slow = p.get("ema_fast", p.get("fast")), p.get("ema_slow", p.get("slow"))
     sig = str(p.get("signal") or "sema").lower()
@@ -217,9 +217,8 @@ def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
     if filt not in FILTERS:
         errors.append(f"slots[{idx}].params.filt 不支援：{filt}")
     lev = float(p.get("leverage") or 1.0)
-    cap = leverage_cap(p.get("maxdd_pct"))
-    if lev > cap + 1e-9:
-        errors.append(f"slots[{idx}].params.leverage={lev} 超過硬頂 {cap:g}（MaxDD {p.get('maxdd_pct')}）")
+    if abs(lev - leverage_cap()) > 1e-9:
+        errors.append(f"slots[{idx}].params.leverage={lev}：short_trend_perp 鎖定 1 倍")
 
 
 def fetch_quote_symbols(quote: str = "USDT") -> set[str] | None:
@@ -506,7 +505,7 @@ def slot_to_runtime(slot: dict) -> dict:
     reset = params.get("require_reset_below_hi", params.get("reset_below_hi", False))
     quote_asset = infer_quote_asset(slot)
     notion = slot_notional(slot, quote_asset)
-    # short_trend_perp (S) only: signal kind, filter, analyst MaxDD (leverage cap 5x if |DD| <= 45%)
+    # short_trend_perp (S) only: signal kind, filter, analyst MaxDD (info; S leverage locked 1x)
     s_extra = {
         "signal": str(params.get("signal") or "sema").lower(),
         "filter": str(params.get("filt", params.get("filter")) or "none").lower(),
