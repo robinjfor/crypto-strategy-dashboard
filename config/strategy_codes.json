@@ -658,11 +658,13 @@
         },
         "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h": {
           "code": "S2",
-          "active": true
+          "active": false,
+          "replaced_by": "wf_sema_ema9_21_s2.0_t5.0_fpos__ARB__4h"
         },
         "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h": {
           "code": "S3",
-          "active": true
+          "active": false,
+          "replaced_by": "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h"
         },
         "sr_sdon_n40_s1.0_t2.0_fpos__OP__4h": {
           "code": "S4",
@@ -670,7 +672,8 @@
         },
         "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h": {
           "code": "S5",
-          "active": true
+          "active": false,
+          "replaced_by": "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h"
         },
         "sr_sema_ema12_26_s3.0_t5.0_fpos__1000SHIB__4h": {
           "code": "S6",
@@ -682,7 +685,8 @@
         },
         "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h": {
           "code": "S8",
-          "active": true
+          "active": false,
+          "replaced_by": "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h"
         },
         "p118_sema_ema50_200_s4.0_t3.0_coin50__FIL__12h": {
           "code": "S9",
@@ -715,6 +719,26 @@
         "p118_sema_ema20_50_s2.0_t3.0_coin50__APT__6h": {
           "code": "S16",
           "active": true
+        },
+        "wf_sema_ema9_21_s2.0_t5.0_fpos__ARB__4h": {
+          "code": "S2",
+          "active": true,
+          "replaces": "sr_sema_ema9_21_s2.0_t4.0_none__ARB__4h"
+        },
+        "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h": {
+          "code": "S3",
+          "active": true,
+          "replaces": "sr_sema_ema9_21_s2.0_t4.0_fpos__DOT__4h"
+        },
+        "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h": {
+          "code": "S5",
+          "active": true,
+          "replaces": "sr_sema_ema12_26_s2.0_t2.0_fpos__APT__4h"
+        },
+        "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h": {
+          "code": "S8",
+          "active": true,
+          "replaces": "p118_sema_ema12_26_s2.5_t4.0_fpos__GALA__6h"
         }
       },
       "active": true,
