@@ -754,7 +754,7 @@
     if (g._failSplit) {
       return '<div class="fam-approve-bar" onclick="event.stopPropagation()"><span class="badge bad">未過關 · 封存</span>' +
         (g._parentBucket === "approved" ? ' <span class="badge muted">家族仍為已批准（未撤銷）</span>' : "") +
-        '<span class="fam-pass-info">' + (g.rows || []).length + " 列未過關" + (g.code ? (" · 代碼 " + esc(g.code)) : "") + "</span></div>";
+        '<span class="fam-pass-info">' + visibleRows(g).length + " 列未過關" + (g.code ? (" · 代碼 " + esc(g.code)) : "") + "</span></div>";
     }
     var rf = runnerFamilyId(familyId, sample);
     var onRunner = !!(rf && RUNNER_FAMILIES[rf]);
@@ -763,8 +763,8 @@
     else if (!onRunner) famLock = LOCK_PREP;
     else famLock = approveLockReason(sample, familyId, true);
     var supported = !famLock;
-    var nPass = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
-    var nAll = (g.rows || []).length;
+    var nPass = visibleRows(g).filter(function (r) { return gatePass3y(r); }).length;
+    var nAll = visibleRows(g).length;
     var approved = familyApproved(familyId);
     var statusHtml = bucket === "archived"
       ? (!hasPass && !familyManuallyArchived(familyId)
@@ -797,17 +797,26 @@
       statusHtml + " " + info + " " + btns.join(" ") + "</div>";
   }
 
-  function renderGroupCard(g) {
-    var familyId = g.family_id || g.key;
-    var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
-    var rows = g.rows || [];
+  // Rows a family card actually shows (g.rows is already past hideUnapprovable; 只看過關 applied here).
+  function visibleRows(g) {
+    var rows = (g && g.rows) || [];
     if (filterBothOnly) {
       rows = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r); }); // never hide live rows
     }
+    return rows;
+  }
+
+  function renderGroupCard(g) {
+    var familyId = g.family_id || g.key;
+    var supported = g.supported != null ? g.supported : runnerSupports(g.rows[0] || {}, familyId);
+    var rows = visibleRows(g);
     if (filterBothOnly && !rows.length) return "";
 
-    var nBoth = (g.rows || []).filter(function (r) { return gatePass3y(r); }).length;
-    var best = g.best_score != null ? g.best_score : (g.rows[0] && g.rows[0].score) || 0;
+    // Header stats count only the rows this card shows (hidden rows — wf_pass false, unapprovable,
+    // or filtered by 只看過關 — never feed the row count, pass count or best score).
+    var nBoth = rows.filter(function (r) { return gatePass3y(r); }).length;
+    var best = rows.reduce(function (m, r) { var v = Number(r.score); return isFinite(v) && v > m ? v : m; }, -Infinity);
+    if (!isFinite(best)) best = 0;
     var desc = g.description_zh || "";
     if (desc.length > 90) desc = desc.slice(0, 90) + "…";
     var open = !!expandedKeys[g.key];
@@ -882,7 +891,7 @@
       '<span class="badge muted">' + esc(familyId) + "</span> " + supportNote +
       (familyFlag(familyId) ? " " + flagBadge(familyFlag(familyId)) : "") +
       familyControls(g) +
-      '<span class="ssc-params">' + (g.rows || []).length + " 列 · 過關 " + nBoth +
+      '<span class="ssc-params">' + rows.length + " 列 · 過關 " + nBoth +
       " · 最佳 " + num(best, 1) + "</span>" +
       '<span class="chevron">' + (open ? "▾" : "▸") + "</span>" +
       "</div>" +
