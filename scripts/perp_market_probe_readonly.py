@@ -1,5 +1,6 @@
 """READ-ONLY: from the Cloud Run job (asia-east1), fetch public USDT-M perp klines + funding via the
-deployed perp_market module (no API keys, GET only, no state writes). Prints one PERP_PROBE line."""
+deployed perp_market module (no API keys, GET only, no trader-state writes). Prints one PERP_PROBE line and
+stores it at gs://$GCS_BUCKET/trader/snapshots/perp_market_probe.json (dedicated probe object)."""
 import json
 import os
 import time
@@ -20,4 +21,9 @@ for sym, tf in (("ARBUSDT", "4h"), ("DOTUSDT", "4h"), ("APTUSDT", "4h"), ("GALAU
     except Exception as e:  # noqa: BLE001
         row.update(ok=False, error=str(e)[:300])
     out["rows"].append(row)
-print("PERP_PROBE " + json.dumps(out), flush=True)
+body = json.dumps(out)
+print("PERP_PROBE " + body, flush=True)
+bucket = os.environ.get("GCS_BUCKET") or ""
+if bucket:  # dedicated probe object only (never trader state)
+    from google.cloud import storage
+    storage.Client().bucket(bucket).blob("trader/snapshots/perp_market_probe.json").upload_from_string(body, content_type="application/json")
