@@ -88,7 +88,7 @@ def _funding_events(slot, idx, fill_i, exit_i, O):
     return int(m.sum()), float(np.sum(O[k[m]] * f.values[m]))
 
 
-def _live(code):
+def _live(code, runner_side_stop=False):
     slot, b = slot_from_spec(SPEC[code]), _bars(code)
     df = b[["Open", "High", "Low", "Close"]]
     idx, O = df.index, df["Open"].values
@@ -117,9 +117,15 @@ def _live(code):
             pos = None
             # runner bookkeeping: reconcile records an exchange stop as reason "stop" on its bar;
             # apply_signal records a close-based exit on the decision bar
-            meta.update(last_acted_bar_ts=r["exit_bar_ts"], last_exit_reason=("stop" if stop_exit else r["reason"]))
-            if stop_exit:  # stop already filled -> runner evaluates this bar flat
-                r = run(win, None)
+            if runner_side_stop and stop_exit:
+                # runner closes on the stop itself: apply_signal records the evaluator's reason, then
+                # main applies the attached same-bar flat decision (after_stop)
+                meta.update(last_acted_bar_ts=r["exit_bar_ts"], last_exit_reason=r["reason"])
+                r = r["after_stop"]
+            else:
+                meta.update(last_acted_bar_ts=r["exit_bar_ts"], last_exit_reason=("stop" if stop_exit else r["reason"]))
+                if stop_exit:  # exchange stop already filled -> reconcile, then runner evaluates this bar flat
+                    r = run(win, None)
         if pos is None and r["action"] == "enter":
             raw = float(O[t])
             pos = {"status": "FILLED", "entry": raw, "stop_basis": stop_basis_from_fill(raw),
@@ -135,10 +141,12 @@ def _cmp_frame(rows):
     return d
 
 
-@pytest.mark.parametrize("code", CODES)
-def test_live_matches_spec_trades(code):
+@pytest.mark.parametrize("code,runner_side_stop", [(c, False) for c in CODES] + [("S2", True), ("S5", True)])
+def test_live_matches_spec_trades(code, runner_side_stop):
+    """runner_side_stop: stops closed by the runner (not the exchange) must give the same trades,
+    including a re-entry on the stop bar itself (S2/S5 have the most stop exits)."""
     want = _trades(code)
-    got = _cmp_frame(_live(code))
+    got = _cmp_frame(_live(code, runner_side_stop))
     assert len(got) == len(want), (code, len(got), len(want))
     w = want.copy()
     for c in ("signal_bar", "entry_time", "exit_signal_bar", "exit_time"):

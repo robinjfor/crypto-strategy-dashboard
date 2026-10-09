@@ -150,3 +150,65 @@ def test_apply_signal_s_entry_stop_from_fill(monkeypatch):
     assert seen["stop"]["working_type"] == "CONTRACT_PRICE" and seen["stop"]["is_long"] is False
     assert seen["open"]["side"] == "SELL" and seen["open"]["leverage_cap"] == 5
     assert state["slots"]["short_gala_6h"]["last_entry_bar_ts"] == sig["bar_ts"]
+
+
+def test_reconcile_records_funding_for_s_stop(monkeypatch):
+    import execution
+    import perp_market
+
+    class FC:
+        pass
+
+    monkeypatch.setattr(futures_client, "FuturesDemoClient", lambda: FC())
+    monkeypatch.setattr(futures_execution, "cancel_algo_stops", lambda fc, sym: 0)
+    monkeypatch.setattr(execution, "_futures_closed_info", lambda fc, sid, pos: {
+        "qty": 100.0, "price": 0.021, "time_ms": 1_760_000_000_000, "order_id": 5, "reason": "stop"})
+    got = {}
+    monkeypatch.setattr(perp_market, "funding_income_usdt",
+                        lambda fc, sym, a, b=None: got.update(args=(sym, a, b)) or 0.42)
+    state = {"positions": {
+        "short_gala_6h": {"status": "FILLED", "venue": "futures", "symbol": "GALAUSDT", "side": "SHORT", "qty": 100.0,
+                          "entry": 0.02, "family": "short_trend_perp", "filled_ms": 1_759_000_000_000},
+        "other": {"status": "FILLED", "venue": "futures", "symbol": "OPUSDT", "side": "LONG", "qty": 1.0, "entry": 1.0}}}
+    out = execution.reconcile_exchange_closes(None, state, tf_by_slot={"short_gala_6h": "6h", "other": "4h"})
+    by = {c["slot"]: c for c in out}
+    assert by["short_gala_6h"]["funding_usdt"] == 0.42
+    assert got["args"] == ("GALAUSDT", 1_759_000_000_000, 1_760_000_000_000)
+    assert "funding_usdt" not in by["other"]
+    assert state["slots"]["short_gala_6h"]["last_exit_reason"] == "stop"
+
+
+def test_runner_side_stop_reentry_follow_up(monkeypatch):
+    """cmd_run applies the attached same-bar entry only after the stop close executed."""
+    calls = []
+
+    def fake_apply(client, state, sig, live, allow_entries):
+        calls.append(sig["action"])
+        return {"executed": True, "slot": sig["slot"]}
+
+    enter = {"slot": "short_gala_6h", "action": "enter", "symbol": "GALAUSDT"}
+    sig = {"slot": "short_gala_6h", "action": "exit", "reason": "stop_trail", "symbol": "GALAUSDT", "after_stop": enter}
+    monkeypatch.setattr(main, "apply_signal", fake_apply)
+    monkeypatch.setattr(main, "evaluate_all", lambda client, state: [dict(sig)])
+    monkeypatch.setattr(main, "resolve_allocation", lambda: ({"slots": []}, "test"))
+
+    class Store:
+        st: dict = {}
+
+        def load(self):
+            return {}
+
+        def save(self, st):
+            Store.st = st
+
+        def mutate(self, fn):
+            Store.st = fn(Store.st)
+            return Store.st
+
+    monkeypatch.setattr(main, "StateStore", Store)
+    monkeypatch.setenv("TRADER_ENABLED", "false")
+    try:
+        main.cmd_run(None, dry_run=True)
+    except Exception:  # noqa: BLE001  (later bookkeeping may need real clients; the apply order is what we test)
+        pass
+    assert calls[:2] == ["exit", "enter"]

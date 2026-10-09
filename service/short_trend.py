@@ -195,6 +195,12 @@ def evaluate_short_trend_slot(slot: dict, klines: pd.DataFrame, position: dict |
             res.update(action="manage", reason="trail_update")
         else:
             res.update(action="exit", reason=ex["reason"], exit_ref=ex["exit_ref"], exit_bar_ts=ex["bar_ts"])
+            if ex["reason"].startswith("stop"):
+                # Runner-side stop close (exchange stop missing / not filled): the engine checks the
+                # stop before the entry edge, so the flat decision on this same closed bar is attached
+                # and applied by the runner right after the close executes.
+                res["after_stop"] = evaluate_short_trend_slot(
+                    slot, klines, None, {**slot_meta, "last_acted_bar_ts": ex["bar_ts"], "last_exit_reason": ex["reason"]})
         return res
     if not slot.get("armed", True):
         res.update(action="skip", reason="not_armed"); return res

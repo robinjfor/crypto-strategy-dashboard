@@ -651,10 +651,18 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         signals = evaluate_all(client, state)
     if only_slots:
         signals = [x for x in signals if str(x.get("slot") or "") in only_slots]
-    applied = [
-        apply_signal(client, state, sig, live=live, allow_entries=allow_entries)
-        for sig in signals
-    ]
+    applied = []
+    follow_ups = []
+    for sig in signals:
+        app = apply_signal(client, state, sig, live=live, allow_entries=allow_entries)
+        applied.append(app)
+        nxt = sig.get("after_stop")
+        # S family: runner-side stop close on this bar -> same-bar flat decision (re-entry edge)
+        if isinstance(nxt, dict) and sig.get("action") == "exit" and app.get("executed") and nxt.get("action") == "enter":
+            follow_ups.append((nxt, apply_signal(client, state, nxt, live=live, allow_entries=allow_entries)))
+    for nxt, app in follow_ups:
+        signals.append(nxt)
+        applied.append(app)
     # Persist per-slot decision audit trail for /status (no Cloud Logging needed)
     decisions = []
     for sig, app in zip(signals, applied):

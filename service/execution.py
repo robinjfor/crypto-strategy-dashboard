@@ -333,7 +333,7 @@ def _entry_ms(pos: dict) -> int:
 
 def _record_exchange_close(state: dict, slot_id: str, pos: dict, *, qty: float, price: float | None,
                            time_ms, order_id, reason: str, venue: str, tf: str | None,
-                           exit_fee_usdt: float | None = None) -> dict:
+                           exit_fee_usdt: float | None = None, funding_usdt: float | None = None) -> dict:
     entry = float(pos.get("entry") or 0)
     is_long = str(pos.get("side") or "LONG").upper() == "LONG"
     pnl = None
@@ -349,6 +349,8 @@ def _record_exchange_close(state: dict, slot_id: str, pos: dict, *, qty: float, 
     finalize_closed_pnl(closed, pos, exit_fee_usdt)
     if venue == "futures":
         closed["side"] = pos.get("side")
+    if funding_usdt is not None:
+        closed["funding_usdt"] = funding_usdt
     state.setdefault("closed_trades", []).append(closed)
     state["closed_trades"] = state["closed_trades"][-200:]
     state.setdefault("positions", {}).pop(slot_id, None)
@@ -447,6 +449,11 @@ def reconcile_exchange_closes(client, state: dict, *, only_slots: set | None = N
                 info = _futures_closed_info(fc, slot_id, pos)
                 if info:
                     cancel_algo_stops(fc, pos["symbol"])
+                    if pos.get("family") == "short_trend_perp" and pos.get("filled_ms"):
+                        # S: exchange FUNDING_FEE income over the holding period (stop closed it)
+                        from perp_market import funding_income_usdt
+                        info["funding_usdt"] = funding_income_usdt(fc, pos["symbol"], int(pos["filled_ms"]),
+                                                                   int(info["time_ms"]) if info.get("time_ms") else None)
             else:
                 info = _spot_closed_info(client, slot_id, pos)
             if info:

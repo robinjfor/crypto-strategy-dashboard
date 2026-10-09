@@ -712,6 +712,8 @@ def evaluate_all(client, state: dict) -> list[dict]:
                 kl, eval_meta = _short_trend_inputs(slot, meta, positions)
                 res = evaluate_slot_dispatch(slot, kl, pos, eval_meta)
                 _enrich_signal(res, slot)
+                if isinstance(res.get("after_stop"), dict):
+                    _enrich_signal(res["after_stop"], slot)
                 results.append(res)
                 continue
             kl = client.fetch_klines(slot["symbol"], slot["tf"], limit=limit, use_vision=True)
