@@ -194,6 +194,7 @@ def root():
 @app.route("/control/revoke_family", methods=["OPTIONS"])
 @app.route("/control/archive_family", methods=["OPTIONS"])
 @app.route("/control/unarchive_family", methods=["OPTIONS"])
+@app.route("/control/restore_approval", methods=["OPTIONS"])
 @app.route("/approved", methods=["OPTIONS"])
 def options_ok():
     return _cors(app.make_response(("", 204)))
@@ -1274,9 +1275,11 @@ def approve_family_ep():
     holder: dict = {}
 
     def mut(st):
-        holder["r"] = approve_family(st, family, at=now_iso_taipei(), by="api")
-        # Keep derived per-strategy approved in sync for older clients
-        _sync_approved_from_families(st)
+        at = now_iso_taipei()
+        holder["r"] = approve_family(st, family, at=at, by="api")
+        # Only ADD missing entries for this family's live slots; never rebuild, re-stamp,
+        # re-size or drop any other approval (bug 2026-10-10: approving S wiped C8/A6).
+        _add_missing_family_approvals(st, family, at=at)
         return st
 
     try:
@@ -1308,7 +1311,8 @@ def revoke_family_ep():
 
     def mut(st):
         holder["r"] = revoke_family(st, family, at=now_iso_taipei(), by="api")
-        _sync_approved_from_families(st)
+        # Drop only this family's per-strategy entries; other families' approvals untouched.
+        _drop_family_approvals(st, family)
         return st
 
     try:
@@ -1383,7 +1387,131 @@ def unarchive_family_ep():
 
 
 
+def _entry_family(sid: str, meta: dict) -> str:
+    slot = slot_by_strategy_id(sid) or {}
+    fam = family_for_strategy_id(sid) or (meta or {}).get("family") or slot.get("family") or ""
+    return normalize_family(str(fam))
+
+
+def _add_missing_family_approvals(st: dict, family: str, *, at: str) -> list[str]:
+    """Add approved entries for `family`'s live allocation slots that are not listed yet.
+
+    Existing entries (any family) are never modified or removed.
+    """
+    family = normalize_family(family)
+    approved = st.get("approved") if isinstance(st.get("approved"), dict) else {}
+    revoked = st.get("revoked_strategies") if isinstance(st.get("revoked_strategies"), dict) else {}
+    added: list[str] = []
+    pub = _allocation_public(st)
+    for slot in (pub.get("live_slots") or []):
+        sid = slot.get("strategy_id")
+        if not sid or sid in approved or sid in revoked:
+            continue
+        rt = slot_by_strategy_id(sid) or {}
+        if normalize_family(str(rt.get("family") or slot.get("family") or "")) != family:
+            continue
+        approved[sid] = {
+            "slot": rt.get("id") or slot.get("slot"),
+            "notional_usdt": rt.get("quote_usdt") or slot.get("notional_usdt"),
+            "approved": True,
+            "mode": "live",
+            "family": family,
+            "label_zh": "已核准 · 上線待命",
+            "approved_at": at,
+        }
+        added.append(sid)
+    st["approved"] = approved
+    return added
+
+
+def _drop_family_approvals(st: dict, family: str) -> list[str]:
+    family = normalize_family(family)
+    approved = st.get("approved") if isinstance(st.get("approved"), dict) else {}
+    gone = [sid for sid, meta in approved.items()
+            if isinstance(meta, dict) and _entry_family(sid, meta) == family]
+    for sid in gone:
+        approved.pop(sid, None)
+    st["approved"] = approved
+    return gone
+
+
+@app.route("/control/restore_approval", methods=["POST"])
+def restore_approval_ep():
+    """Restore ONE per-strategy approval record exactly (approved_at, notional) — nothing else.
+
+    For repairing state.approved after the 2026-10-10 family-approve rebuild bug. Does not touch
+    other entries, family approvals, archive state, allocation (enabled stays as is) or positions.
+    """
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    body = request.get_json(silent=True) or {}
+    sid = (body.get("strategy_id") or "").strip()
+    at = (body.get("approved_at") or "").strip()
+    if not sid or not at:
+        return jsonify({"ok": False, "error": "需要 strategy_id 與 approved_at"}), 400
+    try:
+        dt = datetime.fromisoformat(at)
+        if dt.tzinfo is None:
+            raise ValueError("no tz")
+    except Exception:  # noqa: BLE001
+        return jsonify({"ok": False, "error": "approved_at 需為含時區的 ISO 8601"}), 400
+    notional = body.get("notional_usdt")
+    if notional is not None:
+        try:
+            notional = float(notional)
+        except Exception:  # noqa: BLE001
+            return jsonify({"ok": False, "error": "notional_usdt 需為數字"}), 400
+        if not (10.0 <= notional <= float(MAX_NOTIONAL_USDT)):
+            return jsonify({"ok": False, "error": f"notional_usdt 需介於 10 與 {MAX_NOTIONAL_USDT}"}), 400
+    slot = slot_by_strategy_id(sid)
+    holder: dict = {}
+
+    def mut(st):
+        approved = st.get("approved") if isinstance(st.get("approved"), dict) else {}
+        cur = approved.get(sid)
+        if not isinstance(cur, dict):
+            if not slot:
+                raise ValueError(f"未知的 strategy_id：{sid}")
+            cur = {
+                "slot": slot.get("id"),
+                "notional_usdt": slot.get("quote_usdt") or 1000.0,
+                "approved": True,
+                "mode": "live",
+                "status": "live_standby",
+                "family": slot.get("family"),
+                "label_zh": "已核准 · 上線待命",
+            }
+            holder["created"] = True
+        cur = dict(cur)
+        cur["approved_at"] = dt.isoformat()
+        if notional is not None:
+            cur["notional_usdt"] = notional
+        cur["restored_at"] = now_iso_taipei()
+        approved[sid] = cur
+        st["approved"] = approved
+        # Explicit restore = re-approval of this one id: clear its revoke tombstone / signal_only row.
+        if isinstance(st.get("revoked_strategies"), dict):
+            st["revoked_strategies"].pop(sid, None)
+        if isinstance(st.get("signal_only"), dict):
+            st["signal_only"].pop(sid, None)
+        st.setdefault("meta", {})["last_restore_approval"] = {"strategy_id": sid, "approved_at": cur["approved_at"],
+                                                              "at": cur["restored_at"], "by": "api"}
+        holder["entry"] = cur
+        return st
+
+    try:
+        StateStore().mutate(mut)
+        return jsonify({"ok": True, "strategy_id": sid, "created": bool(holder.get("created")),
+                        "entry": holder.get("entry")})
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 def _sync_approved_from_families(st: dict) -> None:
+    """DEPRECATED — rebuilds every approval (re-stamps/drops). Must not be called from endpoints."""
     """Derive legacy per-strategy approved dict from approved_families + allocation."""
     fams = ensure_approved_families(st)
     pub = _allocation_public(st)
