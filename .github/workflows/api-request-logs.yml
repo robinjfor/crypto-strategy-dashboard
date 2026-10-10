@@ -1,0 +1,72 @@
+# Manual only. READ-ONLY: reads Cloud Run request + app logs of crypto-trader-api for a time window.
+# Does not call the API, touch state, or modify any service. Raw IPs are never printed (public repo):
+# each IP is shown as ip_hash = sha256(ip)[:8] (same convention as the API's auth logs) + its network owner.
+name: api-request-logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_utc: { description: "Window start (UTC, ISO 8601)", required: true }
+      end_utc: { description: "Window end (UTC, ISO 8601)", required: true }
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: asia-east1
+  SERVICE_NAME: crypto-trader-api
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Read logs (read-only)
+        env:
+          START: ${{ inputs.start_utc }}
+          END: ${{ inputs.end_utc }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          F="resource.type=cloud_run_revision AND resource.labels.service_name=${SERVICE_NAME} AND timestamp>=\"${START}\" AND timestamp<=\"${END}\""
+          gcloud logging read "${F} AND logName:\"run.googleapis.com%2Frequests\"" --project="${PROJECT}" \
+            --order=asc --limit=1000 --format=json > req.json
+          gcloud logging read "${F} AND NOT logName:\"run.googleapis.com%2Frequests\"" --project="${PROJECT}" \
+            --order=asc --limit=1000 --format=json > app.json
+          python3 - <<'PY'
+          import json, hashlib, urllib.request
+          org = {}
+          def owner(ip):
+              if ip not in org:
+                  try:
+                      org[ip] = urllib.request.urlopen(f"https://ipinfo.io/{ip}/org", timeout=10).read().decode().strip()
+                  except Exception as e:
+                      org[ip] = f"? ({type(e).__name__})"
+              return org[ip]
+          h = lambda ip: hashlib.sha256(ip.encode()).hexdigest()[:8] if ip else "-"
+          req = json.load(open("req.json"))
+          print(f"REQUESTS {len(req)}")
+          for e in req:
+              r = e.get("httpRequest") or {}
+              ip = r.get("remoteIp") or ""
+              url = r.get("requestUrl") or ""
+              path = "/" + url.split("/", 3)[3] if url.count("/") >= 3 else url
+              print("REQ", e.get("timestamp"), r.get("requestMethod"), path[:80], r.get("status"),
+                    "ip_hash=" + h(ip), "org=" + owner(ip) if ip else "", "| ua=" + (r.get("userAgent") or "")[:160],
+                    "| ref=" + (r.get("referer") or "")[:80])
+          app = json.load(open("app.json"))
+          print(f"APP_LOGS {len(app)}")
+          for e in app:
+              t = e.get("textPayload") or json.dumps(e.get("jsonPayload") or {}, ensure_ascii=False)
+              if not t:
+                  continue
+              print("APP", e.get("timestamp"), e.get("severity"), t[:300].replace("\n", " "))
+          PY
