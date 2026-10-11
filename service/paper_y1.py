@@ -330,8 +330,14 @@ def add_symbol(st: dict, sym: str) -> int:
     st["sym_index"][sym] = len(st["syms"]) - 1
     st["coins"].setdefault(sym, new_coin())
     st["qv"].setdefault(sym, [])
+    n = len(st["syms"])
     for b in st["books"].values():
-        grow_book(b, len(st["syms"]))
+        grow_book(b, n)
+    p = st.get("pending")
+    if p:                                   # pending targets stay aligned with the symbol list
+        for k, w in p["targets"].items():
+            if len(w) < n:
+                p["targets"][k] = np.concatenate([w, np.zeros(n - len(w))])
     return st["sym_index"][sym]
 
 

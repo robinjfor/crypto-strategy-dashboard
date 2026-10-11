@@ -304,3 +304,62 @@ def test_run_paper_seeds_rolls_back_on_error_and_public_is_strict_json(tmp_path,
     assert y["n_positions"] == 27 and y["next_fill_utc"] == "2026-10-11T00:00:00+00:00"
     assert y["last_decision"]["n_eligible"] == 27 and y["pending_targets"]["BTCUSDT"] == pytest.approx(0.5555, abs=1e-4)
     assert 15 < y["liq_distance_pct"] < 80
+
+
+def test_new_symbol_keeps_pending_and_books_aligned():
+    """Regression (first cloud run): bootstrapping new coins grew syms 241 -> 566 but not the pending targets."""
+    st = Y.load_seed()
+    n0 = len(st["syms"])
+    tg0 = {k: v.copy() for k, v in st["pending"]["targets"].items()}
+    for s in ("NEWAUSDT", "NEWBUSDT"):
+        Y.add_symbol(st, s)
+    for k, w in st["pending"]["targets"].items():
+        assert len(w) == n0 + 2 and (w[:n0] == tg0[k]).all() and (w[n0:] == 0).all()
+    for b in st["books"].values():
+        assert len(b["u"]) == len(b["last"]) == n0 + 2
+    st2 = Y.from_json(json.loads(json.dumps(Y.to_json(st))))
+    assert len(st2["pending"]["targets"]["C_lev"]) == n0 + 2
+    ok = np.ones(n0 + 2, bool)
+    O = np.r_[np.where(st["books"]["C_lev"]["last"][:n0] > 0, st["books"]["C_lev"]["last"][:n0], 1.0), [1.0, 1.0]]
+    Y.open_bar(st["books"]["C_lev"], O, ok, np.zeros(n0 + 2), np.where(ok, st["pending"]["targets"]["C_lev"], 0.0), st["syms"], [], {})
+
+
+@need
+def test_live_path_with_coins_bootstrapped_mid_life(world):
+    """Like the first cloud run: the exchange lists perps the state has never seen -> bootstrap, then normal bars and
+    a daily decision with the larger symbol list (clones of SOL/DOGE data under new names)."""
+    class More(FakeMarket):
+        EXTRA = {"SOLCLONEUSDT": "SOLUSDT", "DOGECLONEUSDT": "DOGEUSDT"}
+
+        def exchange_info(self):
+            out = super().exchange_info()
+            for e, src in self.EXTRA.items():
+                out.append({**next(x for x in out if x["symbol"] == src), "symbol": e, "base": e[:-4]})
+            return out
+
+        def klines(self, sym, interval, start, limit):
+            return super().klines(self.EXTRA.get(sym, sym), interval, start, limit)
+
+        def funding_hour(self, t):
+            fr = super().funding_hour(t)
+            fr.update({e: fr[src] for e, src in self.EXTRA.items() if src in fr})
+            return fr
+    st = Y.from_json(json.loads(json.dumps(world["start"])))
+    st.pop("ready", None)
+    M = More(world["pan"], world["spot"])
+    now = datetime(2026, 9, 28, 0, 1, tzinfo=timezone.utc)
+    while now <= datetime(2026, 9, 30, 1, 1, tzinfo=timezone.utc):
+        M.now = now
+        s = Y.step_live(st, now, M)
+        assert not (s["stopped"] or "").startswith("bootstrap"), s["stopped"]
+        st = Y.from_json(json.loads(json.dumps(Y.to_json(st))))
+        now += timedelta(hours=1)
+    assert "SOLCLONEUSDT" in st["syms"] and st["coins"]["SOLCLONEUSDT"]["pos"] == st["coins"]["SOLUSDT"]["pos"]
+    assert st["v1_day"] == "2026-09-29" and st["last_closed_bar"] == "2026-09-30T00:00:00+00:00"
+    d = st["decisions"][-1]
+    sol_elig = "SOLUSDT" in st["elig_today"]
+    assert ("SOLCLONEUSDT" in st["elig_today"]) == sol_elig
+    assert d["n_eligible"] == len(st["elig_today"])
+    n = len(st["syms"])
+    for b in st["books"].values():
+        assert len(b["u"]) == n
