@@ -156,6 +156,7 @@ try:
                 "maxdd_next_open": (_r.get("next_open_reval") or {}).get("maxdd"),
                 "neighbor_pct_next_open": (_r.get("next_open_reval") or {}).get("neighbor_pct"),
                 "site_note_zh": _r.get("site_note_zh"),
+                "gate_exception": _r.get("gate_exception"),
                 "supported_by_runner": _f.get("cloud_supported", str(_f.get("strategy_family_id") or "").startswith("donchian")),
             })
     (dst_dir / "scores.json").write_text(json.dumps({"meta": _meta, "strategies": _rows}, ensure_ascii=False, indent=2) + "\n")

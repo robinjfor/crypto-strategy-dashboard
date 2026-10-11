@@ -1094,10 +1094,21 @@ def _paper_public() -> dict:
     try:
         import paper_u1
         v = paper_u1.public_view(paper_u1.PaperStore().load())
-        return {"U1": v} if v else {"U1": None, "note": "尚無模擬紀錄"}
+        out = {"U1": v} if v else {"U1": None, "note": "尚無模擬紀錄"}
     except Exception as e:  # noqa: BLE001
         log.warning("paper_view_fail err=%s", e)
-        return {"U1": None, "error": str(e)[:200]}
+        out = {"U1": None, "error": str(e)[:200]}
+    # Y1 / X1: small public summary object written by the runner (never the full engine state, never the books)
+    try:
+        import paper_y1
+        y = paper_y1.Y1Store().load_public() or {}
+        out["Y1"] = y.get("Y1")
+        out["X1"] = y.get("X1")
+    except Exception as e:  # noqa: BLE001
+        log.warning("paper_y1_view_fail err=%s", e)
+        out["Y1"] = out["X1"] = None
+        out["y1_error"] = str(e)[:200]
+    return out
 
 
 @app.route("/paper", methods=["GET"])

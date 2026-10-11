@@ -32,7 +32,7 @@
       "notes": [],
       "notes_rescore": []
     },
-    "generated_at": "2026-10-11 16:41:05 CST",
+    "generated_at": "2026-10-11 23:44:40 CST",
     "n_strategies": 20,
     "n_gate_pass": 9,
     "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
@@ -51,7 +51,7 @@
     },
     "n_gate_pass_both": 5,
     "generated_from": "catalog.json (sync_unified_scores.sh)",
-    "generated_at_taipei": "2026-10-11T16:41:05+08:00",
+    "generated_at_taipei": "2026-10-11T23:44:40+08:00",
     "catalog_meta": {
       "period_3y": {
         "start": "2023-09-24",
@@ -89,8 +89,8 @@
       },
       "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
       "generated_at": "2026-10-11 16:29:52 CST",
-      "n_strategies": 21,
-      "n_rows": 152,
+      "n_strategies": 23,
+      "n_rows": 154,
       "n_gate_pass_3y": 91,
       "n_gate_pass_both": 8,
       "notes": [
@@ -109,7 +109,9 @@
         "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched.",
         "s_family_spec WF (2026-10-09 CST): S1-S16 walk-forward — params+coin chosen on 2023-09-24..2025-03-24 only (g1: ret_h1>B&H, DD_h1<=45, ret_h1>=39.8%; H1 neighbour>=50%; setting passes on >=2 coins; H1 liquidity), evaluated 2025-03-24..2026-09-24; pass = H2>0 + full hard gates. wf_pass/wf_first_half_cagr/wf_second_half_cagr added; wf_* refer to the WF-selected params (wf_params). Pass: S2,S3,S5,S8.",
         "s_family_spec WF params apply (2026-10-09 23:44:12 CST): replaced S2/S3/S5/S8 params+3y metrics with walk-forward (H1-selected) params' full-window backtest; old values kept in catalog_params_before_wf; equity CSVs rewritten; rescored. allocation.json untouched.",
-        "d4_trend_spec (2026-10-11 16:29:52 CST): +family btc_eth_trend_voltarget_perp (U) row U1 = rd_regime D4_N200_tv60 (cap 3x); status PAPER（Robin 核可模擬）; gate_fail_reasons=['neighbor'] only; wf_pass true; score 0 (not a full gate passer, no rescore). allocation.json untouched."
+        "d4_trend_spec (2026-10-11 16:29:52 CST): +family btc_eth_trend_voltarget_perp (U) row U1 = rd_regime D4_N200_tv60 (cap 3x); status PAPER（Robin 核可模擬）; gate_fail_reasons=['neighbor'] only; wf_pass true; score 0 (not a full gate passer, no rescore). allocation.json untouched.",
+        "rd_tradingview (2026-10-11 22:48:32 CST): +family tradingview_popular_ports (V) row V1 = TradingView 'Super Scalper - 5 Min 15 Min' (VinayKumarKV) default params, 1d, PIT universe, vt60 cap3; PENDING_EMILY; passes rd gates (DD<=60) incl. neighbor 62%; wf_pass true; score 0 (catalog scoring gate DD<=45 not met, no rescore). allocation.json untouched.",
+        "combo_u1v1_spec (2026-10-11 23:17:29 CST): +family combo_u1_v1_equal_risk_perp (Y) row Y1 = U1 + V1(X1) equal-risk combo, tv75 cap5; status PAPER（Robin 核可模擬，積極版 tv75）; post-hoc, fragile (4/8 neighbours DD>60%); score 0 (catalog scoring gate DD<=45 not met, no rescore). allocation.json untouched."
       ],
       "inconsistencies_vs_scores_json": [
         {
@@ -443,6 +445,7 @@
       "maxdd_next_open": -45.51,
       "neighbor_pct_next_open": 38.5,
       "site_note_zh": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線",
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -496,6 +499,7 @@
       "maxdd_next_open": -27.22,
       "neighbor_pct_next_open": 88.5,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -548,6 +552,7 @@
       "maxdd_next_open": -28.73,
       "neighbor_pct_next_open": 88.5,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -601,6 +606,7 @@
       "maxdd_next_open": -40.51,
       "neighbor_pct_next_open": 73.1,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -655,6 +661,7 @@
       "maxdd_next_open": -28.29,
       "neighbor_pct_next_open": 92.3,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -712,6 +719,7 @@
       "maxdd_next_open": -38.48,
       "neighbor_pct_next_open": 23.1,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -766,6 +774,7 @@
       "maxdd_next_open": -34.22,
       "neighbor_pct_next_open": 69.2,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -821,6 +830,7 @@
       "maxdd_next_open": -44.61,
       "neighbor_pct_next_open": 30.8,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -878,6 +888,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -934,6 +945,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -990,6 +1002,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1046,6 +1059,7 @@
       "maxdd_next_open": -53.02,
       "neighbor_pct_next_open": 15.4,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1102,6 +1116,7 @@
       "maxdd_next_open": -46.42,
       "neighbor_pct_next_open": 3.8,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1158,6 +1173,7 @@
       "maxdd_next_open": -53.81,
       "neighbor_pct_next_open": 26.9,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1217,6 +1233,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1273,6 +1290,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1333,6 +1351,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1392,6 +1411,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1449,6 +1469,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1509,6 +1530,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1568,6 +1590,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1624,6 +1647,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1681,6 +1705,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1738,6 +1763,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1795,6 +1821,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -1855,6 +1882,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -1914,6 +1942,7 @@
       "maxdd_next_open": -37.82,
       "neighbor_pct_next_open": 26.9,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -1973,6 +2002,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2034,6 +2064,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2093,6 +2124,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2156,6 +2188,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2215,6 +2248,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2276,6 +2310,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2328,6 +2363,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2382,6 +2418,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2436,6 +2473,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2491,6 +2529,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2546,6 +2585,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2600,6 +2640,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2654,6 +2695,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2709,6 +2751,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2766,6 +2809,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -2813,6 +2857,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -2860,6 +2905,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -2907,6 +2953,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -2954,6 +3001,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3001,6 +3049,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3048,6 +3097,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3095,6 +3145,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3142,6 +3193,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3189,6 +3241,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3236,6 +3289,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3283,6 +3337,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3330,6 +3385,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3377,6 +3433,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3424,6 +3481,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3471,6 +3529,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3518,6 +3577,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3565,6 +3625,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3612,6 +3673,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3659,6 +3721,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3704,6 +3767,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3749,6 +3813,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3797,6 +3862,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3842,6 +3908,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3889,6 +3956,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3936,6 +4004,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -3984,6 +4053,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4032,6 +4102,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4081,6 +4152,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4129,6 +4201,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4178,6 +4251,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4225,6 +4299,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4272,6 +4347,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4319,6 +4395,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4366,6 +4443,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4413,6 +4491,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4460,6 +4539,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4507,6 +4587,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4554,6 +4635,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4601,6 +4683,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4648,6 +4731,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4695,6 +4779,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4742,6 +4827,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4789,6 +4875,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4836,6 +4923,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4883,6 +4971,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": true
     },
     {
@@ -4929,6 +5018,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -4973,6 +5063,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5020,6 +5111,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5066,6 +5158,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5115,6 +5208,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5159,6 +5253,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5201,6 +5296,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5247,6 +5343,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5291,6 +5388,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5337,6 +5435,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5383,6 +5482,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5425,6 +5525,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5467,6 +5568,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5513,6 +5615,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5558,6 +5661,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5610,6 +5714,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5662,6 +5767,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5714,6 +5820,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5766,6 +5873,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5847,6 +5955,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5887,6 +5996,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5927,6 +6037,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -5967,6 +6078,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6011,6 +6123,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6055,6 +6168,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 44.0% → 後半 53.6%（WF 參數 EMA9/21、停損 2×ATR、移動停利 5×ATR、濾網 資金費率>0）· 風險：前半選幣、後半驗證",
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6099,6 +6213,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空",
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6141,6 +6256,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6185,6 +6301,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50）· 風險：前半選幣、後半驗證",
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6229,6 +6346,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6273,6 +6391,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6317,6 +6436,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無）· 風險：前半選幣、後半驗證",
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6361,6 +6481,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6405,6 +6526,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6449,6 +6571,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6493,6 +6616,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6537,6 +6661,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6581,6 +6706,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6625,6 +6751,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6669,6 +6796,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6712,6 +6840,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6758,6 +6887,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6802,6 +6932,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6845,6 +6976,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6890,6 +7022,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6934,6 +7067,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -6980,6 +7114,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7026,6 +7161,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7072,6 +7208,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7118,6 +7255,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7164,6 +7302,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7210,6 +7349,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7256,6 +7396,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7302,6 +7443,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7348,6 +7490,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7394,6 +7537,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "獲利集中在 2024/11 單月",
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7440,6 +7584,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7486,6 +7631,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7532,6 +7678,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7576,6 +7723,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7621,6 +7769,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7667,6 +7816,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7713,6 +7863,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7757,6 +7908,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7801,6 +7953,7 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
+      "gate_exception": null,
       "supported_by_runner": false
     },
     {
@@ -7875,12 +8028,176 @@
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行",
-      "supported_by_runner": false,
       "gate_exception": {
         "by": "Robin",
         "at": "2026-10-11",
         "reason_zh": "鄰居門檻未過，Robin 破例上架"
-      }
+      },
+      "supported_by_runner": false
+    },
+    {
+      "strategy_id": "tv_superscalper_atr14_rsi25v100__PIT_UNIV__1d_vt60_cap3",
+      "code": "X1",
+      "family": "tradingview_popular_ports",
+      "symbol": "MULTI",
+      "timeframe": "1d（原作為 5 分線；本列只在 1d 過關；1h 成交）",
+      "status": "候選（PENDING_EMILY）",
+      "params": {
+        "kind": "tradingview_port_universe",
+        "tv_script": "Super Scalper - 5 Min 15 Min",
+        "tv_author": "VinayKumarKV",
+        "tv_url": "https://www.tradingview.com/script/4ORGCiTh-Super-Scalper-5-Min-15-Min/",
+        "tv_boosts": 7181,
+        "atr_len": 14,
+        "atr_smoothing": "WMA",
+        "atr_mult": 1.0,
+        "rsi_fast": 25,
+        "rsi_slow": 100,
+        "bar": "1d UTC",
+        "direction": "long_short_reverse",
+        "universe": "PIT perp qv>=$50M on >45 of trailing 90 days",
+        "weight": "1/N_eligible",
+        "account_vol_target": 0.6,
+        "account_vol_window": 60,
+        "vol_floor": 0.05,
+        "lev_max": 3.0,
+        "band": 0.25,
+        "margin": "cross",
+        "stop": null
+      },
+      "kind": "tradingview_popular_ports",
+      "initial": 10000.0,
+      "final": 75323.3,
+      "ret_3y": 653.2,
+      "total_return_3y": 653.2,
+      "cagr_3y": 95.99,
+      "ret_1y": 29.0,
+      "bh_ret_3y": 202.9,
+      "maxdd": -52.09,
+      "oos_pass": "4/6",
+      "n_trades": 1730,
+      "gate_pass": true,
+      "gate_pass_3y": true,
+      "gate_pass_both": true,
+      "gate_fail_reasons": [],
+      "score": 0.0,
+      "full_period": {
+        "start": "2020-06-24",
+        "end": "2026-10-11",
+        "ret": 1815.2,
+        "cagr": 59.82,
+        "maxdd": -52.09,
+        "sharpe": 1.02,
+        "bh_ret": 761.1,
+        "oos_pass": "4/6",
+        "cagr_h1": 32.72,
+        "cagr_h2": 95.99,
+        "split": "2023-10-11",
+        "final": 191522.74,
+        "n_trades": 3324,
+        "funding_usd": -30371.0,
+        "fees_usd": 25104.0,
+        "gross_mean": 1.23,
+        "gross_max": 3.04,
+        "L_mean": 1.34,
+        "turnover_x": 1255.2,
+        "exposure_pct": 100.0
+      },
+      "robust_neighbor_pct": 62.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
+      "site_note_zh": null,
+      "gate_exception": null,
+      "supported_by_runner": false
+    },
+    {
+      "strategy_id": "combo_U1_D4N200_plus_V1_SSCALP_eqrisk_tv75_cap5",
+      "code": "Y1",
+      "family": "combo_u1_v1_equal_risk_perp",
+      "symbol": "MULTI",
+      "timeframe": "1d（1h 成交）",
+      "status": "PAPER（Robin 核可模擬，積極版 tv75）",
+      "params": {
+        "kind": "combo_equal_risk_voltarget",
+        "legs": [
+          "U1_1x",
+          "V1_1x"
+        ],
+        "risk_weight": "inverse_vol_60d_of_shadow_1x_books",
+        "vol_window": 60,
+        "vol_min_obs": 20,
+        "vol_floor": 0.05,
+        "combo_vol_target": 0.75,
+        "combo_vol_window": 60,
+        "lev_max": 5.0,
+        "per_position_cap": 3.0,
+        "gross_cap": 5.0,
+        "band": 0.25,
+        "margin": "cross",
+        "stop": null,
+        "U1": {
+          "N": 200,
+          "asset_vol_target": 0.6,
+          "asset_vol_window": 20,
+          "sleeve_weight": 0.5,
+          "signal": "spot_close > SMA200"
+        },
+        "V1": {
+          "atr_len": 14,
+          "atr_smoothing": "WMA",
+          "atr_mult": 1.0,
+          "rsi_fast": 25,
+          "rsi_slow": 100,
+          "bar": "1d UTC perp",
+          "direction": "long_short_reverse",
+          "universe": "PIT perp qv>=$50M on >45 of trailing 90 days",
+          "weight": "1/N_eligible"
+        }
+      },
+      "kind": "combo_u1_v1_equal_risk_perp",
+      "initial": 10000.0,
+      "final": 191899.09,
+      "ret_3y": 1819.0,
+      "total_return_3y": 1819.0,
+      "cagr_3y": 167.67,
+      "ret_1y": 25.2,
+      "bh_ret_3y": 202.9,
+      "maxdd": -57.74,
+      "oos_pass": "5/6",
+      "n_trades": 5401,
+      "gate_pass": true,
+      "gate_pass_3y": true,
+      "gate_pass_both": true,
+      "gate_fail_reasons": [],
+      "score": 0.0,
+      "full_period": {
+        "start": "2020-06-24",
+        "end": "2026-10-11",
+        "ret": 19513.0,
+        "cagr": 131.24,
+        "maxdd": -57.74,
+        "sharpe": 1.46,
+        "bh_ret": 761.1,
+        "oos_pass": "6/6",
+        "cagr_h1": 102.41,
+        "cagr_h2": 167.67,
+        "split": "2023-10-11",
+        "final": 1961298.47,
+        "n_fills": 10217,
+        "funding_usd": -300595.0,
+        "fees_usd": 245237.0,
+        "gross_mean": 1.53,
+        "gross_max_hourly": 5.45,
+        "L_mean": 3.22,
+        "L_cap_binding_days": 628,
+        "maxdd_hourly_close": -58.56
+      },
+      "robust_neighbor_pct": 50.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
+      "site_note_zh": null,
+      "gate_exception": null,
+      "supported_by_runner": false
     }
   ]
 }

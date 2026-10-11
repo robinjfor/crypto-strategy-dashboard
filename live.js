@@ -638,6 +638,72 @@
       frows + "</tbody></table></div></div></section>";
   }
 
+  // Y1 / X1 模擬倉 (paper only): cloud /status.paper.Y1 / .X1 — internal simulation, never orders, not in the books, not approvable.
+  function renderPaperY1() {
+    var P = cloud && cloud.paper;
+    if (!P || (!P.Y1 && !P.X1)) return "";
+    function tpt(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }) + " TPT"; } catch (e) { return String(iso); }
+    }
+    function n(v, d) { return (v == null || !isFinite(Number(v))) ? "—" : Number(v).toLocaleString("en-US", { maximumFractionDigits: d == null ? 2 : d, minimumFractionDigits: d == null ? 2 : d }); }
+    function pct(v) { return (v == null || !isFinite(Number(v))) ? "—" : (Number(v) >= 0 ? "+" : "") + Number(v).toFixed(2) + "%"; }
+    function fillsTable(list) {
+      var f = (list || []).slice(-8).reverse();
+      var rows = f.length ? f.map(function (x) {
+        return "<tr><td>" + esc(tpt(x.fill_time_utc)) + "</td><td>" + esc(x.symbol) + "</td><td>" + esc(x.side) + "</td><td>" + esc(x.reason) +
+          '</td><td class="num">' + n(x.qty_delta, 4) + '</td><td class="num">' + n(x.price, 6) + '</td><td class="num">' + n(x.target_weight, 4) + "</td></tr>";
+      }).join("") : '<tr><td colspan="7" class="empty-row">模擬期間尚無調倉</td></tr>';
+      return '<div class="table-scroll"><table class="data"><thead><tr><th>模擬成交</th><th>標的</th><th>方向</th><th>原因</th><th class="num">數量</th><th class="num">價格(1h 開盤)</th><th class="num">目標權重</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    }
+    function topPos(p) {
+      var ps = (p.positions || []).slice(0, 6);
+      return ps.length ? ps.map(function (x) { return esc(String(x.symbol).replace(/USDT$/, "")) + " " + (x.weight >= 0 ? "+" : "") + n(x.weight, 3); }).join("　") : "—";
+    }
+    function lastRunNote(p) {
+      var r = p.last_run || {};
+      var t = r.timing || {};
+      var s = r.stopped ? "（暫停於：" + esc(r.stopped) + "，下次執行自動補跑）" : "";
+      return "最近一次執行 " + n(t.total_s, 1) + " 秒 · fapi 請求 " + esc(String((r.http || {}).requests == null ? "—" : r.http.requests)) +
+        " 次 · 最高用量 " + esc(String((r.http || {}).max_used_weight_1m == null ? "—" : r.http.max_used_weight_1m)) + "/2400 每分鐘" + s;
+    }
+    var out = "";
+    var y = P.Y1;
+    if (y) {
+      var d = y.last_decision || {};
+      out += '<section class="section" id="sec-paper-y1">' +
+        '<div class="section-head"><h2>模擬倉 Y1 · <span class="badge muted">模擬（非實盤）</span></h2>' +
+        '<span class="hint">U1＋V1（X1）等風險組合 · 組合層波動目標 75%、槓桿上限 5x · 全倉 · 無停損 · ' + esc(y.status_zh || "") + ' · 內部模擬，不下任何單（含 Demo）· 不計入 USDT/USDC 帳本 · 不可核准</span></div>' +
+        '<div class="card"><p class="hint">⚠ 脆弱性：' + (y.warnings_zh || []).map(esc).join("；") + "</p>" +
+        '<div class="table-scroll"><table class="data"><tbody>' +
+        '<tr><th>模擬權益</th><td class="num">' + n(y.equity) + ' USDT</td><th>模擬開始以來</th><td class="num">' + pct(y.return_since_paper_start_pct) + "</td></tr>" +
+        '<tr><th>持倉數（多／空）</th><td class="num">' + n(y.n_positions, 0) + "（" + n(y.n_long, 0) + "／" + n(y.n_short, 0) + '）</td><th>毛／淨曝險</th><td class="num">' + n(y.gross, 2) + "x / " + n(y.net, 2) + "x</td></tr>" +
+        '<tr><th>距強平（全部持倉同步不利）</th><td class="num">' + pct(y.liq_distance_pct == null ? null : -y.liq_distance_pct) + '</td><th>組合槓桿 L_C（' + esc(d.day || "—") + '）</th><td class="num">' + n(d.L_C, 3) + " / 上限 5</td></tr>" +
+        '<tr><th>等風險權重 a_U／a_V</th><td class="num">' + n(d.a_U, 3) + " / " + n(d.a_V, 3) + '</td><th>V1 合格幣數（多／空）</th><td class="num">' + n(d.n_eligible, 0) + "（" + n(d.n_long_V, 0) + "／" + n(d.n_short_V, 0) + "）</td></tr>" +
+        '<tr><th>σ60 U1／V1／組合</th><td class="num">' + pct(d.sigma_U == null ? null : d.sigma_U * 100) + " / " + pct(d.sigma_V == null ? null : d.sigma_V * 100) + " / " + pct(d.sigma_C == null ? null : d.sigma_C * 100) +
+        '</td><th>目標毛／淨曝險</th><td class="num">' + n(d.gross_target_C, 2) + "x / " + n(d.net_target_C, 2) + "x</td></tr>" +
+        '<tr><th>最大部位</th><td colspan="3">' + topPos(y) + "</td></tr>" +
+        '<tr><th>下次決策成交</th><td>' + esc(tpt(y.next_fill_utc)) + '</td><th>最後結算 K 線</th><td>' + esc(tpt(y.last_closed_bar_utc)) + "</td></tr>" +
+        '<tr><th>資金費／手續費（模擬）</th><td class="num">' + n(y.funding_pnl) + " / " + n(y.fees) + '</td><th>更新</th><td>' + esc(tpt(y.updated_at_utc)) + "</td></tr>" +
+        "</tbody></table></div>" + fillsTable(y.recent_fills) +
+        '<p class="hint">' + lastRunNote(y) + " · 起始點：分析師種子狀態（2026-10-10 23:00 UTC 收盤，回測自 2020-06-24 以 10,000 起算）</p></div></section>";
+    }
+    var x = P.X1;
+    if (x) {
+      var dx = x.last_decision || {};
+      out += '<section class="section" id="sec-paper-x1">' +
+        '<div class="section-head"><h2>模擬倉 X1 · <span class="badge muted">模擬（非實盤）</span></h2>' +
+        '<span class="hint">TradingView Super Scalper 日線移植（PIT 流動全市場，多空）· Y1 的 V1 腿單獨運行，帳戶 vt60、上限 3x · 全倉 · 無停損 · 不下任何單 · 不計入帳本 · 不可核准</span></div>' +
+        '<div class="card"><div class="table-scroll"><table class="data"><tbody>' +
+        '<tr><th>模擬權益</th><td class="num">' + n(x.equity) + ' USDT</td><th>模擬開始以來</th><td class="num">' + pct(x.return_since_paper_start_pct) + "</td></tr>" +
+        '<tr><th>持倉數（多／空）</th><td class="num">' + n(x.n_positions, 0) + "（" + n(x.n_long, 0) + "／" + n(x.n_short, 0) + '）</td><th>毛／淨曝險</th><td class="num">' + n(x.gross, 2) + "x / " + n(x.net, 2) + "x</td></tr>" +
+        '<tr><th>帳戶槓桿 L_V（' + esc(dx.day || "—") + '）</th><td class="num">' + n(dx.L_V, 3) + ' / 上限 3</td><th>合格幣數</th><td class="num">' + n(dx.n_eligible, 0) + "</td></tr>" +
+        '<tr><th>下次決策成交</th><td>' + esc(tpt(x.next_fill_utc)) + '</td><th>距強平</th><td class="num">' + pct(x.liq_distance_pct == null ? null : -x.liq_distance_pct) + "</td></tr>" +
+        "</tbody></table></div>" + fillsTable(x.recent_fills) + "</div></section>";
+    }
+    return out;
+  }
+
   function renderChanges() {
     var rows = changeRows().slice(0, CHANGES_N);
     var body = rows.length ? rows.map(tradeRow).join("") :
@@ -1281,7 +1347,7 @@
     main.className = "";
     pieParts = actualPieParts();
     main.innerHTML = renderHealth() + renderAccount() +
-      renderActual() + renderPlanned() + renderPaperU1() + renderStrategies() + renderTrades() + renderChanges();
+      renderActual() + renderPlanned() + renderPaperU1() + renderPaperY1() + renderStrategies() + renderTrades() + renderChanges();
     mountAllPies();
     bindControls();
     var pending = plannedList();

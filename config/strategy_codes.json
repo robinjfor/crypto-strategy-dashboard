@@ -897,6 +897,26 @@
       "created_at": "2026-10-11",
       "created_at_iso": "2026-10-11T16:45:00+08:00",
       "note": "PAPER only (Robin cleared paper trading, not live)"
+    },
+    "tradingview_popular_ports": {
+      "code": "X",
+      "rows": {
+        "tv_superscalper_atr14_rsi25v100__PIT_UNIV__1d_vt60_cap3": {
+          "code": "X1",
+          "active": true
+        }
+      },
+      "active": true
+    },
+    "combo_u1_v1_equal_risk_perp": {
+      "code": "Y",
+      "rows": {
+        "combo_U1_D4N200_plus_V1_SSCALP_eqrisk_tv75_cap5": {
+          "code": "Y1",
+          "active": true
+        }
+      },
+      "active": true
     }
   }
 }

@@ -650,6 +650,22 @@ def _run_paper_u1() -> tuple[dict | None, dict | None]:
         return {"ok": False, "error": str(e)[:300]}, None
 
 
+def _run_paper_y1() -> dict | None:
+    """Y1 / X1 paper (模擬倉) step — internal simulation in its own GCS object (trader/paper/y1_state.json).
+    Never places orders (public GETs only); runs after the trader state and feed are saved, and any
+    failure is logged and swallowed so it can never affect the live run."""
+    if not env_bool("PAPER_Y1_ENABLED", True):
+        return None
+    try:
+        import paper_y1
+        s = paper_y1.run_paper()
+        return {k: s.get(k) for k in ("ok", "bars_closed", "open_phase", "stopped", "error", "seeded", "fills",
+                                      "bootstrapped", "bootstrap_pending", "timing", "http", "decisions")}
+    except Exception as e:  # noqa: BLE001
+        log.exception("paper_y1_fail err=%s", e)
+        return {"ok": False, "error": str(e)[:300]}
+
+
 def _u1_fetch_1h(symbol: str, now):
     from perp_market import fetch_perp_klines
     return fetch_perp_klines(symbol, "1h", limit=48)
@@ -940,11 +956,14 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     except Exception as e:  # noqa: BLE001
         log.warning("expectation_log_save_skip err=%s", e)
 
+    # Y1 / X1 paper (own GCS object) — last, after the trader state + feed are saved; isolated
+    paper_y1_summary = _run_paper_y1()
+
     log.info("run_done signals=%s live=%s paused=%s feed=%s", len(applied), live, paused, url)
     print(
         json.dumps(
             {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url, "paper_u1": paper,
-             "u1_live": state["meta"].get("u1_live_last")},
+             "u1_live": state["meta"].get("u1_live_last"), "paper_y1": paper_y1_summary},
             indent=2,
             ensure_ascii=False,
         )
