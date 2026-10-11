@@ -101,3 +101,19 @@ USDT / USDC 各上限 **5000**。Emily 決策（2026-10-01）：
 - 合約路徑仍是 Demo **USD-M（USDT 保證金）** only；驗證會拒絕 `quote_currency=USDC` 的 futures 家族（避免假扣 USDC）。
 
 若日後要測現貨 `*USDC`，欄位為：`quote_currency: "USDC"`、`symbol: "XXXUSDC"`、`notional_usdc`（計入 `book_usdc`）。現階段請不要加。
+
+## U1 — `btc_eth_trend_voltarget_perp` (Robin 破例上架 2026-10-11; cross margin, no stops)
+
+Orders need BOTH Robin's family approval AND an enabled slot like this (the analyst adds it):
+
+```json
+{"slot": "u1_btc_eth", "family": "btc_eth_trend_voltarget_perp",
+ "strategy_id": "d4_trend_N200_tv60_cap3__BTC_ETH__1d", "symbol": "BTCUSDT", "timeframe": "1d",
+ "notional_usdt": 1000, "enabled": true,
+ "params": {"symbols": ["BTCUSDT", "ETHUSDT"]}}
+```
+
+- `notional_usdt` = U1 sleeve capital (counts toward book_usdt). Gross notional ≤ 3 × it, per coin ≤ 1.5 × it
+  (`params.max_gross_notional_usdt` may only lower the gross cap). The slot reserves BOTH BTCUSDT and ETHUSDT.
+- No stop/trail params (spec has none). BTCUSDT/ETHUSDT are set to CROSSED, exchange leverage 3.
+- Decisions = the paper engine's (00:00 UTC, 25% band); see service/u1_live.py for the margin/liquidation guards.

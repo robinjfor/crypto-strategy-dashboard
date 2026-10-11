@@ -116,6 +116,26 @@ class FuturesDemoClient:
         data = self._public("/fapi/v1/ticker/price", {"symbol": symbol})
         return float(data["price"])
 
+    def get_order(self, symbol: str, client_order_id: str) -> dict | None:
+        """GET /fapi/v1/order by origClientOrderId; None when the exchange has no such order (-2013)."""
+        try:
+            return self._signed("GET", "/fapi/v1/order", {"symbol": symbol, "origClientOrderId": client_order_id})
+        except RuntimeError as e:
+            if "-2013" in str(e) or "Order does not exist" in str(e):
+                return None
+            raise
+
+    def income(self, symbol: str, income_type: str, start_ms: int, end_ms: int | None = None) -> list:
+        params = {"symbol": symbol, "incomeType": income_type, "startTime": int(start_ms), "limit": 1000}
+        if end_ms:
+            params["endTime"] = int(end_ms)
+        return self._signed("GET", "/fapi/v1/income", params) or []
+
+    def position_mode_dual(self) -> bool:
+        """True when the account is in hedge (dual-side) mode."""
+        r = self._signed("GET", "/fapi/v1/positionSide/dual") or {}
+        return bool(r.get("dualSidePosition"))
+
     def cancel_all(self, symbol: str) -> dict:
         return self._signed("DELETE", "/fapi/v1/allOpenOrders", {"symbol": symbol})
 

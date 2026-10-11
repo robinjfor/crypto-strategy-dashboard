@@ -25,6 +25,9 @@ RUNNER_FAMILIES = frozenset({
     # S short-trend perp (資金控管 passed ba9cac1, 2026-10-09). Orders need Emily's approval AND an
     # enabled allocation slot added by the analyst.
     "short_trend_perp",
+    # U1 BTC/ETH trend vol-target perp (Robin: 待審核 by exception, 2026-10-11). Own order path
+    # (u1_live, cross margin); orders need Robin's approval AND an enabled allocation slot.
+    "btc_eth_trend_voltarget_perp",
 })
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
@@ -34,13 +37,17 @@ FUTURES_FAMILIES = frozenset({
     "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp",
     "short_trend_perp",
+    "btc_eth_trend_voltarget_perp",
 })
 # Families whose runner code exists but that must not enter the allocation yet (none now; S was
 # here until 資金控管 passed it on 2026-10-09).
 PENDING_REVIEW_FAMILIES: frozenset = frozenset()
 # Timeframes per family: existing families keep 1h/4h/1d; S adds the perp 2h/6h/12h bars.
 BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
-FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"})}
+FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"}),
+                     "btc_eth_trend_voltarget_perp": frozenset({"1d"})}
+U1_STRATEGY_ID = "d4_trend_N200_tv60_cap3__BTC_ETH__1d"
+U1_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
     "donchian": "donchian_atr",
@@ -54,6 +61,7 @@ FAMILY_ALIASES = {
     "ls_donch_btc_regime_perp": "ls_donch_btc_regime_perp",
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
     "short_trend_perp": "short_trend_perp",
+    "btc_eth_trend_voltarget_perp": "btc_eth_trend_voltarget_perp",
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
@@ -185,6 +193,8 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
 
     elif family == "short_trend_perp":
         _validate_short_trend(p, errors, idx)
+    elif family == "btc_eth_trend_voltarget_perp":
+        _validate_u1(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -221,6 +231,20 @@ def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
     lev = float(p.get("leverage") or 1.0)
     if abs(lev - leverage_cap()) > 1e-9:
         errors.append(f"slots[{idx}].params.leverage={lev}：short_trend_perp 鎖定 1 倍")
+
+
+def _validate_u1(p: dict, errors: list[str], idx: int) -> None:
+    """U1 slot params: symbols must be exactly BTCUSDT+ETHUSDT; optional max_gross_notional_usdt may
+    only LOWER the 3 × notional_usdt cap. Leverage is the strategy's own (w1x·L, cap 3); no stop params."""
+    syms = p.get("symbols") or list(U1_SYMBOLS)
+    if sorted(str(x).upper() for x in syms) != sorted(U1_SYMBOLS):
+        errors.append(f"slots[{idx}].params.symbols 必須是 BTCUSDT + ETHUSDT（btc_eth_trend_voltarget_perp）")
+    lim = p.get("max_gross_notional_usdt")
+    if lim is not None and (not isinstance(lim, (int, float)) or lim <= 0):
+        errors.append(f"slots[{idx}].params.max_gross_notional_usdt 必須 > 0")
+    for k in ("stop_atr_mult", "trail_atr_mult", "stop_m", "trail_m"):
+        if p.get(k) is not None:
+            errors.append(f"slots[{idx}].params.{k}：U1 規格無停損/停利")
 
 
 def fetch_quote_symbols(quote: str = "USDT") -> set[str] | None:
@@ -364,6 +388,15 @@ def validate_allocation(
                 if pool is not None and sym not in pool:
                     errors.append(f"Binance 現貨找不到或未交易：{sym}")
 
+        if family == "btc_eth_trend_voltarget_perp":
+            if sid and sid != U1_STRATEGY_ID:
+                errors.append(f"slots[{i}].strategy_id 必須是 {U1_STRATEGY_ID}")
+            if symbol and str(symbol).upper() != "BTCUSDT":
+                errors.append(f"slots[{i}].symbol 必須是 BTCUSDT（U1 同時交易 BTCUSDT+ETHUSDT 永續）")
+            if is_en:
+                if "ETHUSDT" in seen_sym_enabled:
+                    errors.append("重複 symbol（enabled）：ETHUSDT")
+                seen_sym_enabled.add("ETHUSDT")
         if tf is not None and str(tf).lower() not in FAMILY_TIMEFRAMES.get(normalize_family(family), BASE_TIMEFRAMES):
             errors.append(f"slots[{i}].timeframe 不支援：{tf}")
 

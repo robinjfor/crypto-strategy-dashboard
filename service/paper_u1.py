@@ -203,6 +203,11 @@ def open_phase(st: dict, ts, opens: dict, rates: dict) -> list[dict]:
                 st[log_key].append(f)
                 if b == "lev":
                     out.append(f)
+        # The executed decision, for the live order path (u1_live): same targets and the same
+        # 00:00 UTC open reference prices, so live and paper decide identically.
+        st["last_fill_decision"] = {"fill_bar": p["fill_bar"], "decision_bar": p["decision_bar"],
+                                    "indicator_day": p["indicator_day"], "L": p["L"], "w1x": dict(p["w1x"]),
+                                    "targets_lev": dict(p["targets_lev"]), "fill_opens": dict(opens)}
         st["pending"] = None
     st["open_done_bar"] = _iso(ts)
     return out
@@ -418,6 +423,7 @@ def run_paper(now: datetime | None = None, fetchers: dict | None = None, store: 
     store.save(st)
     log.info("paper_u1 ok=%s bars=%s fills=%s decisions=%s stopped=%s", summ.get("ok"), summ.get("bars_closed"),
              len(summ.get("fills") or []), len(summ.get("decisions") or []), summ.get("stopped"))
+    summ["_state"] = st   # for the live order path in the same run (never serialized by main)
     return summ
 
 

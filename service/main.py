@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from binance_client import BinanceClient
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop, spot_market_exit, net_filled_qty, fee_usdt_from_rows, finalize_closed_pnl
 from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, slot_by_id, all_known_slots, FUTURES_FAMILIES, venue_for_family, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
-from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation
+from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation, normalize_family
 from slots import ensure_approved_families
 from state_store import StateStore
 from strategy import evaluate_all, now_iso_taipei, check_position_liquidation
@@ -259,7 +259,18 @@ def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) ->
             continue
         if _base_asset(p.get("symbol") or "") == base and str(p.get("side") or "LONG").upper() != want:
             return pid
+    # U1 (btc_eth_trend_voltarget_perp) keeps its BTC/ETH longs in state["u1_live"], not in positions
+    u1 = state.get("u1_live") or {}
+    if want == "SHORT" and float((u1.get("units") or {}).get(base) or 0) > 0:
+        return "u1_live"
     return None
+
+
+def u1_perp_in_use(state: dict, symbol: str, venue: str) -> bool:
+    """True when another slot wants a futures position on a perp U1 holds (one-way mode would net them)."""
+    u1 = state.get("u1_live") or {}
+    return venue == "futures" and float((u1.get("units") or {}).get(_base_asset(symbol)) or 0) > 0 \
+        and str(symbol or "").upper().endswith("USDT")
 
 
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
@@ -288,6 +299,11 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             out["reason"] = "opposite_position_open"
             out["blocked_by"] = opp
             log.info("skip_enter slot=%s reason=opposite_position_open by=%s", slot_id, opp)
+            return out
+        if u1_perp_in_use(state, str(sig.get("symbol") or ""), slot_meta_venue(sig)):
+            out["reason"] = "u1_perp_in_use"
+            out["blocked_by"] = "u1_live"
+            log.info("skip_enter slot=%s reason=u1_perp_in_use", slot_id)
             return out
         quote = min(float(sig.get("quote_usdt") or 0), MAX_NOTIONAL_USDT)
         bar_ts = str(sig.get("bar_ts") or "")
@@ -619,19 +635,49 @@ class _SkipSol(Exception):
     pass
 
 
-def _run_paper_u1() -> dict | None:
-    """U1 paper (模擬倉) step — internal simulation in its own GCS object, after live state is saved.
-    Never places orders; failures are logged and never affect the live run."""
+def _run_paper_u1() -> tuple[dict | None, dict | None]:
+    """U1 paper (模擬倉) step — internal simulation in its own GCS object. Never places orders;
+    failures are logged and never affect the live run. Returns (summary, paper engine state)."""
     if not env_bool("PAPER_U1_ENABLED", True):
-        return None
+        return None, None
     try:
         import paper_u1
         s = paper_u1.run_paper()
-        return {k: s.get(k) for k in ("ok", "bars_closed", "open_phase", "stopped", "error", "seeded")} | {
-            "n_fills": len(s.get("fills") or []), "decisions": s.get("decisions")}
+        return ({k: s.get(k) for k in ("ok", "bars_closed", "open_phase", "stopped", "error", "seeded")} | {
+            "n_fills": len(s.get("fills") or []), "decisions": s.get("decisions")}, s.get("_state"))
     except Exception as e:  # noqa: BLE001
         log.exception("paper_u1_fail err=%s", e)
-        return {"ok": False, "error": str(e)[:300]}
+        return {"ok": False, "error": str(e)[:300]}, None
+
+
+def _u1_fetch_1h(symbol: str, now):
+    from perp_market import fetch_perp_klines
+    return fetch_perp_klines(symbol, "1h", limit=48)
+
+
+def _run_u1_live(state: dict, paper_state: dict | None, *, live: bool, allow_entries: bool,
+                 only_slots: set | None = None) -> dict:
+    """U1 live orders (u1_live). Sends nothing unless the family is approved AND the allocation has an
+    enabled U1 slot. Executes the paper engine's decision. Errors never break the rest of the run."""
+    try:
+        import u1_live
+        doc, _src = resolve_allocation()
+        if validate_allocation(doc, check_binance=False):
+            doc = state.get("allocation_last_good") or {"slots": []}
+        slot = u1_live.u1_slot(doc)
+        if only_slots and not (slot and slot.get("slot") in only_slots):
+            return {"active": False, "reason": "only_slots_run"}
+        from futures_client import FuturesDemoClient
+        return u1_live.run_u1_live(state, paper_state, datetime.now(timezone.utc), alloc_doc=doc,
+                                   approved_families=ensure_approved_families(state), live=live,
+                                   allow_increase=allow_entries, fc_factory=FuturesDemoClient,
+                                   fetch_1h=_u1_fetch_1h)
+    except Exception as e:  # noqa: BLE001
+        log.exception("u1_live_fail err=%s", e)
+        err = {"at": datetime.now(timezone.utc).isoformat(), "error": str(e)[:300]}
+        if isinstance(state.get("u1_live"), dict):
+            state["u1_live"]["errors"] = (state["u1_live"].get("errors", []) + [err])[-20:]
+        return {"active": None, "ok": False, **err}
 
 
 def cmd_run(client: BinanceClient, dry_run: bool) -> int:
@@ -678,7 +724,9 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     # Evaluate allocation-enabled slots (approved → live; others signal-only via apply gate)
     try:
         doc, _src = resolve_allocation()
-        eval_slots = [slot_to_runtime(s) for s in (doc.get("slots") or []) if s.get("enabled")]
+        # U1 (btc_eth_trend_voltarget_perp) has its own order path (_run_u1_live), never the per-slot one
+        eval_slots = [slot_to_runtime(s) for s in (doc.get("slots") or [])
+                      if s.get("enabled") and normalize_family(s.get("family")) != "btc_eth_trend_voltarget_perp"]
         if only_slots:
             eval_slots = [s for s in eval_slots if s.get("id") in only_slots]
             log.info("ONLY_SLOTS=%s → evaluating %s", sorted(only_slots), [s.get("id") for s in eval_slots])
@@ -858,6 +906,11 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
         log.exception("sol_core_fail err=%s", e)
         applied.append({"slot": "core_sol", "symbol": "SOLUSDT", "error": str(e)})
 
+    # U1: paper step (own GCS object), then the live order path executing the same decision
+    paper, paper_state = _run_paper_u1()
+    state.setdefault("meta", {})["u1_live_last"] = _run_u1_live(
+        state, paper_state, live=live, allow_entries=allow_entries, only_slots=only_slots or None)
+
     state.setdefault("meta", {})["last_run_at"] = now_iso_taipei()
     state["meta"]["last_run_at_utc"] = datetime.now(timezone.utc).isoformat()
     state["meta"]["last_run_runner_version"] = os.environ.get("RUNNER_VERSION") or "unknown"
@@ -887,11 +940,11 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     except Exception as e:  # noqa: BLE001
         log.warning("expectation_log_save_skip err=%s", e)
 
-    paper = _run_paper_u1()
     log.info("run_done signals=%s live=%s paused=%s feed=%s", len(applied), live, paused, url)
     print(
         json.dumps(
-            {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url, "paper_u1": paper},
+            {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url, "paper_u1": paper,
+             "u1_live": state["meta"].get("u1_live_last")},
             indent=2,
             ensure_ascii=False,
         )

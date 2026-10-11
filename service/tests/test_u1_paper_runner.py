@@ -218,12 +218,15 @@ def test_live_run_makes_only_public_gets(monkeypatch, tmp_path, fx):
     assert {u.split("/")[2] for u in seen} <= {"fapi.binance.com", "data-api.binance.vision"}
 
 
-def test_u1_not_approvable_and_not_in_allocation():
+def test_u1_approvable_by_exception_but_not_in_allocation():
+    # Robin 2026-10-11: U1 in 待審核 by exception (approvable); the allocation still has no U1 slot,
+    # so approval alone trades nothing (see test_u1_live_parity.py).
     from slots import SUPPORTED_FAMILIES, approve_family
     from allocation import RUNNER_FAMILIES
-    assert P.FAMILY not in SUPPORTED_FAMILIES and P.FAMILY not in RUNNER_FAMILIES
-    with pytest.raises(ValueError):
-        approve_family({}, P.FAMILY, at="2026-10-11T16:00:00+08:00")
+    assert P.FAMILY in SUPPORTED_FAMILIES and P.FAMILY in RUNNER_FAMILIES
+    st = {}
+    approve_family(st, P.FAMILY, at="2026-10-11T16:00:00+08:00")
+    assert P.FAMILY in st["approved_families"]
     alloc = json.loads((Path(__file__).resolve().parents[2] / "config" / "allocation.json").read_text())
     assert not any(s.get("family") == P.FAMILY or "BTC_ETH" in str(s.get("strategy_id")) for s in alloc["slots"])
 
@@ -231,10 +234,10 @@ def test_u1_not_approvable_and_not_in_allocation():
 def test_main_paper_failure_never_breaks_live(monkeypatch):
     import main
     monkeypatch.setattr(P, "run_paper", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
-    out = main._run_paper_u1()
-    assert out == {"ok": False, "error": "boom"}
+    out, st = main._run_paper_u1()
+    assert out == {"ok": False, "error": "boom"} and st is None
     monkeypatch.setenv("PAPER_U1_ENABLED", "false")
-    assert main._run_paper_u1() is None
+    assert main._run_paper_u1() == (None, None)
 
 
 def test_api_paper_endpoint_read_only(monkeypatch, tmp_path):

@@ -676,6 +676,8 @@ def evaluate_all(client, state: dict) -> list[dict]:
         except Exception:  # noqa: BLE001
             slots = []
     slots = slots or SLOTS
+    # U1 has its own order path (u1_live via main._run_u1_live); never evaluate it per slot here
+    slots = [s for s in slots if s.get("family") != "btc_eth_trend_voltarget_perp"]
     need_btc = any(
         s.get("btc_regime")
         or s.get("family") in (

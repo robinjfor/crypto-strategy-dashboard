@@ -1058,6 +1058,8 @@ def build_status() -> dict:
         "approved_families": ensure_approved_families(state),
         "allocation": (state.get("allocation_public") or _allocation_public(state)),
         "allocation_alert": state.get("allocation_alert"),
+        # U1 live sleeve (null until Robin approves AND the analyst enables a U1 slot); last gate result
+        "u1_live": _u1_live_public(state),
         "live_slots": [add_code(x, x.get("strategy_id"), x.get("family")) for x in live_allocation if isinstance(x, dict)],
         "satellite_strategies": [],
         "strategies": [],
@@ -1076,6 +1078,15 @@ def status():
     except Exception as e:  # noqa: BLE001
         log.exception("status_fail")
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _u1_live_public(state: dict) -> dict:
+    try:
+        import u1_live
+        return {"sleeve": u1_live.public_view(state.get("u1_live")),
+                "last_run": (state.get("meta") or {}).get("u1_live_last")}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)[:200]}
 
 
 def _paper_public() -> dict:
