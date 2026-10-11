@@ -662,6 +662,37 @@
     return sortDesc(settlements || []);
   }
 
+  // U1 模擬倉 (paper only): internal simulation from cloud /status.paper.U1 — never orders, not in the books.
+  function renderPaperU1() {
+    var p = cloud && cloud.paper && cloud.paper.U1;
+    if (!p) return "";
+    function tpt(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }) + " TPT"; } catch (e) { return String(iso); }
+    }
+    function n(v, d) { return (v == null || !isFinite(Number(v))) ? "—" : Number(v).toLocaleString("en-US", { maximumFractionDigits: d == null ? 2 : d, minimumFractionDigits: d == null ? 2 : d }); }
+    function pct(v) { return (v == null || !isFinite(Number(v))) ? "—" : (Number(v) >= 0 ? "+" : "") + Number(v).toFixed(2) + "%"; }
+    var w = p.weights || {}, u = p.units || {}, ld = p.last_decision || {}, pend = p.pending || {};
+    var tgt = (pend.targets_lev || ld.targets_lev || {});
+    var fills = (p.paper_fills || []).slice(-5).reverse();
+    var frows = fills.length ? fills.map(function (f) {
+      return "<tr><td>" + esc(tpt(f.fill_time_utc)) + "</td><td>" + esc(f.symbol) + "</td><td>" + esc(f.side) + "</td><td>" + esc(f.reason) +
+        '</td><td class="num">' + n(f.qty_delta, 4) + '</td><td class="num">' + n(f.price) + '</td><td class="num">' + n(f.target_weight, 3) + "</td></tr>";
+    }).join("") : '<tr><td colspan="7" class="empty-row">模擬期間尚無調倉</td></tr>';
+    return '<section class="section" id="sec-paper-u1">' +
+      '<div class="section-head"><h2>模擬倉 U1 · <span class="badge muted">模擬（非實盤）</span></h2>' +
+      '<span class="hint">BTC/ETH 200 日線趨勢＋波動目標槓桿（上限 3x）· 內部模擬，不下任何單（含 Demo）· 不計入 USDT/USDC 帳本</span></div>' +
+      '<div class="card"><div class="table-scroll"><table class="data"><tbody>' +
+      '<tr><th>模擬權益</th><td class="num">' + n(p.equity) + ' USDT</td><th>模擬開始以來</th><td class="num">' + pct(p.return_since_paper_start_pct) + "</td></tr>" +
+      '<tr><th>BTC 權重／單位</th><td class="num">' + n(w.BTC, 3) + " / " + n(u.BTC, 4) + '</td><th>ETH 權重／單位</th><td class="num">' + n(w.ETH, 3) + " / " + n(u.ETH, 4) + "</td></tr>" +
+      '<tr><th>毛曝險</th><td class="num">' + n(p.gross, 2) + 'x</td><th>帳戶槓桿 L（' + esc(ld.indicator_day || "—") + '）</th><td class="num">' + n(ld.L, 3) + "</td></tr>" +
+      '<tr><th>目標權重 BTC／ETH</th><td class="num">' + n(tgt.BTC, 3) + " / " + n(tgt.ETH, 3) + '</td><th>下次決策成交</th><td>' + esc(tpt(p.next_fill_utc)) + "</td></tr>" +
+      '<tr><th>最後結算 K 線</th><td>' + esc(tpt(p.last_closed_bar_utc)) + '</td><th>更新</th><td>' + esc(tpt(p.updated_at_utc)) + "</td></tr>" +
+      "</tbody></table></div>" +
+      '<div class="table-scroll"><table class="data"><thead><tr><th>模擬成交</th><th>標的</th><th>方向</th><th>原因</th><th class="num">數量</th><th class="num">價格(1h 開盤)</th><th class="num">目標權重</th></tr></thead><tbody>' +
+      frows + "</tbody></table></div></div></section>";
+  }
+
   function renderChanges() {
     var rows = changeRows().slice(0, CHANGES_N);
     var body = rows.length ? rows.map(tradeRow).join("") :
@@ -1325,7 +1356,7 @@
     main.className = "";
     pieParts = actualPieParts();
     main.innerHTML = renderHealth() + renderAccount() +
-      renderActual() + renderPlanned() + renderStrategies() + renderTrades() + renderChanges();
+      renderActual() + renderPlanned() + renderPaperU1() + renderStrategies() + renderTrades() + renderChanges();
     mountAllPies();
     bindControls();
     var pending = plannedList();

@@ -32,7 +32,7 @@
       "notes": [],
       "notes_rescore": []
     },
-    "generated_at": "2026-10-09 23:47:19 CST",
+    "generated_at": "2026-10-11 16:41:05 CST",
     "n_strategies": 20,
     "n_gate_pass": 9,
     "full_period_note": "full_period uses longest Binance history available per symbol; OOS is fixed-parameter 6-segment split (same definition as 3y), not re-optimizing WF. Costs 20bps one-way.",
@@ -51,7 +51,7 @@
     },
     "n_gate_pass_both": 5,
     "generated_from": "catalog.json (sync_unified_scores.sh)",
-    "generated_at_taipei": "2026-10-09T23:47:19+08:00",
+    "generated_at_taipei": "2026-10-11T16:41:05+08:00",
     "catalog_meta": {
       "period_3y": {
         "start": "2023-09-24",
@@ -88,9 +88,9 @@
         ]
       },
       "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
-      "generated_at": "2026-10-09 23:44:12 CST",
-      "n_strategies": 20,
-      "n_rows": 151,
+      "generated_at": "2026-10-11 16:29:52 CST",
+      "n_strategies": 21,
+      "n_rows": 152,
       "n_gate_pass_3y": 91,
       "n_gate_pass_both": 8,
       "notes": [
@@ -108,7 +108,8 @@
         "rd_short_range (2026-10-08 17:57:30 CST): +families short_trend_perp (S1-S7) and range_reversion_perp (G1-G6), status PENDING_EMILY; rescored (high_return method). allocation.json untouched.",
         "rd_p118v2 (2026-10-09 13:25:20 CST): G2/G5 hard ATR stops (codes kept); +S8-S16 (short new TFs), +family trend_long_scan_perp T1-T9, +family vol_target_sized_passers_perp W1-W10; PENDING_EMILY; no portfolio added (none passed walk-forward); rescored. allocation.json untouched.",
         "s_family_spec WF (2026-10-09 CST): S1-S16 walk-forward — params+coin chosen on 2023-09-24..2025-03-24 only (g1: ret_h1>B&H, DD_h1<=45, ret_h1>=39.8%; H1 neighbour>=50%; setting passes on >=2 coins; H1 liquidity), evaluated 2025-03-24..2026-09-24; pass = H2>0 + full hard gates. wf_pass/wf_first_half_cagr/wf_second_half_cagr added; wf_* refer to the WF-selected params (wf_params). Pass: S2,S3,S5,S8.",
-        "s_family_spec WF params apply (2026-10-09 23:44:12 CST): replaced S2/S3/S5/S8 params+3y metrics with walk-forward (H1-selected) params' full-window backtest; old values kept in catalog_params_before_wf; equity CSVs rewritten; rescored. allocation.json untouched."
+        "s_family_spec WF params apply (2026-10-09 23:44:12 CST): replaced S2/S3/S5/S8 params+3y metrics with walk-forward (H1-selected) params' full-window backtest; old values kept in catalog_params_before_wf; equity CSVs rewritten; rescored. allocation.json untouched.",
+        "d4_trend_spec (2026-10-11 16:29:52 CST): +family btc_eth_trend_voltarget_perp (U) row U1 = rd_regime D4_N200_tv60 (cap 3x); status PAPER（Robin 核可模擬）; gate_fail_reasons=['neighbor'] only; wf_pass true; score 0 (not a full gate passer, no rescore). allocation.json untouched."
       ],
       "inconsistencies_vs_scores_json": [
         {
@@ -7797,6 +7798,80 @@
       "score": 38.2978,
       "full_period": null,
       "robust_neighbor_pct": 50.0,
+      "maxdd_next_open": null,
+      "neighbor_pct_next_open": null,
+      "site_note_zh": null,
+      "supported_by_runner": false
+    },
+    {
+      "strategy_id": "d4_trend_N200_tv60_cap3__BTC_ETH__1d",
+      "code": "U1",
+      "family": "btc_eth_trend_voltarget_perp",
+      "symbol": "MULTI",
+      "timeframe": "1d（1h 成交）",
+      "status": "PAPER（Robin 核可模擬）",
+      "params": {
+        "kind": "trend_voltarget_portfolio",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "signal": "spot_close > SMA(N)",
+        "N": 200,
+        "asset_vol_target": 0.6,
+        "asset_vol_window": 20,
+        "sleeve_weight": 0.5,
+        "account_vol_target": 0.6,
+        "account_vol_window": 60,
+        "vol_floor": 0.05,
+        "lev_max": 3.0,
+        "rebalance": "daily 00:00 UTC open",
+        "band": 0.25,
+        "direction": "long_cash",
+        "margin": "cross",
+        "stop": null
+      },
+      "kind": "btc_eth_trend_voltarget_perp",
+      "initial": 10000.0,
+      "final": 56394.33,
+      "ret_3y": 463.9,
+      "total_return_3y": 463.9,
+      "cagr_3y": 77.97,
+      "ret_1y": 7.8,
+      "bh_ret_3y": 202.9,
+      "maxdd": -40.58,
+      "oos_pass": "5/6",
+      "n_trades": 88,
+      "gate_pass": false,
+      "gate_pass_3y": false,
+      "gate_pass_both": false,
+      "gate_fail_reasons": [
+        "neighbor"
+      ],
+      "score": 0.0,
+      "full_period": {
+        "start": "2020-06-24",
+        "end": "2026-10-11",
+        "ret": 3329.3,
+        "cagr": 75.31,
+        "maxdd": -40.58,
+        "sharpe": 1.28,
+        "bh_ret": 761.1,
+        "oos_pass": "5/6",
+        "oos_vs_cash": "4/6",
+        "cagr_h1": 72.91,
+        "cagr_h2": 77.97,
+        "split": "2023-10-11",
+        "final": 342930.67,
+        "n_fills": 186,
+        "funding_usd": -76480.0,
+        "fees_usd": 24802.0,
+        "gross_mean": 0.77,
+        "gross_max": 2.97,
+        "L_mean": 1.97,
+        "exposure_pct": 63.9
+      },
+      "robust_neighbor_pct": 0.0,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
       "site_note_zh": null,
