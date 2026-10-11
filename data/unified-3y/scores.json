@@ -7809,7 +7809,7 @@
       "family": "btc_eth_trend_voltarget_perp",
       "symbol": "MULTI",
       "timeframe": "1d（1h 成交）",
-      "status": "PAPER（Robin 核可模擬）",
+      "status": "待審核（Robin 破例上架；模擬倉運行中）",
       "params": {
         "kind": "trend_voltarget_portfolio",
         "symbols": [
@@ -7874,8 +7874,13 @@
       "robust_neighbor_pct": 0.0,
       "maxdd_next_open": null,
       "neighbor_pct_next_open": null,
-      "site_note_zh": null,
-      "supported_by_runner": false
+      "site_note_zh": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行",
+      "supported_by_runner": false,
+      "gate_exception": {
+        "by": "Robin",
+        "at": "2026-10-11",
+        "reason_zh": "鄰居門檻未過，Robin 破例上架"
+      }
     }
   ]
 }

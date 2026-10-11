@@ -2,7 +2,8 @@
   "_comment": "Applied by scripts/sync_unified_scores.sh after every catalog sync (資金控管 re-audit 2026-10-08). Site-side corrections of analyst text; remove an entry once the analyst catalog is fixed.",
   "row_status": {
     "donchian55_s2.0_t3.0_btcRegimeD__FET__4h": "已封存（J 家族 2026-10-01 封存；鄰居穩健 22.2% 未過。/approved 依 Emily 指示保留，FET 槽位未啟用）",
-    "donchian55_s2.0_t3.0__FET__4h": "未過關（次棒開盤成交後鄰居穩健 23.1% < 50%）"
+    "donchian55_s2.0_t3.0__FET__4h": "未過關（次棒開盤成交後鄰居穩健 23.1% < 50%）",
+    "d4_trend_N200_tv60_cap3__BTC_ETH__1d": "待審核（Robin 破例上架；模擬倉運行中）"
   },
   "row_notes": {
     "donchian_breakout_atr__ARB__4h": "MaxDD −45.5%（下一根開盤成交）超過門檻，Emily 指示照常上線",
@@ -10,7 +11,8 @@
     "wf_sema_ema9_21_s2.0_t5.0_fpos__ARB__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 44.0% → 後半 53.6%（WF 參數 EMA9/21、停損 2×ATR、移動停利 5×ATR、濾網 資金費率>0）· 風險：前半選幣、後半驗證",
     "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空",
     "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50）· 風險：前半選幣、後半驗證",
-    "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無）· 風險：前半選幣、後半驗證"
+    "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無）· 風險：前半選幣、後半驗證",
+    "d4_trend_N200_tv60_cap3__BTC_ETH__1d": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行"
   },
   "family_text_replace": {
     "donchian_atr": [
@@ -19,5 +21,12 @@
         "（停損後須先收破 Donchian 下軌才可再進；reset_below_hi 另要求出場後先收回上軌下方）"
       ]
     ]
+  },
+  "row_gate_exception": {
+    "d4_trend_N200_tv60_cap3__BTC_ETH__1d": {
+      "by": "Robin",
+      "at": "2026-10-11",
+      "reason_zh": "鄰居門檻未過，Robin 破例上架"
+    }
   }
 }

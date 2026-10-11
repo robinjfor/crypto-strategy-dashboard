@@ -121,6 +121,9 @@ try:
                 _r["status_catalog"] = _r.get("status"); _r["status"] = _ov["row_status"][_sid]; _n_ov += 1
             if _sid in (_ov.get("row_notes") or {}):
                 _r["site_note_zh"] = _ov["row_notes"][_sid]; _n_ov += 1
+            if _sid in (_ov.get("row_gate_exception") or {}):
+                # explicit owner exception: approvable although the gate failed (gate_pass_3y unchanged)
+                _r["gate_exception"] = _ov["row_gate_exception"][_sid]; _n_ov += 1
     _cat_p.write_text(json.dumps(_cat, ensure_ascii=False, indent=2) + "\n")
     # scores.json was a stale 9/24 export; rebuild it from the current catalog.
     _old = json.loads((dst_dir / "scores.json").read_text()) if (dst_dir / "scores.json").exists() else {}

@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true, btc_eth_trend_voltarget_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -20,6 +20,7 @@
     ls_univ_portfolio_perp: "ls_univ_portfolio_perp",
     portfolio_core_satellite_perp: null, // runner not built yet → 準備中
     portfolio_ensemble_passers_perp: null, // R1–R3: runner not built → 準備中 (not approvable)
+    btc_eth_trend_voltarget_perp: "btc_eth_trend_voltarget_perp", // U1 (Robin 破例上架 2026-10-11; own live path, cross margin)
     short_trend_perp: "short_trend_perp", // S (2026-10-09 ba9cac1, 資金控管 passed): only wf_pass rows (S2/S3/S5/S8) shown
     range_reversion_perp: null, // G1–G6 (2026-10-08): no cloud order support yet → 準備中
     trend_long_scan_perp: null, // T1–T9 (2026-10-09): perp long scan, not on runner → hidden
@@ -199,9 +200,13 @@
   // Emily 資金控管：核准門檻＝僅 3 年窗（全期僅參考）
   var bothGatesOk = gatePass3y; // legacy alias
 
+  // Owner exception (config/catalog_overrides.json row_gate_exception): the row failed the gate but the
+  // owner explicitly put it up for review (U1: 鄰居門檻未過，Robin 破例上架). It stays a gate FAIL in
+  // counts/badges, but is approvable like a passing row.
+  function gateExempt(r) { return !!(r && r.gate_exception); }
   function familyHasPass3y(gOrRows) {
     var rows = Array.isArray(gOrRows) ? gOrRows : ((gOrRows && gOrRows.rows) || []);
-    return rows.some(function (r) { return gatePass3y(r); });
+    return rows.some(function (r) { return gatePass3y(r) || gateExempt(r); });
   }
 
 
@@ -801,7 +806,7 @@
   function visibleRows(g) {
     var rows = (g && g.rows) || [];
     if (filterBothOnly) {
-      rows = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r); }); // never hide live rows
+      rows = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r) || gateExempt(r); }); // never hide live / owner-exception rows
     }
     return rows;
   }
@@ -860,6 +865,7 @@
         "<td><strong>" + esc(rowTitle) + "</strong> / " + esc(r.timeframe || "") +
         (r.data_short ? ' <span class="badge warn">data_short</span>' : "") +
         (!passBoth ? ' <span class="badge bad row-fail">未過關</span>' : "") +
+        (gateExempt(r) ? ' <span class="badge warn">Robin 破例上架</span>' : "") +
         lookaheadNote(r) +
         (rowFlag(r.strategy_id) ? " " + flagBadge(rowFlag(r.strategy_id)) + flagNote(rowFlag(r.strategy_id)) : "") +
         (!passBoth && reasons ? '<div class="fail-reason">' + esc(reasons) + "</div>" : "") + "</td>" +
@@ -938,8 +944,8 @@
     groups.forEach(function (g) {
       var rows = g.rows || [];
       // Live rows (C1/F1) stay in the family card even when they fail the gate.
-      var fail = rows.filter(function (r) { return !gatePass3y(r) && !isLiveRow(r); });
-      var pass = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r); });
+      var fail = rows.filter(function (r) { return !gatePass3y(r) && !isLiveRow(r) && !gateExempt(r); });
+      var pass = rows.filter(function (r) { return gatePass3y(r) || isLiveRow(r) || gateExempt(r); });
       var b = familyReviewBucket(g);
       if (b === "archived" || !fail.length) { out.push(g); return; }
       if (pass.length) out.push(Object.assign({}, g, { rows: pass }));

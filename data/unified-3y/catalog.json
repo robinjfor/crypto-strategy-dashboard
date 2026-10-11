@@ -16700,7 +16700,7 @@
             "stop": null
           },
           "params_source": "rd_newdir PREREG D4 (pre-registered N∈{50,100★,200}); rd_regime re-eval tv60",
-          "status": "PAPER（Robin 核可模擬）",
+          "status": "待審核（Robin 破例上架；模擬倉運行中）",
           "review": "APPROVED_PAPER_ROBIN",
           "approval_status": "robin_approved_paper",
           "initial": 10000.0,
@@ -16905,7 +16905,14 @@
             "decided_at": "daily close, fill next 1h open",
             "lev_max_note": "tested cap 3x (not 5x)"
           },
-          "score": 0.0
+          "score": 0.0,
+          "status_catalog": "PAPER（Robin 核可模擬）",
+          "site_note_zh": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行",
+          "gate_exception": {
+            "by": "Robin",
+            "at": "2026-10-11",
+            "reason_zh": "鄰居門檻未過，Robin 破例上架"
+          }
         }
       ],
       "n_gate_pass_3y": 0
