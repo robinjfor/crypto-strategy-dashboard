@@ -619,6 +619,21 @@ class _SkipSol(Exception):
     pass
 
 
+def _run_paper_u1() -> dict | None:
+    """U1 paper (模擬倉) step — internal simulation in its own GCS object, after live state is saved.
+    Never places orders; failures are logged and never affect the live run."""
+    if not env_bool("PAPER_U1_ENABLED", True):
+        return None
+    try:
+        import paper_u1
+        s = paper_u1.run_paper()
+        return {k: s.get(k) for k in ("ok", "bars_closed", "open_phase", "stopped", "error", "seeded")} | {
+            "n_fills": len(s.get("fills") or []), "decisions": s.get("decisions")}
+    except Exception as e:  # noqa: BLE001
+        log.exception("paper_u1_fail err=%s", e)
+        return {"ok": False, "error": str(e)[:300]}
+
+
 def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     enabled = env_bool("TRADER_ENABLED", True)
     mode = "dry-run" if dry_run else trader_mode()
@@ -872,10 +887,11 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     except Exception as e:  # noqa: BLE001
         log.warning("expectation_log_save_skip err=%s", e)
 
+    paper = _run_paper_u1()
     log.info("run_done signals=%s live=%s paused=%s feed=%s", len(applied), live, paused, url)
     print(
         json.dumps(
-            {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url},
+            {"ok": True, "live": live, "paused": paused, "signals": applied, "feed": url, "paper_u1": paper},
             indent=2,
             ensure_ascii=False,
         )

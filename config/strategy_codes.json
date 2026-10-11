@@ -884,6 +884,19 @@
       "created_at": "2026-10-09",
       "created_at_iso": "2026-10-09T13:25:20+08:00",
       "_note": "codes taken from analyst catalog (rd_p118v2)"
+    },
+    "btc_eth_trend_voltarget_perp": {
+      "code": "U",
+      "rows": {
+        "d4_trend_N200_tv60_cap3__BTC_ETH__1d": {
+          "code": "U1",
+          "active": true
+        }
+      },
+      "active": true,
+      "created_at": "2026-10-11",
+      "created_at_iso": "2026-10-11T16:45:00+08:00",
+      "note": "PAPER only (Robin cleared paper trading, not live)"
     }
   }
 }

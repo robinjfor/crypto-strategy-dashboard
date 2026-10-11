@@ -1,0 +1,1728 @@
+{
+ "source": "full replay of d4_trend_spec bars.csv.gz (2020-06-24..2026-10-10 23:00 UTC); state after 2026-10-10 23:00 close",
+ "engine": {
+  "books": {
+   "x1": {
+    "cash": 4835.349967351793,
+    "units": {
+     "BTC": 0.44678101902425654,
+     "ETH": 11.335465056349664
+    },
+    "last": {
+     "BTC": 82941.0,
+     "ETH": 2504.91
+    },
+    "funding_pnl": 0.0,
+    "fees": 0.0,
+    "n_liq": 0,
+    "dead": false
+   },
+   "lev": {
+    "cash": -282443.61752761656,
+    "units": {
+     "BTC": 4.006844948484977,
+     "ETH": 116.98726282478567
+    },
+    "last": {
+     "BTC": 82941.0,
+     "ETH": 2504.91
+    },
+    "funding_pnl": 0.0,
+    "fees": 0.0,
+    "n_liq": 0,
+    "dead": false
+   }
+  },
+  "pending": {
+   "decision_bar": "2026-10-10T23:00:00+00:00",
+   "fill_bar": "2026-10-11T00:00:00+00:00",
+   "indicator_day": "2026-10-10",
+   "w1x": {
+    "BTC": 0.5,
+    "ETH": 0.5
+   },
+   "L": 1.595962405057923,
+   "sigma60_1x": 0.3759487053695503,
+   "targets_1x": {
+    "BTC": 0.5,
+    "ETH": 0.5
+   },
+   "targets_lev": {
+    "BTC": 0.7979812025289615,
+    "ETH": 0.7979812025289615
+   },
+   "e1x_close": 70286.13424054348,
+   "ret_1x": 0.005269213237680148,
+   "equity_close": 342930.6738671098,
+   "indicators": {
+    "BTC": {
+     "spot_close": 82988.36,
+     "sma200": 71955.5061,
+     "sigma20": 0.3609104729414234,
+     "signal": 1.0
+    },
+    "ETH": {
+     "spot_close": 2506.52,
+     "sma200": 2133.08885,
+     "sigma20": 0.3755601204984638,
+     "signal": 1.0
+    }
+   }
+  },
+  "last_closed_bar": "2026-10-10T23:00:00+00:00",
+  "open_done_bar": null,
+  "open_funding_used": null,
+  "e1x_closes": [
+   [
+    "2026-08-07",
+    61932.87421334625
+   ],
+   [
+    "2026-08-08",
+    61932.87421334625
+   ],
+   [
+    "2026-08-09",
+    61932.87421334625
+   ],
+   [
+    "2026-08-10",
+    61932.87421334625
+   ],
+   [
+    "2026-08-11",
+    61932.87421334625
+   ],
+   [
+    "2026-08-12",
+    61932.87421334625
+   ],
+   [
+    "2026-08-13",
+    61932.87421334625
+   ],
+   [
+    "2026-08-14",
+    61932.87421334625
+   ],
+   [
+    "2026-08-15",
+    61932.87421334625
+   ],
+   [
+    "2026-08-16",
+    61932.87421334625
+   ],
+   [
+    "2026-08-17",
+    61932.87421334625
+   ],
+   [
+    "2026-08-18",
+    61932.87421334625
+   ],
+   [
+    "2026-08-19",
+    61932.87421334625
+   ],
+   [
+    "2026-08-20",
+    64295.460789670295
+   ],
+   [
+    "2026-08-21",
+    68804.57124415507
+   ],
+   [
+    "2026-08-22",
+    67166.7148915633
+   ],
+   [
+    "2026-08-23",
+    67898.53514232763
+   ],
+   [
+    "2026-08-24",
+    68640.10699915866
+   ],
+   [
+    "2026-08-25",
+    67978.78009726937
+   ],
+   [
+    "2026-08-26",
+    68906.81181860225
+   ],
+   [
+    "2026-08-27",
+    69485.5746535224
+   ],
+   [
+    "2026-08-28",
+    67632.8515704748
+   ],
+   [
+    "2026-08-29",
+    67961.42173747573
+   ],
+   [
+    "2026-08-30",
+    67232.62226236617
+   ],
+   [
+    "2026-08-31",
+    68206.0109837803
+   ],
+   [
+    "2026-09-01",
+    67124.07504734375
+   ],
+   [
+    "2026-09-02",
+    66768.71973099503
+   ],
+   [
+    "2026-09-03",
+    69819.2393374925
+   ],
+   [
+    "2026-09-04",
+    68498.51873235496
+   ],
+   [
+    "2026-09-05",
+    68854.7394031055
+   ],
+   [
+    "2026-09-06",
+    69460.84421698832
+   ],
+   [
+    "2026-09-07",
+    68629.29157423199
+   ],
+   [
+    "2026-09-08",
+    68271.31690443074
+   ],
+   [
+    "2026-09-09",
+    67996.23996757789
+   ],
+   [
+    "2026-09-10",
+    66880.16895884945
+   ],
+   [
+    "2026-09-11",
+    68054.31146903936
+   ],
+   [
+    "2026-09-12",
+    68175.65255711281
+   ],
+   [
+    "2026-09-13",
+    67414.04675643882
+   ],
+   [
+    "2026-09-14",
+    68440.84128734288
+   ],
+   [
+    "2026-09-15",
+    65972.8106963753
+   ],
+   [
+    "2026-09-16",
+    66456.68365713277
+   ],
+   [
+    "2026-09-17",
+    66867.45266820148
+   ],
+   [
+    "2026-09-18",
+    70722.14979928992
+   ],
+   [
+    "2026-09-19",
+    71098.62343013198
+   ],
+   [
+    "2026-09-20",
+    71184.3577821638
+   ],
+   [
+    "2026-09-21",
+    75079.96293540357
+   ],
+   [
+    "2026-09-22",
+    74630.71681629434
+   ],
+   [
+    "2026-09-23",
+    73032.95606617049
+   ],
+   [
+    "2026-09-24",
+    73068.79795022764
+   ],
+   [
+    "2026-09-25",
+    72968.17181343462
+   ],
+   [
+    "2026-09-26",
+    73165.55221804742
+   ],
+   [
+    "2026-09-27",
+    73083.32765767485
+   ],
+   [
+    "2026-09-28",
+    72647.21121044228
+   ],
+   [
+    "2026-09-29",
+    72589.0171658913
+   ],
+   [
+    "2026-09-30",
+    72645.50499251002
+   ],
+   [
+    "2026-10-01",
+    73431.08066008448
+   ],
+   [
+    "2026-10-02",
+    72834.19008623497
+   ],
+   [
+    "2026-10-03",
+    73145.05920156333
+   ],
+   [
+    "2026-10-04",
+    74380.06548290182
+   ],
+   [
+    "2026-10-05",
+    73835.65944409191
+   ],
+   [
+    "2026-10-06",
+    73603.61893531567
+   ],
+   [
+    "2026-10-07",
+    71214.49822687416
+   ],
+   [
+    "2026-10-08",
+    69395.31313585716
+   ],
+   [
+    "2026-10-09",
+    69917.7228497551
+   ],
+   [
+    "2026-10-10",
+    70286.13424054348
+   ]
+  ],
+  "e1x_prev": 70286.13424054348,
+  "returns_1x": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0381475364470476,
+   0.0701310854468471,
+   -0.023804470007956158,
+   0.010895579037113912,
+   0.010921765179124465,
+   -0.009634700917604877,
+   0.013651785454298793,
+   0.008399210755008601,
+   -0.026663420318330577,
+   0.0048581445166266946,
+   -0.010723723201742197,
+   0.014477922899029716,
+   -0.01586276518493135,
+   -0.005294006898390546,
+   0.04568785531290298,
+   -0.018916284646892767,
+   0.0052004142183337265,
+   0.00880265932508184,
+   -0.011971530898165383,
+   -0.005216062436169122,
+   -0.004029172855094076,
+   -0.016413716541688328,
+   0.017555914233894132,
+   0.0017830036841774977,
+   -0.011171228614731188,
+   0.015231165911368194,
+   -0.036060786871478845,
+   0.007334429981835866,
+   0.00618100375257935,
+   0.05764683679839844,
+   0.005323277529182713,
+   0.0012058510825609936,
+   0.0547255784081242,
+   -0.005983568738516132,
+   -0.02140888923868689,
+   0.0004907631566313242,
+   -0.0013771423591991683,
+   0.0027050205549545847,
+   -0.0011238152092056808,
+   -0.005967386286450327,
+   -0.0008010499450888942,
+   0.0007781869602894176,
+   0.010813823479587148,
+   -0.00812858218187662,
+   0.004268175632354598,
+   0.016884343178056982,
+   -0.007319246565264836,
+   -0.003142661832010174,
+   -0.03245928315754576,
+   -0.025545150725087895,
+   0.007528025889518064,
+   0.005269213237680148
+  ],
+  "fills": [
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 1.4713116940821973,
+    "price": 2506.87,
+    "qty_delta": -107.21042573227967,
+    "units_after": 0.0,
+    "notional": 268762.59995547996,
+    "fee": 537.5251999109599,
+    "equity_before": 182668.70373998745,
+    "fill_time_utc": "2025-07-05T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-07-04T23:00:00+00:00",
+    "indicator_day_utc": "2025-07-04",
+    "w1x": 0.0,
+    "leverage": 2.8088095641939104,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 1.3830623867288308,
+    "weight_before": 0.0,
+    "price": 2515.25,
+    "qty_delta": 100.4153035315644,
+    "units_after": 100.4153035315644,
+    "notional": 252569.59220776736,
+    "fee": 505.1391844155347,
+    "equity_before": 182616.19622606892,
+    "fill_time_utc": "2025-07-06T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-07-05T23:00:00+00:00",
+    "indicator_day_utc": "2025-07-05",
+    "w1x": 0.48910215230156323,
+    "leverage": 2.827757719365101,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.931314857412739,
+    "weight_before": 1.2180629288297031,
+    "price": 3486.41,
+    "qty_delta": -23.6390862466276,
+    "units_after": 76.7762172849368,
+    "notional": 82415.54668110493,
+    "fee": 164.83109336220986,
+    "equity_before": 287414.4759678728,
+    "fill_time_utc": "2025-08-02T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-01T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-01",
+    "w1x": 0.5,
+    "leverage": 1.862629714825478,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.7237814539097824,
+    "weight_before": 0.9115361061120328,
+    "price": 4589.31,
+    "qty_delta": -15.814065813829664,
+    "units_after": 60.96215147110714,
+    "notional": 72575.65038006663,
+    "fee": 145.15130076013324,
+    "equity_before": 386545.15096588794,
+    "fill_time_utc": "2025-08-13T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-12T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-12",
+    "w1x": 0.4305080106132988,
+    "leverage": 1.6812264489078572,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.5607784777679875,
+    "weight_before": 0.7363372204087033,
+    "price": 4073.93,
+    "qty_delta": -14.53469737004474,
+    "units_after": 46.4274541010624,
+    "notional": 59213.339656746364,
+    "fee": 118.42667931349273,
+    "equity_before": 337285.0520918092,
+    "fill_time_utc": "2025-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-19",
+    "w1x": 0.37099646344744003,
+    "leverage": 1.5115466938876476,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.44574981428082155,
+    "weight_before": 0.5878260585650896,
+    "price": 4830.36,
+    "qty_delta": -11.221411868777828,
+    "units_after": 35.206042232284574,
+    "notional": 54203.45903446967,
+    "fee": 108.40691806893935,
+    "equity_before": 381509.6556607918,
+    "fill_time_utc": "2025-08-23T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-22T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-22",
+    "w1x": 0.3209405068895363,
+    "leverage": 1.3888861166229884,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "rebalance_band",
+    "target_weight": 0.7096948188556971,
+    "weight_before": 0.431643074149383,
+    "price": 4456.87,
+    "qty_delta": 22.67869462792097,
+    "units_after": 57.88473686020554,
+    "notional": 101075.99372634213,
+    "fee": 202.15198745268427,
+    "equity_before": 363515.0494491641,
+    "fill_time_utc": "2025-09-12T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-09-11T23:00:00+00:00",
+    "indicator_day_utc": "2025-09-11",
+    "w1x": 0.5,
+    "leverage": 1.4193896377113941,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.6367247104425839,
+    "weight_before": 0.8248084287028428,
+    "price": 112715.0,
+    "qty_delta": -0.5307734763012006,
+    "units_after": 1.7968412743778392,
+    "notional": 59826.13238128983,
+    "fee": 119.65226476257968,
+    "equity_before": 318082.46314285486,
+    "fill_time_utc": "2025-10-11T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-10T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-10",
+    "w1x": 0.5,
+    "leverage": 1.2734494208851679,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.4573397173994822,
+    "weight_before": 0.695164683463475,
+    "price": 3820.0,
+    "qty_delta": -19.803128534686053,
+    "units_after": 38.08160832551949,
+    "notional": 75647.95100250072,
+    "fee": 151.29590200500144,
+    "equity_before": 318082.46314285486,
+    "fill_time_utc": "2025-10-11T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-10T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-10",
+    "w1x": 0.359134575664252,
+    "leverage": 1.2734494208851679,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.6229538670857758,
+    "price": 106378.5,
+    "qty_delta": -1.7968412743778392,
+    "units_after": 0.0,
+    "notional": 191145.27950640296,
+    "fee": 382.29055901280594,
+    "equity_before": 306836.9739810665,
+    "fill_time_utc": "2025-10-18T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-17T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-17",
+    "w1x": 0.0,
+    "leverage": 1.2789342086885456,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.6593600805242238,
+    "weight_before": 0.0,
+    "price": 108586.2,
+    "qty_delta": 1.8954889934415835,
+    "units_after": 1.8954889934415835,
+    "notional": 205823.94693964647,
+    "fee": 411.64789387929295,
+    "equity_before": 312157.12479288445,
+    "fill_time_utc": "2025-10-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-19T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-19",
+    "w1x": 0.5,
+    "leverage": 1.3187201610484476,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.672761861929038,
+    "price": 107532.1,
+    "qty_delta": -1.8954889934415835,
+    "units_after": 0.0,
+    "notional": 203825.91199165973,
+    "fee": 407.65182398331945,
+    "equity_before": 302968.88620770094,
+    "fill_time_utc": "2025-10-23T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-22T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-22",
+    "w1x": 0.0,
+    "leverage": 1.4293689141598154,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.7145087643339547,
+    "weight_before": 0.0,
+    "price": 110026.0,
+    "qty_delta": 1.9774158894131135,
+    "units_after": 1.9774158894131135,
+    "notional": 217567.16064856722,
+    "fee": 435.1343212971345,
+    "equity_before": 304498.9390037466,
+    "fill_time_utc": "2025-10-24T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-23T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-23",
+    "w1x": 0.5,
+    "leverage": 1.4290175286679094,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.7177300382892525,
+    "price": 108263.6,
+    "qty_delta": -1.9774158894131135,
+    "units_after": 0.0,
+    "notional": 214082.16288506557,
+    "fee": 428.16432577013114,
+    "equity_before": 298276.72169795446,
+    "fill_time_utc": "2025-10-31T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-30T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-30",
+    "w1x": 0.0,
+    "leverage": 1.4381465731937466,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "rebalance_band",
+    "target_weight": 0.670933563397122,
+    "weight_before": 0.48551137117207577,
+    "price": 3802.8,
+    "qty_delta": 14.543789740963163,
+    "units_after": 52.62539806648265,
+    "notional": 55307.12362693472,
+    "fee": 110.61424725386945,
+    "equity_before": 298276.72169795446,
+    "fill_time_utc": "2025-10-31T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-30T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-30",
+    "w1x": 0.4665265529278802,
+    "leverage": 1.4381465731937466,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.718794952254747,
+    "weight_before": 0.0,
+    "price": 109557.2,
+    "qty_delta": 1.9683267690567878,
+    "units_after": 1.9683267690567878,
+    "notional": 215644.36950290832,
+    "fee": 431.28873900581664,
+    "equity_before": 300008.1856814183,
+    "fill_time_utc": "2025-11-01T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-31T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-31",
+    "w1x": 0.5,
+    "leverage": 1.437589904509494,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.7475714708817115,
+    "price": 106544.0,
+    "qty_delta": -1.9683267690567878,
+    "units_after": 0.0,
+    "notional": 209713.4072823864,
+    "fee": 419.4268145647728,
+    "equity_before": 280526.2312044134,
+    "fill_time_utc": "2025-11-04T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-03T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-03",
+    "w1x": 0.0,
+    "leverage": 1.3945564263886372,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.6563653617317748,
+    "price": 3285.28,
+    "qty_delta": -52.62539806648265,
+    "units_after": 0.0,
+    "notional": 172889.16775985414,
+    "fee": 345.7783355197083,
+    "equity_before": 263403.85681489646,
+    "fill_time_utc": "2025-11-05T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-04T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-04",
+    "w1x": 0.0,
+    "leverage": 1.3537176271896276,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.6028971828426489,
+    "weight_before": 0.0,
+    "price": 3423.06,
+    "qty_delta": 46.33192945470331,
+    "units_after": 46.33192945470331,
+    "notional": 158596.9744392167,
+    "fee": 317.1939488784334,
+    "equity_before": 263058.07847937674,
+    "fill_time_utc": "2025-11-06T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-05T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-05",
+    "w1x": 0.445376612394643,
+    "leverage": 1.3536794839788957,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.5958760024752272,
+    "price": 3313.7,
+    "qty_delta": -46.33192945470331,
+    "units_after": 0.0,
+    "notional": 153530.11463405035,
+    "fee": 307.0602292681007,
+    "equity_before": 257654.46837311285,
+    "fill_time_utc": "2025-11-07T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-06T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-06",
+    "w1x": 0.0,
+    "leverage": 1.3521044476963784,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5796201479370866,
+    "weight_before": 0.0,
+    "price": 3434.37,
+    "qty_delta": 43.43263619806867,
+    "units_after": 43.43263619806867,
+    "notional": 149163.7427795611,
+    "fee": 298.3274855591222,
+    "equity_before": 257347.40814384475,
+    "fill_time_utc": "2025-11-08T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-07T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-07",
+    "w1x": 0.42843564883110663,
+    "leverage": 1.3528756290902821,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.5779008078647652,
+    "price": 3400.08,
+    "qty_delta": -43.43263619806867,
+    "units_after": 0.0,
+    "notional": 147674.4376843293,
+    "fee": 295.34887536865864,
+    "equity_before": 255535.95993395234,
+    "fill_time_utc": "2025-11-09T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-08T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-08",
+    "w1x": 0.0,
+    "leverage": 1.3528497027970976,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5552326921801952,
+    "weight_before": 0.0,
+    "price": 3581.31,
+    "qty_delta": 39.57153433569714,
+    "units_after": 39.57153433569714,
+    "notional": 141717.93163177551,
+    "fee": 283.435863263551,
+    "equity_before": 255240.6110585837,
+    "fill_time_utc": "2025-11-10T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-09T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-09",
+    "w1x": 0.40907856539631376,
+    "leverage": 1.3572764235209631,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.5442508385234555,
+    "price": 3416.33,
+    "qty_delta": -39.57153433569714,
+    "units_after": 0.0,
+    "notional": 135189.4198970722,
+    "fee": 270.37883979414437,
+    "equity_before": 248395.4278579324,
+    "fill_time_utc": "2025-11-12T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-11T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-11",
+    "w1x": 0.0,
+    "leverage": 1.3851322511972592,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 1.5,
+    "weight_before": 0.0,
+    "price": 69310.1,
+    "qty_delta": 5.369889432091533,
+    "units_after": 5.369889432091533,
+    "notional": 372187.57352720737,
+    "fee": 744.3751470544147,
+    "equity_before": 248125.04901813826,
+    "fill_time_utc": "2026-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2026-08-19",
+    "w1x": 0.5,
+    "leverage": 3.0,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 1.236632143763363,
+    "weight_before": 0.0,
+    "price": 2252.17,
+    "qty_delta": 136.24167415811854,
+    "units_after": 136.24167415811854,
+    "notional": 306839.4112886898,
+    "fee": 613.6788225773796,
+    "equity_before": 248125.04901813826,
+    "fill_time_utc": "2026-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2026-08-19",
+    "w1x": 0.41221071458778763,
+    "leverage": 3.0,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.8098475270366984,
+    "weight_before": 1.0225892328072688,
+    "price": 2454.56,
+    "qty_delta": -28.344016568477954,
+    "units_after": 107.89765758964059,
+    "notional": 69572.08930832325,
+    "fee": 139.1441786166465,
+    "equity_before": 327026.09512472694,
+    "fill_time_utc": "2026-09-05T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-09-04T23:00:00+00:00",
+    "indicator_day_utc": "2026-09-04",
+    "w1x": 0.3540777634024655,
+    "leverage": 2.287202447435758,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "rebalance_band",
+    "target_weight": 1.1291690858911863,
+    "weight_before": 0.8288773186954411,
+    "price": 2483.87,
+    "qty_delta": 39.08995643030711,
+    "units_after": 146.9876140199477,
+    "notional": 97094.37007854693,
+    "fee": 194.18874015709386,
+    "equity_before": 323333.4399582656,
+    "fill_time_utc": "2026-09-09T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-09-08T23:00:00+00:00",
+    "indicator_day_utc": "2026-09-08",
+    "w1x": 0.5,
+    "leverage": 2.2583381717823725,
+    "book": "lev"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 1.028246702963405,
+    "weight_before": 1.3780346319400016,
+    "price": 75599.9,
+    "qty_delta": -1.363044483606556,
+    "units_after": 4.006844948484977,
+    "notional": 103046.02665620726,
+    "fee": 206.09205331241452,
+    "equity_before": 294595.7196341724,
+    "fill_time_utc": "2026-09-16T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-09-15T23:00:00+00:00",
+    "indicator_day_utc": "2026-09-15",
+    "w1x": 0.5,
+    "leverage": 2.05649340592681,
+    "book": "lev"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.8472855494618137,
+    "weight_before": 1.064564451734368,
+    "price": 2683.41,
+    "qty_delta": -30.000351195162025,
+    "units_after": 116.98726282478567,
+    "notional": 80503.24240060973,
+    "fee": 161.00648480121947,
+    "equity_before": 370506.4852528874,
+    "fill_time_utc": "2026-09-24T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-09-23T23:00:00+00:00",
+    "indicator_day_utc": "2026-09-23",
+    "w1x": 0.5,
+    "leverage": 1.6945710989236273,
+    "book": "lev"
+   }
+  ],
+  "fills_1x": [
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5,
+    "weight_before": 0.0,
+    "price": 86044.1,
+    "qty_delta": 0.3265382114417656,
+    "units_after": 0.3265382114417656,
+    "notional": 28096.686519116425,
+    "fee": 56.19337303823285,
+    "equity_before": 56193.37303823285,
+    "fill_time_utc": "2025-03-24T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-03-23T23:00:00+00:00",
+    "indicator_day_utc": "2025-03-23",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.49565557967524576,
+    "price": 84380.8,
+    "qty_delta": -0.3265382114417656,
+    "units_after": 0.0,
+    "notional": 27553.555512025334,
+    "fee": 55.10711102405067,
+    "equity_before": 55590.12475977465,
+    "fill_time_utc": "2025-03-29T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-03-28T23:00:00+00:00",
+    "indicator_day_utc": "2025-03-28",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.4733722130677469,
+    "weight_before": 0.0,
+    "price": 93404.9,
+    "qty_delta": 0.28144919813784347,
+    "units_after": 0.28144919813784347,
+    "notional": 26288.734207145455,
+    "fee": 52.57746841429091,
+    "equity_before": 55535.017648750596,
+    "fill_time_utc": "2025-04-23T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-04-22T23:00:00+00:00",
+    "indicator_day_utc": "2025-04-22",
+    "w1x": 0.4733722130677469,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.4818333608360818,
+    "weight_before": 0.0,
+    "price": 2679.13,
+    "qty_delta": 10.805155436130706,
+    "units_after": 10.805155436130706,
+    "notional": 28948.41608360086,
+    "fee": 57.89683216720172,
+    "equity_before": 60079.72555775153,
+    "fill_time_utc": "2025-06-10T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-06-09T23:00:00+00:00",
+    "indicator_day_utc": "2025-06-09",
+    "w1x": 0.4818333608360818,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.48973005535315567,
+    "price": 2641.38,
+    "qty_delta": -10.805155436130706,
+    "units_after": 0.0,
+    "notional": 28540.521465886926,
+    "fee": 57.08104293177385,
+    "equity_before": 58278.06799667563,
+    "fill_time_utc": "2025-06-13T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-06-12T23:00:00+00:00",
+    "indicator_day_utc": "2025-06-12",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.4913431664149242,
+    "weight_before": 0.0,
+    "price": 2569.37,
+    "qty_delta": 11.296157162804121,
+    "units_after": 11.296157162804121,
+    "notional": 29024.007329394022,
+    "fee": 58.04801465878805,
+    "equity_before": 59070.745892666266,
+    "fill_time_utc": "2025-07-03T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-07-02T23:00:00+00:00",
+    "indicator_day_utc": "2025-07-02",
+    "w1x": 0.4913431664149242,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.4878287009359425,
+    "price": 2506.87,
+    "qty_delta": -11.296157162804121,
+    "units_after": 0.0,
+    "notional": 28317.997506718766,
+    "fee": 56.63599501343754,
+    "equity_before": 58049.05995155304,
+    "fill_time_utc": "2025-07-05T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-07-04T23:00:00+00:00",
+    "indicator_day_utc": "2025-07-04",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.48910215230156323,
+    "weight_before": 0.0,
+    "price": 2515.25,
+    "qty_delta": 11.28830286999389,
+    "units_after": 11.28830286999389,
+    "notional": 28392.90379375213,
+    "fee": 56.785807587504266,
+    "equity_before": 58051.0710495628,
+    "fill_time_utc": "2025-07-06T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-07-05T23:00:00+00:00",
+    "indicator_day_utc": "2025-07-05",
+    "w1x": 0.48910215230156323,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.4690551510375907,
+    "weight_before": 0.605306571227279,
+    "price": 4259.11,
+    "qty_delta": -2.540939369697508,
+    "units_after": 8.747363500296382,
+    "notional": 10822.140278872352,
+    "fee": 21.644280557744704,
+    "equity_before": 79427.72459770211,
+    "fill_time_utc": "2025-08-10T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-09T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-09",
+    "w1x": 0.4690551510375907,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.37099646344744003,
+    "weight_before": 0.46517999806945387,
+    "price": 4073.93,
+    "qty_delta": -1.7710512414562123,
+    "units_after": 6.97631225884017,
+    "notional": 7215.138784105707,
+    "fee": 14.430277568211414,
+    "equity_before": 76607.22028603166,
+    "fill_time_utc": "2025-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-19",
+    "w1x": 0.37099646344744003,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.3209405068895363,
+    "weight_before": 0.40608922763956073,
+    "price": 4830.36,
+    "qty_delta": -1.4627919776296094,
+    "units_after": 5.51352028121056,
+    "notional": 7065.8118570629595,
+    "fee": 14.131623714125919,
+    "equity_before": 82982.0083593086,
+    "fill_time_utc": "2025-08-23T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-08-22T23:00:00+00:00",
+    "indicator_day_utc": "2025-08-22",
+    "w1x": 0.3209405068895363,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "rebalance_band",
+    "target_weight": 0.5,
+    "weight_before": 0.30592364167300456,
+    "price": 4456.87,
+    "qty_delta": 3.4977484312347613,
+    "units_after": 9.011268712445322,
+    "notional": 15589.01005071727,
+    "fee": 31.17802010143454,
+    "equity_before": 80324.10637287237,
+    "fill_time_utc": "2025-09-12T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-09-11T23:00:00+00:00",
+    "indicator_day_utc": "2025-09-11",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "rebalance_band",
+    "target_weight": 0.359134575664252,
+    "weight_before": 0.4682494565421865,
+    "price": 3820.0,
+    "qty_delta": -2.0998711229234353,
+    "units_after": 6.911397589521886,
+    "notional": 8021.507689567523,
+    "fee": 16.043015379135046,
+    "equity_before": 73514.33301330445,
+    "fill_time_utc": "2025-10-11T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-10T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-10",
+    "w1x": 0.359134575664252,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.4170625785179507,
+    "price": 106378.5,
+    "qty_delta": -0.28144919813784347,
+    "units_after": 0.0,
+    "notional": 29940.14352410658,
+    "fee": 59.88028704821316,
+    "equity_before": 71788.13220428486,
+    "fill_time_utc": "2025-10-18T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-17T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-17",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5,
+    "weight_before": 0.0,
+    "price": 108586.2,
+    "qty_delta": 0.33504802168429076,
+    "units_after": 0.33504802168429076,
+    "notional": 36381.591492214735,
+    "fee": 72.76318298442948,
+    "equity_before": 72763.18298442947,
+    "fill_time_utc": "2025-10-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-19T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-19",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.5066784141616986,
+    "price": 107532.1,
+    "qty_delta": -0.33504802168429076,
+    "units_after": 0.0,
+    "notional": 36028.41737255733,
+    "fee": 72.05683474511466,
+    "equity_before": 71107.0698209366,
+    "fill_time_utc": "2025-10-23T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-22T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-22",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5,
+    "weight_before": 0.0,
+    "price": 110026.0,
+    "qty_delta": 0.32440825483441643,
+    "units_after": 0.32440825483441643,
+    "notional": 35693.342646411504,
+    "fee": 71.386685292823,
+    "equity_before": 71386.68529282301,
+    "fill_time_utc": "2025-10-24T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-23T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-23",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.499388903812664,
+    "price": 108263.6,
+    "qty_delta": -0.32440825483441643,
+    "units_after": 0.0,
+    "notional": 35121.60553809133,
+    "fee": 70.24321107618266,
+    "equity_before": 70329.16684762086,
+    "fill_time_utc": "2025-10-31T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-30T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-30",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5,
+    "weight_before": 0.0,
+    "price": 109557.2,
+    "qty_delta": 0.322010233378844,
+    "units_after": 0.322010233378844,
+    "notional": 35278.539540332684,
+    "fee": 70.55707908066537,
+    "equity_before": 70557.07908066537,
+    "fill_time_utc": "2025-11-01T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-10-31T23:00:00+00:00",
+    "indicator_day_utc": "2025-10-31",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.5061084724151171,
+    "price": 106544.0,
+    "qty_delta": -0.322010233378844,
+    "units_after": 0.0,
+    "notional": 34308.25830511555,
+    "fee": 68.6165166102311,
+    "equity_before": 67788.35007720528,
+    "fill_time_utc": "2025-11-04T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-03T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-03",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "rebalance_band",
+    "target_weight": 0.5,
+    "weight_before": 0.36725913521633025,
+    "price": 3602.15,
+    "qty_delta": 2.4980315121542347,
+    "units_after": 9.409429101676121,
+    "notional": 8998.284211506376,
+    "fee": 17.996568423012754,
+    "equity_before": 67788.35007720528,
+    "fill_time_utc": "2025-11-04T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-03T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-03",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.47767118967126615,
+    "price": 3285.28,
+    "qty_delta": -9.409429101676121,
+    "units_after": 0.0,
+    "notional": 30912.609239154528,
+    "fee": 61.825218478309054,
+    "equity_before": 64715.2474496706,
+    "fill_time_utc": "2025-11-05T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-04T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-04",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.445376612394643,
+    "weight_before": 0.0,
+    "price": 3423.06,
+    "qty_delta": 8.412099750822048,
+    "units_after": 8.412099750822048,
+    "notional": 28795.12217304892,
+    "fee": 57.59024434609784,
+    "equity_before": 64653.422231192286,
+    "fill_time_utc": "2025-11-06T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-05T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-05",
+    "w1x": 0.445376612394643,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.4377910021539476,
+    "price": 3313.7,
+    "qty_delta": -8.412099750822048,
+    "units_after": 0.0,
+    "notional": 27875.17494429902,
+    "fee": 55.75034988859804,
+    "equity_before": 63672.33407528283,
+    "fill_time_utc": "2025-11-07T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-06T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-06",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.42843564883110663,
+    "weight_before": 0.0,
+    "price": 3434.37,
+    "qty_delta": 7.936131612146535,
+    "units_after": 7.936131612146535,
+    "notional": 27255.612324807695,
+    "fee": 54.51122464961539,
+    "equity_before": 63616.58372539423,
+    "fill_time_utc": "2025-11-08T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-07T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-07",
+    "w1x": 0.42843564883110663,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.42637639930886256,
+    "price": 3400.08,
+    "qty_delta": -7.936131612146535,
+    "units_after": 0.0,
+    "notional": 26983.48237182719,
+    "fee": 53.96696474365438,
+    "equity_before": 63285.59089003573,
+    "fill_time_utc": "2025-11-09T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-08T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-08",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.40907856539631376,
+    "weight_before": 0.0,
+    "price": 3581.31,
+    "qty_delta": 7.222692814371756,
+    "units_after": 7.222692814371756,
+    "notional": 25866.702003037713,
+    "fee": 51.733404006075425,
+    "equity_before": 63231.62392529208,
+    "fill_time_utc": "2025-11-10T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-09T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-09",
+    "w1x": 0.40907856539631376,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "SELL",
+    "reason": "exit_to_cash",
+    "target_weight": 0.0,
+    "weight_before": 0.3980996547697899,
+    "price": 3416.33,
+    "qty_delta": -7.222692814371756,
+    "units_after": 0.0,
+    "notional": 24675.10214252266,
+    "fee": 49.35020428504532,
+    "equity_before": 61982.224417631296,
+    "fill_time_utc": "2025-11-12T00:00:00+00:00",
+    "decision_bar_open_utc": "2025-11-11T23:00:00+00:00",
+    "indicator_day_utc": "2025-11-11",
+    "w1x": 0.0,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.5,
+    "weight_before": 0.0,
+    "price": 69310.1,
+    "qty_delta": 0.44678101902425654,
+    "units_after": 0.44678101902425654,
+    "notional": 30966.437106673126,
+    "fee": 61.93287421334625,
+    "equity_before": 61932.87421334625,
+    "fill_time_utc": "2026-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2026-08-19",
+    "w1x": 0.5,
+    "leverage": 1.0,
+    "book": "x1"
+   },
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "reason": "entry",
+    "target_weight": 0.41221071458778763,
+    "weight_before": 0.0,
+    "price": 2252.17,
+    "qty_delta": 11.335465056349664,
+    "units_after": 11.335465056349664,
+    "notional": 25529.394335959023,
+    "fee": 51.058788671918045,
+    "equity_before": 61932.87421334625,
+    "fill_time_utc": "2026-08-20T00:00:00+00:00",
+    "decision_bar_open_utc": "2026-08-19T23:00:00+00:00",
+    "indicator_day_utc": "2026-08-19",
+    "w1x": 0.41221071458778763,
+    "leverage": 1.0,
+    "book": "x1"
+   }
+  ],
+  "decisions": [
+   {
+    "decision_bar": "2026-10-06T23:00:00+00:00",
+    "fill_bar": "2026-10-07T00:00:00+00:00",
+    "indicator_day": "2026-10-06",
+    "w1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "L": 1.6720688075117494,
+    "sigma60_1x": 0.3588369074911912,
+    "targets_1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "targets_lev": {
+     "BTC": 0.8360344037558747,
+     "ETH": 0.8360344037558747
+    },
+    "e1x_close": 73603.61893531567,
+    "ret_1x": -0.003142661832010174,
+    "equity_close": 375611.811303541,
+    "indicators": {
+     "BTC": {
+      "spot_close": 85549.93,
+      "sma200": 71693.2068,
+      "sigma20": 0.39694239035268125,
+      "signal": 1.0
+     },
+     "ETH": {
+      "spot_close": 2697.49,
+      "sma200": 2125.10815,
+      "sigma20": 0.3806594540977716,
+      "signal": 1.0
+     }
+    }
+   },
+   {
+    "decision_bar": "2026-10-07T23:00:00+00:00",
+    "fill_bar": "2026-10-08T00:00:00+00:00",
+    "indicator_day": "2026-10-07",
+    "w1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "L": 1.6245978397744474,
+    "sigma60_1x": 0.36932217026910585,
+    "targets_1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "targets_lev": {
+     "BTC": 0.8122989198872237,
+     "ETH": 0.8122989198872237
+    },
+    "e1x_close": 71214.49822687416,
+    "ret_1x": -0.03245928315754576,
+    "equity_close": 352296.11507039954,
+    "indicators": {
+     "BTC": {
+      "spot_close": 83321.81,
+      "sma200": 71765.22524999999,
+      "sigma20": 0.42006723556145015,
+      "signal": 1.0
+     },
+     "ETH": {
+      "spot_close": 2574.14,
+      "sma200": 2127.5545,
+      "sigma20": 0.4396258098589715,
+      "signal": 1.0
+     }
+    }
+   },
+   {
+    "decision_bar": "2026-10-08T23:00:00+00:00",
+    "fill_bar": "2026-10-09T00:00:00+00:00",
+    "indicator_day": "2026-10-08",
+    "w1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "L": 1.596953514021404,
+    "sigma60_1x": 0.3757153822775321,
+    "targets_1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "targets_lev": {
+     "BTC": 0.798476757010702,
+     "ETH": 0.798476757010702
+    },
+    "e1x_close": 69395.31313585716,
+    "ret_1x": -0.025545150725087895,
+    "equity_close": 334469.04593748663,
+    "indicators": {
+     "BTC": {
+      "spot_close": 81754.45,
+      "sma200": 71834.7025,
+      "sigma20": 0.3584191034174766,
+      "signal": 1.0
+     },
+     "ETH": {
+      "spot_close": 2474.8,
+      "sma200": 2129.65905,
+      "sigma20": 0.3755408839994709,
+      "signal": 1.0
+     }
+    }
+   },
+   {
+    "decision_bar": "2026-10-09T23:00:00+00:00",
+    "fill_bar": "2026-10-10T00:00:00+00:00",
+    "indicator_day": "2026-10-09",
+    "w1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "L": 1.5961024877331813,
+    "sigma60_1x": 0.3759157100570232,
+    "targets_1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "targets_lev": {
+     "BTC": 0.7980512438665907,
+     "ETH": 0.7980512438665907
+    },
+    "e1x_close": 69917.7228497551,
+    "ret_1x": 0.007528025889518064,
+    "equity_close": 339343.7477959649,
+    "indicators": {
+     "BTC": {
+      "spot_close": 82635.55,
+      "sma200": 71893.348,
+      "sigma20": 0.3607151333930428,
+      "signal": 1.0
+     },
+     "ETH": {
+      "spot_close": 2487.7,
+      "sma200": 2131.3374,
+      "sigma20": 0.37428626479154165,
+      "signal": 1.0
+     }
+    }
+   },
+   {
+    "decision_bar": "2026-10-10T23:00:00+00:00",
+    "fill_bar": "2026-10-11T00:00:00+00:00",
+    "indicator_day": "2026-10-10",
+    "w1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "L": 1.595962405057923,
+    "sigma60_1x": 0.3759487053695503,
+    "targets_1x": {
+     "BTC": 0.5,
+     "ETH": 0.5
+    },
+    "targets_lev": {
+     "BTC": 0.7979812025289615,
+     "ETH": 0.7979812025289615
+    },
+    "e1x_close": 70286.13424054348,
+    "ret_1x": 0.005269213237680148,
+    "equity_close": 342930.6738671098,
+    "indicators": {
+     "BTC": {
+      "spot_close": 82988.36,
+      "sma200": 71955.5061,
+      "sigma20": 0.3609104729414234,
+      "signal": 1.0
+     },
+     "ETH": {
+      "spot_close": 2506.52,
+      "sma200": 2133.08885,
+      "sigma20": 0.3755601204984638,
+      "signal": 1.0
+     }
+    }
+   }
+  ],
+  "first_bar": "2020-06-24T00:00:00+00:00"
+ }
+}

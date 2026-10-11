@@ -196,6 +196,7 @@ def root():
 @app.route("/control/unarchive_family", methods=["OPTIONS"])
 @app.route("/control/restore_approval", methods=["OPTIONS"])
 @app.route("/approved", methods=["OPTIONS"])
+@app.route("/paper", methods=["OPTIONS"])
 def options_ok():
     return _cors(app.make_response(("", 204)))
 
@@ -1069,10 +1070,31 @@ def status():
     if not ok:
         return jsonify({"ok": False, "error": err}), code
     try:
-        return jsonify(build_status())
+        out = build_status()
+        out["paper"] = _paper_public()
+        return jsonify(out)
     except Exception as e:  # noqa: BLE001
         log.exception("status_fail")
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _paper_public() -> dict:
+    """Read-only U1 paper (模擬倉) view from its own GCS object — never trader state, never the books."""
+    try:
+        import paper_u1
+        v = paper_u1.public_view(paper_u1.PaperStore().load())
+        return {"U1": v} if v else {"U1": None, "note": "尚無模擬紀錄"}
+    except Exception as e:  # noqa: BLE001
+        log.warning("paper_view_fail err=%s", e)
+        return {"U1": None, "error": str(e)[:200]}
+
+
+@app.route("/paper", methods=["GET"])
+def paper_status():
+    ok, err, code = _check_auth(allow_readonly=True)
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    return jsonify({"ok": True, "label_zh": "模擬（非實盤）", "paper": _paper_public()})
 
 
 @app.route("/control/pause", methods=["POST"])

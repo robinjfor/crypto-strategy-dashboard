@@ -1,0 +1,159 @@
+{
+ "code": "U1",
+ "family_code": "U",
+ "strategy_family_id": "btc_eth_trend_voltarget_perp",
+ "strategy_id": "d4_trend_N200_tv60_cap3__BTC_ETH__1d",
+ "source": {
+  "design": "rd_newdir D4 (PREREG §1 D4 + common leverage rule §0) re-evaluated in rd_regime as D4_N200_tv60",
+  "code": [
+   "/workspace/strategy-unified-3y/rd_regime/code/designs_old.py::d4_daily_weights,d4",
+   "/workspace/strategy-unified-3y/rd_regime/code/engine.py::_sim,lev_series,lev_hourly",
+   "/workspace/strategy-unified-3y/rd_regime/code/run.py::lev_run"
+  ],
+  "fixture_builder": "/workspace/strategy-unified-3y/d4_trend_spec/code/build_fixture.py"
+ },
+ "status": "PAPER（Robin 核可模擬）",
+ "mode": "paper_only",
+ "universe": {
+  "execution": [
+   "BTCUSDT",
+   "ETHUSDT"
+  ],
+  "venue": "Binance USDT-M perpetual",
+  "signal_source": "Binance SPOT 1d klines BTCUSDT/ETHUSDT (close)"
+ },
+ "clock": {
+  "timezone": "UTC",
+  "daily_bar": "spot 1d kline of UTC date d (00:00–24:00 UTC)",
+  "decision_time": "close of perp 1h bar 23:00 UTC of day d (= 00:00 UTC d+1)",
+  "fill": "open of perp 1h bar 00:00 UTC d+1 (market, taker)",
+  "decision_frequency": "once per day; no intraday decisions"
+ },
+ "signal": {
+  "timeframe": "1d",
+  "N": 200,
+  "formula": "sig_i(d) = 1 if S_i(d) > SMA200_i(d) else 0, S=spot daily close of day d, SMA200_i(d)=mean(S_i(d-199..d)) (includes day d, needs 200 closes; else 0)",
+  "prev_close_usage": "uses day d's own just-completed close (no extra one-day lag); trades at the very next 1h open",
+  "direction": "long / cash only (no shorts)"
+ },
+ "asset_weight_1x": {
+  "formula": "w1x_i(d) = sig_i(d) * 0.5 * min(1, 0.60 / sigma20_i(d))",
+  "sigma20": "std(ln S_i(k)/S_i(k-1), k=d-19..d, ddof=1, min 15 obs) * sqrt(365); NaN -> w=0",
+  "allocation": "BTC and ETH each a 0.5 sleeve (fixed), each scaled down only (cap 1) by its own 60%-vol ratio; no cross-rebalancing; total 1x gross <= 1"
+ },
+ "account_leverage": {
+  "target_vol_ann": 0.6,
+  "cap": 3.0,
+  "cap_note": "tested cap is 3x (rd_newdir PREREG: 'Lcap=5（D4 用 3）'; rd_regime run.py ('common',0.6,3.0)). NOT 5x. Account gross limit 5x and per-position |w|<=3 are additional clips that never bind.",
+  "formula": "L(d) = min(3, 0.60 / max(sigma60_1x(d), 0.05)); L=1 while fewer than 20 daily returns",
+  "sigma60_1x": "std of last 60 daily returns (ddof=1, min 20) of the SHADOW 1x book equity (closes of 23:00 UTC perp bar), * sqrt(365); first return = E1x(2020-06-24)/10000-1",
+  "shadow_1x_book": "a separate paper book trading w1x with the identical engine (band, fees, funding) — its equity drives L. Must be persisted and continued (seed from bars.csv.gz last row: BTC_units_1x_shadow, ETH_units_1x_shadow, equity_1x_shadow).",
+  "target_weight": "w_i(d) = w1x_i(d) * L(d); clip |w_i|<=3; if sum|w|>5 scale to 5 (never binds; max per coin 1.5, max gross 3)"
+ },
+ "rebalance": {
+  "when": "only at the daily fill (00:00 UTC open)",
+  "band": 0.25,
+  "rule": "V = cash + sum(units*Open); wc = units*Open/V. Trade symbol i iff (wt==0 and units!=0) [exit_to_cash] or (wc==0 and wt!=0) [entry] or sign differs [flip, never occurs] or |wt-wc| > 0.25*|wt| [rebalance_band]. If trading: units := wt*V/Open (exactly to target).",
+  "sizing_reference_equity": "V at fill-bar open after that bar's funding"
+ },
+ "costs": {
+  "fee_bps_per_side": 20,
+  "fee_base": "|delta units| * fill price",
+  "slippage": "included in the 20bps; fill price = 1h open"
+ },
+ "funding": {
+  "source": "Binance USDT-M historical fundingRate (2026-10-01..10-10 estimated from premium index)",
+  "rule": "at the bar whose OPEN is a settlement time (BTC/ETH 00/08/16 UTC): cash -= units * Open * rate; applied BEFORE that bar's fills (so the 00:00 settlement is paid on the position held before the daily trade)"
+ },
+ "margin": {
+  "type": "CROSS (single cross-margined USDT account holding both perps; NOT isolated)",
+  "maintenance": 0.005,
+  "liquidation_check": "every 1h bar after fills: worst = cash + sum(units*Low) (longs); gw = sum(|units|*Low); if worst <= 0.005*gw -> close all at worst minus 20bps",
+  "backtest_liquidations": 0
+ },
+ "stops": "none (no stop-loss, no take-profit, no time stop). Exit only when spot close <= SMA200 (or sigma20 NaN).",
+ "initial_capital": 10000.0,
+ "backtest_start": "2020-06-24 00:00 UTC (first decision 2020-06-24 23:00 bar, first fill 2020-06-25 00:00)",
+ "data_end": "2026-10-10 23:00 UTC bar",
+ "state_at_data_end": {
+  "date": "2026-10-10",
+  "BTC": {
+   "signal": 1,
+   "spot_close": 82988.36,
+   "sma200": 71955.51,
+   "sigma20": 0.3609,
+   "w1x": 0.5
+  },
+  "ETH": {
+   "signal": 1,
+   "spot_close": 2506.52,
+   "sma200": 2133.09,
+   "sigma20": 0.3756,
+   "w1x": 0.5
+  },
+  "sigma60_1x": 0.3759,
+  "L": 1.596,
+  "target_w": {
+   "BTC": 0.798,
+   "ETH": 0.798
+  },
+  "gross": 1.6,
+  "next_decision": "2026-10-11 23:00 UTC bar close -> fill 2026-10-12 00:00 UTC (08:00 Taipei)"
+ },
+ "metrics": {
+  "full_2020-06-24_2026-10-11": {
+   "ret": 3329.3,
+   "cagr": 75.31,
+   "sharpe": 1.28,
+   "maxdd": -40.58,
+   "btc_ret": 761.1,
+   "oos_btc": 5,
+   "oos_cash": 4,
+   "cagr_h1": 72.91,
+   "cagr_h2": 77.97,
+   "g_bh": true,
+   "g_oos": true,
+   "g_dd": true,
+   "g_wf": true
+  },
+  "gate_3y_2023-10-11_2026-10-11": {
+   "ret": 463.9,
+   "cagr": 77.97,
+   "sharpe": 1.28,
+   "maxdd": -40.58,
+   "btc_ret": 202.9,
+   "oos_btc": 5,
+   "oos_cash": 4,
+   "cagr_h1": 93.56,
+   "cagr_h2": 63.64,
+   "g_bh": true,
+   "g_oos": true,
+   "g_dd": true,
+   "g_wf": true
+  },
+  "ret_1y": 7.8,
+  "maxdd_hourly_close_full": -42.86,
+  "n_fills_full": 186,
+  "n_fills_3y": 88,
+  "funding_full": -76480.0,
+  "fees_full": 24802.0,
+  "L_mean_full": 1.97,
+  "gross_mean_full": 0.77,
+  "gross_max_full_hourly": 2.97
+ },
+ "gates": {
+  "pass_except_neighbor": true,
+  "wf_pass": true,
+  "fail": [
+   "neighbor"
+  ],
+  "neighbor_note": "N50/N100 (same tv) have MaxDD -75%..-85% (2022 whipsaw); N200 is a non-default (★ was N100) pre-registered value => mild selection bias. Honest yearly WF (pick N by past Sharpe) CAGR 20.5% full / 74.0% 3y."
+ },
+ "parity_fixture": {
+  "trades": "trades.csv (levered book, 186 fills)",
+  "trades_1x_shadow": "trades_1x_shadow.csv",
+  "bars": "bars.csv.gz (1h, 2020-06-24..2026-10-10 23:00 UTC, BTC/ETH OHLC, funding, state weights, units, indicators used, L, equities)",
+  "daily": "daily_indicators.csv",
+  "tolerance_hint": "replica of engine verified exact (rtol 1e-9). Live runner will differ by qty rounding (stepSize 0.001) and real fill vs 1h open."
+ }
+}
