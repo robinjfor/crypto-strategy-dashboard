@@ -2,8 +2,8 @@
   "version": 1,
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
-  "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-20T21:40:00+08:00",
+  "updated_by": "網頁工程師",
+  "updated_at": "2026-10-20T22:31:00+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -298,6 +298,23 @@
         "leverage": 1.0
       },
       "note": "S3 short_trend_perp walk-forward params (s_family_spec)；1x 逐倉 750 USDT；候選（enabled:false）：DOTUSDT 已由 C5 sat_dot_4h 佔用，一幣一方向"
+    },
+    {
+      "slot": "u1_btc_eth_usdc",
+      "family": "btc_eth_trend_voltarget_perp",
+      "strategy_id": "d4_trend_N200_tv60_cap3__BTC_ETH__1d",
+      "symbol": "BTCUSDC",
+      "quote_currency": "USDC",
+      "timeframe": "1d",
+      "notional_usdc": 1000,
+      "enabled": true,
+      "params": {
+        "symbols": [
+          "BTCUSDC",
+          "ETHUSDC"
+        ]
+      },
+      "note": "U1 on USDC book（Robin 2026-10-20 核准，取代 10/01 USDC 閒置）：BTCUSDC+ETHUSDC USD-M 永續，全倉 3x，無停損；sleeve 1000 USDC"
     }
   ],
   "book_usdc": 5000,
