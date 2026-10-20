@@ -35,6 +35,15 @@ def main():
     ] if isinstance(pr, list) else pr
     near = [x for x in pr if x.get("symbol") == "NEARUSDT"] if isinstance(pr, list) else []
     out["near_positionAmt"] = [x.get("positionAmt") for x in near]
+    fb = get(FUT, "/fapi/v2/balance")
+    out["fut_balances_nonzero"] = [
+        {k: b.get(k) for k in ("asset", "balance", "availableBalance", "crossWalletBalance", "crossUnPnl", "marginAvailable")}
+        for b in fb if float(b.get("balance") or 0) != 0
+    ] if isinstance(fb, list) else fb
+    fa = get(FUT, "/fapi/v2/account")
+    out["fut_multi_assets_margin"] = fa.get("multiAssetsMargin") if isinstance(fa, dict) else fa
+    pm = get(FUT, "/fapi/v1/positionSide/dual")
+    out["fut_dual_side"] = pm.get("dualSidePosition") if isinstance(pm, dict) else pm
     oo = get(FUT, "/fapi/v1/openOrders")
     out["fut_open_orders"] = [{k: o.get(k) for k in ("symbol", "orderId", "type", "side", "origQty", "price", "stopPrice", "reduceOnly", "time")} for o in oo] if isinstance(oo, list) else oo
     ao = get(FUT, "/fapi/v1/openAlgoOrders")
