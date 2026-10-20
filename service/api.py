@@ -44,6 +44,9 @@ STATUS_ZH = {
     "btc_regime_unchecked": "BTC 濾網未取得",
     "idempotent_same_bar": "本根已處理",
     "trail_update": "持倉中 · 移動止損",
+    "waiting_short_entry": "等做空進場邊緣（死叉／濾網轉真當根）",
+    "stale_signal_before_exit": "訊號早於上次出場（不追）",
+    "short_entry_edge": "做空進場邊緣",
     "PENDING_FILL": "已掛單，等成交",
     "pending_fill": "已掛單，等成交",
 }
@@ -465,8 +468,45 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
 
 
 
+S_FILTER_ZH = {
+    "none": "無濾網",
+    "fpos": "資金費率近 9 期均值 > 0",
+    "coin50": "幣日線收盤 < SMA50（前一日）",
+    "btc50": "BTC 日線收盤 < EMA50（前一日）",
+    "btc200": "BTC 日線收盤 < SMA200（前一日）",
+    "btc50_fpos": "BTC < EMA50 且資金費率均值 > 0",
+}
+
+
+def _num(x) -> str:
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return "?"
+    return f"{v:g}"
+
+
+def _short_trend_rule(slot: dict) -> str:
+    """S short_trend_perp rule text from the slot's own params (s_family_spec §2)."""
+    sig = str(slot.get("signal") or "sema").lower()
+    filt = str(slot.get("filter") or slot.get("filt") or "none").lower()
+    if sig == "sdon":
+        head = f"Donchian{slot.get('donch_n')} 收盤跌破下軌做空"
+    else:
+        head = f"EMA{slot.get('ema_fast')}/{slot.get('ema_slow')} 死叉做空"
+    mh = slot.get("max_hold_bars")
+    return (f"{head}（只在進場邊緣那根收盤進場：死叉或濾網轉真；已在空頭區不追）"
+            f" · 停損 {_num(slot.get('stop_atr_mult'))}×ATR14 · 移動停損 {_num(slot.get('trail_atr_mult'))}×ATR14"
+            f" · 濾網：{S_FILTER_ZH.get(filt, filt)}" + (f" · 最長持有 {mh} 根" if mh else "")
+            + f" · {_num(slot.get('leverage') or 1)}x 逐倉 · 永續")
+
+
 def _entry_condition(slot: dict) -> str:
     fam = str(slot.get("family") or "")
+    if fam == "short_trend_perp":
+        return _short_trend_rule(slot)
+    if fam == "btc_eth_trend_voltarget_perp":
+        return "BTC/ETH 現貨日線收盤 > SMA200 做多（否則空手）· 波動目標 60%、槓桿上限 3x · 偏離 > 25% 才調倉 · 全倉 · 無停損"
     reset = "（需先回落重置）" if slot.get("require_reset_below_hi") else ""
     btc = " · BTC 日線多頭濾網" if slot.get("btc_regime") else ""
     if fam == "ema_cross_atr":
@@ -509,6 +549,21 @@ def _trigger_fields(slot: dict, sig: dict) -> dict:
             "last_cross_bar_ts": sig.get("last_cross_bar_ts"),
             "last_entry_edge_bar_ts": sig.get("last_entry_edge_bar_ts"),
             "btc_regime": bool(slot.get("btc_regime")),
+            "entry_rule_code": "edge_only",
+        })
+    elif fam == "short_trend_perp":
+        ef, es = _f(sig.get("ema_fast")), _f(sig.get("ema_slow"))
+        out.update({
+            "trigger_kind": "short_trend",
+            "trigger": None, "distance": None,
+            "signal_kind": slot.get("signal") or "sema",
+            "ema_fast": ef, "ema_slow": es,
+            "ema_fast_n": slot.get("ema_fast"), "ema_slow_n": slot.get("ema_slow"),
+            "ema_gap_pct": (round((ef / es - 1.0) * 100.0, 4) if (ef is not None and es) else None),
+            "ema_bear": sig.get("bear") if sig.get("bear") is not None else (ef < es if (ef is not None and es is not None) else None),
+            "s_filter": slot.get("filter") or "none", "filter_on": sig.get("filter_on"),
+            "stop_atr_mult": slot.get("stop_atr_mult"), "trail_atr_mult": slot.get("trail_atr_mult"),
+            "max_hold_bars": slot.get("max_hold_bars"), "bar_ts": sig.get("bar_ts"),
             "entry_rule_code": "edge_only",
         })
     elif fam in ("ls_donch_btc_regime_perp", "donchian_long_short_btc_regime"):

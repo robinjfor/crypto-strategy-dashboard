@@ -49,6 +49,8 @@
     wait_reset: "等回落重置（需先收回上軌下方）",
     wait_signal_reset_then_breakout: "等回落重置（需先收回上軌下方）",
     WAIT_SIGNAL_RESET_THEN_BREAKOUT: "等回落重置（需先收回上軌下方）",
+    waiting_short_entry: "等做空進場邊緣（死叉／濾網轉真當根）",
+    stale_signal_before_exit: "訊號早於上次出場（不追）",
     PENDING_FILL: "已掛單，等成交",
     pending_fill: "已掛單，等成交"
   };
@@ -876,6 +878,7 @@
       var kind = String(src.trigger_kind || "");
       if (!kind) {
         kind = fam === "ema_cross_atr" ? "ema_cross"
+          : fam === "short_trend_perp" ? "short_trend"
           : ((fam === "ls_donch_btc_regime_perp" || fam === "donchian_long_short_btc_regime") ? "donchian_ls" : "donchian_hi");
       }
       var statusLabel = modeLabel(om);
@@ -900,6 +903,21 @@
         }
         ruleTxt = "EMA" + fN + " 上穿 EMA" + sN + "（只在交叉當根收盤進場，與回測一致）· " + btcTxt +
           (src.last_cross_bar_ts ? " · 上次交叉 " + String(src.last_cross_bar_ts).slice(0, 10) : "");
+        needsMarket = false;
+      } else if (kind === "short_trend") {
+        var sfN = src.ema_fast_n || pms.ema_fast || "?";
+        var ssN = src.ema_slow_n || pms.ema_slow || "?";
+        var sef = src.ema_fast != null ? Number(src.ema_fast) : null;
+        var ses = src.ema_slow != null ? Number(src.ema_slow) : null;
+        var sgap = src.ema_gap_pct != null ? Number(src.ema_gap_pct) : (sef != null && ses ? (sef / ses - 1) * 100 : null);
+        var bear = src.ema_bear === true || (sef != null && ses != null && sef < ses);
+        var isDon = String(src.signal_kind || pms.signal || "sema").toLowerCase() === "sdon";
+        subTxt = isDon ? ("Donch " + (pms.donch_n || donchN) + " 做空") : ("EMA " + sfN + "/" + ssN + " 做空");
+        trigHtml = isDon ? "—" : ((sef != null ? "EMA" + sfN + " " + num(sef, 6) : "—") + "<br>" + (ses != null ? "EMA" + ssN + " " + num(ses, 6) : "—"));
+        distHtml = sgap != null ? ("差距 " + (sgap >= 0 ? "+" : "") + num(sgap, 2) + "%<br>" + (bear ? "空頭區" : "多頭區")) : "—";
+        if (om === "live") statusLabel = bear ? "已在空頭區 · 等下一次死叉（不追）" : "等死叉做空";
+        ruleTxt = src.entry_condition || src.entry_rule ||
+          ("EMA" + sfN + "/" + ssN + " 死叉做空 · 停損 " + (pms.stop_atr_mult || "?") + "×ATR · 移動 " + (pms.trail_atr_mult || "?") + "×ATR · 濾網 " + (pms.filt || "none"));
         needsMarket = false;
       } else if (kind === "donchian_ls") {
         var hi = src.donch_hi != null ? Number(src.donch_hi) : null;
