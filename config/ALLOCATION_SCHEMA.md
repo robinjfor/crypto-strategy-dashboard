@@ -91,20 +91,26 @@
 OP、DOT：`enabled: true`、各 1000 USDT；FET／SOL：`enabled: false`。  
 不要把 FET 4h 設成 `enabled: true`，除非分析師明確決定上線（因其家族 `donchian_atr` 已批准，一啟用就會進實盤）。
 
-## USDC 帳本（目前閒置）
+## USDC 帳本（U1 使用中，2026-10-20 起）
 
-USDT / USDC 各上限 **5000**。Emily 決策（2026-10-01）：
+USDT / USDC 各上限 **5000**，兩本帳互不佔額度。
 
-- 多出來的資金是 Demo 帳上既有的 **5000 USDC 現金**，**不要**把 `book_usdt` 拉到 10000。
-- **USDC 帳本維持閒置**（不下單、不換匯成 USDT、不接 USDC-M、不把 `port_ew_univ10` 掛上來）。
-- USDT 帳本 `book_usdt=5000`，僅既有 6 個 live 槽：`sat_apt_1h`、`sat_dot_4h`、`sat_fet_4h`、`sat_fil_1h`、`sat_sol_ema_1d`、`ls_near_4h`。
-- 合約路徑仍是 Demo **USD-M（USDT 保證金）** only；驗證會拒絕 `quote_currency=USDC` 的 futures 家族（避免假扣 USDC）。
-
-若日後要測現貨 `*USDC`，欄位為：`quote_currency: "USDC"`、`symbol: "XXXUSDC"`、`notional_usdc`（計入 `book_usdc`）。現階段請不要加。
+- **2026-10-20 Robin 明確核准**：U1 改用 **USDC 帳本**（取代 2026-10-01「USDC 帳本閒置、不接 USDC-M」的決策）。
+  原因：USDT 帳本已滿（5000），不把 `book_usdt` 拉高。
+- U1 交易 Demo **USD-M USDC 保證金永續 BTCUSDC + ETHUSDC**（全倉 CROSSED、交易所槓桿 3），保證金來自合約帳戶的 **USDC 錢包**
+  （單一資產模式，`multiAssetsMargin=false`：USDC 錢包與 USDT 錢包分開，U1 的虧損不會吃到 USDT 帳本的 A/S 保證金）。
+- 名義寫在 `notional_usdc`（計入 `book_usdc`），`quote_currency: "USDC"`，`symbol: "BTCUSDC"`，`params.symbols: ["BTCUSDC","ETHUSDC"]`。
+- 驗證：只有 `btc_eth_trend_voltarget_perp` 可以掛 USDC 永續；其他合約家族（A/S 等）仍只能用 USDT 帳本（會被拒絕）。
+  APT 等沒有 USDC 永續的幣不能放進 USDC 帳本（Binance 沒有 APTUSDC 永續）。
+- 訊號與決策不變：仍用現貨 BTCUSDT/ETHUSDT 日線訊號與 paper 引擎（USDT 永續影子帳本）算目標權重；USDC sleeve 以 USDC 永續 00:00 UTC 開盤價做 band 判斷與下單。
+- `/status.books.usdc.futures`：直接從 Binance 讀 USDC 合約錢包（wallet / unrealized / margin_balance / available）、USDC 永續持倉，並與 trader 帳本（`u1_live` sleeve）逐一對帳（`reconcile.ok` / `mismatches`）。首頁 USDC 帳本卡片顯示這些雲端數字。
+- 現貨 `*USDC`（例如 `XXXUSDC` 現貨策略）欄位相同：`quote_currency: "USDC"`、`symbol: "XXXUSDC"`、`notional_usdc`。
 
 ## U1 — `btc_eth_trend_voltarget_perp` (Robin 破例上架 2026-10-11; cross margin, no stops)
 
-Orders need BOTH Robin's family approval AND an enabled slot like this (the analyst adds it):
+Orders need BOTH Robin's family approval AND an enabled slot like this (the analyst adds it).
+Live since 2026-10-20 on the **USDC book** (slot `u1_btc_eth_usdc`, `notional_usdc` 1000, BTCUSDC+ETHUSDC);
+the USDT form below is still valid but is not used (USDT book full):
 
 ```json
 {"slot": "u1_btc_eth", "family": "btc_eth_trend_voltarget_perp",
@@ -113,7 +119,7 @@ Orders need BOTH Robin's family approval AND an enabled slot like this (the anal
  "params": {"symbols": ["BTCUSDT", "ETHUSDT"]}}
 ```
 
-- `notional_usdt` = U1 sleeve capital (counts toward book_usdt). Gross notional ≤ 3 × it, per coin ≤ 1.5 × it
+- `notional_usdt` / `notional_usdc` = U1 sleeve capital (counts toward that quote's book). Gross notional ≤ 3 × it, per coin ≤ 1.5 × it
   (`params.max_gross_notional_usdt` may only lower the gross cap). The slot reserves BOTH BTCUSDT and ETHUSDT.
 - No stop/trail params (spec has none). BTCUSDT/ETHUSDT are set to CROSSED, exchange leverage 3.
 - Decisions = the paper engine's (00:00 UTC, 25% band); see service/u1_live.py for the margin/liquidation guards.

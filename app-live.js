@@ -580,6 +580,21 @@
     return { pnl: u.unrealized, cost: null, pct: u.unrealized_pct };
   }
 
+  /** USD-M futures wallet for this quote, from the cloud API (Binance-reconciled). Empty when absent. */
+  function futuresKpis(q) {
+    var b = ((cloud && cloud.books) || {})[String(q).toLowerCase()] || {};
+    var f = b.futures;
+    if (!f || f.error) return f && f.error ? '<div class="kpi"><div class="label">合約錢包</div><div class="value">—</div><div class="sublabel">讀取失敗</div></div>' : "";
+    var rec = f.reconcile || {};
+    var recTxt = rec.ok ? "與 Binance 一致" : ("不一致 " + ((rec.mismatches || []).map(function (m) { return m.symbol; }).join(", ")));
+    var sl = f.u1_sleeve;
+    var pos = (f.positions || []).map(function (p) { return esc(p.symbol) + " " + num(p.qty, 4); }).join(" · ") || "無持倉";
+    return '<div class="kpi"><div class="label">合約錢包（USD-M ' + q + '）</div><div class="value">' + num(f.margin_balance, 2) +
+      '</div><div class="sublabel">錢包 ' + num(f.wallet, 2) + ' · 未實現 ' + signedNum(f.unrealized_pnl || 0, 2) + ' · 可用 ' + num(f.available, 2) + '</div></div>' +
+      '<div class="kpi"><div class="label">合約配置 / 持倉</div><div class="value">' + num(f.allocated || 0, 0) +
+      '</div><div class="sublabel">' + pos + (sl && sl.equity != null ? ' · U1 權益 ' + num(sl.equity, 2) : "") + ' · ' + esc(recTxt) + '</div></div>';
+  }
+
   function renderBookCard(st) {
     var q = st.quote;
     var upnl = '<span class="' + signedCls(st.unrealized) + '">' +
@@ -607,6 +622,7 @@
       '<div class="kpi"><div class="label">未實現損益</div><div class="value">' + upnl + '</div><div class="sublabel">持倉市價</div></div>' +
       '<div class="kpi"><div class="label">現金</div><div class="value">' + num(st.cash, 2) + '</div><div class="sublabel">可用 + 鎖定</div></div>' +
       '<div class="kpi"><div class="label">已用 / 剩餘</div><div class="value">' + num(st.used, 2) + ' / ' + num(st.remaining, 2) + '</div><div class="sublabel">持倉市值 vs 原本</div></div>' +
+      futuresKpis(q) +
       '</div>' +
       '<div class="holdings-pie-panel book-pie">' +
       '<div class="section-head"><h4>' + q + ' 分布</h4>' +

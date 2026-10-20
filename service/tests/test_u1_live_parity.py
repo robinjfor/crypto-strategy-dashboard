@@ -241,6 +241,8 @@ def test_approval_alone_opens_nothing():
         created.append(1)
         return FakeFC()
     real_alloc = json.loads((Path(__file__).resolve().parents[2] / "config" / "allocation.json").read_text())
+    # since 2026-10-20 the repo has the U1 USDC slot (Robin); approval alone = the repo minus that slot
+    real_alloc["slots"] = [s_ for s_ in real_alloc["slots"] if s_.get("family") != P.FAMILY]
     for doc in (real_alloc, {"slots": []}, {"slots": [dict(SLOT, enabled=False)]}):
         state = {"positions": {}, "approved_families": [P.FAMILY]}
         out = L.run_u1_live(state, _dec(), NOW, alloc_doc=doc, approved_families=[P.FAMILY], live=True,

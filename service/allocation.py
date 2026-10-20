@@ -48,6 +48,15 @@ FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"}),
                      "btc_eth_trend_voltarget_perp": frozenset({"1d"})}
 U1_STRATEGY_ID = "d4_trend_N200_tv60_cap3__BTC_ETH__1d"
 U1_SYMBOLS = ("BTCUSDT", "ETHUSDT")
+# U1 may run on either USD-M margin asset (Robin 2026-10-20: U1 on the USDC book, BTCUSDC+ETHUSDC perps).
+U1_QUOTES = ("USDT", "USDC")
+# Futures families allowed on a USDC-margined perp (Demo USD-M has BTCUSDC/ETHUSDC; others stay USDT-only)
+USDC_PERP_FAMILIES = frozenset({"btc_eth_trend_voltarget_perp"})
+
+
+def u1_symbols(quote: str = "USDT") -> tuple[str, str]:
+    q = str(quote or "USDT").upper()
+    return ("BTC" + q, "ETH" + q)
 # Map legacy slot family names → catalog ids
 FAMILY_ALIASES = {
     "donchian": "donchian_atr",
@@ -104,7 +113,7 @@ def _stop_trail_keys(p: dict) -> tuple:
     return stop, trail
 
 
-def validate_params(family: str, params: dict | None, errors: list[str], idx: int) -> None:
+def validate_params(family: str, params: dict | None, errors: list[str], idx: int, quote: str = "USDT") -> None:
     p = params if isinstance(params, dict) else {}
     if family == "donchian_atr":
         for k in ("donch_n", "stop_atr_mult", "trail_atr_mult"):
@@ -194,7 +203,7 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
     elif family == "short_trend_perp":
         _validate_short_trend(p, errors, idx)
     elif family == "btc_eth_trend_voltarget_perp":
-        _validate_u1(p, errors, idx)
+        _validate_u1(p, errors, idx, quote)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -233,12 +242,13 @@ def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
         errors.append(f"slots[{idx}].params.leverage={lev}：short_trend_perp 鎖定 1 倍")
 
 
-def _validate_u1(p: dict, errors: list[str], idx: int) -> None:
+def _validate_u1(p: dict, errors: list[str], idx: int, quote: str = "USDT") -> None:
     """U1 slot params: symbols must be exactly BTCUSDT+ETHUSDT; optional max_gross_notional_usdt may
     only LOWER the 3 × notional_usdt cap. Leverage is the strategy's own (w1x·L, cap 3); no stop params."""
-    syms = p.get("symbols") or list(U1_SYMBOLS)
-    if sorted(str(x).upper() for x in syms) != sorted(U1_SYMBOLS):
-        errors.append(f"slots[{idx}].params.symbols 必須是 BTCUSDT + ETHUSDT（btc_eth_trend_voltarget_perp）")
+    want = u1_symbols(quote)
+    syms = p.get("symbols") or list(want)
+    if sorted(str(x).upper() for x in syms) != sorted(want):
+        errors.append(f"slots[{idx}].params.symbols 必須是 {want[0]} + {want[1]}（btc_eth_trend_voltarget_perp, {quote}）")
     lim = p.get("max_gross_notional_usdt")
     if lim is not None and (not isinstance(lim, (int, float)) or lim <= 0):
         errors.append(f"slots[{idx}].params.max_gross_notional_usdt 必須 > 0")
@@ -366,7 +376,7 @@ def validate_allocation(
         if quote not in SUPPORTED_QUOTE_ASSETS:
             errors.append(f"slots[{i}].quote_currency 不支援：{quote}（僅 USDT / USDC）")
         # Futures Demo is USD-M (USDT-margined) only — do not fake USDC book for perps
-        if quote == "USDC" and family in FUTURES_FAMILIES:
+        if quote == "USDC" and family in FUTURES_FAMILIES and family not in USDC_PERP_FAMILIES:
             errors.append(
                 f"slots[{i}] family={family} 是合約路徑，Demo 僅 USD-M(USDT)；"
                 f"不可掛在 USDC 帳本（尚無 USDC-M）。請用 spot *USDC 或等 USDC-M。"
@@ -391,12 +401,15 @@ def validate_allocation(
         if family == "btc_eth_trend_voltarget_perp":
             if sid and sid != U1_STRATEGY_ID:
                 errors.append(f"slots[{i}].strategy_id 必須是 {U1_STRATEGY_ID}")
-            if symbol and str(symbol).upper() != "BTCUSDT":
-                errors.append(f"slots[{i}].symbol 必須是 BTCUSDT（U1 同時交易 BTCUSDT+ETHUSDT 永續）")
+            u_btc, u_eth = u1_symbols(quote)
+            if quote not in U1_QUOTES:
+                errors.append(f"slots[{i}] U1 quote 不支援：{quote}")
+            elif symbol and str(symbol).upper() != u_btc:
+                errors.append(f"slots[{i}].symbol 必須是 {u_btc}（U1 同時交易 {u_btc}+{u_eth} 永續）")
             if is_en:
-                if "ETHUSDT" in seen_sym_enabled:
-                    errors.append("重複 symbol（enabled）：ETHUSDT")
-                seen_sym_enabled.add("ETHUSDT")
+                if u_eth in seen_sym_enabled:
+                    errors.append(f"重複 symbol（enabled）：{u_eth}")
+                seen_sym_enabled.add(u_eth)
         if tf is not None and str(tf).lower() not in FAMILY_TIMEFRAMES.get(normalize_family(family), BASE_TIMEFRAMES):
             errors.append(f"slots[{i}].timeframe 不支援：{tf}")
 
@@ -425,7 +438,7 @@ def validate_allocation(
             elif family not in RUNNER_FAMILIES:
                 errors.append(f"slots[{i}].family 雲端尚未支援：{family}")
             else:
-                validate_params(family, params if isinstance(params, dict) else {}, errors, i)
+                validate_params(family, params if isinstance(params, dict) else {}, errors, i, quote)
 
     if total_usdt > book_usdt + 1e-6:
         errors.append(

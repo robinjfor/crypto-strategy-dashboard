@@ -916,6 +916,68 @@ def _books_overview(
     return out
 
 
+def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc=None) -> dict:
+    """USD-M futures wallet for one margin asset, straight from Binance (GET /fapi/v2/account +
+    /fapi/v2/positionRisk), reconciled against the trader's own books (Robin rule: the dashboard's
+    numbers come from the cloud API and must match Binance). Today only U1 trades *USDC perps.
+    Read-only; any error is reported, never raised."""
+    q = str(quote).upper()
+    out: dict = {"quote": q, "source": "binance_futures_demo"}
+    try:
+        from allocation import FUTURES_FAMILIES, infer_quote_asset, slot_notional
+        import u1_live
+        if fc is None:
+            from futures_client import FuturesDemoClient
+            fc = FuturesDemoClient()
+        acct = fc.account() or {}
+        row = next((a for a in acct.get("assets") or [] if str(a.get("asset")).upper() == q), {}) or {}
+        f = lambda k: float(row.get(k) or 0)  # noqa: E731
+        out.update({"wallet": f("walletBalance"), "unrealized_pnl": f("unrealizedProfit"),
+                    "margin_balance": f("marginBalance"), "available": f("availableBalance"),
+                    "maint_margin": f("maintMargin"), "initial_margin": f("initialMargin"),
+                    "multi_assets_margin": acct.get("multiAssetsMargin")})
+        exch = []
+        for pr in fc.position_risk() or []:
+            sym = str(pr.get("symbol") or "")
+            amt = float(pr.get("positionAmt") or 0)
+            if sym.endswith(q) and amt != 0:
+                exch.append({"symbol": sym, "qty": amt, "entry": float(pr.get("entryPrice") or 0),
+                             "mark": float(pr.get("markPrice") or 0),
+                             "notional": amt * float(pr.get("markPrice") or 0),
+                             "unrealized_pnl": float(pr.get("unRealizedProfit") or 0),
+                             "margin_type": pr.get("marginType"), "leverage": pr.get("leverage")})
+        out["positions"] = exch
+        # what the trader thinks it holds on this margin asset
+        expect: dict[str, float] = {}
+        sl = state.get("u1_live") or {}
+        if (sl.get("quote") or "USDT").upper() == q:
+            pm = u1_live.perp_map(q)
+            for k, u in (sl.get("units") or {}).items():
+                if k in pm and float(u or 0) != 0:
+                    expect[pm[k]] = expect.get(pm[k], 0.0) + float(u)
+            marks = {k: next((x["mark"] for x in exch if x["symbol"] == pm[k]), 0.0) for k in u1_live.SYMS}
+            out["u1_sleeve"] = {"capital": sl.get("capital_usdt"), "cash": sl.get("cash"), "units": sl.get("units"),
+                                "equity": (u1_live.sleeve_equity(sl, marks) if all(marks[k] or not float((sl.get("units") or {}).get(k) or 0)
+                                                                    for k in u1_live.SYMS) else None),
+                                "fees": sl.get("fees"), "funding": sl.get("funding")}
+        for pid, pos in (state.get("positions") or {}).items():
+            if isinstance(pos, dict) and pos.get("status") == "FILLED" and (pos.get("venue") or "spot") == "futures" \
+                    and str(pos.get("symbol") or "").upper().endswith(q):
+                sgn = -1.0 if str(pos.get("side") or "LONG").upper() == "SHORT" else 1.0
+                sym = str(pos["symbol"]).upper()
+                expect[sym] = expect.get(sym, 0.0) + sgn * abs(float(pos.get("qty") or 0))
+        got = {x["symbol"]: x["qty"] for x in exch}
+        mism = [{"symbol": s_, "trader": expect.get(s_, 0.0), "binance": got.get(s_, 0.0)}
+                for s_ in sorted(set(expect) | set(got)) if abs(expect.get(s_, 0.0) - got.get(s_, 0.0)) > 1e-9]
+        out["reconcile"] = {"ok": not mism, "mismatches": mism}
+        out["allocated"] = sum(slot_notional(s_, q) for s_ in (alloc_doc or {}).get("slots") or []
+                               if s_.get("enabled") is True and infer_quote_asset(s_) == q
+                               and str(s_.get("family") or "") in FUTURES_FAMILIES)
+    except Exception as e:  # noqa: BLE001
+        out["error"] = str(e)[:200]
+    return out
+
+
 def build_status() -> dict:
     store = StateStore()
     state = store.load()
@@ -1016,6 +1078,11 @@ def build_status() -> dict:
         book_usdt=float((_doc or {}).get("book_usdt") or (alloc_pub or {}).get("book_usdt") or 5000),
         book_usdc=float((_doc or {}).get("book_usdc") or (alloc_pub or {}).get("book_usdc") or 5000),
     )
+    # USDC book also holds the USD-M USDC futures wallet (U1 on BTCUSDC/ETHUSDC, Robin 2026-10-20):
+    # numbers come from Binance via the cloud API, reconciled against the trader's books.
+    from futures_client import FuturesDemoClient as _FDC
+    if (books.get("usdc") is not None) and _FDC().api_key:
+        books["usdc"]["futures"] = _futures_quote_reconcile(state, "USDC", _doc)
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),

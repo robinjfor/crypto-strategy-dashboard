@@ -228,7 +228,10 @@ def test_u1_approvable_by_exception_but_not_in_allocation():
     approve_family(st, P.FAMILY, at="2026-10-11T16:00:00+08:00")
     assert P.FAMILY in st["approved_families"]
     alloc = json.loads((Path(__file__).resolve().parents[2] / "config" / "allocation.json").read_text())
-    assert not any(s.get("family") == P.FAMILY or "BTC_ETH" in str(s.get("strategy_id")) for s in alloc["slots"])
+    # Robin 2026-10-20: exactly one U1 slot, on the USDC book (BTCUSDC+ETHUSDC), 1000 USDC
+    u1 = [s for s in alloc["slots"] if s.get("family") == P.FAMILY or "BTC_ETH" in str(s.get("strategy_id"))]
+    assert len(u1) == 1 and u1[0]["slot"] == "u1_btc_eth_usdc" and u1[0]["symbol"] == "BTCUSDC"
+    assert u1[0]["quote_currency"] == "USDC" and u1[0]["notional_usdc"] == 1000 and "notional_usdt" not in u1[0]
 
 
 def test_main_paper_failure_never_breaks_live(monkeypatch):

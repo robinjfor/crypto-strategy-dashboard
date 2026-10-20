@@ -59,7 +59,31 @@ CODE = "U1"
 FAMILY = P.FAMILY
 STRATEGY_ID = P.STRATEGY_ID
 SYMS = P.SYMS
-PERP = {k: k + "USDT" for k in SYMS}
+PERP = {k: k + "USDT" for k in SYMS}   # default (USDT book); a USDC slot uses perp_map("USDC")
+QUOTES = ("USDT", "USDC")
+
+
+def perp_map(quote: str | None = "USDT") -> dict:
+    """{coin: perp symbol} on the slot's USD-M margin asset (BTCUSDT/ETHUSDT or BTCUSDC/ETHUSDC)."""
+    q = str(quote or "USDT").upper()
+    if q not in QUOTES:
+        raise ValueError(f"U1 quote not supported: {q}")
+    return {k: k + q for k in SYMS}
+
+
+def slot_quote(slot: dict | None) -> str:
+    from allocation import infer_quote_asset
+    return infer_quote_asset(slot or {}) if slot else "USDT"
+
+
+def slot_capital(slot: dict) -> float:
+    """U1 sleeve capital in the slot's quote (notional_usdt on the USDT book, notional_usdc on USDC)."""
+    from allocation import slot_notional
+    return float(slot_notional(slot, slot_quote(slot)))
+
+
+def _pm(sleeve: dict | None) -> dict:
+    return perp_map((sleeve or {}).get("quote") or "USDT")
 MARGIN_TYPE = "CROSSED"
 EXCHANGE_LEVERAGE = 3            # Binance per-symbol leverage (initial margin only) = spec cap
 NOTIONAL_CAP_MULT = P.LEV_CAP    # gross ≤ 3 × slot capital
@@ -104,10 +128,13 @@ def caps_for(capital: float, params: dict | None = None) -> tuple[float, float]:
 
 
 def new_sleeve(slot: dict, now: datetime) -> dict:
-    c = float(slot.get("notional_usdt"))
+    c = slot_capital(slot)
+    q = slot_quote(slot)
     ms = int(now.timestamp() * 1000)
+    # capital_usdt keeps its historical name; its unit is the sleeve quote ("quote": USDT or USDC)
     return {"code": CODE, "family": FAMILY, "strategy_id": STRATEGY_ID, "slot": slot.get("slot"),
-            "venue": "futures", "margin_type": "cross", "capital_usdt": c, "cash": c,
+            "venue": "futures", "margin_type": "cross", "quote": q, "perps": perp_map(q),
+            "capital_usdt": c, "cash": c,
             "units": {k: 0.0 for k in SYMS}, "fees": 0.0, "funding": 0.0, "started_at": now.isoformat(),
             "income_cursor_ms": ms, "liq_checked_bar": None, "last_fill_bar": None,
             "fills": [], "events": [], "runs": []}
@@ -124,8 +151,9 @@ def _round_step(q: float, step: float) -> float:
 def plan_orders(sleeve: dict, targets: dict, opens: dict, *, cap_gross: float, cap_pos: float,
                 steps: dict | None = None, min_notional: dict | None = None,
                 max_add_notional: float | None = None, allow_increase: bool = True,
-                blocked_increase: dict | None = None) -> tuple[list[dict], list[dict]]:
+                blocked_increase: dict | None = None, perp: dict | None = None) -> tuple[list[dict], list[dict]]:
     """Band decision per coin exactly as paper_u1.rebalance, then caps/rounding. Returns (orders, skips)."""
+    PERP = perp or _pm(sleeve)  # noqa: N806 — the sleeve's perps (USDT or USDC)
     units = sleeve["units"]
     V = sleeve["cash"] + sum(units[k] * opens[k] for k in SYMS)
     skips: list[dict] = []
@@ -210,10 +238,10 @@ def _fmt(q: float, step: float) -> str:
     return f"{abs(q):.{prec}f}".rstrip("0").rstrip(".") if prec else f"{abs(q):.0f}"
 
 
-def _commission(fc, sym: str, order_id) -> tuple[float | None, bool]:
+def _commission(fc, sym: str, order_id, quote: str = "USDT") -> tuple[float | None, bool]:
     try:
         rows = [t for t in fc.user_trades(sym, limit=50) or [] if str(t.get("orderId")) == str(order_id)]
-        if rows and all(str(t.get("commissionAsset") or "USDT") == "USDT" for t in rows):
+        if rows and all(str(t.get("commissionAsset") or quote) == quote for t in rows):
             return sum(float(t.get("commission") or 0) for t in rows), False
     except Exception as e:  # noqa: BLE001
         log.warning("u1_commission_read_fail sym=%s err=%s", sym, e)
@@ -232,7 +260,7 @@ def _apply_fill(fc, sleeve: dict, od: dict, resp: dict, cid: str, tag: str, now:
                                  "client_id": cid, "status": resp.get("status")})
         return None
     signed = exq if str(resp.get("side") or od["side"]) == "BUY" else -exq
-    fee, est = _commission(fc, sym, resp.get("orderId"))
+    fee, est = _commission(fc, sym, resp.get("orderId"), sleeve.get("quote") or "USDT")
     if fee is None:
         fee = exq * avg * EST_FEE
     sleeve["cash"] -= signed * avg + fee
@@ -271,6 +299,7 @@ def execute(fc, sleeve: dict, orders: list[dict], *, tag: str, steps: dict, now:
 def recover_unbooked(fc, sleeve: dict, fill_bar: str, now: datetime) -> list[dict]:
     """A run that placed a U1 order but crashed before saving state: book that order now (by client id)."""
     tag = P._ts(fill_bar).strftime("%Y%m%d%H")
+    PERP = _pm(sleeve)  # noqa: N806
     out = []
     for k in SYMS:
         cid = f"u1-{tag}-{k}"
@@ -308,15 +337,18 @@ def coin_conflicts(state: dict) -> dict:
     return out
 
 
-def margin_reserve(doc: dict | None, state: dict, approved_families) -> float:
-    """Isolated margin other live, currently flat futures slots need to open (notional / leverage)."""
-    from allocation import FUTURES_FAMILIES
+def margin_reserve(doc: dict | None, state: dict, approved_families, quote: str = "USDT") -> float:
+    """Isolated margin other live, currently flat futures slots on the SAME margin asset need to open
+    (notional / leverage). Single-asset mode: USDT and USDC margin are separate wallets."""
+    from allocation import FUTURES_FAMILIES, infer_quote_asset
     fams = {_norm(f) for f in (approved_families or [])}
     pos = state.get("positions") or {}
     r = 0.0
     for s in (doc or {}).get("slots") or []:
         fam = _norm(s.get("family"))
         if not s.get("enabled") or fam == FAMILY or fam not in FUTURES_FAMILIES or fam not in fams:
+            continue
+        if infer_quote_asset(s) != str(quote).upper():
             continue
         p = pos.get(s.get("slot"))
         if isinstance(p, dict) and p.get("status") == "FILLED":
@@ -331,11 +363,42 @@ def sleeve_equity(sleeve: dict, px: dict) -> float:
 
 
 def _close_all(fc, sleeve, steps, now, why) -> list[dict]:
+    PERP = _pm(sleeve)  # noqa: N806
     orders = [{"symbol": PERP[k], "coin": k, "side": "SELL", "qty_delta": -sleeve["units"][k], "reduce_only": True,
                "reason": why, "target_weight": 0.0, "weight_before": None, "ref_price": None, "equity_before": None}
               for k in SYMS if sleeve["units"][k] > 0]
     tag = why[:6] + pd.Timestamp(now).strftime("%Y%m%d%H")
     return execute(fc, sleeve, orders, tag=tag, steps=steps, now=now)
+
+
+def quote_margin(acct: dict, quote: str = "USDT") -> dict:
+    """Margin figures for the sleeve's margin asset. USDT: account totals (existing behaviour; in single-asset
+    mode Binance totals are the USDT wallet). USDC: the USDC row of account.assets (its own cross wallet)."""
+    if str(quote).upper() == "USDT":
+        return {"available": float(acct.get("availableBalance") or 0),
+                "margin_balance": float(acct.get("totalMarginBalance") or 0),
+                "maint_margin": float(acct.get("totalMaintMargin") or 0)}
+    row = next((a for a in acct.get("assets") or [] if str(a.get("asset")).upper() == str(quote).upper()), {}) or {}
+    return {"available": float(row.get("availableBalance") or 0),
+            "margin_balance": float(row.get("marginBalance") or 0),
+            "maint_margin": float(row.get("maintMargin") or 0)}
+
+
+def fill_opens_for(dec: dict, perp: dict, fill_bar, now: datetime, fetch_1h=None) -> dict:
+    """Band reference prices. Paper decides on the USDT perps (= the backtest); a USDC sleeve sizes against its
+    own perps' 00:00 UTC open when available (same bar, same rule), else falls back to paper's opens."""
+    opens = dict(dec.get("fill_opens") or {})
+    if fetch_1h is None or all(str(perp[k]).endswith("USDT") for k in SYMS):
+        return opens
+    fb = P._ts(fill_bar)
+    for k in SYMS:
+        try:
+            b = fetch_1h(perp[k], now)
+            if b is not None and fb in b.index and "open" in b.columns:
+                opens[k] = float(b.loc[fb, "open"])
+        except Exception as e:  # noqa: BLE001
+            log.warning("u1_fill_open_fallback sym=%s err=%s", perp[k], e)
+    return opens
 
 
 # ---------------------------------------------------------------- one hourly run
@@ -349,18 +412,28 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
         return {"active": False, "reason": why_not, "orders": 0}
     if not live:
         return {"active": False, "reason": "not_live_mode", "orders": 0}
+    if sleeve is not None and slot is not None and (sleeve.get("quote") or "USDT") != slot_quote(slot):
+        if holding:
+            return {"active": True, "reason": "quote_change_while_holding", "blocked": "quote_change_while_holding",
+                    "orders": 0, "sleeve_quote": sleeve.get("quote") or "USDT", "slot_quote": slot_quote(slot)}
+        old = sleeve
+        sleeve = state["u1_live"] = new_sleeve(slot, now)
+        sleeve["events"].append({"at": now.isoformat(), "event": "quote_changed", "from": old.get("quote") or "USDT",
+                                 "to": sleeve["quote"]})
     if sleeve is None:
         sleeve = state["u1_live"] = new_sleeve(slot, now)
         sleeve["events"].append({"at": now.isoformat(), "event": "activated", "slot": slot.get("slot"),
                                  "capital_usdt": sleeve["capital_usdt"]})
     can_add = bool(allow_increase and slot is not None)
-    if slot is not None and float(slot.get("notional_usdt")) != sleeve["capital_usdt"]:
-        new_c = float(slot.get("notional_usdt"))
+    PERP = _pm(sleeve)  # noqa: N806 — BTC/ETH perps on the sleeve's margin asset
+    quote = sleeve.get("quote") or "USDT"
+    if slot is not None and slot_capital(slot) != sleeve["capital_usdt"]:
+        new_c = slot_capital(slot)
         sleeve["cash"] += new_c - sleeve["capital_usdt"]
         sleeve["events"].append({"at": now.isoformat(), "event": "capital_changed",
                                  "from": sleeve["capital_usdt"], "to": new_c})
         sleeve["capital_usdt"] = new_c
-    run = {"at": now.isoformat(), "slot_live": slot is not None, "gate": why_not or "ok", "orders": 0,
+    run = {"at": now.isoformat(), "slot_live": slot is not None, "gate": why_not or "ok", "orders": 0, "quote": quote,
            "blocked": None, "skips": [], "alerts": []}
     fc = fc_factory()
     info = fc.exchange_info()
@@ -394,7 +467,8 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
     sleeve["income_cursor_ms"] = end_ms + 1
     run["funding_usdt"] = fund
     acct = fc.account() or {}
-    mb, mm = float(acct.get("totalMarginBalance") or 0), float(acct.get("totalMaintMargin") or 0)
+    qm = quote_margin(acct, quote)
+    mb, mm = qm["margin_balance"], qm["maint_margin"]
     mr = mm / mb if mb > 0 else None
     run["account_margin_ratio"] = mr
     fills: list[dict] = []
@@ -427,13 +501,14 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             run["decision"] = {"fill_bar": dec["fill_bar"], "skipped": "outside_2h_window"}
         else:
             cap_gross, cap_pos = caps_for(sleeve["capital_usdt"], (slot or {}).get("params"))
-            reserve = margin_reserve(alloc_doc, state, approved_families)
-            avail = float(acct.get("availableBalance") or 0)
+            reserve = margin_reserve(alloc_doc, state, approved_families, quote)
+            avail = qm["available"]
             max_add = max(0.0, (avail - reserve) / IM_BUFFER) * EXCHANGE_LEVERAGE
             conflicts = coin_conflicts(state)
-            orders, skips = plan_orders(sleeve, dec["targets_lev"], dec["fill_opens"], cap_gross=cap_gross,
+            opens = fill_opens_for(dec, PERP, fb, now, fetch_1h)
+            orders, skips = plan_orders(sleeve, dec["targets_lev"], opens, cap_gross=cap_gross,
                                         cap_pos=cap_pos, steps=steps, min_notional=mins, max_add_notional=max_add,
-                                        allow_increase=can_add, blocked_increase=conflicts)
+                                        allow_increase=can_add, blocked_increase=conflicts, perp=PERP)
             for od in orders:
                 if not od["reduce_only"]:
                     _prepare(fc, od["symbol"])
@@ -442,7 +517,8 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             run["skips"] = skips
             run["decision"] = {"fill_bar": dec["fill_bar"], "indicator_day": dec["indicator_day"], "L": dec["L"],
                                "targets_lev": dec["targets_lev"], "n_orders": len(orders),
-                               "margin_reserve_usdt": reserve, "available_usdt": avail, "caps": [cap_gross, cap_pos]}
+                               "margin_reserve_usdt": reserve, "available_usdt": avail, "caps": [cap_gross, cap_pos],
+                               "quote": quote, "ref_opens": opens}
         sleeve["last_fill_bar"] = dec["fill_bar"]
     run["orders"] = len(fills)
     run["fills"] = [{k: f[k] for k in ("symbol", "side", "qty", "price", "reason", "fee")} for f in fills]
@@ -455,6 +531,8 @@ def public_view(sleeve: dict | None, marks: dict | None = None) -> dict | None:
         return None
     out = {k: sleeve.get(k) for k in ("code", "slot", "venue", "margin_type", "capital_usdt", "cash", "units",
                                      "fees", "funding", "started_at", "last_fill_bar")}
+    out["quote"] = sleeve.get("quote") or "USDT"
+    out["perps"] = _pm(sleeve)
     if marks:
         out["equity"] = sleeve_equity(sleeve, marks)
     out["last_run"] = (sleeve.get("runs") or [None])[-1]

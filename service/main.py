@@ -270,7 +270,7 @@ def u1_perp_in_use(state: dict, symbol: str, venue: str) -> bool:
     """True when another slot wants a futures position on a perp U1 holds (one-way mode would net them)."""
     u1 = state.get("u1_live") or {}
     return venue == "futures" and float((u1.get("units") or {}).get(_base_asset(symbol)) or 0) > 0 \
-        and str(symbol or "").upper().endswith("USDT")
+        and str(symbol or "").upper().endswith(str(u1.get("quote") or "USDT").upper())
 
 
 def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, allow_entries: bool) -> dict:
