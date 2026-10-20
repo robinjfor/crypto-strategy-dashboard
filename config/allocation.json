@@ -3,7 +3,7 @@
   "book_usdt": 5000,
   "max_notional_per_order_usdt": 1500.0,
   "updated_by": "strategy-analyst",
-  "updated_at": "2026-10-09T05:59:51+08:00",
+  "updated_at": "2026-10-20T21:40:00+08:00",
   "slots": [
     {
       "slot": "sat_apt_1h",
@@ -214,6 +214,90 @@
         "regime_scale": "none"
       },
       "note": "rotation 2026-10-07：stale（BTC 多頭只做多，距上軌 +15.5%≥12%）→NEAR ls（~8.6%，同家族最近合格；score 27.3／robust 58%）。本槽停用。"
+    },
+    {
+      "slot": "short_arb_4h",
+      "family": "short_trend_perp",
+      "strategy_id": "wf_sema_ema9_21_s2.0_t5.0_fpos__ARB__4h",
+      "symbol": "ARBUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "signal": "sema",
+        "ema_fast": 9,
+        "ema_slow": 21,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 5.0,
+        "filt": "fpos",
+        "max_hold_bars": 60,
+        "atr_mode": "sma",
+        "leverage": 1.0
+      },
+      "note": "S2 short_trend_perp walk-forward params (s_family_spec)；1x 逐倉 750 USDT"
+    },
+    {
+      "slot": "short_gala_6h",
+      "family": "short_trend_perp",
+      "strategy_id": "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h",
+      "symbol": "GALAUSDT",
+      "timeframe": "6h",
+      "notional_usdt": 750,
+      "enabled": true,
+      "params": {
+        "signal": "sema",
+        "ema_fast": 12,
+        "ema_slow": 26,
+        "stop_atr_mult": 3.0,
+        "trail_atr_mult": 5.0,
+        "filt": "none",
+        "max_hold_bars": 40,
+        "atr_mode": "sma",
+        "leverage": 1.0
+      },
+      "note": "S8 short_trend_perp walk-forward params (s_family_spec)；1x 逐倉 750 USDT"
+    },
+    {
+      "slot": "short_apt_4h",
+      "family": "short_trend_perp",
+      "strategy_id": "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h",
+      "symbol": "APTUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": false,
+      "params": {
+        "signal": "sema",
+        "ema_fast": 12,
+        "ema_slow": 26,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 2.0,
+        "filt": "coin50",
+        "max_hold_bars": 60,
+        "atr_mode": "sma",
+        "leverage": 1.0
+      },
+      "note": "S5 short_trend_perp walk-forward params (s_family_spec)；1x 逐倉 750 USDT；候選（enabled:false）：book_usdt 額度不足"
+    },
+    {
+      "slot": "short_dot_4h",
+      "family": "short_trend_perp",
+      "strategy_id": "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h",
+      "symbol": "DOTUSDT",
+      "timeframe": "4h",
+      "notional_usdt": 750,
+      "enabled": false,
+      "params": {
+        "signal": "sema",
+        "ema_fast": 9,
+        "ema_slow": 21,
+        "stop_atr_mult": 2.0,
+        "trail_atr_mult": 4.0,
+        "filt": "none",
+        "max_hold_bars": 60,
+        "atr_mode": "sma",
+        "leverage": 1.0
+      },
+      "note": "S3 short_trend_perp walk-forward params (s_family_spec)；1x 逐倉 750 USDT；候選（enabled:false）：DOTUSDT 已由 C5 sat_dot_4h 佔用，一幣一方向"
     }
   ],
   "book_usdc": 5000,
