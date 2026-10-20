@@ -34,7 +34,7 @@ jobs:
         working-directory: service
         run: |
           set -euo pipefail
-          pip install -q google-cloud-storage
+          pip install -q google-cloud-storage numpy pandas
           python allocation.py ../config/allocation.json
 
       - id: auth
