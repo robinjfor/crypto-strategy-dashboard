@@ -150,3 +150,17 @@ def test_approve_perp_family_touches_nothing_else(tmp_path, monkeypatch):
     st = json.loads(path.read_text())
     assert st["approved_families"] == ["donchian_atr", FAM]
     assert st["approved"] == seed
+
+
+def test_site_gate_45_and_z_cloud_supported():
+    """資金控管 2026-10-21: batch gate stored/displayed at MaxDD 45% (until Robin confirms); Z cloud_supported."""
+    cat = json.loads((ROOT / "data/unified-3y/catalog.json").read_text(encoding="utf-8"))
+    rows = {r["code"]: (f, r) for f in cat["strategies"] for r in f["rows"]}
+    for c in ACCEPTED + ["Z1", "Z4", "Z9"]:
+        f, r = rows[c]
+        assert r["gate_maxdd_limit"] == 45.0 and "MaxDD<=45%" in r["gate_spec"] and "60%" not in r["gate_spec"].split("（")[0]
+        assert abs(float(r["maxdd_3y"])) <= 45 and r["gate_pass_3y"] is True
+    z = next(f for f in cat["strategies"] if f["strategy_family_id"] == "bb_squeeze_breakout_perp")
+    assert z["cloud_supported"] is True and all(r.get("cloud_supported", True) for r in z["rows"])
+    sc = json.loads((ROOT / "data/unified-3y/scores.json").read_text(encoding="utf-8"))
+    assert all(r["supported_by_runner"] for r in sc["strategies"] if (r.get("code") or "").startswith("Z"))

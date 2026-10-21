@@ -890,7 +890,8 @@
         "<td>" + esc(oos) + "</td>" +
         "<td>" + dualBadge(r) + "</td>" +
         '<td class="num">' + num(displayScore(r), 2) + "</td>" +
-        "<td>" + statusBadge(displayStatus(r)) + (r.site_note_zh ? '<div class="site-note">⚠ ' + esc(r.site_note_zh) + "</div>" : "") + "</td>" +
+        "<td>" + statusBadge(displayStatus(r)) + (r.site_note_zh ? '<div class="site-note">⚠ ' + esc(r.site_note_zh) + "</div>" : "") +
+        (r.gate_maxdd_note_zh ? '<div class="gate-note">' + esc(r.gate_maxdd_note_zh) + "</div>" : "") + "</td>" +
         "</tr>" +
         '<tr class="expand-row hidden" id="exp-' + esc(r.strategy_id) + '"><td colspan="11">' +
         expandHtml(r) + "</td></tr>";

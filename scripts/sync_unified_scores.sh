@@ -128,6 +128,41 @@ try:
             if _sid in (_ov.get("row_gate_exception") or {}):
                 # explicit owner exception: approvable although the gate failed (gate_pass_3y unchanged)
                 _r["gate_exception"] = _ov["row_gate_exception"][_sid]; _n_ov += 1
+    # family_cloud_supported: families whose cloud runner is deployed although the analyst catalog still
+    # says cloud_supported=false (Z bb_squeeze_breakout_perp 2026-10-21) -> family + rows true
+    for _fid, _v in ((_ov.get("family_cloud_supported") or {}).items()):
+        for _f in _cat.get("strategies") or []:
+            if _f.get("strategy_family_id") == _fid and not _fid.startswith("_"):
+                _f["cloud_supported"] = bool(_v); _n_ov += 1
+                for _r in _f.get("rows") or []:
+                    if "cloud_supported" in _r:
+                        _r["cloud_supported"] = bool(_v)
+    # gate_maxdd_override (資金控管 2026-10-21): batch gate_spec said MaxDD<=60%; until Robin confirms,
+    # store/display the 45% gate: rewrite the spec text and re-judge gate_pass_3y at the limit.
+    _gm = _ov.get("gate_maxdd_override") or {}
+    if _gm.get("limit") is not None:
+        _lim = float(_gm["limit"])
+        for _f in _cat.get("strategies") or []:
+            for _r in _f.get("rows") or []:
+                _gs = str(_r.get("gate_spec") or "")
+                _ws = str(_r.get("wf_spec") or "")
+                _hit = any(_m in _gs for _m in _gm.get("match") or []) or (_r.get("strategy_id") or "").startswith(tuple(_gm.get("id_prefixes") or ()))
+                if not _hit:
+                    continue
+                for _m in _gm.get("match") or []:
+                    _gs = _gs.replace(_m, _gm.get("replace") or _m)
+                for _m, _rp in (_gm.get("wf_replace") or {}).items():
+                    _ws = _ws.replace(_m, _rp)
+                _r["gate_spec"] = _gs or _gm.get("gate_spec_default")
+                if _ws:
+                    _r["wf_spec"] = _ws
+                _r["gate_maxdd_limit"] = _lim
+                _r["gate_maxdd_note_zh"] = _gm.get("note_zh")
+                _dd = _r.get("maxdd_3y", _r.get("maxdd"))
+                if _dd is not None and abs(float(_dd)) > _lim and _r.get("gate_pass_3y"):
+                    _r["gate_pass_3y"] = False
+                    _r["gate_fail_reasons"] = list(_r.get("gate_fail_reasons") or []) + [f"maxdd {float(_dd):.2f} worse than -{_lim:g}%"]
+                _n_ov += 1
     # row_hide: rows 資金控管 did not accept stay off the site (codes stay reserved in strategy_codes.json)
     _hide = set((_ov.get("row_hide") or {}).get("strategy_ids") or [])
     for _f in _cat.get("strategies") or []:

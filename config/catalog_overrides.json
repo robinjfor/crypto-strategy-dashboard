@@ -81,5 +81,27 @@
       "created_at": "2026-10-21",
       "created_at_iso": "2026-10-21T11:30:00+08:00"
     }
+  },
+  "family_cloud_supported": {
+    "_comment": "Cloud runner deployed (資金控管 accepted); analyst catalog still has cloud_supported=false.",
+    "bb_squeeze_breakout_perp": true
+  },
+  "gate_maxdd_override": {
+    "_comment": "資金控管 2026-10-21: batch (rcr1020 / rd1021 / strictwf1021) gate_spec said MaxDD<=60%; store/display 45% until Robin confirms the book limit.",
+    "limit": 45,
+    "id_prefixes": [
+      "rcr1020_",
+      "rd1021_",
+      "strictwf1021_"
+    ],
+    "match": [
+      "MaxDD<=60%"
+    ],
+    "replace": "MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）",
+    "wf_replace": {
+      "H1 DD<=60%": "H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）"
+    },
+    "gate_spec_default": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50%; liquidity; strict WF",
+    "note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
   }
 }

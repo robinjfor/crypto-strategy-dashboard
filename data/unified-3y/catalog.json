@@ -17483,7 +17483,7 @@
       "source_dirs": [
         "/workspace/strategy-unified-3y/rd_daily/2026-10-21"
       ],
-      "cloud_supported": false,
+      "cloud_supported": true,
       "rows": [
         {
           "strategy_id": "rd1021_bbsq_n20_k2.5_q0.2_s1.5_t3.5__WLD__4h",
@@ -17548,7 +17548,7 @@
           "wf_params_same_as_catalog": true,
           "wf_first_half_ret": 162.54,
           "wf_second_half_ret": 74.413,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -17559,7 +17559,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "funding_pnl": -545.97,
@@ -17569,7 +17569,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/equity/Z1__rd1021_bbsq_n20_k2.5_q0.2_s1.5_t3.5__WLD__4h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z1.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z1.csv.gz",
@@ -17636,7 +17636,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一"
+          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d",
@@ -17701,7 +17703,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 574.387,
           "wf_second_half_ret": 5.377,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -17712,7 +17714,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "funding_pnl": -402.13,
@@ -17722,7 +17724,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/equity/Z2__rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z2.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z2.csv.gz",
@@ -17789,7 +17791,9 @@
               "all_gates_pass": false
             }
           },
-          "wf_fail_reason": "strict WF: listed params != H1 pick"
+          "wf_fail_reason": "strict WF: listed params != H1 pick",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__ARB__4h",
@@ -17854,7 +17858,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 21.587,
           "wf_second_half_ret": 19.792,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -17865,7 +17869,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "funding_pnl": -513.34,
@@ -17875,7 +17879,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/equity/Z3__rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__ARB__4h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z3.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z3.csv.gz",
@@ -17942,7 +17946,9 @@
               "all_gates_pass": false
             }
           },
-          "wf_fail_reason": "strict WF: listed params != H1 pick"
+          "wf_fail_reason": "strict WF: listed params != H1 pick",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h",
@@ -18007,7 +18013,7 @@
           "wf_params_same_as_catalog": true,
           "wf_first_half_ret": 82.103,
           "wf_second_half_ret": 4.595,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18018,7 +18024,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "funding_pnl": -805.13,
@@ -18028,7 +18034,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/equity/Z4__rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z4.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z4.csv.gz",
@@ -18095,7 +18101,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "和 C5 同幣，C5 啟用時不能開"
+          "site_note_zh": "和 C5 同幣，C5 啟用時不能開",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h",
@@ -18160,7 +18168,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": -13.912,
           "wf_second_half_ret": 35.141,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among 243-config bbsq grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18171,7 +18179,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "funding_pnl": -293.39,
@@ -18181,7 +18189,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt n/stop/trail); trades>=15; liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/equity/Z5__rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z5.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z5.csv.gz",
@@ -18248,7 +18256,9 @@
               "all_gates_pass": false
             }
           },
-          "wf_fail_reason": "strict WF: listed params != H1 pick"
+          "wf_fail_reason": "strict WF: listed params != H1 pick",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "strictwf1021_Z9_bb_n40_bb_k2.5_sq_q0.35_stop_m1.5_trail_m3.5__ARB__1h",
@@ -18353,7 +18363,7 @@
             "source": "rd_short_range/data/universe.csv"
           },
           "approval_excluded": false,
-          "cloud_supported": false,
+          "cloud_supported": true,
           "score": 0.0,
           "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
           "price_source": "Binance USDT-M perp klines (data.binance.vision)",
@@ -18365,7 +18375,10 @@
           "backtest_code": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/code/bbsq.py",
           "generated_at": "2026-10-21 10:08:03 CST",
           "data_short": false,
-          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一"
+          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50%; liquidity; strict WF",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         }
       ],
       "n_gate_pass_3y": 6
@@ -18454,7 +18467,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 99.265,
           "wf_second_half_ret": 110.846,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2 ret>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18475,7 +18488,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C23__rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C23.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C23.csv.gz",
@@ -18533,7 +18546,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一"
+          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h",
@@ -18592,7 +18607,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 46.615,
           "wf_second_half_ret": 90.497,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2 ret>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18613,7 +18628,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C25__rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C25.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C25.csv.gz",
@@ -18671,7 +18686,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一"
+          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h",
@@ -18730,7 +18747,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 3.177,
           "wf_second_half_ret": 78.244,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2 ret>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18751,7 +18768,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C29__rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C29.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C29.csv.gz",
@@ -18809,7 +18826,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "和 C2 同幣 FIL，C2 啟用時不能開"
+          "site_note_zh": "和 C2 同幣 FIL，C2 啟用時不能開",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rcr1020_donchian30_s1.5_t3.5_reset__APT__4h",
@@ -18868,7 +18887,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 14.785,
           "wf_second_half_ret": 37.937,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2 ret>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -18889,7 +18908,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C31__rcr1020_donchian30_s1.5_t3.5_reset__APT__4h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C31.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C31.csv.gz",
@@ -18946,7 +18965,9 @@
               "neighbor_pct": 100.0,
               "all_gates_pass": true
             }
-          }
+          },
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h",
@@ -19005,7 +19026,7 @@
           "wf_params_same_as_catalog": false,
           "wf_first_half_ret": 29.801,
           "wf_second_half_ret": 7.244,
-          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=45%（嚴格 WF：L=45 與 L=60 選出參數相同，見 STRICT_WF_AUDIT）; pass = pick H2 ret>0 and this row H2>0",
           "liquidity": {
             "status": "ok",
             "rule": "vol_only_A",
@@ -19026,7 +19047,7 @@
             "funding",
             "next_open_fill"
           ],
-          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
           "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C32__rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h.csv",
           "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C32.csv",
           "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C32.csv.gz",
@@ -19084,7 +19105,9 @@
               "all_gates_pass": true
             }
           },
-          "site_note_zh": "和 C5 同幣 DOT，C5 啟用時不能開（也和 Z4 同幣）"
+          "site_note_zh": "和 C5 同幣 DOT，C5 啟用時不能開（也和 Z4 同幣）",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h",
@@ -19193,7 +19216,10 @@
           "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
           "generated_at": "2026-10-21 10:08:03 CST",
           "data_short": false,
-          "site_note_zh": "後半段只有 +7%，成交量剛過門檻"
+          "site_note_zh": "後半段只有 +7%，成交量剛過門檻",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50%; liquidity; strict WF",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h",
@@ -19302,7 +19328,10 @@
           "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
           "generated_at": "2026-10-21 10:08:03 CST",
           "data_short": false,
-          "site_note_zh": "和 S8 同幣 GALA，S8 有空單時不能開"
+          "site_note_zh": "和 S8 同幣 GALA，S8 有空單時不能開",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50%; liquidity; strict WF",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         },
         {
           "strategy_id": "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h",
@@ -19411,7 +19440,10 @@
           "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
           "generated_at": "2026-10-21 10:08:03 CST",
           "data_short": false,
-          "site_note_zh": "和 C3 同幣 OP，C3 啟用時不能開"
+          "site_note_zh": "和 C3 同幣 OP，C3 啟用時不能開",
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=45%（Robin 確認前以 45% 為準；研發原規格 60%）; neighbor>=50%; liquidity; strict WF",
+          "gate_maxdd_limit": 45.0,
+          "gate_maxdd_note_zh": "MaxDD 門檻 45%（研發規格 60%，Robin 確認前以 45% 為準）"
         }
       ],
       "cloud_supported": true
