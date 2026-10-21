@@ -108,6 +108,19 @@ class FuturesDemoClient:
     def user_trades(self, symbol: str, limit: int = 50) -> list:
         return self._signed("GET", "/fapi/v1/userTrades", {"symbol": symbol, "limit": limit})
 
+    def open_orders(self, symbol: str | None = None) -> list:
+        params = {"symbol": symbol} if symbol else {}
+        return self._signed("GET", "/fapi/v1/openOrders", params)
+
+    def all_orders(self, symbol: str, start_ms: int | None = None, limit: int = 100) -> list:
+        params = {"symbol": symbol, "limit": limit}
+        if start_ms:
+            params["startTime"] = int(start_ms)
+        return self._signed("GET", "/fapi/v1/allOrders", params)
+
+    def user_trades_since(self, symbol: str, start_ms: int, limit: int = 1000) -> list:
+        return self._signed("GET", "/fapi/v1/userTrades", {"symbol": symbol, "startTime": int(start_ms), "limit": limit})
+
     def open_algo_orders(self, symbol: str | None = None) -> list:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/fapi/v1/openAlgoOrders", params)

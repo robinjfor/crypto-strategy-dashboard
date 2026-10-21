@@ -664,6 +664,25 @@
       "</div></div></div>";
   }
 
+  /** Resting orders from Binance (spot + USD-M futures, incl. algo/stop orders). */
+  function renderOpenOrders() {
+    var oo = cloud && cloud.open_orders;
+    if (!oo) return "";
+    var rows = [].concat(oo.spot || [], oo.futures || [], oo.futures_algo || []).map(function (o) {
+      var venue = o.venue === "spot" ? "現貨" : (o.venue === "futures_algo" ? "合約條件單" : "合約") + (o.quote ? " " + o.quote : "");
+      var px = o.stopPrice || o.triggerPrice || o.price;
+      return "<tr><td>" + esc(venue) + "</td><td><strong>" + esc(o.symbol || "") + "</strong></td><td>" + esc(o.side || "") +
+        "</td><td>" + esc(o.type || o.orderType || "") + (o.reduceOnly ? " · 只減倉" : "") + '</td><td class="num">' + num(o.origQty || o.quantity, 4) +
+        '</td><td class="num">' + (px == null ? "—" : num(px, 4)) + "</td><td>" + esc(o.status || o.algoStatus || "") +
+        "</td><td>" + esc(String(o.orderId || o.algoId || "")) + "</td></tr>";
+    }).join("");
+    var err = (oo.errors || []).length ? '<p class="neg">讀取失敗：' + esc(oo.errors.join("；")) + "</p>" : "";
+    return '<div class="ops-panel" id="openOrdersPanel"><div class="ops-head"><strong>幣安掛單（現貨 + USDT/USDC 合約）</strong>' +
+      '<span class="hint">' + (oo.count || 0) + " 筆 · 直接讀幣安</span></div>" + err +
+      (rows ? '<div class="table-scroll"><table class="data"><thead><tr><th>市場</th><th>標的</th><th>方向</th><th>類型</th><th class="num">數量</th><th class="num">價格／觸發價</th><th>狀態</th><th>訂單號</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
+        : '<p class="ops-help">目前沒有掛單</p>') + "</div>";
+  }
+
   function renderReconcile() {
     var r = cloud && cloud.reconcile;
     if (!r || !r.at) return '<div class="ops-panel"><strong>對帳狀態</strong> <span class="dim">尚未執行</span></div>';
@@ -693,6 +712,7 @@
       renderTotalAssets() +
       '<div class="books-row">' + renderBookCard(usdt) + renderBookCard(usdc) + "</div>" +
       renderReconcile() +
+      renderOpenOrders() +
       '<p class="book-math-hint">驗算：現在餘額 ≈ 原本 + 已實現 + 未實現（若有入金／出金或手續費幣種差異，數字可能不完全對上）。</p>' +
       "</section>";
   }

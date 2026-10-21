@@ -1117,6 +1117,35 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
 STABLES = {"USDT", "USDC", "FDUSD", "BUSD"}
 
 
+def _open_orders(client, fc) -> dict:
+    """Resting orders straight from Binance: spot openOrders, USD-M openOrders and openAlgoOrders
+    (USDT- and USDC-margined share one futures account). Read-only; errors reported per venue."""
+    out: dict = {"source": "binance", "spot": [], "futures": [], "futures_algo": [], "errors": []}
+    keep = ("symbol", "orderId", "algoId", "clientOrderId", "clientAlgoId", "side", "type", "orderType",
+            "status", "algoStatus", "price", "stopPrice", "triggerPrice", "origQty", "quantity",
+            "executedQty", "reduceOnly", "workingType", "time", "createTime", "updateTime")
+    def norm(rows, venue):
+        res = []
+        for o in rows or []:
+            r = {k: o.get(k) for k in keep if o.get(k) not in (None, "")}
+            r["venue"] = venue
+            sym = str(o.get("symbol") or "")
+            r["quote"] = "USDC" if sym.endswith("USDC") else ("USDT" if sym.endswith("USDT") else None)
+            res.append(r)
+        return res
+    for key, fn, venue in (("spot", lambda: client.open_orders(), "spot"),
+                           ("futures", lambda: fc.open_orders(), "futures"),
+                           ("futures_algo", lambda: fc.open_algo_orders(), "futures_algo")):
+        try:
+            if (client if venue == "spot" else fc) is None:
+                continue
+            out[key] = norm(fn(), venue)
+        except Exception as e:  # noqa: BLE001
+            out["errors"].append(f"{key}: {str(e)[:160]}")
+    out["count"] = len(out["spot"]) + len(out["futures"]) + len(out["futures_algo"])
+    return out
+
+
 def _total_assets(client, bals: list, books: dict) -> dict:
     """Whole account in USDT terms, every number from Binance: all spot balances (incl. dust) valued at
     Binance ticker prices + USD-M USDT and USDC futures margin balances (wallet + unrealized)."""
@@ -1262,6 +1291,8 @@ def build_status() -> dict:
             if books.get(_q) is not None:
                 books[_q]["futures"] = _futures_quote_reconcile(state, _q.upper(), _doc)
     total_assets = _total_assets(client, bals, books)
+    _fc = _FDC()
+    open_orders = _open_orders(client if client.api_key else None, _fc if _fc.api_key else None)
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -1270,6 +1301,7 @@ def build_status() -> dict:
         "paused": paused,
         "paused_slots": state.get("paused_slots") or {},
         "total_assets": total_assets,
+        "open_orders": open_orders,
         "reconcile": {k: v for k, v in (state.get("reconcile") or {}).items() if k != "wallets"},
         "reconcile_alerts": (state.get("reconcile_alerts") or [])[-20:],
         "health": _health(meta, paused),
