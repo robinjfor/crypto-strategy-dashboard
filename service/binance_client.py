@@ -165,6 +165,9 @@ class BinanceClient:
         return df.set_index("open_time").sort_index()
 
 
+    def all_prices(self) -> list:
+        return self._public("/api/v3/ticker/price", base=self.base_url)
+
     def ticker_price(self, symbol: str) -> float:
         data = self._public("/api/v3/ticker/price", {"symbol": symbol}, base=self.base_url)
         return float(data["price"])

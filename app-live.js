@@ -652,6 +652,36 @@
       '<div class="pie-legend" id="' + legendId + '">' + legend + "</div></div></div></div>";
   }
 
+  /** Whole account from Binance: spot balances (all assets, ticker-priced) + USD-M USDT/USDC futures margin balance. */
+  function renderTotalAssets() {
+    var t = cloud && cloud.total_assets;
+    if (!t || t.error || t.total_usdt == null) return "";
+    var f = t.futures || {};
+    return '<div class="kpi-grid"><div class="kpi kpi-emphasis"><div class="label">帳戶總資產（幣安）</div><div class="value">' +
+      num(t.total_usdt, 2) + ' USDT</div><div class="sublabel">現貨 ' + num(t.spot_usdt, 2) +
+      ' + 合約 USDT ' + (f.USDT == null ? "—" : num(f.USDT, 2)) + ' + 合約 USDC ' + (f.USDC == null ? "—" : num(f.USDC, 2)) +
+      (t.complete ? "" : ' · <span class="neg">部分讀取失敗' + (t.unpriced && t.unpriced.length ? "（未計價 " + esc(t.unpriced.join(",")) + "）" : "") + "</span>") +
+      "</div></div></div>";
+  }
+
+  function renderReconcile() {
+    var r = cloud && cloud.reconcile;
+    if (!r || !r.at) return '<div class="ops-panel"><strong>對帳狀態</strong> <span class="dim">尚未執行</span></div>';
+    var mism = (r.mismatches || []).map(function (m) {
+      return "<li>" + esc((m.venue || "") + " " + (m.symbol || "") + "：本地 " + m.trader + " / 幣安 " + m.binance +
+        " · " + (m.kind || "") + ((m.slots || []).length ? " · 槽 " + m.slots.join(",") + (m.pause ? "（已暫停開新倉）" : "") : "")) + "</li>";
+    }).join("");
+    var errs = (r.errors || []).map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("");
+    var alerts = ((cloud && cloud.reconcile_alerts) || []).slice(-5).reverse().map(function (a) {
+      return "<li>" + esc((a.at || "") + " " + (a.venue || "") + " " + (a.symbol || "") + " 本地 " + a.trader + " / 幣安 " + a.binance + " " + (a.kind || "")) + "</li>";
+    }).join("");
+    return '<div class="ops-panel" id="reconcilePanel"><div class="ops-head"><strong>對帳狀態（每 15 分鐘與幣安比對）</strong>' +
+      '<span class="' + (r.ok ? "pos" : "neg") + '">' + (r.ok ? "一致" : "不一致") + "</span></div>" +
+      '<p class="ops-help">最後對帳：' + esc(r.at) + " · 連續通過 " + esc(String(r.consecutive_ok || 0)) + " 次</p>" +
+      (mism ? "<ul>" + mism + "</ul>" : "") + (errs ? '<ul class="neg">' + errs + "</ul>" : "") +
+      (alerts ? '<details><summary>告警紀錄</summary><ul>' + alerts + "</ul></details>" : "") + "</div>";
+  }
+
   function renderAccount() {
     var usdt = bookStats("USDT");
     var usdc = bookStats("USDC");
@@ -660,7 +690,9 @@
       '<div class="section-head"><h2>帳戶總覽</h2><span class="hint">' +
       esc((cloud && cloud.source_label) || (book && book.source_label) || "Binance Demo") +
       " · USDT / USDC 分開記帳</span></div>" +
+      renderTotalAssets() +
       '<div class="books-row">' + renderBookCard(usdt) + renderBookCard(usdc) + "</div>" +
+      renderReconcile() +
       '<p class="book-math-hint">驗算：現在餘額 ≈ 原本 + 已實現 + 未實現（若有入金／出金或手續費幣種差異，數字可能不完全對上）。</p>' +
       "</section>";
   }

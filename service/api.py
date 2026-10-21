@@ -1086,7 +1086,7 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
         # what the trader thinks it holds on this margin asset
         expect: dict[str, float] = {}
         sl = state.get("u1_live") or {}
-        if (sl.get("quote") or "USDT").upper() == q:
+        if sl and (sl.get("quote") or "USDT").upper() == q:
             pm = u1_live.perp_map(q)
             for k, u in (sl.get("units") or {}).items():
                 if k in pm and float(u or 0) != 0:
@@ -1109,6 +1109,46 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
         out["allocated"] = sum(slot_notional(s_, q) for s_ in (alloc_doc or {}).get("slots") or []
                                if s_.get("enabled") is True and infer_quote_asset(s_) == q
                                and str(s_.get("family") or "") in FUTURES_FAMILIES)
+    except Exception as e:  # noqa: BLE001
+        out["error"] = str(e)[:200]
+    return out
+
+
+STABLES = {"USDT", "USDC", "FDUSD", "BUSD"}
+
+
+def _total_assets(client, bals: list, books: dict) -> dict:
+    """Whole account in USDT terms, every number from Binance: all spot balances (incl. dust) valued at
+    Binance ticker prices + USD-M USDT and USDC futures margin balances (wallet + unrealized)."""
+    out: dict = {"source": "binance", "spot_usdt": 0.0, "futures": {}, "unpriced": []}
+    try:
+        prices = {}
+        if bals:
+            prices = {r["symbol"]: float(r["price"]) for r in client.all_prices() or []}
+        for b in bals or []:
+            a = str(b["asset"]).upper()
+            amt = float(b.get("free") or 0) + float(b.get("locked") or 0)
+            if a in STABLES:
+                px = 1.0 if a == "USDT" else prices.get(f"{a}USDT", 1.0)
+            else:
+                px = prices.get(f"{a}USDT")
+            if px is None:
+                out["unpriced"].append(a)
+                continue
+            out["spot_usdt"] += amt * px
+        fut_total = 0.0
+        for q in ("USDT", "USDC"):
+            f = (books.get(q.lower()) or {}).get("futures") or {}
+            if f.get("error") or f.get("margin_balance") is None:
+                out["futures"][q] = None
+                continue
+            mb = float(f["margin_balance"])
+            out["futures"][q] = mb
+            fut_total += mb * (1.0 if q == "USDT" else prices.get("USDCUSDT", 1.0))
+        out["spot_usdt"] = round(out["spot_usdt"], 4)
+        out["futures_usdt"] = round(fut_total, 4)
+        out["total_usdt"] = round(out["spot_usdt"] + fut_total, 4)
+        out["complete"] = not out["unpriced"] and all(v is not None for v in out["futures"].values())
     except Exception as e:  # noqa: BLE001
         out["error"] = str(e)[:200]
     return out
@@ -1217,8 +1257,11 @@ def build_status() -> dict:
     # USDC book also holds the USD-M USDC futures wallet (U1 on BTCUSDC/ETHUSDC, Robin 2026-10-20):
     # numbers come from Binance via the cloud API, reconciled against the trader's books.
     from futures_client import FuturesDemoClient as _FDC
-    if (books.get("usdc") is not None) and _FDC().api_key:
-        books["usdc"]["futures"] = _futures_quote_reconcile(state, "USDC", _doc)
+    if _FDC().api_key:
+        for _q in ("usdt", "usdc"):
+            if books.get(_q) is not None:
+                books[_q]["futures"] = _futures_quote_reconcile(state, _q.upper(), _doc)
+    total_assets = _total_assets(client, bals, books)
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -1226,6 +1269,9 @@ def build_status() -> dict:
         "mode": mode,
         "paused": paused,
         "paused_slots": state.get("paused_slots") or {},
+        "total_assets": total_assets,
+        "reconcile": {k: v for k, v in (state.get("reconcile") or {}).items() if k != "wallets"},
+        "reconcile_alerts": (state.get("reconcile_alerts") or [])[-20:],
         "health": _health(meta, paused),
         "balances": bals,
         "balances_map": bals_map,

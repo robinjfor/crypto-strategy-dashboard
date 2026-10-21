@@ -1017,6 +1017,14 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     # Y1 / X1 paper (own GCS object) — last, after the trader state + feed are saved; isolated
     paper_y1_summary = _run_paper_y1()
 
+    # Spec 3.3: reconcile with Binance at the end of every runner job too (read-only; may pause slots).
+    if live and client.api_key and os.environ.get("GCS_BUCKET"):
+        try:
+            import reconcile
+            reconcile.run_once(store, client=client)
+        except Exception as e:  # noqa: BLE001
+            log.warning("reconcile_after_run_skip err=%s", e)
+
     log.info("run_done signals=%s live=%s paused=%s feed=%s", len(applied), live, paused, url)
     print(
         json.dumps(
