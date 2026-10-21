@@ -1,0 +1,298 @@
+[
+ {
+  "code": "C23",
+  "spec_strategy_id": "rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h",
+  "status": "PENDING_EMILY",
+  "symbol": "WLDUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "WLD",
+   "tf": "4h",
+   "donch_n": 70,
+   "stop_m": 2.0,
+   "trail_m": 1.5,
+   "max_hold": 36,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR (first TR=H-L)",
+   "donch_hi/lo = rolling N max(High)/min(Low) shifted 1 bar",
+   "state: 0->1 on close>donch_hi, 1->0 on close<donch_lo; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR) each close",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "reset_below_hi": true,
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C23.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C23.csv.gz"
+  },
+  "family": "donchian_atr"
+ },
+ {
+  "code": "C25",
+  "spec_strategy_id": "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h",
+  "status": "PENDING_EMILY",
+  "symbol": "ARBUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "ARB",
+   "tf": "1h",
+   "donch_n": 70,
+   "stop_m": 2.5,
+   "trail_m": 3.0,
+   "max_hold": 192,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR (first TR=H-L)",
+   "donch_hi/lo = rolling N max(High)/min(Low) shifted 1 bar",
+   "state: 0->1 on close>donch_hi, 1->0 on close<donch_lo; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR) each close",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "reset_below_hi": true,
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C25.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C25.csv.gz"
+  },
+  "family": "donchian_atr"
+ },
+ {
+  "code": "C29",
+  "spec_strategy_id": "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h",
+  "status": "PENDING_EMILY",
+  "symbol": "FILUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "FIL",
+   "tf": "1h",
+   "donch_n": 70,
+   "stop_m": 1.5,
+   "trail_m": 2.5,
+   "max_hold": 192,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR (first TR=H-L)",
+   "donch_hi/lo = rolling N max(High)/min(Low) shifted 1 bar",
+   "state: 0->1 on close>donch_hi, 1->0 on close<donch_lo; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR) each close",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "reset_below_hi": true,
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C29.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C29.csv.gz"
+  },
+  "family": "donchian_atr"
+ },
+ {
+  "code": "C31",
+  "spec_strategy_id": "rcr1020_donchian30_s1.5_t3.5_reset__APT__4h",
+  "status": "PENDING_EMILY",
+  "symbol": "APTUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "APT",
+   "tf": "4h",
+   "donch_n": 30,
+   "stop_m": 1.5,
+   "trail_m": 3.5,
+   "max_hold": 36,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR (first TR=H-L)",
+   "donch_hi/lo = rolling N max(High)/min(Low) shifted 1 bar",
+   "state: 0->1 on close>donch_hi, 1->0 on close<donch_lo; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR) each close",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "reset_below_hi": true,
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C31.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C31.csv.gz"
+  },
+  "family": "donchian_atr"
+ },
+ {
+  "code": "C32",
+  "spec_strategy_id": "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h",
+  "status": "PENDING_EMILY",
+  "symbol": "DOTUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "DOT",
+   "tf": "1h",
+   "donch_n": 70,
+   "stop_m": 2.0,
+   "trail_m": 3.5,
+   "max_hold": 192,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR (first TR=H-L)",
+   "donch_hi/lo = rolling N max(High)/min(Low) shifted 1 bar",
+   "state: 0->1 on close>donch_hi, 1->0 on close<donch_lo; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR) each close",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "reset_below_hi": true,
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C32.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C32.csv.gz"
+  },
+  "family": "donchian_atr"
+ },
+ {
+  "code": "C35",
+  "spec_strategy_id": "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h",
+  "family": "donchian_atr",
+  "status": "PENDING_EMILY",
+  "symbol": "SEIUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "SEI",
+   "tf": "4h",
+   "donch_n": 40,
+   "stop_m": 1.5,
+   "trail_m": 2.5,
+   "max_hold": 36,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/trades_C35.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/bars_C35.csv.gz"
+  }
+ },
+ {
+  "code": "C36",
+  "spec_strategy_id": "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h",
+  "family": "donchian_atr",
+  "status": "PENDING_EMILY",
+  "symbol": "GALAUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "GALA",
+   "tf": "4h",
+   "donch_n": 20,
+   "stop_m": 2.0,
+   "trail_m": 2.5,
+   "max_hold": 36,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/trades_C36.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/bars_C36.csv.gz"
+  }
+ },
+ {
+  "code": "C39",
+  "spec_strategy_id": "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h",
+  "family": "donchian_atr",
+  "status": "PENDING_EMILY",
+  "symbol": "OPUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "OP",
+   "tf": "1h",
+   "donch_n": 70,
+   "stop_m": 1.5,
+   "trail_m": 3.0,
+   "max_hold": 192,
+   "reset_below_hi": true,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/trades_C39.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/bars_C39.csv.gz"
+  }
+ },
+ {
+  "code": "Z9",
+  "spec_strategy_id": "strictwf1021_Z9_bb_n40_bb_k2.5_sq_q0.35_stop_m1.5_trail_m3.5__ARB__1h",
+  "family": "bb_squeeze_breakout_perp",
+  "status": "PENDING_EMILY",
+  "symbol": "ARBUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "ARB",
+   "tf": "1h",
+   "bb_n": 40,
+   "bb_k": 2.5,
+   "sq_q": 0.35,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 1.5,
+   "trail_m": 3.5,
+   "max_hold": 192,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/trades_Z9.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures_batch2/bars_Z9.csv.gz"
+  }
+ }
+]

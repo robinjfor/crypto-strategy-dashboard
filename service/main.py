@@ -251,7 +251,7 @@ def _base_asset(symbol: str) -> str:
     return sym
 
 
-NEXT_OPEN_PERP_FAMILIES = ("short_trend_perp", "bb_squeeze_breakout_perp")
+NEXT_OPEN_PERP_FAMILIES = ("short_trend_perp", "bb_squeeze_breakout_perp", "donchian_atr_perp")
 
 
 def _next_open_perp_module(family):
@@ -262,6 +262,9 @@ def _next_open_perp_module(family):
     if family == "bb_squeeze_breakout_perp":
         import bb_squeeze
         return bb_squeeze
+    if family == "donchian_atr_perp":
+        import donchian_perp
+        return donchian_perp
     return None
 
 

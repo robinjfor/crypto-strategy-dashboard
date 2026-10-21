@@ -1,0 +1,89 @@
+[
+ {
+  "code": "C23",
+  "n_trades": 20,
+  "final": 42014.3,
+  "exit_reasons": {
+   "stop_trail": 13,
+   "stop_initial": 6,
+   "max_hold": 1
+  }
+ },
+ {
+  "code": "C25",
+  "n_trades": 86,
+  "final": 27929.71,
+  "exit_reasons": {
+   "stop_trail": 64,
+   "stop_initial": 22
+  }
+ },
+ {
+  "code": "C29",
+  "n_trades": 102,
+  "final": 18390.77,
+  "exit_reasons": {
+   "stop_initial": 52,
+   "stop_trail": 50
+  }
+ },
+ {
+  "code": "C31",
+  "n_trades": 49,
+  "final": 15833.14,
+  "exit_reasons": {
+   "stop_initial": 22,
+   "max_hold": 14,
+   "stop_trail": 12,
+   "exit_signal": 1
+  }
+ },
+ {
+  "code": "C32",
+  "n_trades": 97,
+  "final": 13920.34,
+  "exit_reasons": {
+   "stop_initial": 51,
+   "stop_trail": 46
+  }
+ },
+ {
+  "code": "C35",
+  "n_trades": 42,
+  "final": 22464.75,
+  "exit_reasons": {
+   "stop_initial": 20,
+   "stop_trail": 16,
+   "max_hold": 6
+  }
+ },
+ {
+  "code": "C36",
+  "n_trades": 62,
+  "final": 20154.99,
+  "exit_reasons": {
+   "stop_trail": 39,
+   "stop_initial": 17,
+   "max_hold": 6
+  }
+ },
+ {
+  "code": "C39",
+  "n_trades": 90,
+  "final": 15176.46,
+  "exit_reasons": {
+   "stop_initial": 52,
+   "stop_trail": 38
+  }
+ },
+ {
+  "code": "Z9",
+  "n_trades": 137,
+  "final": 11634.05,
+  "exit_reasons": {
+   "stop_initial": 87,
+   "exit_signal": 30,
+   "stop_trail": 20
+  }
+ }
+]

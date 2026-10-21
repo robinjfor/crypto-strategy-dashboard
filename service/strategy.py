@@ -491,6 +491,10 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
     if fam == "bb_squeeze_breakout_perp":
         from bb_squeeze import evaluate_bb_squeeze_slot
         return evaluate_bb_squeeze_slot(slot, klines, position, slot_meta)
+    if fam == "donchian_atr_perp":
+        # C22+ perp Donchian rows (eng.bt next-open, perp klines); NOT the spot donchian_atr runner
+        from donchian_perp import evaluate_donchian_perp_slot
+        return evaluate_donchian_perp_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev":
         return {
             "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
@@ -713,7 +717,7 @@ def evaluate_all(client, state: dict) -> list[dict]:
             # 1000 bars (API max) so the Donchian state machine / Wilder ATR
             # warm up like the full-history backtest.
             limit = 1000 if str(slot.get("family") or "").startswith("donchian") else max(250, donch_n + 80, ema_slow + 80)
-            if slot.get("family") in ("short_trend_perp", "bb_squeeze_breakout_perp"):
+            if slot.get("family") in ("short_trend_perp", "bb_squeeze_breakout_perp", "donchian_atr_perp"):
                 kl, eval_meta = (_short_trend_inputs if slot.get("family") == "short_trend_perp"
                                  else _bb_squeeze_inputs)(slot, meta, positions)
                 res = evaluate_slot_dispatch(slot, kl, pos, eval_meta)
