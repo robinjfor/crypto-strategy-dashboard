@@ -370,7 +370,13 @@ def _ledger_and_lvb(store, state: dict, client, fc):
         import live_vs_backtest
         if client is not None and live_vs_backtest.due(state):
             by_id = {k.get("id"): k for k in known}
-            lvb = live_vs_backtest.run(state, doc, client=client,
+            paper = None
+            try:
+                import paper_u1
+                paper = store.load_feed(object_name=paper_u1.PAPER_OBJECT)
+            except Exception:  # noqa: BLE001
+                paper = None
+            lvb = live_vs_backtest.run(state, doc, client=client, paper_u1=paper,
                                        slot_lookup=lambda i: slot_by_id(i) or by_id.get(i))
     except Exception as e:  # noqa: BLE001
         log.warning("ledger_or_lvb_fail err=%s", e)

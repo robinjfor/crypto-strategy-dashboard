@@ -74,3 +74,16 @@ def test_apply_signal_enter_uses_fill_minus_atr_not_suggested():
     assert abs(pos["stop"] - expected) < 1e-6
     assert abs(pos["stop"] - 0.204942) > 1e-4  # not the stale suggested
     assert pos["stop_order_id"] == 55
+
+
+def test_close_fill_family_stop_anchored_at_signal_close_like_backtest():
+    """C2 FIL 2026-10-04: fill 24 bps below the close put the live stop under the backtest stop and the
+    stop hit one bar later. Backtest anchor = signal close x (1 + 20 bps)."""
+    import main
+    close, atr = 1.0797, 0.01566760129652035
+    stop = main.spot_initial_stop(1.07707, close, 1.5, atr)
+    assert abs(stop - (close * 1.002 - 1.5 * atr)) < 1e-12  # 1.05836 → hit in the 18:00 bar (low 1.0547)
+    # late fill far from the close (> 1%): anchor stays at the fill
+    assert main.spot_initial_stop(0.2289, 0.2239, 2.0, 0.009695) == 0.2289 - 2.0 * 0.009695
+    # non close-fill family (no close passed) → fill anchor
+    assert main.spot_initial_stop(1.0, 0.0, 2.0, 0.01) == 1.0 - 0.02

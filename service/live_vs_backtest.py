@@ -17,11 +17,15 @@ log = logging.getLogger(__name__)
 
 PRICE_BPS_TOL = 30.0
 PAUSE_WINDOW_H = 48
-SUPPORTED = {"donchian_atr", "donchian", "donchian_btc_regime"}
-TF_DELTA = {"1h": pd.Timedelta(hours=1), "4h": pd.Timedelta(hours=4), "6h": pd.Timedelta(hours=6),
+CLOSE_FILL = {"donchian_atr", "donchian", "donchian_btc_regime"}
+NEXT_OPEN = {"short_trend_perp"}
+U1_FAMILY = "btc_eth_trend_voltarget_perp"
+SUPPORTED = CLOSE_FILL | NEXT_OPEN
+TF_DELTA = {"1h": pd.Timedelta(hours=1), "2h": pd.Timedelta(hours=2), "4h": pd.Timedelta(hours=4),
+            "6h": pd.Timedelta(hours=6), "12h": pd.Timedelta(hours=12),
             "1d": pd.Timedelta(days=1)}
 REASON = {"stop": "stop_loss", "stop_loss": "stop_loss", "donch_lo": "signal_exit", "signal_exit": "signal_exit",
-          "max_hold": "max_hold", "exit": "signal_exit"}
+          "max_hold": "max_hold", "exit": "signal_exit", "exit_signal": "signal_exit", "reverse": "reverse"}
 
 
 def _backtest(slot: dict, kl: pd.DataFrame, btc: pd.DataFrame | None) -> list[dict]:
@@ -45,19 +49,61 @@ def _backtest(slot: dict, kl: pd.DataFrame, btc: pd.DataFrame | None) -> list[di
     return out
 
 
+def _backtest_short(slot: dict, kl: pd.DataFrame, funding, btc_daily, coin_daily) -> list[dict]:
+    import bt_short_trend as S
+    D = S.Data(kl, funding, btc_daily, coin_daily, str(slot["tf"]))
+    fam = str(slot.get("signal") or "sema")
+    p = {"filt": str(slot.get("filter") or "none")}
+    if fam == "sema":
+        p["pair"] = S.PAIRS.index((int(slot["ema_fast"]), int(slot["ema_slow"])))
+    else:
+        p["n"] = int(slot["donch_n"])
+    ent, *x = S.signals(D, fam, p)
+    trades, _ = S.bt(D, ent, tuple(x), float(slot["stop_atr_mult"]), float(slot["trail_atr_mult"]),
+                     int(slot.get("max_hold_bars") or 60))
+    out = []
+    for t in trades:
+        if t["reason"] == "eod_flat":
+            continue
+        short = t["side"] < 0
+        out.append({"entry_bar": pd.Timestamp(t["entry"]), "exit_bar": pd.Timestamp(t["exit"]),
+                    "side": "SHORT" if short else "LONG", "reason": t["reason"],
+                    "entry_px": t["entry_px"] / ((1 - S.COST) if short else (1 + S.COST)),
+                    "exit_px": t["exit_px"] / ((1 + S.COST) if short else (1 - S.COST))})
+    return out
+
+
+# Root causes found 2026-10-21 (rd_daily/2026-10-21/PARITY_ROOTCAUSE.md), keyed by slot + close time.
+_PRE = "舊版 runner（10/08 前 backfill／位準進場，9e6f7db 已修）"
+_SLIP = "Demo 市價單滑價（非 bug）"
+KNOWN_CAUSES = {
+    ("sat_fil_1h", "2026-09-27T03:25"): _PRE, ("sat_dot_4h", "2026-09-27T04:40"): _PRE,
+    ("sat_op_4h", "2026-09-27T08:01"): _PRE, ("sat_fet_4h", "2026-09-29T06:06"): _PRE,
+    ("sat_fil_1h", "2026-10-04T03:03"): "停損錨點用成交價（bug，10/21 已修：改用訊號收盤×(1+20bps)）",
+    ("sat_fil_1h", "2026-10-05T23:32"): _PRE, ("sat_fil_1h", "2026-10-06T03:05"): _PRE,
+    ("sat_apt_1h", "2026-10-07T09:58"): _PRE,
+    ("sat_op_4h", "2026-10-12T21:29"): _SLIP, ("sat_dot_4h", "2026-10-13T00:54"): _SLIP,
+}
+
+
 def _bps(a, b):
     return None if not a or not b else round((float(a) / float(b) - 1) * 1e4, 2)
 
 
-def compare_trade(live: dict, bt: list[dict], tf: str) -> dict:
-    """live: {entry_ms, exit_ms, entry_px, exit_px, side, reason}. Bars: open time of the bar."""
+def compare_trade(live: dict, bt: list[dict], tf: str, model: str = "close_fill") -> dict:
+    """live: {entry_ms, exit_ms, entry_px, exit_px, side, reason}. Bars: open time of the bar.
+    close_fill (C): backtest fills at the signal-bar close → live fill lands in the next bar.
+    next_open (S): backtest fills at the next bar's open → live fill lands in that same bar."""
     d = TF_DELTA.get(tf, pd.Timedelta(hours=1))
     e_fill = pd.Timestamp(live["entry_ms"], unit="ms", tz="UTC")
     x_fill = pd.Timestamp(live["exit_ms"], unit="ms", tz="UTC")
-    live_entry_bar = e_fill.floor(d) - d   # runner fills right after the signal bar closes
-    live_exit_bar = x_fill.floor(d)        # resting stop fills inside the stop bar
-    if REASON.get(str(live.get("reason")), "signal_exit") != "stop_loss":
-        live_exit_bar = x_fill.floor(d) - d
+    if model == "next_open":
+        live_entry_bar, live_exit_bar = e_fill.floor(d), x_fill.floor(d)
+    else:
+        live_entry_bar = e_fill.floor(d) - d   # runner fills right after the signal bar closes
+        live_exit_bar = x_fill.floor(d)        # resting stop fills inside the stop bar
+        if REASON.get(str(live.get("reason")), "signal_exit") != "stop_loss":
+            live_exit_bar = x_fill.floor(d) - d
     m = min(bt, key=lambda t: abs((t["entry_bar"] - live_entry_bar).total_seconds()), default=None)
     row = {"live_entry_bar": live_entry_bar.isoformat(), "live_exit_bar": live_exit_bar.isoformat(),
            "live_reason": REASON.get(str(live.get("reason")), live.get("reason")), "live_side": live.get("side", "LONG"),
@@ -114,7 +160,49 @@ def live_trades_from_ledger(ledger_doc: dict, closed: list[dict]) -> list[dict]:
     return out
 
 
-def run(state: dict, ledger_doc: dict, *, client, slot_lookup, now: datetime | None = None) -> dict:
+U1_WEIGHT_TOL = 0.10  # |live weight − paper target weight| as a fraction of the target
+
+
+def u1_rows(state: dict, paper_u1: dict | None) -> list[dict]:
+    """U1 executes the paper engine's decision; each runner fill must match the paper fill on the same
+    coin and fill bar: direction, price vs the paper 1h open (<= 30 bps), resulting weight (<= 10%)."""
+    sl = state.get("u1_live") or {}
+    paper = [f for f in (paper_u1 or {}).get("fills") or [] if f.get("book", "lev") == "lev"]
+    rows = []
+    for f in sl.get("fills") or []:
+        if f.get("external") or f.get("manual"):
+            continue
+        coin = "BTC" if str(f.get("symbol", "")).startswith("BTC") else "ETH"
+        bar = pd.Timestamp(f.get("filled_at")).tz_convert("UTC").floor("h") if f.get("filled_at") else None
+        base = {"slot": sl.get("slot") or "u1", "code": "U1", "symbol": f.get("symbol"), "family": U1_FAMILY,
+                "tf": "1h", "closed_at": f.get("filled_at"), "live_entry_bar": bar.isoformat() if bar is not None else None,
+                "live_side": "LONG" if float(f.get("qty_signed") or 0) > 0 else "SHORT", "live_entry_px": f.get("price")}
+        m = next((p for p in paper if str(p["symbol"]).startswith(coin)
+                  and bar is not None and pd.Timestamp(p.get("fill_time_utc")).floor("h") == bar), None)
+        if m is None:
+            rows.append({**base, "match": False, "problems": ["no_paper_fill_at_bar"]})
+            continue
+        probs = []
+        if (float(m.get("qty_delta") or 0) > 0) != (float(f.get("qty_signed") or 0) > 0):
+            probs.append("direction")
+        eb = _bps(f.get("price"), m.get("price"))
+        if eb is None or abs(eb) > PRICE_BPS_TOL:
+            probs.append("entry_price")
+        tw = float(m.get("target_weight") or 0)
+        eq = float(m.get("equity_before") or 0)
+        cap = float(sl.get("capital_usdt") or 0)
+        lw = (float(f.get("units_after") or 0) * float(f.get("price") or 0) / cap) if cap else None
+        if tw and lw is not None and abs(lw - tw) > U1_WEIGHT_TOL * abs(tw):
+            probs.append("weight")
+        rows.append({**base, "bt_entry_bar": pd.Timestamp(m["fill_time_utc"]).isoformat(), "bt_entry_px": m.get("price"),
+                     "bt_side": "LONG" if float(m.get("qty_delta") or 0) > 0 else "SHORT", "entry_bps": eb,
+                     "live_weight": round(lw, 4) if lw is not None else None, "bt_weight": tw,
+                     "paper_equity": eq, "match": not probs, "problems": probs})
+    return rows
+
+
+def run(state: dict, ledger_doc: dict, *, client, slot_lookup, now: datetime | None = None,
+        paper_u1: dict | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     rows, cache = [], {}
     btc = None
@@ -126,8 +214,19 @@ def run(state: dict, ledger_doc: dict, *, client, slot_lookup, now: datetime | N
             rows.append({**base, "family": fam, "match": None, "problems": ["family_not_supported_yet"]})
             continue
         tf = str(slot.get("tf") or "1h")
-        key = (lt["symbol"], tf)
+        key = (lt["symbol"], tf, fam in NEXT_OPEN)
         try:
+            if fam in NEXT_OPEN:
+                from perp_market import KLINES_MAX, fetch_funding, fetch_perp_klines
+                if key not in cache:
+                    filt = str(slot.get("filter") or "none")
+                    cache[key] = (fetch_perp_klines(lt["symbol"], tf, limit=KLINES_MAX),
+                                  fetch_funding(lt["symbol"], limit=1000) if "fpos" in filt else None,
+                                  fetch_perp_klines("BTCUSDT", "1d", limit=KLINES_MAX) if filt.startswith("btc") else None,
+                                  fetch_perp_klines(lt["symbol"], "1d", limit=400) if filt == "coin50" else None)
+                bt = _backtest_short(slot, *cache[key])
+                rows.append({**base, "family": fam, "tf": tf, **compare_trade(lt, bt, tf, "next_open")})
+                continue
             if key not in cache:
                 cache[key] = client.fetch_klines(lt["symbol"], tf, limit=1000, use_vision=True)
             if slot.get("btc_regime") and btc is None:
@@ -136,6 +235,11 @@ def run(state: dict, ledger_doc: dict, *, client, slot_lookup, now: datetime | N
             rows.append({**base, "family": fam, "tf": tf, **compare_trade(lt, bt, tf)})
         except Exception as e:  # noqa: BLE001
             rows.append({**base, "family": fam, "match": None, "problems": [f"error: {str(e)[:120]}"]})
+    rows.extend(u1_rows(state, paper_u1))
+    for r in rows:
+        c = KNOWN_CAUSES.get((r.get("slot"), str(r.get("closed_at") or "")[:16]))
+        if c and r.get("match") is False:
+            r["root_cause"] = c
     recent_cut = now - timedelta(hours=PAUSE_WINDOW_H)
     for r in rows:
         try:

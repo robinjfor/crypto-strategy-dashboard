@@ -292,6 +292,19 @@ def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) ->
     return None
 
 
+CLOSE_FILL_FAMILIES = {"donchian_atr", "donchian", "donchian_btc_regime", "ema_cross_atr"}
+BT_COST = 0.002            # bt_reference COST: 20 bps per side
+STOP_ANCHOR_MAX_DEV = 0.01  # |fill/close - 1| above this → anchor at the fill
+
+
+def spot_initial_stop(fill_px: float, signal_close: float, stop_m: float, atr: float) -> float:
+    if signal_close > 0 and fill_px > 0 and abs(fill_px / signal_close - 1) <= STOP_ANCHOR_MAX_DEV:
+        basis = signal_close * (1 + BT_COST)
+    else:
+        basis = fill_px
+    return basis - stop_m * atr
+
+
 SPOT_DUST_FRAC = 0.05  # spot base held worth > 5% of the planned entry = already a position
 
 
@@ -496,7 +509,12 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             # the live fill (esp. backfill) is a different price.
             stop_m = float(sig.get("stop_atr_mult") or 2.0)
             if atr > 0 and stop_m > 0:
-                stop = px - stop_m * atr
+                # Backtest (close-fill model) anchors the initial stop at signal close x (1 + COST), not at
+                # the exchange fill; a fill 20+ bps below the close put the live stop lower and the stop
+                # hit one bar later (C2 FIL 2026-10-04). A fill far from the close (late run) keeps the
+                # fill as the anchor so the stop can never sit above the price paid.
+                close_fill_fam = str(sig.get("family") or "") in CLOSE_FILL_FAMILIES
+                stop = spot_initial_stop(px, float(sig.get("close") or 0) if close_fill_fam else 0.0, stop_m, atr)
             else:
                 stop = float(sig.get("suggested_stop") or 0)
             positions[slot_id] = {

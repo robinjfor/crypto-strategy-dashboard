@@ -718,7 +718,7 @@
       return "<tr><td>" + esc((x.code || "") + " " + (x.symbol || "")) + "</td><td>" + esc(x.closed_at || "") + "</td><td>" +
         esc((x.live_entry_bar || "—") + " / " + (x.bt_entry_bar || "—")) + "</td><td>" + esc((x.live_exit_bar || "—") + " / " + (x.bt_exit_bar || "—")) +
         '</td><td class="num">' + (x.entry_bps == null ? "—" : num(x.entry_bps, 1)) + '</td><td class="num">' + (x.exit_bps == null ? "—" : num(x.exit_bps, 1)) +
-        "</td><td>" + st + (x.pause ? "（已暫停該槽）" : "") + "</td><td>" + esc((x.problems || []).join(",")) + "</td></tr>";
+        "</td><td>" + st + (x.pause ? "（已暫停該槽）" : "") + "</td><td>" + esc((x.problems || []).join(",")) + (x.root_cause ? '<div class="dim" style="font-size:11px">根因：' + esc(x.root_cause) + "</div>" : "") + "</td></tr>";
     }).join("");
     return '<div class="ops-panel" id="lvbPanel"><div class="ops-head"><strong>實盤 vs 回測（逐筆，每日 UTC 00:30 後）</strong><span class="hint">' +
       esc(r.at || "") + " · 一致 " + r.n_match + " · 不一致 " + r.n_mismatch + " · 價差容忍 " + r.tolerance_bps + " bps · 近 " + r.pause_window_h + " 小時不一致才暫停</span></div>" +
