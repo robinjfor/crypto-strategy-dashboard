@@ -530,6 +530,15 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
         sleeve["last_fill_bar"] = dec["fill_bar"]
     run["orders"] = len(fills)
     run["fills"] = [{k: f[k] for k in ("symbol", "side", "qty", "price", "reason", "fee")} for f in fills]
+    if fills:
+        px = {f["coin"]: f["price"] for f in fills if f.get("coin")}
+        px = {k: px.get(k) or (dec or {}).get("fill_opens", {}).get(k) or 0.0 for k in SYMS}
+        eq = sleeve_equity(sleeve, px)
+        if eq > 0:
+            run["effective_leverage"] = {k: sleeve["units"][k] * px[k] / eq for k in SYMS}
+            run["gross_leverage"] = sum(abs(sleeve["units"][k]) * px[k] for k in SYMS) / eq
+            run["target_gross_leverage"] = sum(abs(float(v)) for v in ((dec or {}).get("targets_lev") or {}).values()) or None
+        run["exchange_leverage_cap"] = EXCHANGE_LEVERAGE
     sleeve["runs"] = (sleeve["runs"] + [run])[-48:]
     return {"active": True, **run}
 
@@ -540,9 +549,13 @@ def public_view(sleeve: dict | None, marks: dict | None = None) -> dict | None:
     out = {k: sleeve.get(k) for k in ("code", "slot", "venue", "margin_type", "capital_usdt", "cash", "units",
                                      "fees", "funding", "started_at", "last_fill_bar")}
     out["quote"] = sleeve.get("quote") or "USDT"
+    out["exchange_leverage_cap"] = EXCHANGE_LEVERAGE
     out["perps"] = _pm(sleeve)
     if marks:
         out["equity"] = sleeve_equity(sleeve, marks)
+        eq = out["equity"]
+        out["effective_leverage"] = {k: (sleeve["units"][k] * marks[k] / eq if eq > 0 else None) for k in SYMS}
+        out["gross_leverage"] = (sum(abs(sleeve["units"][k]) * marks[k] for k in SYMS) / eq) if eq > 0 else None
     out["last_run"] = (sleeve.get("runs") or [None])[-1]
     out["fills_recent"] = (sleeve.get("fills") or [])[-6:]
     out["events_recent"] = (sleeve.get("events") or [])[-6:]

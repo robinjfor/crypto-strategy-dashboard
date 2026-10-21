@@ -342,3 +342,23 @@ def test_usdc_ref_open_from_klines_frame_columns():
                   allow_increase=True, fc_factory=lambda: fc, fetch_1h=fetch_1h)
     o = {c[1]["symbol"]: float(c[1]["quantity"]) for c in fc.calls if c[0] == "new_order"}
     assert o == pytest.approx({"BTCUSDC": 800 / 60100, "ETHUSDC": 800 / 2501})
+
+
+def test_u1_effective_leverage_labels_not_exchange_cap():
+    """08:01 10/21: targets 0.883 each (L 1.766); BTC 0.01064 → step 0.001 → 0.011. Show actual ×, cap ×3 alongside."""
+    import api
+    state = {"u1_live": {"quote": "USDC", "slot": "u1_btc_eth_usdc", "cash": -794.8920081, "units": {"BTC": 0.011, "ETH": 0.361}}}
+    rows = [{"venue": "futures", "raw_symbol": "BTCUSDC", "symbol": "BTCUSDC 多×3", "qty": 0.011, "mark": 82901.8, "leverage": 3},
+            {"venue": "futures", "raw_symbol": "ETHUSDC", "symbol": "ETHUSDC 多×3", "qty": 0.361, "mark": 2443.67, "leverage": 3},
+            {"venue": "futures", "raw_symbol": "ARBUSDT", "symbol": "ARBUSDT 空×1", "qty": 1.0, "mark": 1.0, "leverage": 1}]
+    api._label_u1_effective_leverage(rows, state)
+    eq = -794.8920081 + 0.011 * 82901.8 + 0.361 * 2443.67
+    assert rows[0]["effective_leverage"] == pytest.approx(0.011 * 82901.8 / eq, rel=1e-3)
+    assert rows[0]["symbol"].startswith("BTCUSDC 多 實際×0.91") and "上限×3" in rows[0]["symbol"]
+    assert rows[0]["u1_gross_leverage"] == pytest.approx(1.79, abs=0.01)
+    assert rows[2]["symbol"] == "ARBUSDT 空×1"
+    pv = api._u1_live_public(state, rows)["sleeve"]
+    assert pv["exchange_leverage_cap"] == 3 and pv["gross_leverage"] == pytest.approx(1.79, abs=0.01)
+    # sizing per spec: want = target·V/open, rounded to the 0.001 lot
+    assert L._round_step(0.8829321187226429 * 1000 / 82984.7, 0.001) == 0.011
+    assert L._round_step(0.8829321187226429 * 1000 / 2447.77, 0.001) == 0.361

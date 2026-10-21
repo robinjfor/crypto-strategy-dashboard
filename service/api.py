@@ -466,7 +466,43 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
             out.append(add_code(fr, fr.get("strategy_id"), fr.get("family")))
     except Exception as e:  # noqa: BLE001
         log.warning("futures_positions_merge_fail err=%s", e)
+    _label_u1_effective_leverage(out, state)
     return out
+
+
+def _label_u1_effective_leverage(rows: list, state: dict) -> None:
+    """U1 rows: the exchange leverage (3) is only the margin cap. Show the actual exposure
+    (position notional / U1 sleeve equity) and keep the cap alongside, e.g. "BTCUSDC 多 實際×0.91（上限×3）"."""
+    sl = state.get("u1_live") or {}
+    try:
+        import u1_live
+        pm = u1_live.perp_map(sl.get("quote") or "USDT")
+    except Exception:  # noqa: BLE001
+        return
+    by_sym = {v: k for k, v in pm.items()}
+    u1_rows = [r for r in rows if r.get("venue") == "futures" and r.get("raw_symbol") in by_sym
+               and float((sl.get("units") or {}).get(by_sym[r["raw_symbol"]]) or 0) > 0]
+    if not u1_rows:
+        return
+    marks = {by_sym[r["raw_symbol"]]: float(r.get("mark") or 0) for r in u1_rows}
+    for k in u1_live.SYMS:
+        marks.setdefault(k, 0.0)
+    eq = u1_live.sleeve_equity(sl, marks)
+    gross = 0.0
+    for r in u1_rows:
+        mv = abs(float(r.get("qty") or 0)) * float(r.get("mark") or 0)
+        gross += mv
+        eff = mv / eq if eq > 0 else None
+        cap = r.get("leverage")
+        r["code"] = r.get("code") or "U1"
+        r["slot"] = sl.get("slot") or r.get("slot")
+        r["exchange_leverage_cap"] = cap
+        r["effective_leverage"] = round(eff, 4) if eff is not None else None
+        tag = f"實際×{eff:.2f}（上限×{cap}）" if eff is not None else f"上限×{cap}"
+        r["symbol"] = f"{r['raw_symbol']} 多 {tag}"
+        r["asset"] = f"{r['raw_symbol']} 多 {tag}"
+    for r in u1_rows:
+        r["u1_gross_leverage"] = round(gross / eq, 4) if eq > 0 else None
 
 
 
@@ -1212,7 +1248,7 @@ def build_status() -> dict:
         "allocation": (state.get("allocation_public") or _allocation_public(state)),
         "allocation_alert": state.get("allocation_alert"),
         # U1 live sleeve (null until Robin approves AND the analyst enables a U1 slot); last gate result
-        "u1_live": _u1_live_public(state),
+        "u1_live": _u1_live_public(state, positions),
         "live_slots": [add_code(x, x.get("strategy_id"), x.get("family")) for x in live_allocation if isinstance(x, dict)],
         "satellite_strategies": [],
         "strategies": [],
@@ -1233,10 +1269,18 @@ def status():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-def _u1_live_public(state: dict) -> dict:
+def _u1_live_public(state: dict, positions: list | None = None) -> dict:
     try:
         import u1_live
-        return {"sleeve": u1_live.public_view(state.get("u1_live")),
+        sl = state.get("u1_live")
+        marks = None
+        if sl and positions:
+            pm = u1_live.perp_map(sl.get("quote") or "USDT")
+            got = {k: next((float(r.get("mark") or 0) for r in positions if r.get("raw_symbol") == pm[k]), 0.0)
+                   for k in u1_live.SYMS}
+            if all(got[k] > 0 or not float(sl["units"].get(k) or 0) for k in u1_live.SYMS):
+                marks = got
+        return {"sleeve": u1_live.public_view(sl, marks),
                 "last_run": (state.get("meta") or {}).get("u1_live_last")}
     except Exception as e:  # noqa: BLE001
         return {"error": str(e)[:200]}
