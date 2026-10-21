@@ -29,6 +29,9 @@ RUNNER_FAMILIES = frozenset({
     # (u1_live, cross margin); orders need Robin's approval AND an enabled allocation slot.
     "btc_eth_trend_voltarget_perp",
 })
+# Z bb_squeeze_breakout_perp: runner code + parity done (2026-10-21) but NOT in RUNNER_FAMILIES until
+# 資金控管 accepts it (see PENDING_REVIEW_FAMILIES); listed here only for venue/validation.
+Z_FAMILY = "bb_squeeze_breakout_perp"
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
     "donchian_long_short_btc_regime",
@@ -38,14 +41,18 @@ FUTURES_FAMILIES = frozenset({
     "ls_univ_portfolio_perp",
     "short_trend_perp",
     "btc_eth_trend_voltarget_perp",
+    "bb_squeeze_breakout_perp",
 })
-# Families whose runner code exists but that must not enter the allocation yet (none now; S was
-# here until 資金控管 passed it on 2026-10-09).
-PENDING_REVIEW_FAMILIES: frozenset = frozenset()
+# Families whose runner code exists but that must not enter the allocation yet. S was here until
+# 資金控管 passed it on 2026-10-09. Z (bb_squeeze_breakout_perp, 2026-10-21): live path + trade-by-trade
+# parity done, awaiting 資金控管 acceptance. After acceptance: remove it here, add it to RUNNER_FAMILIES
+# (+ slots.SUPPORTED_FAMILIES, backtest.js RUNNER_FAMILIES / CATALOG_FAMILY_RUNNER) to show it in 待審核.
+PENDING_REVIEW_FAMILIES: frozenset = frozenset({"bb_squeeze_breakout_perp"})
 # Timeframes per family: existing families keep 1h/4h/1d; S adds the perp 2h/6h/12h bars.
 BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
 FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"}),
-                     "btc_eth_trend_voltarget_perp": frozenset({"1d"})}
+                     "btc_eth_trend_voltarget_perp": frozenset({"1d"}),
+                     "bb_squeeze_breakout_perp": frozenset({"1h", "4h", "1d"})}
 U1_STRATEGY_ID = "d4_trend_N200_tv60_cap3__BTC_ETH__1d"
 U1_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 # U1 may run on either USD-M margin asset (Robin 2026-10-20: U1 on the USDC book, BTCUSDC+ETHUSDC perps).
@@ -71,6 +78,7 @@ FAMILY_ALIASES = {
     "ls_univ_portfolio_perp": "ls_univ_portfolio_perp",
     "short_trend_perp": "short_trend_perp",
     "btc_eth_trend_voltarget_perp": "btc_eth_trend_voltarget_perp",
+    "bb_squeeze_breakout_perp": "bb_squeeze_breakout_perp",
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
@@ -204,6 +212,8 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         _validate_short_trend(p, errors, idx)
     elif family == "btc_eth_trend_voltarget_perp":
         _validate_u1(p, errors, idx, quote)
+    elif family == "bb_squeeze_breakout_perp":
+        _validate_bb_squeeze(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -240,6 +250,34 @@ def _validate_short_trend(p: dict, errors: list[str], idx: int) -> None:
     lev = float(p.get("leverage") or 1.0)
     if abs(lev - leverage_cap()) > 1e-9:
         errors.append(f"slots[{idx}].params.leverage={lev}：short_trend_perp 鎖定 1 倍")
+
+
+def _validate_bb_squeeze(p: dict, errors: list[str], idx: int) -> None:
+    """Z bb_squeeze_breakout_perp params (PREREG 2026-10-21 §B): BB n/k and squeeze q from the analyst
+    grid, L=120 / recent=5 fixed, stop/trail ATR mults > 0, SMA ATR, long only, leverage locked 1x."""
+    from bb_squeeze import GRID, SQ_LOOKBACK, SQ_RECENT, leverage_cap
+    for k, allowed in GRID.items():
+        v = p.get(k)
+        try:
+            ok = any(abs(float(v) - a) < 1e-9 for a in allowed)
+        except (TypeError, ValueError):
+            ok = False
+        if not ok:
+            errors.append(f"slots[{idx}].params.{k}={v!r} 必須是分析師網格的值 {list(allowed)}（bb_squeeze_breakout_perp）")
+    for k, want in (("sq_lookback", SQ_LOOKBACK), ("sq_recent", SQ_RECENT)):
+        if p.get(k) is not None and int(p.get(k)) != want:
+            errors.append(f"slots[{idx}].params.{k} 必須是 {want}（bb_squeeze_breakout_perp）")
+    stop, trail = _stop_trail_keys(p)
+    for k, v in (("stop_atr_mult", stop), ("trail_atr_mult", trail)):
+        if not isinstance(v, (int, float)) or v <= 0:
+            errors.append(f"slots[{idx}].params.{k} 必填且 > 0（bb_squeeze_breakout_perp）")
+    if str(p.get("atr_mode") or "sma").lower() != "sma":
+        errors.append(f"slots[{idx}].params.atr_mode 必須是 sma（bb_squeeze_breakout_perp）")
+    if str(p.get("kind") or "long").lower() != "long":
+        errors.append(f"slots[{idx}].params.kind 只能 long（bb_squeeze_breakout_perp 只做多）")
+    lev = float(p.get("leverage") or 1.0)
+    if abs(lev - leverage_cap()) > 1e-9:
+        errors.append(f"slots[{idx}].params.leverage={lev}：bb_squeeze_breakout_perp 鎖定 1 倍")
 
 
 def _validate_u1(p: dict, errors: list[str], idx: int, quote: str = "USDT") -> None:
@@ -543,7 +581,7 @@ def slot_to_runtime(slot: dict) -> dict:
     tf = str(slot.get("timeframe") or "").lower()
     fam = normalize_family(slot.get("family"))
     # EMA catalog default atr_mode=sma; others wilder
-    default_atr = "sma" if fam == "ema_cross_atr" else "wilder"
+    default_atr = "sma" if fam in ("ema_cross_atr", "bb_squeeze_breakout_perp") else "wilder"
     _atr_mode = str(params.get("atr_mode") or default_atr).strip().lower()
     if _atr_mode not in ("sma", "wilder"):
         raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{params.get('atr_mode')!r}")
@@ -559,6 +597,11 @@ def slot_to_runtime(slot: dict) -> dict:
         "filter": str(params.get("filt", params.get("filter")) or "none").lower(),
         "maxdd_pct": params.get("maxdd_pct"),
     } if fam == "short_trend_perp" else {}
+    # bb_squeeze_breakout_perp (Z) only: BB / squeeze params (SMA ATR, leverage locked 1x)
+    if fam == "bb_squeeze_breakout_perp":
+        s_extra = {"bb_n": params.get("bb_n"), "bb_k": params.get("bb_k"), "sq_q": params.get("sq_q"),
+                   "sq_lookback": params.get("sq_lookback"), "sq_recent": params.get("sq_recent"),
+                   "maxdd_pct": params.get("maxdd_pct")}
     return {
         **s_extra,
         "id": slot.get("slot"),

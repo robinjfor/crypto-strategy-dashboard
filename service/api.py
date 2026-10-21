@@ -47,6 +47,8 @@ STATUS_ZH = {
     "waiting_short_entry": "等做空進場邊緣（死叉／濾網轉真當根）",
     "stale_signal_before_exit": "訊號早於上次出場（不追）",
     "short_entry_edge": "做空進場邊緣",
+    "waiting_bb_squeeze_breakout": "等布林壓縮後突破上軌（狀態 0→1 當根）",
+    "bb_squeeze_breakout_edge": "布林壓縮突破進場邊緣",
     "PENDING_FILL": "已掛單，等成交",
     "pending_fill": "已掛單，等成交",
 }
@@ -501,10 +503,21 @@ def _short_trend_rule(slot: dict) -> str:
             + f" · {_num(slot.get('leverage') or 1)}x 逐倉 · 永續")
 
 
+def _bb_squeeze_rule(slot: dict) -> str:
+    """Z bb_squeeze_breakout_perp rule text from the slot's own params (PREREG 2026-10-21 §B)."""
+    mh = slot.get("max_hold_bars")
+    return (f"BB({slot.get('bb_n')},{_num(slot.get('bb_k'))}) 壓縮（帶寬 ≤ 前 120 根的 {_num(slot.get('sq_q'))} 分位，近 5 根內成立）"
+            f"後收盤突破上軌做多（只在狀態 0→1 當根；收盤跌破中軌才重置）· 收盤跌破中軌出場"
+            f" · 停損 {_num(slot.get('stop_atr_mult'))}×ATR14 · 移動停損 {_num(slot.get('trail_atr_mult'))}×ATR14"
+            + (f" · 最長持有 {mh} 根" if mh else "") + " · 1x 逐倉 · 永續 · 只做多")
+
+
 def _entry_condition(slot: dict) -> str:
     fam = str(slot.get("family") or "")
     if fam == "short_trend_perp":
         return _short_trend_rule(slot)
+    if fam == "bb_squeeze_breakout_perp":
+        return _bb_squeeze_rule(slot)
     if fam == "btc_eth_trend_voltarget_perp":
         return "BTC/ETH 現貨日線收盤 > SMA200 做多（否則空手）· 波動目標 60%、槓桿上限 3x · 偏離 > 25% 才調倉 · 全倉 · 無停損"
     reset = "（需先回落重置）" if slot.get("require_reset_below_hi") else ""
@@ -562,6 +575,19 @@ def _trigger_fields(slot: dict, sig: dict) -> dict:
             "ema_gap_pct": (round((ef / es - 1.0) * 100.0, 4) if (ef is not None and es) else None),
             "ema_bear": sig.get("bear") if sig.get("bear") is not None else (ef < es if (ef is not None and es is not None) else None),
             "s_filter": slot.get("filter") or "none", "filter_on": sig.get("filter_on"),
+            "stop_atr_mult": slot.get("stop_atr_mult"), "trail_atr_mult": slot.get("trail_atr_mult"),
+            "max_hold_bars": slot.get("max_hold_bars"), "bar_ts": sig.get("bar_ts"),
+            "entry_rule_code": "edge_only",
+        })
+    elif fam == "bb_squeeze_breakout_perp":
+        up = _f(sig.get("bb_up"))
+        out.update({
+            "trigger_kind": "bb_squeeze",
+            "trigger": up, "distance": (round(up - mark, 8) if (up is not None and mark) else None),
+            "bb_n": slot.get("bb_n"), "bb_k": slot.get("bb_k"), "sq_q": slot.get("sq_q"),
+            "bb_up": up, "bb_mid": _f(sig.get("bb_mid")), "bb_bw": _f(sig.get("bb_bw")), "sq_thr": _f(sig.get("sq_thr")),
+            "squeeze_recent": sig.get("squeeze_recent"), "bb_state": sig.get("bb_state"),
+            "dist_up_pct": pct(up),
             "stop_atr_mult": slot.get("stop_atr_mult"), "trail_atr_mult": slot.get("trail_atr_mult"),
             "max_hold_bars": slot.get("max_hold_bars"), "bar_ts": sig.get("bar_ts"),
             "entry_rule_code": "edge_only",

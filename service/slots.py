@@ -208,6 +208,9 @@ FUTURES_FAMILIES = frozenset({
     "short_trend_perp",
     # U1 (cross margin, own order path u1_live): live only once Robin approves AND a slot is enabled
     "btc_eth_trend_voltarget_perp",
+    # Z bb_squeeze_breakout_perp (2026-10-21): runner + parity done; NOT in SUPPORTED_FAMILIES (not
+    # approvable / not in 待審核) until 資金控管 accepts it — venue mapping only.
+    "bb_squeeze_breakout_perp",
 })
 
 _ALLOC_CACHE: dict = {"at": 0.0, "slots": None}

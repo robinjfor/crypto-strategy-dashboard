@@ -251,6 +251,20 @@ def _base_asset(symbol: str) -> str:
     return sym
 
 
+NEXT_OPEN_PERP_FAMILIES = ("short_trend_perp", "bb_squeeze_breakout_perp")
+
+
+def _next_open_perp_module(family):
+    """Live module of a next-open perp family (S / Z) or None (other families keep their own path)."""
+    if family == "short_trend_perp":
+        import short_trend
+        return short_trend
+    if family == "bb_squeeze_breakout_perp":
+        import bb_squeeze
+        return bb_squeeze
+    return None
+
+
 def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) -> str | None:
     """Slot id of an open position on the same coin (any venue/quote) in the opposite direction."""
     base, want = _base_asset(symbol), str(side or "LONG").upper()
@@ -332,7 +346,10 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 from futures_client import FuturesDemoClient
                 from futures_execution import open_market, place_stop_reduce_only
                 fc = FuturesDemoClient()
-                is_s = sig.get("family") == "short_trend_perp"
+                # S (short_trend_perp) and Z (bb_squeeze_breakout_perp): next-open perp families, 1x,
+                # stop from the actual fill (engine cost-adjusted price), CONTRACT_PRICE stop trigger
+                np_mod = _next_open_perp_module(sig.get("family"))
+                is_s = np_mod is not None
                 opened = open_market(
                     fc, symbol=sig["symbol"], side=("BUY" if side == "LONG" else "SELL"),
                     notional_usdt=quote, leverage=(1 if is_s else (sig.get("leverage") or 1)),
@@ -345,14 +362,15 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 stop = float(sig.get("suggested_stop") or 0)
                 s_extra: dict = {}
                 if is_s:
-                    # S spec: stop0 = fill x (1 - 0.002) + stop_m x ATR(signal bar), recomputed after
-                    # the fill (not the close-based suggested_stop); trigger on last/contract price.
-                    from short_trend import STOP_WORKING_TYPE, stop_basis_from_fill
+                    # S spec: stop0 = fill x (1 - 0.002) + stop_m x ATR(signal bar); Z spec: stop0 =
+                    # fill x (1 + 0.002) - stop_m x ATR(signal bar). Recomputed after the fill (not the
+                    # close-based suggested_stop); trigger on last/contract price.
                     px = float(opened.get("avg_price") or px)
-                    basis = stop_basis_from_fill(px)
-                    stop = basis + float(sig.get("stop_atr_mult") or 0) * float(sig.get("stop_atr") or 0)
-                    s_extra = {"family": "short_trend_perp", "strategy_id": sig.get("strategy_id"), "tf": sig.get("tf"),
-                               "stop_basis": basis, "initial_stop": stop, "stop_working_type": STOP_WORKING_TYPE,
+                    basis = np_mod.stop_basis_from_fill(px)
+                    sgn = -1.0 if side == "LONG" else 1.0
+                    stop = basis + sgn * float(sig.get("stop_atr_mult") or 0) * float(sig.get("stop_atr") or 0)
+                    s_extra = {"family": np_mod.FAMILY, "strategy_id": sig.get("strategy_id"), "tf": sig.get("tf"),
+                               "stop_basis": basis, "initial_stop": stop, "stop_working_type": np_mod.STOP_WORKING_TYPE,
                                "filled_ms": int(time.time() * 1000)}
                 positions[slot_id] = {
                     "status": "FILLED", "symbol": sig["symbol"], "qty": qty, "entry": px,
@@ -487,8 +505,8 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 except Exception as e:  # noqa: BLE001
                     log.warning("exit_fee_lookup_fail slot=%s err=%s", slot_id, e)
                 finalize_closed_pnl(closed, pos, _xf)
-                if pos.get("family") == "short_trend_perp" and pos.get("filled_ms"):
-                    # S spec item 10: exchange FUNDING_FEE income over the holding period
+                if pos.get("family") in NEXT_OPEN_PERP_FAMILIES and pos.get("filled_ms"):
+                    # S spec item 10 (also Z): exchange FUNDING_FEE income over the holding period
                     from perp_market import funding_income_usdt
                     closed["funding_usdt"] = funding_income_usdt(fc, sig["symbol"], int(pos["filled_ms"]))
                 state.setdefault("closed_trades", []).append(closed)

@@ -51,6 +51,7 @@
     WAIT_SIGNAL_RESET_THEN_BREAKOUT: "等回落重置（需先收回上軌下方）",
     waiting_short_entry: "等做空進場邊緣（死叉／濾網轉真當根）",
     stale_signal_before_exit: "訊號早於上次出場（不追）",
+    waiting_bb_squeeze_breakout: "等布林壓縮後突破上軌（狀態 0→1 當根）",
     PENDING_FILL: "已掛單，等成交",
     pending_fill: "已掛單，等成交"
   };
@@ -879,6 +880,7 @@
       if (!kind) {
         kind = fam === "ema_cross_atr" ? "ema_cross"
           : fam === "short_trend_perp" ? "short_trend"
+          : fam === "bb_squeeze_breakout_perp" ? "bb_squeeze"
           : ((fam === "ls_donch_btc_regime_perp" || fam === "donchian_long_short_btc_regime") ? "donchian_ls" : "donchian_hi");
       }
       var statusLabel = modeLabel(om);
@@ -918,6 +920,21 @@
         if (om === "live") statusLabel = bear ? "已在空頭區 · 等下一次死叉（不追）" : "等死叉做空";
         ruleTxt = src.entry_condition || src.entry_rule ||
           ("EMA" + sfN + "/" + ssN + " 死叉做空 · 停損 " + (pms.stop_atr_mult || "?") + "×ATR · 移動 " + (pms.trail_atr_mult || "?") + "×ATR · 濾網 " + (pms.filt || "none"));
+        needsMarket = false;
+      } else if (kind === "bb_squeeze") {
+        // Z bb_squeeze_breakout_perp (long only, perp, 1x): rule text from the slot's own params
+        var bN = src.bb_n || pms.bb_n || "?", bK = src.bb_k || pms.bb_k || "?", bQ = src.sq_q || pms.sq_q || "?";
+        var bUp = src.bb_up != null ? Number(src.bb_up) : null;
+        var bMid = src.bb_mid != null ? Number(src.bb_mid) : null;
+        var bSq = src.squeeze_recent === true;
+        var bSt = src.bb_state != null ? Number(src.bb_state) : null;
+        subTxt = "BB" + bN + "/" + bK + " 壓縮突破 做多";
+        trigHtml = "上軌 " + (bUp != null ? num(bUp, 6) : "—") + "<br>中軌 " + (bMid != null ? num(bMid, 6) : "—");
+        distHtml = (bUp != null && mark ? "距上軌 " + num((bUp / mark - 1) * 100, 2) + "%" : "—") + "<br>" + (bSq ? "近 5 根有壓縮" : "無壓縮");
+        if (om === "live") statusLabel = bSt === 1 ? "已在突破狀態 · 等回到中軌下方重置（不追）" : (bSq ? "壓縮中 · 等收盤突破上軌" : "等布林壓縮");
+        ruleTxt = src.entry_condition || src.entry_rule ||
+          ("BB(" + bN + "," + bK + ") 壓縮（帶寬 ≤ 前 120 根 " + bQ + " 分位，近 5 根內）後收盤突破上軌做多 · 收盤跌破中軌出場 · 停損 " +
+           (pms.stop_atr_mult || pms.stop_m || "?") + "×ATR · 移動 " + (pms.trail_atr_mult || pms.trail_m || "?") + "×ATR · 1x 永續");
         needsMarket = false;
       } else if (kind === "donchian_ls") {
         var hi = src.donch_hi != null ? Number(src.donch_hi) : null;

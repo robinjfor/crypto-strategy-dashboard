@@ -449,7 +449,7 @@ def reconcile_exchange_closes(client, state: dict, *, only_slots: set | None = N
                 info = _futures_closed_info(fc, slot_id, pos)
                 if info:
                     cancel_algo_stops(fc, pos["symbol"])
-                    if pos.get("family") == "short_trend_perp" and pos.get("filled_ms"):
+                    if pos.get("family") in ("short_trend_perp", "bb_squeeze_breakout_perp") and pos.get("filled_ms"):
                         # S: exchange FUNDING_FEE income over the holding period (stop closed it)
                         from perp_market import funding_income_usdt
                         info["funding_usdt"] = funding_income_usdt(fc, pos["symbol"], int(pos["filled_ms"]),

@@ -26,6 +26,9 @@
     trend_long_scan_perp: null, // T1–T9 (2026-10-09): perp long scan, not on runner → hidden
     vol_target_sized_passers_perp: null, // W1–W10 (2026-10-09): vol-target sizing not on runner → hidden
     tradingview_popular_ports: null, // X1 (= analyst V1, Super Scalper): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
+    // Z1–Z5 (2026-10-21): cloud live path + trade-by-trade parity done, AWAITING 資金控管 acceptance →
+    // hidden (not in 待審核). After acceptance set "bb_squeeze_breakout_perp" here and in RUNNER_FAMILIES.
+    bb_squeeze_breakout_perp: null,
     combo_u1_v1_equal_risk_perp: null, // Y1 (U1+V1 tv75 cap5, 2026-10-11): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",

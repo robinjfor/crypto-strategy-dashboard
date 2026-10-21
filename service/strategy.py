@@ -488,6 +488,9 @@ def evaluate_slot_dispatch(slot: dict, klines: pd.DataFrame, position: dict | No
     if fam == "short_trend_perp":
         from short_trend import evaluate_short_trend_slot
         return evaluate_short_trend_slot(slot, klines, position, slot_meta)
+    if fam == "bb_squeeze_breakout_perp":
+        from bb_squeeze import evaluate_bb_squeeze_slot
+        return evaluate_bb_squeeze_slot(slot, klines, position, slot_meta)
     if fam == "donchian_lev":
         return {
             "slot": slot["id"], "symbol": slot["symbol"], "family": fam,
@@ -710,8 +713,9 @@ def evaluate_all(client, state: dict) -> list[dict]:
             # 1000 bars (API max) so the Donchian state machine / Wilder ATR
             # warm up like the full-history backtest.
             limit = 1000 if str(slot.get("family") or "").startswith("donchian") else max(250, donch_n + 80, ema_slow + 80)
-            if slot.get("family") == "short_trend_perp":
-                kl, eval_meta = _short_trend_inputs(slot, meta, positions)
+            if slot.get("family") in ("short_trend_perp", "bb_squeeze_breakout_perp"):
+                kl, eval_meta = (_short_trend_inputs if slot.get("family") == "short_trend_perp"
+                                 else _bb_squeeze_inputs)(slot, meta, positions)
                 res = evaluate_slot_dispatch(slot, kl, pos, eval_meta)
                 _enrich_signal(res, slot)
                 if isinstance(res.get("after_stop"), dict):
@@ -750,6 +754,24 @@ def _short_trend_inputs(slot: dict, meta: dict, positions: dict) -> tuple[pd.Dat
         p and p.get("status") == "FILLED" and pid != slot["id"]
         and str(p.get("symbol") or "").upper().removesuffix("USDT").removesuffix("USDC") == sym.upper().removesuffix("USDT")
         and str(p.get("side") or "LONG").upper() != "SHORT"
+        for pid, p in (positions or {}).items()
+    )
+    return kl, m
+
+
+def _bb_squeeze_inputs(slot: dict, meta: dict, positions: dict) -> tuple[pd.DataFrame, dict]:
+    """Z family inputs: USDT-M PERP klines (the backtest's data; 1500 = /fapi max) and the same-coin
+    conflict flag (one-way mode, no hedge: an open SHORT on the coin, any slot/venue, blocks a long).
+    Transient keys go into a copy of the slot meta (never persisted)."""
+    from perp_market import KLINES_MAX, fetch_perp_klines
+    sym = slot["symbol"]
+    kl = fetch_perp_klines(sym, slot["tf"], limit=KLINES_MAX)
+    m = dict(meta)
+    base = sym.upper().removesuffix("USDT").removesuffix("USDC")
+    m["_opposite_open"] = any(
+        p and p.get("status") == "FILLED" and pid != slot["id"]
+        and str(p.get("symbol") or "").upper().removesuffix("USDT").removesuffix("USDC") == base
+        and str(p.get("side") or "LONG").upper() == "SHORT"
         for pid, p in (positions or {}).items()
     )
     return kl, m

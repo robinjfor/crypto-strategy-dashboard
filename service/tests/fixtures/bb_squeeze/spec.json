@@ -1,0 +1,197 @@
+[
+ {
+  "code": "Z1",
+  "spec_strategy_id": "rd1021_bbsq_n20_k2.5_q0.2_s1.5_t3.5__WLD__4h",
+  "status": "PENDING_EMILY",
+  "symbol": "WLDUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "WLD",
+   "tf": "4h",
+   "bb_n": 20,
+   "bb_k": 2.5,
+   "sq_q": 0.2,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 1.5,
+   "trail_m": 3.5,
+   "max_hold": 36,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR",
+   "bb_mid=SMA(n) close; bb_up=mid+k*std(n,ddof=0); bw=(up-lo)/mid",
+   "squeeze: bw[i-1] <= rolling(120).quantile(q) of bw shifted 1; true if any in last 5 bars",
+   "state 0->1 on close>bb_up and squeeze; 1->0 on close<bb_mid; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR)",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z1.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z1.csv.gz"
+  }
+ },
+ {
+  "code": "Z2",
+  "spec_strategy_id": "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d",
+  "status": "PENDING_EMILY",
+  "symbol": "SUIUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1d",
+  "params": {
+   "symbol": "SUI",
+   "tf": "1d",
+   "bb_n": 30,
+   "bb_k": 1.5,
+   "sq_q": 0.5,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 2.0,
+   "trail_m": 1.5,
+   "max_hold": 40,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR",
+   "bb_mid=SMA(n) close; bb_up=mid+k*std(n,ddof=0); bw=(up-lo)/mid",
+   "squeeze: bw[i-1] <= rolling(120).quantile(q) of bw shifted 1; true if any in last 5 bars",
+   "state 0->1 on close>bb_up and squeeze; 1->0 on close<bb_mid; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR)",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z2.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z2.csv.gz"
+  }
+ },
+ {
+  "code": "Z3",
+  "spec_strategy_id": "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__ARB__4h",
+  "status": "PENDING_EMILY",
+  "symbol": "ARBUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "ARB",
+   "tf": "4h",
+   "bb_n": 30,
+   "bb_k": 1.5,
+   "sq_q": 0.5,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 2.0,
+   "trail_m": 1.5,
+   "max_hold": 36,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR",
+   "bb_mid=SMA(n) close; bb_up=mid+k*std(n,ddof=0); bw=(up-lo)/mid",
+   "squeeze: bw[i-1] <= rolling(120).quantile(q) of bw shifted 1; true if any in last 5 bars",
+   "state 0->1 on close>bb_up and squeeze; 1->0 on close<bb_mid; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR)",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z3.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z3.csv.gz"
+  }
+ },
+ {
+  "code": "Z4",
+  "spec_strategy_id": "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h",
+  "status": "PENDING_EMILY",
+  "symbol": "DOTUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "4h",
+  "params": {
+   "symbol": "DOT",
+   "tf": "4h",
+   "bb_n": 20,
+   "bb_k": 1.5,
+   "sq_q": 0.2,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 1.5,
+   "trail_m": 3.5,
+   "max_hold": 36,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR",
+   "bb_mid=SMA(n) close; bb_up=mid+k*std(n,ddof=0); bw=(up-lo)/mid",
+   "squeeze: bw[i-1] <= rolling(120).quantile(q) of bw shifted 1; true if any in last 5 bars",
+   "state 0->1 on close>bb_up and squeeze; 1->0 on close<bb_mid; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR)",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z4.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z4.csv.gz"
+  }
+ },
+ {
+  "code": "Z5",
+  "spec_strategy_id": "rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h",
+  "status": "PENDING_EMILY",
+  "symbol": "ARBUSDT",
+  "venue": "binance_usdtm_perp",
+  "side": "long_only",
+  "timeframe": "1h",
+  "params": {
+   "symbol": "ARB",
+   "tf": "1h",
+   "bb_n": 30,
+   "bb_k": 2.5,
+   "sq_q": 0.35,
+   "sq_lookback": 120,
+   "sq_recent": 5,
+   "stop_m": 2.0,
+   "trail_m": 2.5,
+   "max_hold": 192,
+   "atr_mode": "sma",
+   "leverage": 1.0,
+   "btc_regime": false
+  },
+  "bar_alignment": "Binance kline open_time UTC",
+  "fill": "signal at closed bar i -> market at bar i+1 open; 20bps/side",
+  "indicators": [
+   "atr14 = SMA14 of TR",
+   "bb_mid=SMA(n) close; bb_up=mid+k*std(n,ddof=0); bw=(up-lo)/mid",
+   "squeeze: bw[i-1] <= rolling(120).quantile(q) of bw shifted 1; true if any in last 5 bars",
+   "state 0->1 on close>bb_up and squeeze; 1->0 on close<bb_mid; entry only on 0->1 edge"
+  ],
+  "stops": "initial = fill_px - stop_m*ATR(signal bar), active from fill bar, fills at min(open,stop); trail: stop=max(stop, close - trail_m*ATR)",
+  "exits": "stop (intrabar) > state==0 (exit next open) > bars since fill >= max_hold (exit next open)",
+  "funding": "applied at settlement bar open on held qty",
+  "fixtures": {
+   "trades": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/trades_Z5.csv",
+   "bars": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/fixtures/bars_Z5.csv.gz"
+  }
+ }
+]
