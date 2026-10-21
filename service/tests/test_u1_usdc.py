@@ -292,3 +292,36 @@ def test_status_usdc_futures_reconciles_with_binance():
     fc.pos["ETHUSDC"] = 0.5   # someone traded ETHUSDC outside the trader
     r2 = api._futures_quote_reconcile(state, "USDC", {"slots": [SLOT1000]}, fc=fc)
     assert not r2["reconcile"]["ok"] and r2["reconcile"]["mismatches"][0]["symbol"] == "ETHUSDC"
+
+
+# ---------------------------------------------------------------- regressions 2026-10-21
+def test_hourly_run_while_holding_accepts_klines_frame_columns():
+    """08:07 run failed with KeyError 'low': perp_market.klines_frame returns Open/High/Low/Close."""
+    fc = FakeFCq(); state = {"positions": {}}
+    _run(state, fc)
+    assert state["u1_live"]["units"]["BTC"] > 0
+    idx = pd.date_range("2026-10-21T00:00:00Z", periods=8, freq="1h")
+    def fetch_1h(sym, now):  # same shape as perp_market.fetch_perp_klines
+        px = fc.px[sym]
+        return pd.DataFrame({"Open": px, "High": px, "Low": px * 0.99, "Close": px, "Volume": 1.0}, index=idx)
+    n_before = len([c for c in fc.calls if c[0] == "new_order"])
+    out = L.run_u1_live(state, _dec(), pd.Timestamp("2026-10-21T07:07:00Z").to_pydatetime(),
+                        alloc_doc={"slots": [SLOT1000]}, approved_families=[P.FAMILY], live=True,
+                        allow_increase=True, fc_factory=lambda: fc, fetch_1h=fetch_1h)
+    assert out["active"] and not out.get("blocked") and out["orders"] == 0
+    assert state["u1_live"]["liq_checked_bar"] == "2026-10-21T06:00:00+00:00"
+    assert len([c for c in fc.calls if c[0] == "new_order"]) == n_before   # no trading change
+
+
+def test_usdt_book_excludes_usdc_perp_positions():
+    import api
+    positions = [
+        {"symbol": "ETHUSDC 多×3", "raw_symbol": "ETHUSDC", "venue": "futures", "market_value": 885.64, "unrealized_pnl": 3.47},
+        {"symbol": "BTCUSDC 多×3", "raw_symbol": "BTCUSDC", "venue": "futures", "market_value": 913.97, "unrealized_pnl": 2.05},
+        {"symbol": "ARBUSDT 空×1", "raw_symbol": "ARBUSDT", "venue": "futures", "market_value": 750.0, "unrealized_pnl": 1.0},
+    ]
+    b = api._books_overview({"USDT": 5473.52, "USDC": 5000.0}, positions, [], book_usdt=5000, book_usdc=5000)
+    assert b["usdt"]["open_positions"] == 1 and b["usdt"]["positions_mv"] == 750.0
+    b2 = api._books_overview({"USDT": 5473.52, "USDC": 5000.0}, positions[:2], [], book_usdt=5000, book_usdc=5000)
+    assert b2["usdt"]["open_positions"] == 0 and b2["usdt"]["equity"] == 5473.52   # = Binance spot USDT
+    assert b2["usdc"]["open_positions"] == 0 and b2["usdc"]["equity"] == 5000.0    # U1 is in books.usdc.futures

@@ -925,7 +925,12 @@ def _books_overview(
     out = {}
     for quote, starting in (("USDT", float(book_usdt or 5000)), ("USDC", float(book_usdc or 5000))):
         cash = float(bals_map.get(quote) or 0)
-        pos_rows = [p for p in (positions or []) if _quote_of_symbol(p.get("symbol") or p.get("raw_symbol")) == quote]
+        # raw_symbol first: futures rows carry a display symbol like "ETHUSDC 多×3".
+        # USD-M USDC perps (U1) live in books.usdc.futures (Binance USDC wallet + sleeve), never in a
+        # spot book's positions/equity.
+        pos_rows = [p for p in (positions or [])
+                    if _quote_of_symbol(p.get("raw_symbol") or p.get("symbol")) == quote
+                    and not (quote == "USDC" and (p.get("venue") or "spot") == "futures")]
         pos_mv = 0.0
         unreal = 0.0
         for p in pos_rows:

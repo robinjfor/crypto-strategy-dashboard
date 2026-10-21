@@ -371,6 +371,13 @@ def _close_all(fc, sleeve, steps, now, why) -> list[dict]:
     return execute(fc, sleeve, orders, tag=tag, steps=steps, now=now)
 
 
+def _lc_cols(df):
+    """Lower-case OHLC column names (perp_market.klines_frame returns Open/High/Low/Close)."""
+    if df is None:
+        return df
+    return df.rename(columns={c: str(c).lower() for c in df.columns})
+
+
 def quote_margin(acct: dict, quote: str = "USDT") -> dict:
     """Margin figures for the sleeve's margin asset. USDT: account totals (existing behaviour; in single-asset
     mode Binance totals are the USDT wallet). USDC: the USDC row of account.assets (its own cross wallet)."""
@@ -475,7 +482,8 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
     # --- sleeve liquidation emulation (backtest rule) on closed 1h bars, then account margin guard
     if holding and fetch_1h is not None and not run["blocked"]:
         last = pd.Timestamp(now).floor("h") - P.H
-        bars = {k: fetch_1h(PERP[k], now) for k in SYMS}
+        # perp_market.klines_frame uses Open/High/Low/Close; accept either case
+        bars = {k: _lc_cols(fetch_1h(PERP[k], now)) for k in SYMS}
         since = P._ts(sleeve["liq_checked_bar"]) if sleeve.get("liq_checked_bar") else pd.Timestamp(sleeve["started_at"]).floor("h") - P.H
         idx = [t for t in bars[SYMS[0]].index if since < t <= last and all(t in bars[k].index for k in SYMS)]
         for t in idx:
