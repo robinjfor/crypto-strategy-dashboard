@@ -325,3 +325,20 @@ def test_usdt_book_excludes_usdc_perp_positions():
     b2 = api._books_overview({"USDT": 5473.52, "USDC": 5000.0}, positions[:2], [], book_usdt=5000, book_usdc=5000)
     assert b2["usdt"]["open_positions"] == 0 and b2["usdt"]["equity"] == 5473.52   # = Binance spot USDT
     assert b2["usdc"]["open_positions"] == 0 and b2["usdc"]["equity"] == 5000.0    # U1 is in books.usdc.futures
+
+
+def test_usdc_ref_open_from_klines_frame_columns():
+    """Live fetch returns Open/High/Low/Close: the USDC sleeve must still size on its own perp's 00:00 open."""
+    fb = pd.Timestamp("2026-10-21T00:00:00Z")
+    idx = pd.date_range("2026-10-20T20:00:00Z", periods=5, freq="1h")
+    def fetch_1h(sym, now):
+        px = {"BTCUSDC": 60100.0, "ETHUSDC": 2501.0}[sym]
+        return pd.DataFrame({"Open": px, "High": px, "Low": px, "Close": px}, index=idx)
+    opens = L.fill_opens_for(_dec()["last_fill_decision"], PM, fb, NOW, fetch_1h)
+    assert opens == {"BTC": 60100.0, "ETH": 2501.0}
+    fc = FakeFCq(); state = {"positions": {}}
+    fc.px = {"BTCUSDC": 60100.0, "ETHUSDC": 2501.0}
+    L.run_u1_live(state, _dec(), NOW, alloc_doc={"slots": [SLOT1000]}, approved_families=[P.FAMILY], live=True,
+                  allow_increase=True, fc_factory=lambda: fc, fetch_1h=fetch_1h)
+    o = {c[1]["symbol"]: float(c[1]["quantity"]) for c in fc.calls if c[0] == "new_order"}
+    assert o == pytest.approx({"BTCUSDC": 800 / 60100, "ETHUSDC": 800 / 2501})

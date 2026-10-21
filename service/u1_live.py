@@ -400,7 +400,7 @@ def fill_opens_for(dec: dict, perp: dict, fill_bar, now: datetime, fetch_1h=None
     fb = P._ts(fill_bar)
     for k in SYMS:
         try:
-            b = fetch_1h(perp[k], now)
+            b = _lc_cols(fetch_1h(perp[k], now))
             if b is not None and fb in b.index and "open" in b.columns:
                 opens[k] = float(b.loc[fb, "open"])
         except Exception as e:  # noqa: BLE001
