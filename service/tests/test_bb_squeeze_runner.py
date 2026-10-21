@@ -52,11 +52,11 @@ def test_repo_catalog_only_z1_z4_approvable():
     fam = [f for f in cat["strategies"] if f["strategy_family_id"] == Z]
     assert len(fam) == 1
     rows = {r["code"]: r for r in fam[0]["rows"]}
-    assert sorted(rows) == ["Z1", "Z2", "Z3", "Z4", "Z5"]  # Z6 excluded
+    assert sorted(rows) == ["Z1", "Z2", "Z3", "Z4", "Z5", "Z9"]  # Z6/Z7/Z8/Z10 not on the site (row_hide)
     flags = json.loads((root / "config/review_flags.json").read_text(encoding="utf-8"))["flags"]
     blocked = {sid for f in flags if f.get("active") and f.get("block_approve") for sid in f.get("strategy_ids") or []}
     shown = [c for c, r in rows.items() if r.get("wf_pass") is not False and r["strategy_id"] not in blocked]
-    assert sorted(shown) == ["Z1", "Z4"]
+    assert sorted(shown) == ["Z1", "Z4", "Z9"]  # Z9 added 2026-10-21 (資金控管 batch 2)
     for c in ("Z2", "Z3", "Z5"):
         assert rows[c]["strategy_id"] in blocked
     assert rows["Z4"]["site_note_zh"] == "和 C5 同幣，C5 啟用時不能開"

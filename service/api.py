@@ -548,12 +548,24 @@ def _bb_squeeze_rule(slot: dict) -> str:
             + (f" · 最長持有 {mh} 根" if mh else "") + " · 1x 逐倉 · 永續 · 只做多")
 
 
+def _donchian_perp_rule(slot: dict) -> str:
+    """donchian_atr_perp (perp C rows, eng.bt) rule text from the slot's own params."""
+    mh = slot.get("max_hold_bars")
+    reset = "；出場後需先收盤回到上軌下方才可再進" if slot.get("require_reset_below_hi", True) else ""
+    return (f"Donchian{slot.get('donch_n') or '?'} 收盤突破上軌做多（只在狀態 0→1 當根，下一根開盤成交{reset}）"
+            f" · 收盤跌破下軌出場 · 停損 成交價×1.002−{_num(slot.get('stop_atr_mult'))}×ATR14(SMA)"
+            f" · 移動停損 {_num(slot.get('trail_atr_mult'))}×ATR14" + (f" · 最長持有 {mh} 根" if mh else "")
+            + " · 1x 逐倉 · 永續 · 只做多")
+
+
 def _entry_condition(slot: dict) -> str:
     fam = str(slot.get("family") or "")
     if fam == "short_trend_perp":
         return _short_trend_rule(slot)
     if fam == "bb_squeeze_breakout_perp":
         return _bb_squeeze_rule(slot)
+    if fam == "donchian_atr_perp":
+        return _donchian_perp_rule(slot)
     if fam == "btc_eth_trend_voltarget_perp":
         return "BTC/ETH 現貨日線收盤 > SMA200 做多（否則空手）· 波動目標 60%、槓桿上限 3x · 偏離 > 25% 才調倉 · 全倉 · 無停損"
     reset = "（需先回落重置）" if slot.get("require_reset_below_hi") else ""

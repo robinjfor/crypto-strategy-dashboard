@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true, btc_eth_trend_voltarget_perp: true, bb_squeeze_breakout_perp: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true, btc_eth_trend_voltarget_perp: true, bb_squeeze_breakout_perp: true, donchian_atr_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -28,6 +28,9 @@
     tradingview_popular_ports: null, // X1 (= analyst V1, Super Scalper): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
     // Z (2026-10-21, accepted): 待審核 — only Z1 WLD 4h / Z4 DOT 4h (Z2/Z3/Z5 wf_pass=false + review flag)
     bb_squeeze_breakout_perp: "bb_squeeze_breakout_perp",
+    // Perp Donchian C rows (C23/C25/C29/C31/C32/C35/C36/C39; 2026-10-21 accepted): own site card split from
+    // donchian_atr by sync (strategy_codes runner_family_overrides) → approving it never touches spot C1–C21
+    donchian_atr_perp: "donchian_atr_perp",
     combo_u1_v1_equal_risk_perp: null, // Y1 (U1+V1 tv75 cap5, 2026-10-11): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",

@@ -190,6 +190,6 @@ def test_runner_wiring_dispatch_and_order_path():
     assert r["family"] == "donchian_atr_perp" and r["venue"] == "futures"
     assert main._next_open_perp_module("donchian_atr_perp") is donchian_perp
     assert "donchian_atr_perp" in main.NEXT_OPEN_PERP_FAMILIES
-    # not allocatable / not in 待審核 until 資金控管 accepts it
+    # 資金控管 accepted batch 2 (2026-10-21): runner family, approvable
     import allocation
-    assert "donchian_atr_perp" not in allocation.RUNNER_FAMILIES
+    assert "donchian_atr_perp" in allocation.RUNNER_FAMILIES

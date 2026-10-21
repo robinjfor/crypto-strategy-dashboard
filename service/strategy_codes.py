@@ -55,6 +55,11 @@ def family_for_strategy_id(strategy_id: str | None) -> str | None:
     """Family whose rows contain strategy_id (authoritative family for a variant)."""
     if not strategy_id:
         return None
+    # Runner family differs from the analyst catalog family (perp C22+ rows -> donchian_atr_perp), so
+    # family approve/revoke and approval entries resolve to the family that actually runs them.
+    rfo = mapping().get("runner_family_overrides") or {}
+    if isinstance(rfo.get(strategy_id), str):
+        return rfo[strategy_id]
     for fam, entry in (mapping().get("families") or {}).items():
         if isinstance(entry, dict) and isinstance((entry.get("rows") or {}).get(strategy_id), dict):
             return fam

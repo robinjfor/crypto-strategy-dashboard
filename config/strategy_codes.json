@@ -179,6 +179,82 @@
         "donchian20_s2.0_t3.0__STRK__4h": {
           "code": "C21",
           "active": true
+        },
+        "rcr1020_donchian20_s2.0_t3.0_reset__ARB__4h": {
+          "code": "C22",
+          "active": true
+        },
+        "rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h": {
+          "code": "C23",
+          "active": true
+        },
+        "rcr1020_donchian30_s1.5_t3.5_reset__SEI__4h": {
+          "code": "C24",
+          "active": true
+        },
+        "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h": {
+          "code": "C25",
+          "active": true
+        },
+        "rcr1020_donchian20_s1.5_t1.5_reset__GALA__4h": {
+          "code": "C26",
+          "active": true
+        },
+        "rcr1020_donchian20_s1.5_t1.5_reset__FET__4h": {
+          "code": "C27",
+          "active": true
+        },
+        "rcr1020_donchian20_s1.5_t1.5_reset__OP__4h": {
+          "code": "C28",
+          "active": true
+        },
+        "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h": {
+          "code": "C29",
+          "active": true
+        },
+        "rcr1020_donchian70_s2.0_t3.0_reset__OP__1h": {
+          "code": "C30",
+          "active": true
+        },
+        "rcr1020_donchian30_s1.5_t3.5_reset__APT__4h": {
+          "code": "C31",
+          "active": true
+        },
+        "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h": {
+          "code": "C32",
+          "active": true
+        },
+        "rcr1020_donchian70_s2.0_t1.5_reset__FIL__4h": {
+          "code": "C33",
+          "active": true
+        },
+        "rcr1020_donchian55_s2.0_t1.5_reset__WLD__4h": {
+          "code": "C34",
+          "active": true
+        },
+        "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h": {
+          "code": "C35",
+          "active": true
+        },
+        "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h": {
+          "code": "C36",
+          "active": true
+        },
+        "strictwf1021_C37_donch_n20_stop_m2.5_trail_m3.5_reset_below_hiTrue__FET__4h": {
+          "code": "C37",
+          "active": true
+        },
+        "strictwf1021_C38_donch_n20_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__4h": {
+          "code": "C38",
+          "active": true
+        },
+        "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h": {
+          "code": "C39",
+          "active": true
+        },
+        "strictwf1021_C40_donch_n20_stop_m2.0_trail_m1.5_reset_below_hiTrue__FIL__4h": {
+          "code": "C40",
+          "active": true
         }
       },
       "active": true,
@@ -358,6 +434,42 @@
         },
         "ema_cross_atr__RAY__1h": {
           "code": "F5",
+          "active": true
+        },
+        "rcr1020_ema20_50_s1.5_t3.5__XLM__4h": {
+          "code": "F6",
+          "active": true
+        },
+        "rcr1020_ema20_50_s2.0_t3.5__AVAX__1d": {
+          "code": "F7",
+          "active": true
+        },
+        "rcr1020_ema9_21_s1.5_t3.5_btcRegime__ARB__4h": {
+          "code": "F8",
+          "active": true
+        },
+        "rcr1020_ema20_50_s1.5_t2.5_btcRegime__ARB__1h": {
+          "code": "F9",
+          "active": true
+        },
+        "strictwf1021_F10_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeFalse__XLM__4h": {
+          "code": "F10",
+          "active": true
+        },
+        "strictwf1021_F11_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeFalse__AVAX__1d": {
+          "code": "F11",
+          "active": true
+        },
+        "strictwf1021_F12_fast12_slow26_stop_m1.5_trail_m3.5_btc_regimeFalse__ARB__4h": {
+          "code": "F12",
+          "active": true
+        },
+        "strictwf1021_F13_fast9_slow21_stop_m1.5_trail_m3.5_btc_regimeFalse__ARB__4h": {
+          "code": "F13",
+          "active": true
+        },
+        "strictwf1021_F14_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeTrue__ARB__1h": {
+          "code": "F14",
           "active": true
         }
       },
@@ -940,9 +1052,51 @@
         "rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h": {
           "code": "Z5",
           "active": true
+        },
+        "rd1021_bbsq_n40_k1.5_q0.35_s1.5_t3.5__LDO__4h": {
+          "code": "Z6",
+          "active": true
+        },
+        "strictwf1021_Z7_bb_n40_bb_k1.5_sq_q0.5_stop_m1.5_trail_m3.5__SUI__1d": {
+          "code": "Z7",
+          "active": true
+        },
+        "strictwf1021_Z8_bb_n30_bb_k1.5_sq_q0.2_stop_m1.5_trail_m1.5__ARB__4h": {
+          "code": "Z8",
+          "active": true
+        },
+        "strictwf1021_Z9_bb_n40_bb_k2.5_sq_q0.35_stop_m1.5_trail_m3.5__ARB__1h": {
+          "code": "Z9",
+          "active": true
+        },
+        "strictwf1021_Z10_bb_n40_bb_k2.5_sq_q0.35_stop_m2.5_trail_m2.5__LDO__4h": {
+          "code": "Z10",
+          "active": true
         }
       },
       "active": true
     }
+  },
+  "runner_family_overrides": {
+    "_comment": "Catalog rows whose cloud runner family differs from their analyst catalog family (site card + approval + backend family). C22..C40 were built on USDT-M perp data (eng.bt) -> donchian_atr_perp, not the spot donchian_atr runner.",
+    "rcr1020_donchian20_s2.0_t3.0_reset__ARB__4h": "donchian_atr_perp",
+    "rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h": "donchian_atr_perp",
+    "rcr1020_donchian30_s1.5_t3.5_reset__SEI__4h": "donchian_atr_perp",
+    "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h": "donchian_atr_perp",
+    "rcr1020_donchian20_s1.5_t1.5_reset__GALA__4h": "donchian_atr_perp",
+    "rcr1020_donchian20_s1.5_t1.5_reset__FET__4h": "donchian_atr_perp",
+    "rcr1020_donchian20_s1.5_t1.5_reset__OP__4h": "donchian_atr_perp",
+    "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h": "donchian_atr_perp",
+    "rcr1020_donchian70_s2.0_t3.0_reset__OP__1h": "donchian_atr_perp",
+    "rcr1020_donchian30_s1.5_t3.5_reset__APT__4h": "donchian_atr_perp",
+    "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h": "donchian_atr_perp",
+    "rcr1020_donchian70_s2.0_t1.5_reset__FIL__4h": "donchian_atr_perp",
+    "rcr1020_donchian55_s2.0_t1.5_reset__WLD__4h": "donchian_atr_perp",
+    "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h": "donchian_atr_perp",
+    "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h": "donchian_atr_perp",
+    "strictwf1021_C37_donch_n20_stop_m2.5_trail_m3.5_reset_below_hiTrue__FET__4h": "donchian_atr_perp",
+    "strictwf1021_C38_donch_n20_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__4h": "donchian_atr_perp",
+    "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h": "donchian_atr_perp",
+    "strictwf1021_C40_donch_n20_stop_m2.0_trail_m1.5_reset_below_hiTrue__FIL__4h": "donchian_atr_perp"
   }
 }

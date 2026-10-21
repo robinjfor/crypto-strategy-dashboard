@@ -13,7 +13,16 @@
     "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50）· 風險：前半選幣、後半驗證",
     "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無）· 風險：前半選幣、後半驗證",
     "d4_trend_N200_tv60_cap3__BTC_ETH__1d": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行",
-    "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h": "和 C5 同幣，C5 啟用時不能開"
+    "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h": "和 C5 同幣，C5 啟用時不能開",
+    "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h": "和 C2 同幣 FIL，C2 啟用時不能開",
+    "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h": "和 C5 同幣 DOT，C5 啟用時不能開（也和 Z4 同幣）",
+    "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h": "和 C3 同幣 OP，C3 啟用時不能開",
+    "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一",
+    "strictwf1021_Z9_bb_n40_bb_k2.5_sq_q0.35_stop_m1.5_trail_m3.5__ARB__1h": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一",
+    "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h": "和 S8 同幣 GALA，S8 有空單時不能開",
+    "rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h": "C23 與 Z1 同幣 WLD，只能選一",
+    "rd1021_bbsq_n20_k2.5_q0.2_s1.5_t3.5__WLD__4h": "C23 與 Z1 同幣 WLD，只能選一",
+    "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h": "後半段只有 +7%，成交量剛過門檻"
   },
   "family_text_replace": {
     "donchian_atr": [
@@ -28,6 +37,49 @@
       "by": "Robin",
       "at": "2026-10-11",
       "reason_zh": "鄰居門檻未過，Robin 破例上架"
+    }
+  },
+  "row_hide": {
+    "_comment": "Not accepted by 資金控管 (strict WF 2026-10-21 / batch 2): kept out of the site catalog (codes stay reserved in strategy_codes.json).",
+    "strategy_ids": [
+      "rcr1020_donchian20_s2.0_t3.0_reset__ARB__4h",
+      "rcr1020_donchian30_s1.5_t3.5_reset__SEI__4h",
+      "rcr1020_donchian20_s1.5_t1.5_reset__GALA__4h",
+      "rcr1020_donchian20_s1.5_t1.5_reset__FET__4h",
+      "rcr1020_donchian20_s1.5_t1.5_reset__OP__4h",
+      "rcr1020_donchian70_s2.0_t3.0_reset__OP__1h",
+      "rcr1020_donchian70_s2.0_t1.5_reset__FIL__4h",
+      "rcr1020_donchian55_s2.0_t1.5_reset__WLD__4h",
+      "strictwf1021_C37_donch_n20_stop_m2.5_trail_m3.5_reset_below_hiTrue__FET__4h",
+      "strictwf1021_C38_donch_n20_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__4h",
+      "strictwf1021_C40_donch_n20_stop_m2.0_trail_m1.5_reset_below_hiTrue__FIL__4h",
+      "rcr1020_ema20_50_s1.5_t3.5__XLM__4h",
+      "rcr1020_ema20_50_s2.0_t3.5__AVAX__1d",
+      "rcr1020_ema9_21_s1.5_t3.5_btcRegime__ARB__4h",
+      "rcr1020_ema20_50_s1.5_t2.5_btcRegime__ARB__1h",
+      "strictwf1021_F10_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeFalse__XLM__4h",
+      "strictwf1021_F11_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeFalse__AVAX__1d",
+      "strictwf1021_F12_fast12_slow26_stop_m1.5_trail_m3.5_btc_regimeFalse__ARB__4h",
+      "strictwf1021_F13_fast9_slow21_stop_m1.5_trail_m3.5_btc_regimeFalse__ARB__4h",
+      "strictwf1021_F14_fast20_slow50_stop_m1.5_trail_m3.0_btc_regimeTrue__ARB__1h",
+      "rd1021_bbsq_n40_k1.5_q0.35_s1.5_t3.5__LDO__4h",
+      "strictwf1021_Z7_bb_n40_bb_k1.5_sq_q0.5_stop_m1.5_trail_m3.5__SUI__1d",
+      "strictwf1021_Z8_bb_n30_bb_k1.5_sq_q0.2_stop_m1.5_trail_m1.5__ARB__4h",
+      "strictwf1021_Z10_bb_n40_bb_k2.5_sq_q0.35_stop_m2.5_trail_m2.5__LDO__4h"
+    ]
+  },
+  "family_split": {
+    "donchian_atr_perp": {
+      "from": "donchian_atr",
+      "rows": "strategy_codes.runner_family_overrides",
+      "name_zh": "唐奇安突破（永續、下一根開盤）",
+      "code": "C",
+      "description_zh": "唐奇安通道 N 根突破做多（USDT-M 永續，1x 逐倉，只做多）：收盤站上前 N 根最高價、狀態 0→1 當根下一根開盤進場；SMA ATR14 停損與移動停損；收盤跌破前 N 根最低價出場；持倉上限 1h 192／4h 36 根；需先收盤回落到上軌下方才能再進。每邊 20bps，資金費率計入。",
+      "entry_zh": "收盤 > 前 N 根最高價（狀態 0→1 當根）→ 下一根開盤市價做多（永續 1x）。出場後需先有一根收盤 < 上軌才可再進。",
+      "exit_zh": "收盤 < 前 N 根最低價 → 下一根開盤平倉；持倉滿上限（1h 192／4h 36 根）→ 下一根開盤平倉。",
+      "stop_zh": "初始停損＝成交價×1.002 − stop_m×ATR14（SMA）；每根收盤上移到 收盤 − trail_m×ATR（只上不下）；交易所 STOP_MARKET（合約價）觸發，以 min(開盤, 停損) 成交。",
+      "created_at": "2026-10-21",
+      "created_at_iso": "2026-10-21T11:30:00+08:00"
     }
   }
 }

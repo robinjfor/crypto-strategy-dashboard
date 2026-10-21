@@ -90,6 +90,10 @@ try:
             _sid = _r.get("strategy_id")
             _src = ((_r.get("lookahead_fix") or {}).get("strict_equity_csv")
                     or _r.get("equity_csv"))
+            if _sid and not _src and _r.get("code"):
+                # rows without equity_csv (e.g. strict-WF replacements): rd_daily/*/equity/<code>__<sid>.csv
+                _g = sorted(src_dir.glob(f"rd_daily/*/equity/{_r['code']}__{_sid}.csv"))
+                _src = str(_g[-1]) if _g else None
             if not _sid or not _src:
                 continue
             _sp = Path(_src)
@@ -124,6 +128,31 @@ try:
             if _sid in (_ov.get("row_gate_exception") or {}):
                 # explicit owner exception: approvable although the gate failed (gate_pass_3y unchanged)
                 _r["gate_exception"] = _ov["row_gate_exception"][_sid]; _n_ov += 1
+    # row_hide: rows 資金控管 did not accept stay off the site (codes stay reserved in strategy_codes.json)
+    _hide = set((_ov.get("row_hide") or {}).get("strategy_ids") or [])
+    for _f in _cat.get("strategies") or []:
+        _f["rows"] = [_r for _r in (_f.get("rows") or []) if _r.get("strategy_id") not in _hide]
+        if _hide and "n_gate_pass_3y" in _f:
+            _f["n_gate_pass_3y"] = sum(bool(_r.get("gate_pass_3y")) for _r in _f["rows"])
+    # family_split: rows whose runner family differs from the analyst family (strategy_codes
+    # runner_family_overrides, e.g. perp C22+ -> donchian_atr_perp) get their own site family card, so
+    # approving/revoking one family never touches the other. Codes (C23 ...) are unchanged.
+    _codes = json.loads((_root / "config" / "strategy_codes.json").read_text(encoding="utf-8"))
+    _rfo = {k: v for k, v in (_codes.get("runner_family_overrides") or {}).items() if not k.startswith("_")}
+    for _new, _spec in (_ov.get("family_split") or {}).items():
+        _src_f = next((g for g in _cat.get("strategies") or [] if g.get("strategy_family_id") == _spec.get("from")), None)
+        if _src_f is None:
+            continue
+        _moved = [_r for _r in _src_f.get("rows") or [] if _rfo.get(_r.get("strategy_id")) == _new]
+        if not _moved:
+            continue
+        _src_f["rows"] = [_r for _r in _src_f["rows"] if _rfo.get(_r.get("strategy_id")) != _new]
+        _nf = {k: v for k, v in _src_f.items() if k != "rows"}
+        _nf.update({k: v for k, v in _spec.items() if k not in ("from", "rows")})
+        _nf.update(strategy_family_id=_new, split_from=_spec.get("from"), rows=_moved, cloud_supported=True,
+                   n_gate_pass_3y=sum(bool(_r.get("gate_pass_3y")) for _r in _moved))
+        _src_f["n_gate_pass_3y"] = sum(bool(_r.get("gate_pass_3y")) for _r in _src_f["rows"])
+        _cat["strategies"].append(_nf); _n_ov += 1
     _cat_p.write_text(json.dumps(_cat, ensure_ascii=False, indent=2) + "\n")
     # scores.json was a stale 9/24 export; rebuild it from the current catalog.
     _old = json.loads((dst_dir / "scores.json").read_text()) if (dst_dir / "scores.json").exists() else {}

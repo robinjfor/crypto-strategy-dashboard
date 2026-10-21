@@ -31,6 +31,10 @@ RUNNER_FAMILIES = frozenset({
     # Z bb_squeeze_breakout_perp (2026-10-21, ACCEPTANCE_cloud_Z): 待審核. Only Z1 WLD 4h / Z4 DOT 4h are
     # shown (Z2/Z3/Z5 hidden by review flag + wf_pass=false). Orders need approval AND an enabled slot.
     "bb_squeeze_breakout_perp",
+    # donchian_atr_perp (2026-10-21, ACCEPTANCE_cloud_batch2 + 資金控管 BATCH2_ACCEPT): perp Donchian C rows
+    # C23/C25/C29/C31/C32/C35/C36/C39 (catalog family donchian_atr, runner family via strategy_codes
+    # runner_family_overrides). 待審核; orders need approval AND an enabled slot.
+    "donchian_atr_perp",
 })
 Z_FAMILY = "bb_squeeze_breakout_perp"
 FUTURES_FAMILIES = frozenset({
@@ -43,6 +47,7 @@ FUTURES_FAMILIES = frozenset({
     "short_trend_perp",
     "btc_eth_trend_voltarget_perp",
     "bb_squeeze_breakout_perp",
+    "donchian_atr_perp",
 })
 # Families whose runner code exists but that must not enter the allocation yet. S was here until
 # 資金控管 passed it on 2026-10-09. Z (bb_squeeze_breakout_perp, 2026-10-21): live path + trade-by-trade
@@ -53,7 +58,8 @@ PENDING_REVIEW_FAMILIES: frozenset = frozenset()  # Z moved to RUNNER_FAMILIES 2
 BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
 FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"}),
                      "btc_eth_trend_voltarget_perp": frozenset({"1d"}),
-                     "bb_squeeze_breakout_perp": frozenset({"1h", "4h", "1d"})}
+                     "bb_squeeze_breakout_perp": frozenset({"1h", "4h", "1d"}),
+                     "donchian_atr_perp": frozenset({"1h", "4h", "1d"})}
 U1_STRATEGY_ID = "d4_trend_N200_tv60_cap3__BTC_ETH__1d"
 U1_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 # U1 may run on either USD-M margin asset (Robin 2026-10-20: U1 on the USDC book, BTCUSDC+ETHUSDC perps).
@@ -80,6 +86,7 @@ FAMILY_ALIASES = {
     "short_trend_perp": "short_trend_perp",
     "btc_eth_trend_voltarget_perp": "btc_eth_trend_voltarget_perp",
     "bb_squeeze_breakout_perp": "bb_squeeze_breakout_perp",
+    "donchian_atr_perp": "donchian_atr_perp",
 }
 MAX_LEVERAGE = 3.0
 MAX_BOOK_USDT = 5000.0
@@ -215,6 +222,8 @@ def validate_params(family: str, params: dict | None, errors: list[str], idx: in
         _validate_u1(p, errors, idx, quote)
     elif family == "bb_squeeze_breakout_perp":
         _validate_bb_squeeze(p, errors, idx)
+    elif family == "donchian_atr_perp":
+        _validate_donchian_perp(p, errors, idx)
     elif family in FUTURES_FAMILIES:
         errors.append(f"slots[{idx}].family 合約支援準備中：{family}")
     else:
@@ -279,6 +288,31 @@ def _validate_bb_squeeze(p: dict, errors: list[str], idx: int) -> None:
     lev = float(p.get("leverage") or 1.0)
     if abs(lev - leverage_cap()) > 1e-9:
         errors.append(f"slots[{idx}].params.leverage={lev}：bb_squeeze_breakout_perp 鎖定 1 倍")
+
+
+def _validate_donchian_perp(p: dict, errors: list[str], idx: int) -> None:
+    """donchian_atr_perp params (eng.bt perp C rows): donch_n int >= 2, stop/trail ATR mults > 0, SMA ATR,
+    long only, leverage locked 1x, no BTC regime (the perp C rows have none)."""
+    try:
+        n = int(p.get("donch_n"))
+        ok = n >= 2 and float(p.get("donch_n")) == n
+    except (TypeError, ValueError):
+        ok = False
+    if not ok:
+        errors.append(f"slots[{idx}].params.donch_n 必填且為 >= 2 的整數（donchian_atr_perp）")
+    stop, trail = _stop_trail_keys(p)
+    for k, v in (("stop_atr_mult", stop), ("trail_atr_mult", trail)):
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or v <= 0:
+            errors.append(f"slots[{idx}].params.{k} 必填且 > 0（donchian_atr_perp）")
+    if str(p.get("atr_mode") or "sma").lower() != "sma":
+        errors.append(f"slots[{idx}].params.atr_mode 必須是 sma（donchian_atr_perp）")
+    if str(p.get("kind") or "long").lower() != "long":
+        errors.append(f"slots[{idx}].params.kind 只能 long（donchian_atr_perp 只做多）")
+    if p.get("btc_regime"):
+        errors.append(f"slots[{idx}].params.btc_regime 不支援（donchian_atr_perp）")
+    lev = float(p.get("leverage") or 1.0)
+    if abs(lev - 1.0) > 1e-9:
+        errors.append(f"slots[{idx}].params.leverage={lev}：donchian_atr_perp 鎖定 1 倍")
 
 
 def _validate_u1(p: dict, errors: list[str], idx: int, quote: str = "USDT") -> None:
@@ -582,14 +616,14 @@ def slot_to_runtime(slot: dict) -> dict:
     tf = str(slot.get("timeframe") or "").lower()
     fam = normalize_family(slot.get("family"))
     # EMA catalog default atr_mode=sma; others wilder
-    default_atr = "sma" if fam in ("ema_cross_atr", "bb_squeeze_breakout_perp") else "wilder"
+    default_atr = "sma" if fam in ("ema_cross_atr", "bb_squeeze_breakout_perp", "donchian_atr_perp") else "wilder"
     _atr_mode = str(params.get("atr_mode") or default_atr).strip().lower()
     if _atr_mode not in ("sma", "wilder"):
         raise ValueError(f"atr_mode 必須是 sma 或 wilder，收到：{params.get('atr_mode')!r}")
     stop = params.get("stop_atr_mult", params.get("stop_m"))
     trail = params.get("trail_atr_mult", params.get("trail_m"))
     max_hold = params.get("max_hold_bars", params.get("max_hold"))
-    reset = params.get("require_reset_below_hi", params.get("reset_below_hi", False))
+    reset = params.get("require_reset_below_hi", params.get("reset_below_hi", fam == "donchian_atr_perp"))
     quote_asset = infer_quote_asset(slot)
     notion = slot_notional(slot, quote_asset)
     # short_trend_perp (S) only: signal kind, filter, analyst MaxDD (info; S leverage locked 1x)

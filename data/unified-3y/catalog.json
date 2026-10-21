@@ -35,10 +35,10 @@
       ]
     },
     "oos_definition": "Fixed-parameter segmented test: split the 3y evaluation window into 6 contiguous ~6-month folds; count folds where strategy return > buy&hold return. NOT a re-optimizing walk-forward.",
-    "generated_at": "2026-10-11 16:29:52 CST",
-    "n_strategies": 23,
-    "n_rows": 154,
-    "n_gate_pass_3y": 91,
+    "generated_at": "2026-10-21 10:08:03 CST",
+    "n_strategies": 24,
+    "n_rows": 192,
+    "n_gate_pass_3y": 123,
     "n_gate_pass_both": 8,
     "notes": [
       "Overlapping rows with scores.json copy metrics verbatim; catalog score rescored across all gate_pass_3y in this catalog.",
@@ -58,7 +58,10 @@
       "s_family_spec WF params apply (2026-10-09 23:44:12 CST): replaced S2/S3/S5/S8 params+3y metrics with walk-forward (H1-selected) params' full-window backtest; old values kept in catalog_params_before_wf; equity CSVs rewritten; rescored. allocation.json untouched.",
       "d4_trend_spec (2026-10-11 16:29:52 CST): +family btc_eth_trend_voltarget_perp (U) row U1 = rd_regime D4_N200_tv60 (cap 3x); status PAPER（Robin 核可模擬）; gate_fail_reasons=['neighbor'] only; wf_pass true; score 0 (not a full gate passer, no rescore). allocation.json untouched.",
       "rd_tradingview (2026-10-11 22:48:32 CST): +family tradingview_popular_ports (V) row V1 = TradingView 'Super Scalper - 5 Min 15 Min' (VinayKumarKV) default params, 1d, PIT universe, vt60 cap3; PENDING_EMILY; passes rd gates (DD<=60) incl. neighbor 62%; wf_pass true; score 0 (catalog scoring gate DD<=45 not met, no rescore). allocation.json untouched.",
-      "combo_u1v1_spec (2026-10-11 23:17:29 CST): +family combo_u1_v1_equal_risk_perp (Y) row Y1 = U1 + V1(X1) equal-risk combo, tv75 cap5; status PAPER（Robin 核可模擬，積極版 tv75）; post-hoc, fragile (4/8 neighbours DD>60%); score 0 (catalog scoring gate DD<=45 not met, no rescore). allocation.json untouched."
+      "combo_u1v1_spec (2026-10-11 23:17:29 CST): +family combo_u1_v1_equal_risk_perp (Y) row Y1 = U1 + V1(X1) equal-risk combo, tv75 cap5; status PAPER（Robin 核可模擬，積極版 tv75）; post-hoc, fragile (4/8 neighbours DD>60%); score 0 (catalog scoring gate DD<=45 not met, no rescore). allocation.json untouched.",
+      "rd_catalog_refresh (2026-10-20 22:03:40 CST): donchian_atr + ema_cross_atr gate rescan on 32-coin liquid perp universe (next-open, 20bps, real funding, DD<=60, nb>=50 26-pt, WF H1 pick->H2>0); +17 rows C22..; existing rows untouched (no rescore); review=PENDING_EMILY. allocation.json untouched.",
+      "rd_daily 2026-10-21 (2026-10-21 07:47:16 CST): new family bb_squeeze_breakout_perp (Z) — 243-config grid × 32 coins × 1h/4h/1d, same gates (next-open, 20bps, real funding, DD<=60, OOS>=4/6, ret>B&H, nb>=50 26-pt, WF H1 pick->H2>0, trades>=15); +6 rows Z1..Z6, PENDING_EMILY. Approved-family rescan identical to 10-20 (no new rows). Existing rows and allocation.json untouched.",
+      "strict WF audit (2026-10-21 10:08:03 CST): Z1-Z6, C22-C34, F6-F9 re-audited; wf_strict added (DD45/DD60); wf_pass=false where listed params != H1 pick; replacement rows ['Z7', 'Z8', 'Z9', 'Z10', 'C35', 'C36', 'C37', 'C38', 'C39', 'C40', 'F10', 'F11', 'F12', 'F13', 'F14']; no rows deleted; approved rows and allocation.json untouched."
     ],
     "inconsistencies_vs_scores_json": [
       {
@@ -17165,7 +17168,7 @@
           "score": 0.0
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 1
     },
     {
       "strategy_family_id": "combo_u1_v1_equal_risk_perp",
@@ -17457,7 +17460,7 @@
           "score": 0.0
         }
       ],
-      "n_gate_pass_3y": 0
+      "n_gate_pass_3y": 1
     },
     {
       "strategy_family_id": "bb_squeeze_breakout_perp",
@@ -17632,7 +17635,8 @@
               "neighbor_pct": 100.0,
               "all_gates_pass": true
             }
-          }
+          },
+          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一"
         },
         {
           "strategy_id": "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d",
@@ -18245,9 +18249,1172 @@
             }
           },
           "wf_fail_reason": "strict WF: listed params != H1 pick"
+        },
+        {
+          "strategy_id": "strictwf1021_Z9_bb_n40_bb_k2.5_sq_q0.35_stop_m1.5_trail_m3.5__ARB__1h",
+          "code": "Z9",
+          "base_code": "Z5",
+          "symbol": "ARB",
+          "timeframe": "1h",
+          "params": {
+            "symbol": "ARB",
+            "tf": "1h",
+            "bb_n": 40,
+            "bb_k": 2.5,
+            "sq_q": 0.35,
+            "sq_lookback": 120,
+            "sq_recent": 5,
+            "stop_m": 1.5,
+            "trail_m": 3.5,
+            "max_hold": 192,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "strict_wf_h1_pick_2026-10-21",
+          "status": "候選（strict WF 替代列：H1 選出參數）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 11634.05,
+          "ret_3y": 16.341,
+          "total_return_3y": 16.341,
+          "cagr_3y": 5.169,
+          "cagr": 5.169,
+          "ret_1y": 2.036,
+          "bh_ret_3y": -73.54,
+          "maxdd_3y": -39.461,
+          "maxdd": -39.461,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
+          "n_trades_3y": 137,
+          "n_liquidations": 0,
+          "funding_pnl": -315.93,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": -13.912,
+            "ret_h2": 35.141,
+            "bh_h1": -54.898,
+            "bh_h2": -41.334
+          },
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 63.6,
+          "wf_pass": true,
+          "wf_params": {
+            "bb_n": 40,
+            "bb_k": 2.5,
+            "sq_q": 0.35,
+            "sq_lookback": 120,
+            "sq_recent": 5,
+            "stop_m": 1.5,
+            "trail_m": 3.5,
+            "max_hold": 192
+          },
+          "wf_params_same_as_catalog": true,
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true,
+                "min_trades15": true
+              },
+              "neighbor_pct": 54.5,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true,
+                "min_trades15": true
+              },
+              "neighbor_pct": 63.6,
+              "all_gates_pass": true
+            }
+          },
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 78.76,
+            "symbols": [
+              "ARB"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": false,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "backtest_code": "/workspace/strategy-unified-3y/rd_daily/2026-10-21/code/bbsq.py",
+          "generated_at": "2026-10-21 10:08:03 CST",
+          "data_short": false,
+          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一"
         }
       ],
-      "n_gate_pass_3y": 8
+      "n_gate_pass_3y": 6
+    },
+    {
+      "strategy_family_id": "donchian_atr_perp",
+      "name_zh": "唐奇安突破（永續、下一根開盤）",
+      "description_zh": "唐奇安通道 N 根突破做多（USDT-M 永續，1x 逐倉，只做多）：收盤站上前 N 根最高價、狀態 0→1 當根下一根開盤進場；SMA ATR14 停損與移動停損；收盤跌破前 N 根最低價出場；持倉上限 1h 192／4h 36 根；需先收盤回落到上軌下方才能再進。每邊 20bps，資金費率計入。",
+      "entry_zh": "收盤 > 前 N 根最高價（狀態 0→1 當根）→ 下一根開盤市價做多（永續 1x）。出場後需先有一根收盤 < 上軌才可再進。",
+      "exit_zh": "收盤 < 前 N 根最低價 → 下一根開盤平倉；持倉滿上限（1h 192／4h 36 根）→ 下一根開盤平倉。",
+      "stop_zh": "初始停損＝成交價×1.002 − stop_m×ATR14（SMA）；每根收盤上移到 收盤 − trail_m×ATR（只上不下）；交易所 STOP_MARKET（合約價）觸發，以 min(開盤, 停損) 成交。",
+      "params_schema": {
+        "donch_n": "Donchian 視窗",
+        "stop_m": "初始 ATR 停損倍數",
+        "trail_m": "移動停利 ATR 倍數",
+        "max_hold": "最大持倉 bar 數",
+        "atr_mode": "sma 或 wilder",
+        "reset_below_hi": "出場後是否要求重回通道下方再進場"
+      },
+      "source_dirs": [
+        "/workspace/strategy-crypto-s2",
+        "/workspace/strategy-unified-3y",
+        "/workspace/strategy-crypto-s2/optimize_op_maxdd",
+        "/workspace/strategy-crypto-s2/satB_next_2026-09-24"
+      ],
+      "n_gate_pass_3y": 8,
+      "code": "C",
+      "created_at": "2026-10-21",
+      "created_at_iso": "2026-10-21T11:30:00+08:00",
+      "split_from": "donchian_atr",
+      "rows": [
+        {
+          "strategy_id": "rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h",
+          "code": "C23",
+          "symbol": "WLD",
+          "timeframe": "4h",
+          "params": {
+            "symbol": "WLD",
+            "tf": "4h",
+            "donch_n": 70,
+            "stop_m": 2.0,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "rd_catalog_refresh_2026-10-20_grid",
+          "status": "候選（2026-10-20 全面重掃新增）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 42014.3,
+          "ret_3y": 320.143,
+          "total_return_3y": 320.143,
+          "cagr_3y": 61.285,
+          "cagr": 61.285,
+          "ret_1y": -6.729,
+          "bh_ret_3y": -71.582,
+          "maxdd_3y": -34.251,
+          "maxdd": -34.251,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
+          "oos_pass": "4/6",
+          "n_trades_3y": 20,
+          "n_trades": 20,
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 65.4,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 99.265,
+            "ret_h2": 110.846,
+            "bh_h1": -45.755,
+            "bh_h2": -47.612
+          },
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 70,
+            "stop_m": 2.0,
+            "trail_m": 1.5,
+            "max_hold": 36,
+            "reset_below_hi": false
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_first_half_ret": 99.265,
+          "wf_second_half_ret": 110.846,
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 95.72,
+            "symbols": [
+              "WLD"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "funding_pnl": -270.81,
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C23__rcr1020_donchian70_s2.0_t1.5_reset__WLD__4h.csv",
+          "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C23.csv",
+          "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C23.csv.gz",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-20 22:03:40 CST",
+          "data_short": false,
+          "gate_pass_full": null,
+          "gate_pass_both": null,
+          "selection_bias_note": "Best-CAGR passer per coin×tf from a 120/162-config grid; neighbor+WF gates applied.",
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.0,
+                "trail_m": 1.5,
+                "max_hold": 36,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 110.846,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 61.5,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.0,
+                "trail_m": 1.5,
+                "max_hold": 36,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 110.846,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 65.4,
+              "all_gates_pass": true
+            }
+          },
+          "site_note_zh": "C23 與 Z1 同幣 WLD，只能選一"
+        },
+        {
+          "strategy_id": "rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h",
+          "code": "C25",
+          "symbol": "ARB",
+          "timeframe": "1h",
+          "params": {
+            "symbol": "ARB",
+            "tf": "1h",
+            "donch_n": 70,
+            "stop_m": 2.5,
+            "trail_m": 3.0,
+            "max_hold": 192,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "rd_catalog_refresh_2026-10-20_grid",
+          "status": "候選（2026-10-20 全面重掃新增）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 27929.71,
+          "ret_3y": 179.297,
+          "total_return_3y": 179.297,
+          "cagr_3y": 40.775,
+          "cagr": 40.775,
+          "ret_1y": 16.123,
+          "bh_ret_3y": -73.54,
+          "maxdd_3y": -27.925,
+          "maxdd": -27.925,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
+          "oos_pass": "4/6",
+          "n_trades_3y": 86,
+          "n_trades": 86,
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 46.615,
+            "ret_h2": 90.497,
+            "bh_h1": -54.898,
+            "bh_h2": -41.334
+          },
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 70,
+            "stop_m": 2.5,
+            "trail_m": 3.0,
+            "max_hold": 192,
+            "reset_below_hi": false
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_first_half_ret": 46.615,
+          "wf_second_half_ret": 90.497,
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 78.76,
+            "symbols": [
+              "ARB"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "funding_pnl": -487.58,
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C25__rcr1020_donchian70_s2.5_t3.0_reset__ARB__1h.csv",
+          "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C25.csv",
+          "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C25.csv.gz",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-20 22:03:40 CST",
+          "data_short": false,
+          "gate_pass_full": null,
+          "gate_pass_both": null,
+          "selection_bias_note": "Best-CAGR passer per coin×tf from a 120/162-config grid; neighbor+WF gates applied.",
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.5,
+                "trail_m": 3.0,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 90.497,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.5,
+                "trail_m": 3.0,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 90.497,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            }
+          },
+          "site_note_zh": "和 S2 同幣 ARB，S2 有空單時不能開；C25 與 Z9 只能選一"
+        },
+        {
+          "strategy_id": "rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h",
+          "code": "C29",
+          "symbol": "FIL",
+          "timeframe": "1h",
+          "params": {
+            "symbol": "FIL",
+            "tf": "1h",
+            "donch_n": 70,
+            "stop_m": 1.5,
+            "trail_m": 2.5,
+            "max_hold": 192,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "rd_catalog_refresh_2026-10-20_grid",
+          "status": "候選（2026-10-20 全面重掃新增）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 18390.77,
+          "ret_3y": 83.908,
+          "total_return_3y": 83.908,
+          "cagr_3y": 22.491,
+          "cagr": 22.491,
+          "ret_1y": 75.562,
+          "bh_ret_3y": -69.476,
+          "maxdd_3y": -33.281,
+          "maxdd": -33.281,
+          "oos_pass_3y": "5/6",
+          "oos_wins_3y": 5,
+          "oos_pass": "5/6",
+          "n_trades_3y": 102,
+          "n_trades": 102,
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 3.177,
+            "ret_h2": 78.244,
+            "bh_h1": -6.167,
+            "bh_h2": -67.47
+          },
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 70,
+            "stop_m": 1.5,
+            "trail_m": 2.5,
+            "max_hold": 192,
+            "reset_below_hi": false
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_first_half_ret": 3.177,
+          "wf_second_half_ret": 78.244,
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 93.71,
+            "symbols": [
+              "FIL"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "funding_pnl": -76.99,
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C29__rcr1020_donchian70_s1.5_t2.5_reset__FIL__1h.csv",
+          "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C29.csv",
+          "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C29.csv.gz",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-20 22:03:40 CST",
+          "data_short": false,
+          "gate_pass_full": null,
+          "gate_pass_both": null,
+          "selection_bias_note": "Best-CAGR passer per coin×tf from a 120/162-config grid; neighbor+WF gates applied.",
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 1.5,
+                "trail_m": 2.5,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 78.244,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 1.5,
+                "trail_m": 2.5,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 78.244,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            }
+          },
+          "site_note_zh": "和 C2 同幣 FIL，C2 啟用時不能開"
+        },
+        {
+          "strategy_id": "rcr1020_donchian30_s1.5_t3.5_reset__APT__4h",
+          "code": "C31",
+          "symbol": "APT",
+          "timeframe": "4h",
+          "params": {
+            "symbol": "APT",
+            "tf": "4h",
+            "donch_n": 30,
+            "stop_m": 1.5,
+            "trail_m": 3.5,
+            "max_hold": 36,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "rd_catalog_refresh_2026-10-20_grid",
+          "status": "候選（2026-10-20 全面重掃新增）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 15833.14,
+          "ret_3y": 58.331,
+          "total_return_3y": 58.331,
+          "cagr_3y": 16.535,
+          "cagr": 16.535,
+          "ret_1y": 10.321,
+          "bh_ret_3y": -84.235,
+          "maxdd_3y": -37.956,
+          "maxdd": -37.956,
+          "oos_pass_3y": "5/6",
+          "oos_wins_3y": 5,
+          "oos_pass": "5/6",
+          "n_trades_3y": 49,
+          "n_trades": 49,
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 14.785,
+            "ret_h2": 37.937,
+            "bh_h1": 11.349,
+            "bh_h2": -85.842
+          },
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 30,
+            "stop_m": 1.5,
+            "trail_m": 3.5,
+            "max_hold": 36,
+            "reset_below_hi": false
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_first_half_ret": 14.785,
+          "wf_second_half_ret": 37.937,
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 74.66,
+            "symbols": [
+              "APT"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "funding_pnl": -232.02,
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C31__rcr1020_donchian30_s1.5_t3.5_reset__APT__4h.csv",
+          "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C31.csv",
+          "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C31.csv.gz",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-20 22:03:40 CST",
+          "data_short": false,
+          "gate_pass_full": null,
+          "gate_pass_both": null,
+          "selection_bias_note": "Best-CAGR passer per coin×tf from a 120/162-config grid; neighbor+WF gates applied.",
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "h1_pick": {
+                "donch_n": 30,
+                "stop_m": 1.5,
+                "trail_m": 3.5,
+                "max_hold": 36,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 37.937,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 69.2,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "h1_pick": {
+                "donch_n": 30,
+                "stop_m": 1.5,
+                "trail_m": 3.5,
+                "max_hold": 36,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 37.937,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            }
+          }
+        },
+        {
+          "strategy_id": "rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h",
+          "code": "C32",
+          "symbol": "DOT",
+          "timeframe": "1h",
+          "params": {
+            "symbol": "DOT",
+            "tf": "1h",
+            "donch_n": 70,
+            "stop_m": 2.0,
+            "trail_m": 3.5,
+            "max_hold": 192,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "rd_catalog_refresh_2026-10-20_grid",
+          "status": "候選（2026-10-20 全面重掃新增）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 13920.34,
+          "ret_3y": 39.203,
+          "total_return_3y": 39.203,
+          "cagr_3y": 11.643,
+          "cagr": 11.643,
+          "ret_1y": 13.877,
+          "bh_ret_3y": -71.238,
+          "maxdd_3y": -33.436,
+          "maxdd": -33.436,
+          "oos_pass_3y": "5/6",
+          "oos_wins_3y": 5,
+          "oos_pass": "5/6",
+          "n_trades_3y": 97,
+          "n_trades": 97,
+          "n_liquidations": 0,
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 88.5,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 29.801,
+            "ret_h2": 7.244,
+            "bh_h1": 12.226,
+            "bh_h2": -74.371
+          },
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 70,
+            "stop_m": 2.0,
+            "trail_m": 3.5,
+            "max_hold": 192,
+            "reset_below_hi": false
+          },
+          "wf_params_same_as_catalog": false,
+          "wf_first_half_ret": 29.801,
+          "wf_second_half_ret": 7.244,
+          "wf_spec": "H1 2023-09-24..2025-03-24 pick = max H1 return among family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=60%; pass = pick H2 ret>0 and this row H2>0",
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 90.7,
+            "symbols": [
+              "DOT"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "funding_pnl": -297.21,
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "gate_spec": "3y 2023-09-24→2026-09-24; next-open fill; 20bps/side; real funding; ret>B&H; OOS>=4/6; MaxDD<=60%; neighbor>=50% (26-pt); liquidity vol_only_A; WF",
+          "equity_csv": "/workspace/strategy-unified-3y/rd_catalog_refresh/equity/C32__rcr1020_donchian70_s2.0_t3.5_reset__DOT__1h.csv",
+          "parity_trades": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/trades_C32.csv",
+          "parity_bars": "/workspace/strategy-unified-3y/rd_catalog_refresh/fixtures/bars_C32.csv.gz",
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-20 22:03:40 CST",
+          "data_short": false,
+          "gate_pass_full": null,
+          "gate_pass_both": null,
+          "selection_bias_note": "Best-CAGR passer per coin×tf from a 120/162-config grid; neighbor+WF gates applied.",
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.0,
+                "trail_m": 3.5,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 7.244,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 80.8,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "h1_pick": {
+                "donch_n": 70,
+                "stop_m": 2.0,
+                "trail_m": 3.5,
+                "max_hold": 192,
+                "reset_below_hi": true
+              },
+              "listed_equals_h1_pick": true,
+              "h1_pick_h2_ret": 7.244,
+              "wf_strict_pass": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 88.5,
+              "all_gates_pass": true
+            }
+          },
+          "site_note_zh": "和 C5 同幣 DOT，C5 啟用時不能開（也和 Z4 同幣）"
+        },
+        {
+          "strategy_id": "strictwf1021_C35_donch_n40_stop_m1.5_trail_m2.5_reset_below_hiTrue__SEI__4h",
+          "code": "C35",
+          "base_code": "C24",
+          "symbol": "SEI",
+          "timeframe": "4h",
+          "params": {
+            "symbol": "SEI",
+            "tf": "4h",
+            "donch_n": 40,
+            "stop_m": 1.5,
+            "trail_m": 2.5,
+            "max_hold": 36,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "strict_wf_h1_pick_2026-10-21",
+          "status": "候選（strict WF 替代列：H1 選出參數）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 22464.75,
+          "ret_3y": 124.648,
+          "total_return_3y": 124.648,
+          "cagr_3y": 30.934,
+          "cagr": 30.934,
+          "ret_1y": -6.755,
+          "bh_ret_3y": -48.388,
+          "maxdd_3y": -29.301,
+          "maxdd": -29.301,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
+          "n_trades_3y": 42,
+          "n_liquidations": 0,
+          "funding_pnl": -107.49,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 109.896,
+            "ret_h2": 7.028,
+            "bh_h1": 60.826,
+            "bh_h2": -67.909
+          },
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 69.2,
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 40,
+            "stop_m": 1.5,
+            "trail_m": 2.5,
+            "max_hold": 36,
+            "reset_below_hi": true
+          },
+          "wf_params_same_as_catalog": true,
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 69.2,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 69.2,
+              "all_gates_pass": true
+            }
+          },
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 57.79,
+            "symbols": [
+              "SEI"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-21 10:08:03 CST",
+          "data_short": false,
+          "site_note_zh": "後半段只有 +7%，成交量剛過門檻"
+        },
+        {
+          "strategy_id": "strictwf1021_C36_donch_n20_stop_m2.0_trail_m2.5_reset_below_hiTrue__GALA__4h",
+          "code": "C36",
+          "base_code": "C26",
+          "symbol": "GALA",
+          "timeframe": "4h",
+          "params": {
+            "symbol": "GALA",
+            "tf": "4h",
+            "donch_n": 20,
+            "stop_m": 2.0,
+            "trail_m": 2.5,
+            "max_hold": 36,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "strict_wf_h1_pick_2026-10-21",
+          "status": "候選（strict WF 替代列：H1 選出參數）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 20154.99,
+          "ret_3y": 101.55,
+          "total_return_3y": 101.55,
+          "cagr_3y": 26.288,
+          "cagr": 26.288,
+          "ret_1y": -3.837,
+          "bh_ret_3y": -84.981,
+          "maxdd_3y": -36.188,
+          "maxdd": -36.188,
+          "oos_pass_3y": "5/6",
+          "oos_wins_3y": 5,
+          "n_trades_3y": 62,
+          "n_liquidations": 0,
+          "funding_pnl": -875.16,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 62.741,
+            "ret_h2": 23.847,
+            "bh_h1": 31.733,
+            "bh_h2": -88.599
+          },
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 76.9,
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 20,
+            "stop_m": 2.0,
+            "trail_m": 2.5,
+            "max_hold": 36,
+            "reset_below_hi": true
+          },
+          "wf_params_same_as_catalog": true,
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 61.5,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 76.9,
+              "all_gates_pass": true
+            }
+          },
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 61.26,
+            "symbols": [
+              "GALA"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-21 10:08:03 CST",
+          "data_short": false,
+          "site_note_zh": "和 S8 同幣 GALA，S8 有空單時不能開"
+        },
+        {
+          "strategy_id": "strictwf1021_C39_donch_n70_stop_m1.5_trail_m3.0_reset_below_hiTrue__OP__1h",
+          "code": "C39",
+          "base_code": "C30",
+          "symbol": "OP",
+          "timeframe": "1h",
+          "params": {
+            "symbol": "OP",
+            "tf": "1h",
+            "donch_n": 70,
+            "stop_m": 1.5,
+            "trail_m": 3.0,
+            "max_hold": 192,
+            "reset_below_hi": true,
+            "atr_mode": "sma",
+            "leverage": 1.0,
+            "btc_regime": false
+          },
+          "params_source": "strict_wf_h1_pick_2026-10-21",
+          "status": "候選（strict WF 替代列：H1 選出參數）",
+          "review": "PENDING_EMILY",
+          "initial": 10000.0,
+          "final": 15176.46,
+          "ret_3y": 51.765,
+          "total_return_3y": 51.765,
+          "cagr_3y": 14.901,
+          "cagr": 14.901,
+          "ret_1y": -6.783,
+          "bh_ret_3y": -89.812,
+          "maxdd_3y": -39.503,
+          "maxdd": -39.503,
+          "oos_pass_3y": "4/6",
+          "oos_wins_3y": 4,
+          "n_trades_3y": 90,
+          "n_liquidations": 0,
+          "funding_pnl": -393.81,
+          "walk_forward_split": {
+            "h1": "2023-09-24→2025-03-24",
+            "ret_h1": 24.038,
+            "ret_h2": 22.354,
+            "bh_h1": -33.269,
+            "bh_h2": -84.732
+          },
+          "gate_pass_3y": true,
+          "gate_fail_reasons": [],
+          "robust_neighbor_pct": 100.0,
+          "wf_pass": true,
+          "wf_params": {
+            "donch_n": 70,
+            "stop_m": 1.5,
+            "trail_m": 3.0,
+            "max_hold": 192,
+            "reset_below_hi": true
+          },
+          "wf_params_same_as_catalog": true,
+          "wf_strict": {
+            "spec": "STRICT WF (capital control 2026-10-21): listed params must equal the H1 (2023-09-24..2025-03-24) pick = max H1 return in the family grid for this coin/tf with H1 ret>H1 B&H and H1 DD<=L; and H2 ret>0 with those exact params. Reported for L=45 and L=60.",
+            "generated_at": "2026-10-21 10:08:03 CST",
+            "dd45": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            },
+            "dd60": {
+              "is_h1_pick": true,
+              "gates": {
+                "ret_gt_bh": true,
+                "oos": true,
+                "maxdd": true,
+                "neighbor": 1.0,
+                "own_h2": true,
+                "liquidity": true
+              },
+              "neighbor_pct": 100.0,
+              "all_gates_pass": true
+            }
+          },
+          "liquidity": {
+            "status": "ok",
+            "rule": "vol_only_A",
+            "vol_days_pct": 76.39,
+            "symbols": [
+              "OP"
+            ],
+            "source": "rd_short_range/data/universe.csv"
+          },
+          "approval_excluded": false,
+          "cloud_supported": true,
+          "score": 0.0,
+          "funding_source": "binance_usdtm_historical (data.binance.vision fundingRate)",
+          "price_source": "Binance USDT-M perp klines (data.binance.vision)",
+          "requires": [
+            "perp_futures",
+            "funding",
+            "next_open_fill"
+          ],
+          "backtest_code": "/workspace/strategy-unified-3y/rd_catalog_refresh/code/eng.py",
+          "generated_at": "2026-10-21 10:08:03 CST",
+          "data_short": false,
+          "site_note_zh": "和 C3 同幣 OP，C3 啟用時不能開"
+        }
+      ],
+      "cloud_supported": true
     }
   ]
 }
