@@ -149,7 +149,7 @@ jobs:
             --region="${REGION}" \
             --image="${IMAGE_URI}" \
             --service-account="${RUNTIME_SA}" \
-            --task-timeout=180 \
+            --task-timeout=300 \
             --max-retries=0 \
             --set-env-vars="GCS_BUCKET=${BUCKET},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision" \
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \

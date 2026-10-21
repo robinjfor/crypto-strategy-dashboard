@@ -291,6 +291,7 @@
           fee: t.fee_usdt,
           commissions_text: commissionsText(t),
           fill_source: (t.exit_fill && t.exit_fill.complete) ? "binance" : "",
+          tag: t.tag || (t.manual ? "人工單" : ""),
           reason: t.reason || "manual"
         };
       });
@@ -683,12 +684,54 @@
         : '<p class="ops-help">目前沒有掛單</p>') + "</div>";
   }
 
+  /** Binance ledger (backfilled from 9/15): fees/funding, 人工單 fills, closed_trades vs ledger. */
+  function renderLedger() {
+    var L = cloud && cloud.ledger_summary;
+    if (!L || !L.available) return "";
+    var fees = Object.keys(L.fees_by_quote || {}).map(function (k) { return num(L.fees_by_quote[k], 2) + " " + k; }).join(" · ") || "—";
+    var fund = Object.keys(L.funding_by_asset || {}).map(function (k) { return signedNum(L.funding_by_asset[k], 4) + " " + k; }).join(" · ") || "—";
+    var diff = ((cloud && cloud.ledger_diff) || []).map(function (d) {
+      return "<tr><td>" + esc((d.code || "") + " " + (d.symbol || "")) + (d.tag ? ' <span class="badge warn">' + esc(d.tag) + "</span>" : "") +
+        "</td><td>" + esc(d.closed_at || "") + '</td><td class="num">' + (d.local_pnl == null ? "—" : num(d.local_pnl, 2)) +
+        '</td><td class="num">' + (d.ledger_pnl == null ? "—" : num(d.ledger_pnl, 2)) + '</td><td class="num ' + signedCls(d.diff_pnl) + '">' +
+        (d.diff_pnl == null ? "—" : signedNum(d.diff_pnl, 2)) + '</td><td class="num">' + (d.local_fee == null ? "無" : num(d.local_fee, 3)) +
+        '</td><td class="num">' + (d.ledger_fee == null ? "—" : num(d.ledger_fee, 3)) + "</td><td>" + esc(d.status || "") + "</td></tr>";
+    }).join("");
+    var man = (L.manual_fills || []).map(function (m) {
+      return "<tr><td>" + esc(m.time_taipei || "") + "</td><td>" + esc(m.venue + " " + m.symbol) + ' <span class="badge warn">人工單</span></td><td>' + esc(m.side) +
+        '</td><td class="num">' + num(m.qty, 4) + '</td><td class="num">' + num(m.price, 4) + '</td><td class="num">' + esc(m.commission + " " + m.commissionAsset) + "</td></tr>";
+    }).join("");
+    return '<div class="ops-panel" id="ledgerPanel"><div class="ops-head"><strong>幣安帳本（9/15 起回補）</strong><span class="hint">' +
+      esc(String(L.n_fills)) + " 筆成交 · 同步 " + esc(L.synced_at || "") + "</span></div>" +
+      '<p class="ops-help">手續費（幣安）：' + esc(fees) + " · 資金費：" + esc(fund) + " · 未計價手續費筆數 " + esc(String(L.fee_unpriced_fills || 0)) + "</p>" +
+      (diff ? '<details open><summary>已結算交易 vs 幣安帳本（差額表）</summary><div class="table-scroll"><table class="data"><thead><tr><th>交易</th><th>平倉</th><th class="num">本地損益</th><th class="num">幣安損益</th><th class="num">差額</th><th class="num">本地手續費</th><th class="num">幣安手續費</th><th>狀態</th></tr></thead><tbody>' + diff + "</tbody></table></div></details>" : "") +
+      (man ? '<details><summary>人工單成交（' + esc(String(L.n_manual_fills)) + '）</summary><div class="table-scroll"><table class="data"><thead><tr><th>時間</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">價格</th><th class="num">手續費</th></tr></thead><tbody>' + man + "</tbody></table></div></details>" : "") +
+      "</div>";
+  }
+
+  /** Daily live-vs-backtest, trade by trade. */
+  function renderLiveVsBacktest() {
+    var r = cloud && cloud.live_vs_backtest;
+    if (!r || !r.rows) return "";
+    var rows = r.rows.map(function (x) {
+      var st = x.match === true ? '<span class="pos">一致</span>' : x.match === false ? '<span class="neg">不一致</span>' : '<span class="dim">未支援</span>';
+      return "<tr><td>" + esc((x.code || "") + " " + (x.symbol || "")) + "</td><td>" + esc(x.closed_at || "") + "</td><td>" +
+        esc((x.live_entry_bar || "—") + " / " + (x.bt_entry_bar || "—")) + "</td><td>" + esc((x.live_exit_bar || "—") + " / " + (x.bt_exit_bar || "—")) +
+        '</td><td class="num">' + (x.entry_bps == null ? "—" : num(x.entry_bps, 1)) + '</td><td class="num">' + (x.exit_bps == null ? "—" : num(x.exit_bps, 1)) +
+        "</td><td>" + st + (x.pause ? "（已暫停該槽）" : "") + "</td><td>" + esc((x.problems || []).join(",")) + "</td></tr>";
+    }).join("");
+    return '<div class="ops-panel" id="lvbPanel"><div class="ops-head"><strong>實盤 vs 回測（逐筆，每日 UTC 00:30 後）</strong><span class="hint">' +
+      esc(r.at || "") + " · 一致 " + r.n_match + " · 不一致 " + r.n_mismatch + " · 價差容忍 " + r.tolerance_bps + " bps · 近 " + r.pause_window_h + " 小時不一致才暫停</span></div>" +
+      '<div class="table-scroll"><table class="data"><thead><tr><th>交易</th><th>平倉</th><th>進場K 實盤/回測</th><th>出場K 實盤/回測</th><th class="num">進場差 bps</th><th class="num">出場差 bps</th><th>結果</th><th>差異</th></tr></thead><tbody>' +
+      rows + "</tbody></table></div></div>";
+  }
+
   function renderReconcile() {
     var r = cloud && cloud.reconcile;
     if (!r || !r.at) return '<div class="ops-panel"><strong>對帳狀態</strong> <span class="dim">尚未執行</span></div>';
     var mism = (r.mismatches || []).map(function (m) {
       return "<li>" + esc((m.venue || "") + " " + (m.symbol || "") + "：本地 " + m.trader + " / 幣安 " + m.binance +
-        " · " + (m.kind || "") + ((m.slots || []).length ? " · 槽 " + m.slots.join(",") + (m.pause ? "（已暫停開新倉）" : "") : "")) + "</li>";
+        " · " + (m.kind || "") + (m.tag ? "（" + m.tag + "）" : "") + ((m.slots || []).length ? " · 槽 " + m.slots.join(",") + (m.pause ? "（已暫停開新倉）" : "") : "")) + "</li>";
     }).join("");
     var errs = (r.errors || []).map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("");
     var alerts = ((cloud && cloud.reconcile_alerts) || []).slice(-5).reverse().map(function (a) {
@@ -713,6 +756,8 @@
       '<div class="books-row">' + renderBookCard(usdt) + renderBookCard(usdc) + "</div>" +
       renderReconcile() +
       renderOpenOrders() +
+      renderLedger() +
+      renderLiveVsBacktest() +
       '<p class="book-math-hint">驗算：現在餘額 ≈ 原本 + 已實現 + 未實現（若有入金／出金或手續費幣種差異，數字可能不完全對上）。</p>' +
       "</section>";
   }
@@ -731,7 +776,7 @@
     return "<tr>" +
       "<td>" + esc(String(ts)) + "</td>" +
       "<td>" + esc(String(kind)) + "</td>" +
-      "<td><strong>" + esc(displaySym) + "</strong></td>" +
+      "<td><strong>" + esc(displaySym) + "</strong>" + (r.tag ? ' <span class="badge warn">' + esc(r.tag) + "</span>" : "") + "</td>" +
       "<td>" + esc(String(side)) + "</td>" +
       '<td class="num">' + num(qty, 4) + "</td>" +
       '<td class="num">' + num(px, 4) + "</td>" +

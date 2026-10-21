@@ -74,6 +74,21 @@ class BinanceClient:
     def get_order(self, symbol: str, order_id: int) -> dict:
         return self._signed("GET", "/api/v3/order", {"symbol": symbol, "orderId": int(order_id)})
 
+    def get_order_by_coid(self, symbol: str, client_order_id: str) -> dict | None:
+        """GET /api/v3/order by origClientOrderId; None when Binance has no such order (-2013)."""
+        try:
+            return self._signed("GET", "/api/v3/order", {"symbol": symbol, "origClientOrderId": client_order_id})
+        except RuntimeError as e:
+            if "-2013" in str(e) or "does not exist" in str(e):
+                return None
+            raise
+
+    def all_orders(self, symbol: str, order_id: int = 0, limit: int = 1000) -> list:
+        return self._signed("GET", "/api/v3/allOrders", {"symbol": symbol, "orderId": int(order_id), "limit": limit})
+
+    def my_trades_from(self, symbol: str, from_id: int = 0, limit: int = 1000) -> list:
+        return self._signed("GET", "/api/v3/myTrades", {"symbol": symbol, "fromId": int(from_id), "limit": limit})
+
     def open_orders(self, symbol: str | None = None) -> list:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/api/v3/openOrders", params)

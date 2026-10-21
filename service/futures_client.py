@@ -121,6 +121,17 @@ class FuturesDemoClient:
     def user_trades_since(self, symbol: str, start_ms: int, limit: int = 1000) -> list:
         return self._signed("GET", "/fapi/v1/userTrades", {"symbol": symbol, "startTime": int(start_ms), "limit": limit})
 
+    def get_order_by_id(self, symbol: str, order_id) -> dict | None:
+        try:
+            return self._signed("GET", "/fapi/v1/order", {"symbol": symbol, "orderId": int(order_id)})
+        except RuntimeError as e:
+            if "-2013" in str(e) or "does not exist" in str(e):
+                return None
+            raise
+
+    def user_trades_from(self, symbol: str, from_id: int = 0, limit: int = 1000) -> list:
+        return self._signed("GET", "/fapi/v1/userTrades", {"symbol": symbol, "fromId": int(from_id), "limit": limit})
+
     def open_algo_orders(self, symbol: str | None = None) -> list:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/fapi/v1/openAlgoOrders", params)

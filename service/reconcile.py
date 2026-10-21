@@ -12,6 +12,12 @@ log = logging.getLogger(__name__)
 
 SPOT_TOL = 0.95  # exchange may hold less than saved qty only by fee dust
 MAX_ALERTS = 100
+MANUAL_LOOKBACK_MS = 7 * 86400 * 1000
+
+
+def MANUAL_LOOKBACK_MS_FN() -> int:  # noqa: N802
+    import time
+    return int(time.time() * 1000) - MANUAL_LOOKBACK_MS
 
 
 def now_iso_taipei() -> str:
@@ -79,9 +85,67 @@ def _spot_checks(client, state: dict) -> list[dict]:
                         kind, pause = "stop_filled_pending_record", False
                 except Exception:  # noqa: BLE001
                     pass
+        if pause and hasattr(client, "all_orders"):
+            man = manual_orders_since(None, client, "spot", rows[0][1]["symbol"], MANUAL_LOOKBACK_MS_FN())
+            if man:
+                kind, pause = "manual_order", False
         out.append({"venue": "spot", "symbol": rows[0][1]["symbol"], "asset": base, "trader": exp,
                     "binance": got, "slots": [s for s, _ in rows], "kind": kind, "pause": pause})
     return out
+
+
+# ---------------------------------------------------------------- manual orders (人工單)
+MANUAL_NOTE = "自動交易專家 人工單（Robin 核准）"
+
+
+def _manual_fields(coids) -> dict:
+    from execution import MANUAL_TAG, is_manual_coid
+    if is_manual_coid(coids):
+        return {"closed_by": "manual", "manual": True, "tag": MANUAL_TAG, "note": MANUAL_NOTE}
+    return {"closed_by": "outside_runner"}
+
+
+def tag_manual_closed_trades(st: dict) -> int:
+    """Existing closed trades whose Binance client order id marks a manual order get the 人工單 tag."""
+    n = 0
+    for t in st.get("closed_trades") or []:
+        if not t.get("manual") and t.get("client_order_id") and _manual_fields(t["client_order_id"]).get("manual"):
+            t.update(_manual_fields(t["client_order_id"]))
+            n += 1
+    return n
+
+
+def manual_orders_since(fc, client, venue: str, symbol: str, since_ms: int) -> list[dict]:
+    """Manual-prefixed orders on Binance for this symbol since since_ms (read-only)."""
+    from execution import is_manual_coid
+    try:
+        if venue == "futures":
+            rows = fc.all_orders(symbol, start_ms=since_ms) or []
+        else:
+            rows = [o for o in (client.all_orders(symbol, 0) or []) if int(o.get("time") or 0) >= since_ms]
+    except Exception:  # noqa: BLE001
+        return []
+    return [{"orderId": o.get("orderId"), "clientOrderId": o.get("clientOrderId"), "side": o.get("side"),
+             "executedQty": o.get("executedQty"), "time": o.get("time")}
+            for o in rows if is_manual_coid(o.get("clientOrderId")) and float(o.get("executedQty") or 0) > 0]
+
+
+def u1_funding_true_up(state: dict, fc) -> dict | None:
+    """Sleeve funding must equal Binance FUNDING_FEE income on the U1 perps since the sleeve started,
+    paused or not (late-posted income rows can slip past the runner's cursor)."""
+    sl = state.get("u1_live") or {}
+    if not sl or not sl.get("started_at"):
+        return None
+    import u1_live
+    pm = u1_live.perp_map(sl.get("quote") or "USDT")
+    start = _iso_ms(sl["started_at"]) or 0
+    tot = 0.0
+    for sym in pm.values():
+        for r in fc.income(sym, "FUNDING_FEE", start) or []:
+            if r.get("incomeType", "FUNDING_FEE") == "FUNDING_FEE" and int(r.get("time") or start) >= start:
+                tot += float(r.get("income") or 0)
+    diff = round(tot - float(sl.get("funding") or 0), 10)
+    return {"binance_funding": round(tot, 10), "sleeve_funding": sl.get("funding"), "diff": diff}
 
 
 # ---------------------------------------------------------------- U1 closed outside the runner
@@ -150,7 +214,8 @@ def find_u1_external_closes(state: dict, fc, quote: str = "USDC") -> list[dict]:
             "funding_usdt": round(fund, 8), "order_id": oids[0] if len(oids) == 1 else oids,
             "client_order_id": [orders[o].get("clientOrderId") for o in oids],
             "trade_ids": [t.get("id") for t in trades], "closed_at": _ms_taipei(close_ms),
-            "reason": "external_close", "closed_by": "outside_runner", "source": "binance_userTrades",
+            "reason": "external_close", "source": "binance_userTrades",
+            **_manual_fields([orders[o].get("clientOrderId") for o in oids]),
             "entry_order_id": [f.get("order_id") for f in ent],
         })
     return out
@@ -208,6 +273,10 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
             rep["u1_external_closes"] = find_u1_external_closes(state, fc)
         except Exception as e:  # noqa: BLE001
             rep["errors"].append(f"u1_external: {str(e)[:200]}")
+        try:
+            rep["u1_funding"] = u1_funding_true_up(state, fc)
+        except Exception as e:  # noqa: BLE001
+            rep["errors"].append(f"u1_funding: {str(e)[:200]}")
     adopted = {c["symbol"] for c in rep["u1_external_closes"]}
     for q in ("USDT", "USDC"):
         f = futures_quote_reconcile(state, q, alloc_doc, fc=fc)
@@ -220,6 +289,11 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
             if m["symbol"] in adopted and float(m.get("binance") or 0) == 0:
                 continue  # explained: closed outside the runner, booked from Binance trades
             slots = by_sym.get(m["symbol"], [])
+            man = manual_orders_since(fc, client, "futures", m["symbol"], MANUAL_LOOKBACK_MS_FN()) if fc else []
+            if man:
+                rep["mismatches"].append({"venue": "futures", "quote": q, **m, "slots": slots, "kind": "manual_order",
+                                          "tag": "人工單", "manual_orders": man, "pause": False})
+                continue
             rep["mismatches"].append({"venue": "futures", "quote": q, **m, "slots": slots,
                                       "kind": "futures_position_mismatch" if slots else "untracked_exchange_position",
                                       "pause": bool(slots)})
@@ -236,6 +310,15 @@ def apply_report(st: dict, rep: dict) -> dict:
     """Persist the report; pause slots with unexplained mismatches; record alerts. Never unpauses."""
     prev = st.get("reconcile") or {}
     adopted = apply_u1_external_closes(st, rep.get("u1_external_closes") or [])
+    tag_manual_closed_trades(st)
+    uf = rep.get("u1_funding") or {}
+    sl = st.get("u1_live") or {}
+    if sl and uf and abs(float(uf.get("diff") or 0)) > 1e-9 \
+            and abs(float(sl.get("funding") or 0) - float(uf.get("sleeve_funding") or 0)) < 1e-12:
+        d = float(uf["diff"])
+        sl["cash"] = float(sl.get("cash") or 0) + d
+        sl["funding"] = float(sl.get("funding") or 0) + d
+        sl.setdefault("events", []).append({"at": rep["at"], "event": "funding_true_up_from_binance", "diff": d})
     for c in rep.get("u1_external_closes") or []:
         alerts_key = f"external_close|{c['symbol']}|{c['order_id']}"
         if alerts_key not in {a.get("key") for a in st.get("reconcile_alerts") or []}:
@@ -266,6 +349,34 @@ def apply_report(st: dict, rep: dict) -> dict:
     return st
 
 
+def _ledger_and_lvb(store, state: dict, client, fc):
+    """Incremental Binance ledger sync (backfill from 9/15 on first run) + daily live-vs-backtest."""
+    led_sum = led_diff = lvb = None
+    try:
+        import ledger
+        from slots import all_known_slots, slot_by_id
+        if fc is None:
+            from futures_client import FuturesDemoClient
+            fc = FuturesDemoClient() if FuturesDemoClient().api_key else None
+        known = all_known_slots()
+        bals = client.nonzero_balances() if client is not None else []
+        doc = store.load_feed(object_name=ledger.LEDGER_OBJECT)
+        doc, summ = ledger.sync(doc if (doc and doc.get("fills") is not None) else None, client=client, fc=fc,
+                                symbols=ledger.symbols_to_track(state, bals, known),
+                                slot_ids=[k["id"] for k in known if k.get("id")])
+        store.save_feed(doc, object_name=ledger.LEDGER_OBJECT)
+        led_sum = {**ledger.summarize(doc), "last_sync": summ}
+        led_diff = ledger.diff_closed_trades(doc, state.get("closed_trades") or [])
+        import live_vs_backtest
+        if client is not None and live_vs_backtest.due(state):
+            by_id = {k.get("id"): k for k in known}
+            lvb = live_vs_backtest.run(state, doc, client=client,
+                                       slot_lookup=lambda i: slot_by_id(i) or by_id.get(i))
+    except Exception as e:  # noqa: BLE001
+        log.warning("ledger_or_lvb_fail err=%s", e)
+    return led_sum, led_diff, lvb
+
+
 def run_once(store=None, *, client=None, fc=None) -> dict:
     from state_store import StateStore
     store = store or StateStore()
@@ -274,8 +385,18 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         client = BinanceClient()
         if not client.api_key:
             client = None
-    rep = build_report(store.load(), client=client, fc=fc)
-    st = store.mutate(lambda s: apply_report(s, rep))
+    state0 = store.load()
+    rep = build_report(state0, client=client, fc=fc)
+    led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
+    def mut(s):
+        s = apply_report(s, rep)
+        if led_sum is not None:
+            s["ledger_summary"], s["ledger_diff"] = led_sum, led_diff
+        if lvb is not None:
+            import live_vs_backtest
+            s = live_vs_backtest.apply(s, lvb)
+        return s
+    st = store.mutate(mut)
     out = (st or {}).get("reconcile") or rep
     log.info("reconcile ok=%s mismatches=%s paused_now=%s errors=%s", out.get("ok"),
              len(out.get("mismatches") or []), out.get("paused_now"), out.get("errors"))

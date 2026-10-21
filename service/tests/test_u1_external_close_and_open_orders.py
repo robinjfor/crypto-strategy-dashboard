@@ -30,7 +30,7 @@ class FC:
                  "commission": "0.4127", "commissionAsset": "USDC", "realizedPnl": "5.0875", "time": T1}]
 
     def income(self, sym, t, a, b=None):
-        return [{"income": "-0.0913"}]
+        return [{"income": "-0.0913", "time": T0 + 1}] if sym == "BTCUSDC" else []
 
     def open_orders(self):
         return [{"symbol": "ETHUSDC", "orderId": 7, "side": "SELL", "type": "LIMIT", "price": "3000", "origQty": "0.1",
@@ -57,9 +57,12 @@ def test_external_close_booked_from_binance_and_slot_stays_paused():
     st = reconcile.apply_report(st, rep)
     sl = st["u1_live"]
     assert sl["units"]["BTC"] == 0.0
-    assert abs(sl["cash"] - (-911.9 + 0.011 * 83364.3 - 0.4127)) < 1e-9
+    # close booked from Binance + missing BTC funding trued up from Binance income
+    assert abs(sl["cash"] - (-911.9 + 0.011 * 83364.3 - 0.4127 - 0.0913)) < 1e-9
+    assert abs(sl["funding"] - (-0.0913)) < 1e-12
     ct = st["closed_trades"][-1]
     assert ct["order_id"] == "2" and ct["client_order_id"] == ["u1-manualclose-BTC-1021"]
+    assert ct["manual"] is True and ct["tag"] == "人工單" and ct["closed_by"] == "manual"
     assert ct["exit"] == 83364.3 and ct["entry"] == 82901.8 and ct["pnl_gross_usdt"] == 5.0875
     assert abs(ct["pnl_usdt"] - (5.0875 - 0.41 - 0.4127)) < 1e-4 and ct["funding_usdt"] == -0.0913
     assert "u1_btc_eth_usdc" in st["paused_slots"]  # never unpaused
@@ -68,6 +71,7 @@ def test_external_close_booked_from_binance_and_slot_stays_paused():
     n = len(st["closed_trades"])
     st = reconcile.apply_report(st, reconcile.build_report(st, client=None, fc=FC(), alloc_doc={"slots": []}))
     assert len(st["closed_trades"]) == n
+    assert abs(st["u1_live"]["funding"] - (-0.0913)) < 1e-12  # true-up not repeated
 
 
 def test_open_orders_from_binance():

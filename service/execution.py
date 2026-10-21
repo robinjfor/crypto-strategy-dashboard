@@ -26,6 +26,15 @@ def client_order_id(slot_id: str, kind: str, bar_ts: str | None = None) -> str:
     return raw[:36]
 
 
+# Manual orders (人工單): placed by people/agents outside the runner, e.g. 自動交易專家 with Robin's OK.
+MANUAL_PREFIXES = ("manual-", "u1-manualclose-")
+MANUAL_TAG = "人工單"
+
+
+def is_manual_coid(coid) -> bool:
+    return any(str(c or "").startswith(MANUAL_PREFIXES) for c in (coid if isinstance(coid, list) else [coid]))
+
+
 def base_asset(symbol: str) -> str:
     s = str(symbol or "").upper()
     for q in ("USDT", "USDC", "FDUSD", "BUSD"):

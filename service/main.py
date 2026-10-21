@@ -292,6 +292,38 @@ def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) ->
     return None
 
 
+SPOT_DUST_FRAC = 0.05  # spot base held worth > 5% of the planned entry = already a position
+
+
+def exchange_entry_block(client, sig: dict, venue: str, coid: str, quote: float) -> tuple[str, str] | None:
+    """(reason, detail) when Binance already shows a position on this coin or this client order id.
+    Errors fail closed (no entry), since we cannot prove the coin is flat."""
+    sym = str(sig.get("symbol") or "").upper()
+    base = _base_asset(sym)
+    try:
+        from futures_client import FuturesDemoClient
+        fc = FuturesDemoClient()
+        if getattr(fc, "api_key", None) and hasattr(fc, "position_risk"):
+            for p in fc.position_risk() or []:
+                if _base_asset(p.get("symbol") or "") == base and float(p.get("positionAmt") or 0) != 0:
+                    return "exchange_position_open", f"{p.get('symbol')} {p.get('positionAmt')}"
+            if venue == "futures" and hasattr(fc, "get_order") and fc.get_order(sym, coid) is not None:
+                return "duplicate_client_order_id", coid
+        if venue != "futures" and hasattr(client, "get_order_by_coid") and hasattr(client, "nonzero_balances"):
+            if client.get_order_by_coid(sym, coid) is not None:
+                return "duplicate_client_order_id", coid
+            held = 0.0
+            for b in client.nonzero_balances() or []:
+                if b.get("asset") == base:
+                    held = float(b.get("free") or 0) + float(b.get("locked") or 0)
+            px = float(sig.get("close") or 0)
+            if held > 0 and px > 0 and held * px > SPOT_DUST_FRAC * max(float(quote or 0), 1.0):
+                return "exchange_spot_holding", f"{base} {held}"
+    except Exception as e:  # noqa: BLE001
+        return "exchange_check_failed", str(e)[:120]
+    return None
+
+
 def same_coin_position_slot(state: dict, slot_id: str, symbol: str, side: str) -> str | None:
     """Slot id of an open position on the same coin in the SAME direction (any slot, spot or perp,
     USDT or USDC), incl. the U1 sleeve. Emily 2026-10-21: one position per coin, e.g. C5 spot DOT long
@@ -374,6 +406,14 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             return out
         if positions.get(slot_id, {}).get("status") == "FILLED":
             out["reason"] = "already_filled"
+            return out
+        # One position per coin, checked on Binance itself (state can be stale after a crash/retry or a
+        # manual order): any open perp on the coin (USDT or USDC), any non-dust spot holding, or an order
+        # that already used this client order id blocks the entry.
+        ex_block = exchange_entry_block(client, sig, venue, coid, quote)
+        if ex_block:
+            out["reason"], out["blocked_by"] = ex_block
+            log.info("skip_enter slot=%s reason=%s by=%s", slot_id, *ex_block)
             return out
         try:
             if venue == "futures":
