@@ -321,7 +321,7 @@ def _prepare(fc, sym: str) -> None:
 
 
 def coin_conflicts(state: dict) -> dict:
-    """{coin: reason} when another slot holds a SHORT on the coin or any futures position on the U1 perp."""
+    """{coin: reason} when another slot holds any position on the coin (short, perp, or same-direction spot)."""
     from main import _base_asset
     out = {}
     for pid, p in (state.get("positions") or {}).items():
@@ -334,6 +334,9 @@ def coin_conflicts(state: dict) -> dict:
             out[base] = f"opposite_position:{pid}"
         elif (p.get("venue") or "spot") == "futures":
             out[base] = f"shared_perp:{pid}"
+        else:
+            # Emily 2026-10-21: no second same-direction position on a coin (spot long blocks U1 adds)
+            out[base] = f"same_coin_position:{pid}"
     return out
 
 

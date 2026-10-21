@@ -283,6 +283,22 @@ def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) ->
     return None
 
 
+def same_coin_position_slot(state: dict, slot_id: str, symbol: str, side: str) -> str | None:
+    """Slot id of an open position on the same coin in the SAME direction (any slot, spot or perp,
+    USDT or USDC), incl. the U1 sleeve. Emily 2026-10-21: one position per coin, e.g. C5 spot DOT long
+    blocks Z4 perp DOT long."""
+    base, want = _base_asset(symbol), str(side or "LONG").upper()
+    for pid, p in (state.get("positions") or {}).items():
+        if pid == slot_id or not isinstance(p, dict) or p.get("status") != "FILLED":
+            continue
+        if _base_asset(p.get("symbol") or "") == base and str(p.get("side") or "LONG").upper() == want:
+            return pid
+    u1 = state.get("u1_live") or {}
+    if want == "LONG" and float((u1.get("units") or {}).get(base) or 0) > 0:
+        return "u1_live"
+    return None
+
+
 def u1_perp_in_use(state: dict, symbol: str, venue: str) -> bool:
     """True when another slot wants a futures position on a perp U1 holds (one-way mode would net them)."""
     u1 = state.get("u1_live") or {}
@@ -316,6 +332,12 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
             out["reason"] = "opposite_position_open"
             out["blocked_by"] = opp
             log.info("skip_enter slot=%s reason=opposite_position_open by=%s", slot_id, opp)
+            return out
+        same = same_coin_position_slot(state, slot_id, str(sig.get("symbol") or ""), str(sig.get("side") or "LONG"))
+        if same:
+            out["reason"] = "same_coin_position_open"
+            out["blocked_by"] = same
+            log.info("skip_enter slot=%s reason=same_coin_position_open by=%s", slot_id, same)
             return out
         if u1_perp_in_use(state, str(sig.get("symbol") or ""), slot_meta_venue(sig)):
             out["reason"] = "u1_perp_in_use"

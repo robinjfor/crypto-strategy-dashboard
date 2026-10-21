@@ -241,11 +241,13 @@ def test_long_blocks_s_short_and_other_coins_unaffected(monkeypatch):
     state = {"positions": {"sat_op_4h": {"status": "FILLED", "symbol": "OPUSDT", "qty": 1.0}}}  # spot long (no side)
     s_sig = {**_spot_enter("short_op_4h"), "family": "short_trend_perp", "venue": "futures", "side": "SHORT"}
     assert main.apply_signal(None, state, s_sig, live=False, allow_entries=True)["reason"] == "opposite_position_open"
-    # different coin, or same direction: not blocked (dry run -> intended order)
+    # different coin: not blocked (dry run -> intended order)
     assert "intended_order" in main.apply_signal(None, state, _spot_enter("sat_dot_4h", "DOTUSDT"), live=False, allow_entries=True)
     state2 = {"positions": {"short_op_4h": {"status": "FILLED", "symbol": "OPUSDT", "side": "SHORT"}}}
     other = {**s_sig, "slot": "short_op_6h"}
-    assert "intended_order" in main.apply_signal(None, state2, other, live=False, allow_entries=True)
+    # Emily 2026-10-21: same direction on the same coin is blocked too
+    out = main.apply_signal(None, state2, other, live=False, allow_entries=True)
+    assert out["reason"] == "same_coin_position_open" and out["blocked_by"] == "short_op_4h"
     # a non-FILLED (pending/closed) opposite position does not block
     state3 = {"positions": {"short_op_4h": {"status": "CLOSED", "symbol": "OPUSDT", "side": "SHORT"}}}
     assert "intended_order" in main.apply_signal(None, state3, _spot_enter(), live=False, allow_entries=True)

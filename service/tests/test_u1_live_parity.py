@@ -286,8 +286,9 @@ def test_one_direction_per_coin_and_shared_perp():
                            "c5_eth": {"status": "FILLED", "symbol": "ETHUSDT", "side": "LONG", "venue": "spot"}}}
     out = _run(state, DOC, [P.FAMILY], fc)
     o = [c[1]["symbol"] for c in fc.calls if c[0] == "new_order"]
-    assert o == ["ETHUSDT"]                     # spot long on ETH is the same direction → allowed
+    assert o == []                              # Emily 2026-10-21: spot ETH long blocks U1's ETH long too
     assert any("opposite_position:s2_arb" in s["reason"] for s in out["skips"])
+    assert any("same_coin_position:c5_eth" in s["reason"] for s in out["skips"])
     state["positions"]["a_eth"] = {"status": "FILLED", "symbol": "ETHUSDT", "side": "LONG", "venue": "futures"}
     assert L.coin_conflicts(state)["ETH"] == "shared_perp:a_eth"
     # and the main runner blocks others while U1 holds the coin
@@ -295,6 +296,7 @@ def test_one_direction_per_coin_and_shared_perp():
     st2 = {"positions": {}, "u1_live": {"units": {"BTC": 0.1, "ETH": 0.0}}}
     assert main.opposite_position_slot(st2, "s_x", "BTCUSDT", "SHORT") == "u1_live"
     assert main.opposite_position_slot(st2, "c_x", "BTCUSDC", "LONG") is None
+    assert main.same_coin_position_slot(st2, "c_x", "BTCUSDC", "LONG") == "u1_live"
     assert main.u1_perp_in_use(st2, "BTCUSDT", "futures") and not main.u1_perp_in_use(st2, "BTCUSDT", "spot")
     assert not main.u1_perp_in_use(st2, "ETHUSDT", "futures")
 

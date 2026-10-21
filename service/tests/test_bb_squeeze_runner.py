@@ -176,3 +176,26 @@ def test_api_rule_text_and_trigger():
     tf = api._trigger_fields(rt, {"bb_up": 1.1, "bb_mid": 1.0, "mark": 1.0, "squeeze_recent": True, "bb_state": 0})
     assert tf["trigger_kind"] == "bb_squeeze" and tf["dist_up_pct"] == pytest.approx(10.0)
     assert api.status_zh("waiting_bb_squeeze_breakout").startswith("等布林壓縮")
+
+
+def test_same_direction_second_position_same_coin_blocked(monkeypatch):
+    """Emily 2026-10-21: C5 spot DOT long blocks Z4 perp DOT long (any slot/market/quote, same direction)."""
+    monkeypatch.setattr(main, "_allow_entry_for_slot", lambda *a, **k: (True, ""))
+    sig = {"slot": "bbsq_dot_4h", "symbol": "DOTUSDT", "action": "enter", "family": Z, "venue": "futures", "side": "LONG",
+           "quote_usdt": 750.0, "bar_ts": "2026-10-21T00:00:00+00:00"}
+    for holder in ({"status": "FILLED", "symbol": "DOTUSDT", "side": "LONG", "venue": "spot"},
+                   {"status": "FILLED", "symbol": "DOTUSDC", "side": "LONG", "venue": "futures"}):
+        state = {"positions": {"c5_dot": holder}}
+        out = main.apply_signal(None, state, sig, live=False, allow_entries=True)
+        assert out["reason"] == "same_coin_position_open" and out["blocked_by"] == "c5_dot"
+        assert "bbsq_dot_4h" not in state["positions"]
+    # flat / pending holder or other coin does not block
+    state = {"positions": {"c5_dot": {"status": "CLOSED", "symbol": "DOTUSDT", "side": "LONG"},
+                           "x": {"status": "FILLED", "symbol": "ARBUSDT", "side": "LONG"}}}
+    assert main.same_coin_position_slot(state, "bbsq_dot_4h", "DOTUSDT", "LONG") is None
+    assert "intended_order" in main.apply_signal(None, state, sig, live=False, allow_entries=True)
+    # U1 sleeve long blocks another BTC long; a spot BTC long blocks U1 increases
+    assert main.same_coin_position_slot({"u1_live": {"units": {"BTC": 0.01}}}, "s", "BTCUSDT", "LONG") == "u1_live"
+    import u1_live as L
+    st = {"positions": {"btc_spot": {"status": "FILLED", "symbol": "BTCUSDT", "side": "LONG", "venue": "spot"}}}
+    assert L.coin_conflicts(st)["BTC"] == "same_coin_position:btc_spot"
