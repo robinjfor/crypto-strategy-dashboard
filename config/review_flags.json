@@ -47,6 +47,20 @@
       ],
       "cleared_at_iso": "2026-10-09T15:25:00+08:00",
       "cleared_reason": "analyst rd_p118v2 replaced G2/G5 with hard-stop versions (G2 4.0 ATR, G5 2.0 ATR) that pass"
+    },
+    {
+      "id": "z_not_accepted_2026-10-21",
+      "active": true,
+      "created_at_iso": "2026-10-21T10:30:00+08:00",
+      "badge_zh": "未納入驗收、勿批准",
+      "note_zh": "Z2/Z3/Z5 嚴格 WF 未過（參數 != H1 選擇），只開放 Z1、Z4 待審核。",
+      "block_approve": true,
+      "families": [],
+      "strategy_ids": [
+        "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d",
+        "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__ARB__4h",
+        "rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h"
+      ]
     }
   ]
 }

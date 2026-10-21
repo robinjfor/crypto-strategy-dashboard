@@ -8,7 +8,7 @@
   var EQUITY_BASE = "./data/unified-3y/equity/";
   var MAX_NOTIONAL = 1500;
   // Cloud runner whitelist (must match service SUPPORTED_FAMILIES).
-  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true, btc_eth_trend_voltarget_perp: true };
+  var RUNNER_FAMILIES = { donchian_atr: true, donchian_btc_regime: true, ema_cross_atr: true, donchian_lev_vol: true, donchian_long_short_btc_regime: true, donchian_fear_greed: true, ls_donch_btc_regime_perp: "ls_donch_btc_regime_perp", ls_univ_portfolio_perp: true, short_trend_perp: true, btc_eth_trend_voltarget_perp: true, bb_squeeze_breakout_perp: true };
   // catalog family_id → runner family id (null = not runnable on cloud)
   var CATALOG_FAMILY_RUNNER = {
     donchian_atr: "donchian_atr",
@@ -26,9 +26,8 @@
     trend_long_scan_perp: null, // T1–T9 (2026-10-09): perp long scan, not on runner → hidden
     vol_target_sized_passers_perp: null, // W1–W10 (2026-10-09): vol-target sizing not on runner → hidden
     tradingview_popular_ports: null, // X1 (= analyst V1, Super Scalper): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
-    // Z1–Z5 (2026-10-21): cloud live path + trade-by-trade parity done, AWAITING 資金控管 acceptance →
-    // hidden (not in 待審核). After acceptance set "bb_squeeze_breakout_perp" here and in RUNNER_FAMILIES.
-    bb_squeeze_breakout_perp: null,
+    // Z (2026-10-21, accepted): 待審核 — only Z1 WLD 4h / Z4 DOT 4h (Z2/Z3/Z5 wf_pass=false + review flag)
+    bb_squeeze_breakout_perp: "bb_squeeze_breakout_perp",
     combo_u1_v1_equal_risk_perp: null, // Y1 (U1+V1 tv75 cap5, 2026-10-11): PAPER only (模擬倉) → hidden; not in 待審核 until Robin is asked
     donchian_fear_greed: "donchian_fear_greed",
     ema_cross_atr: "ema_cross_atr",

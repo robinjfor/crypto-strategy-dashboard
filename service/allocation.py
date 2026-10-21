@@ -28,9 +28,10 @@ RUNNER_FAMILIES = frozenset({
     # U1 BTC/ETH trend vol-target perp (Robin: 待審核 by exception, 2026-10-11). Own order path
     # (u1_live, cross margin); orders need Robin's approval AND an enabled allocation slot.
     "btc_eth_trend_voltarget_perp",
+    # Z bb_squeeze_breakout_perp (2026-10-21, ACCEPTANCE_cloud_Z): 待審核. Only Z1 WLD 4h / Z4 DOT 4h are
+    # shown (Z2/Z3/Z5 hidden by review flag + wf_pass=false). Orders need approval AND an enabled slot.
+    "bb_squeeze_breakout_perp",
 })
-# Z bb_squeeze_breakout_perp: runner code + parity done (2026-10-21) but NOT in RUNNER_FAMILIES until
-# 資金控管 accepts it (see PENDING_REVIEW_FAMILIES); listed here only for venue/validation.
 Z_FAMILY = "bb_squeeze_breakout_perp"
 FUTURES_FAMILIES = frozenset({
     "donchian_lev_vol",
@@ -47,7 +48,7 @@ FUTURES_FAMILIES = frozenset({
 # 資金控管 passed it on 2026-10-09. Z (bb_squeeze_breakout_perp, 2026-10-21): live path + trade-by-trade
 # parity done, awaiting 資金控管 acceptance. After acceptance: remove it here, add it to RUNNER_FAMILIES
 # (+ slots.SUPPORTED_FAMILIES, backtest.js RUNNER_FAMILIES / CATALOG_FAMILY_RUNNER) to show it in 待審核.
-PENDING_REVIEW_FAMILIES: frozenset = frozenset({"bb_squeeze_breakout_perp"})
+PENDING_REVIEW_FAMILIES: frozenset = frozenset()  # Z moved to RUNNER_FAMILIES 2026-10-21
 # Timeframes per family: existing families keep 1h/4h/1d; S adds the perp 2h/6h/12h bars.
 BASE_TIMEFRAMES = frozenset({"1h", "4h", "1d"})
 FAMILY_TIMEFRAMES = {"short_trend_perp": frozenset({"2h", "4h", "6h", "12h"}),

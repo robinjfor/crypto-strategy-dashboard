@@ -31,20 +31,35 @@ def _z_slot(code="Z4", **over):
     return s
 
 
-def test_z_awaiting_fund_control_not_approvable_not_allocatable():
-    assert Z in allocation.PENDING_REVIEW_FAMILIES
-    assert Z not in allocation.RUNNER_FAMILIES and Z not in slots.SUPPORTED_FAMILIES
+def test_z_accepted_runner_family_approvable():
+    assert Z not in allocation.PENDING_REVIEW_FAMILIES
+    assert Z in allocation.RUNNER_FAMILIES and Z in slots.SUPPORTED_FAMILIES
     errs = validate_allocation({"book_usdt": 5000, "slots": [_z_slot()]}, check_binance=False)
-    assert any("待資金控管審核" in e for e in errs), errs
-    with pytest.raises(ValueError):
-        slots.approve_family({}, Z, at="t")
+    assert not any("待資金控管審核" in e for e in errs), errs
 
 
-def test_repo_backtest_js_keeps_z_hidden():
+def test_repo_backtest_js_shows_z():
     js = (Path(__file__).resolve().parents[2] / "backtest.js").read_text(encoding="utf-8")
-    assert "bb_squeeze_breakout_perp: null," in js
+    assert 'bb_squeeze_breakout_perp: "bb_squeeze_breakout_perp",' in js
     head = js.split("var RUNNER_FAMILIES", 1)[1].split(";", 1)[0]
-    assert Z not in head
+    assert "bb_squeeze_breakout_perp: true" in head
+
+
+def test_repo_catalog_only_z1_z4_approvable():
+    import json
+    root = Path(__file__).resolve().parents[2]
+    cat = json.loads((root / "data/unified-3y/catalog.json").read_text(encoding="utf-8"))
+    fam = [f for f in cat["strategies"] if f["strategy_family_id"] == Z]
+    assert len(fam) == 1
+    rows = {r["code"]: r for r in fam[0]["rows"]}
+    assert sorted(rows) == ["Z1", "Z2", "Z3", "Z4", "Z5"]  # Z6 excluded
+    flags = json.loads((root / "config/review_flags.json").read_text(encoding="utf-8"))["flags"]
+    blocked = {sid for f in flags if f.get("active") and f.get("block_approve") for sid in f.get("strategy_ids") or []}
+    shown = [c for c, r in rows.items() if r.get("wf_pass") is not False and r["strategy_id"] not in blocked]
+    assert sorted(shown) == ["Z1", "Z4"]
+    for c in ("Z2", "Z3", "Z5"):
+        assert rows[c]["strategy_id"] in blocked
+    assert rows["Z4"]["site_note_zh"] == "和 C5 同幣，C5 啟用時不能開"
 
 
 @pytest.mark.parametrize("code", ["Z1", "Z2", "Z3", "Z4", "Z5"])

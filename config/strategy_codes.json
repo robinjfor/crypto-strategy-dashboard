@@ -917,6 +917,32 @@
         }
       },
       "active": true
+    },
+    "bb_squeeze_breakout_perp": {
+      "code": "Z",
+      "rows": {
+        "rd1021_bbsq_n20_k2.5_q0.2_s1.5_t3.5__WLD__4h": {
+          "code": "Z1",
+          "active": true
+        },
+        "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__SUI__1d": {
+          "code": "Z2",
+          "active": true
+        },
+        "rd1021_bbsq_n30_k1.5_q0.5_s2.0_t1.5__ARB__4h": {
+          "code": "Z3",
+          "active": true
+        },
+        "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h": {
+          "code": "Z4",
+          "active": true
+        },
+        "rd1021_bbsq_n30_k2.5_q0.35_s2.0_t2.5__ARB__1h": {
+          "code": "Z5",
+          "active": true
+        }
+      },
+      "active": true
     }
   }
 }

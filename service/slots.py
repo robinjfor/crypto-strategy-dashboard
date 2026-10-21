@@ -124,7 +124,7 @@ SOL_SLOT = {
 }
 
 # Families the Cloud Run job can actually execute today
-SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr", "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp", "short_trend_perp", "btc_eth_trend_voltarget_perp"})
+SUPPORTED_FAMILIES = frozenset({"donchian_atr", "donchian_btc_regime", "ema_cross_atr", "donchian_lev_vol", "donchian_long_short_btc_regime", "donchian_fear_greed", "ls_donch_btc_regime_perp", "ls_univ_portfolio_perp", "short_trend_perp", "btc_eth_trend_voltarget_perp", "bb_squeeze_breakout_perp"})
 
 # Live-approved (may place Demo orders). OP + DOT only per 資金控管 ruling.
 DEFAULT_APPROVED: dict[str, dict] = {
@@ -208,8 +208,7 @@ FUTURES_FAMILIES = frozenset({
     "short_trend_perp",
     # U1 (cross margin, own order path u1_live): live only once Robin approves AND a slot is enabled
     "btc_eth_trend_voltarget_perp",
-    # Z bb_squeeze_breakout_perp (2026-10-21): runner + parity done; NOT in SUPPORTED_FAMILIES (not
-    # approvable / not in 待審核) until 資金控管 accepts it — venue mapping only.
+    # Z bb_squeeze_breakout_perp (2026-10-21): accepted → 待審核 (Z1/Z4 only on the page)
     "bb_squeeze_breakout_perp",
 })
 

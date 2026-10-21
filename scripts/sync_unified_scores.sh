@@ -118,7 +118,7 @@ try:
         for _r in _f.get("rows") or []:
             _sid = _r.get("strategy_id")
             if _sid in (_ov.get("row_status") or {}):
-                _r["status_catalog"] = _r.get("status"); _r["status"] = _ov["row_status"][_sid]; _n_ov += 1
+                _r.setdefault("status_catalog", _r.get("status")) if _r.get("status") != _ov["row_status"][_sid] else None; _r["status"] = _ov["row_status"][_sid]; _n_ov += 1
             if _sid in (_ov.get("row_notes") or {}):
                 _r["site_note_zh"] = _ov["row_notes"][_sid]; _n_ov += 1
             if _sid in (_ov.get("row_gate_exception") or {}):

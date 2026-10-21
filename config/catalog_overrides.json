@@ -12,7 +12,8 @@
     "wf_sema_ema9_21_s2.0_t4.0_none__DOT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 48.4% → 後半 17.1%（WF 參數 EMA9/21、停損 2×ATR、移動停利 4×ATR、濾網 無）· 風險：前半選幣、後半驗證 · 與 C5 同幣（DOT），已有多單時會跳過不開空",
     "wf_sema_ema12_26_s2.0_t2.0_coin50__APT__4h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 66.0% → 後半 22.1%（WF 參數 EMA12/26、停損 2×ATR、移動停利 2×ATR、濾網 幣價<日線SMA50）· 風險：前半選幣、後半驗證",
     "wf_sema_ema12_26_s3.0_t5.0_none__GALA__6h": "角色：避險（做空趨勢，跌市賺錢）· Walk-forward 年化：前半 47.7% → 後半 49.5%（WF 參數 EMA12/26、停損 3×ATR、移動停利 5×ATR、濾網 無）· 風險：前半選幣、後半驗證",
-    "d4_trend_N200_tv60_cap3__BTC_ETH__1d": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行"
+    "d4_trend_N200_tv60_cap3__BTC_ETH__1d": "鄰居門檻未過，Robin 破例上架 · 3 倍槓桿上限（BTC/ETH 永續）· 全倉（cross margin，與其他合約槽共用錢包）· 無停損 · 模擬倉 U1 同步運行",
+    "rd1021_bbsq_n20_k1.5_q0.2_s1.5_t3.5__DOT__4h": "和 C5 同幣，C5 啟用時不能開"
   },
   "family_text_replace": {
     "donchian_atr": [
