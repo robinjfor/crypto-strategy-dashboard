@@ -248,6 +248,11 @@ def market_close_slot(
             "pnl_usdt": pnl, "reason": reason, "side": pos.get("side"), "venue": "futures",
             "closed_at": now_iso_taipei(), "order_id": order.get("orderId"),
         }
+        import fill_readback as fr
+        _fb = fr.safe(fr.readback_futures, fc, symbol, order, coid=coid)
+        if _fb:
+            fr.apply_exit_fill(closed, _fb)
+            finalize_closed_pnl(closed, pos, _fb.get("commission_quote") if _fb.get("complete") else None)
         state.setdefault("closed_trades", []).append(closed)
         state["closed_trades"] = state["closed_trades"][-200:]
         positions.pop(slot_id, None)
@@ -283,7 +288,14 @@ def market_close_slot(
         "closed_at": now_iso_taipei(),
         "order_id": order.get("orderId"),
     }
-    finalize_closed_pnl(closed, pos, fee_usdt_from_rows(fills, symbol))
+    _xf = fee_usdt_from_rows(fills, symbol)
+    import fill_readback as fr
+    _fb = fr.safe(fr.readback_spot, client, symbol, order)
+    if _fb:
+        fr.apply_exit_fill(closed, _fb)
+        if _fb.get("complete"):
+            _xf = _fb.get("commission_quote")
+    finalize_closed_pnl(closed, pos, _xf)
     state.setdefault("closed_trades", []).append(closed)
     state["closed_trades"] = state["closed_trades"][-200:]
     positions.pop(slot_id, None)

@@ -191,6 +191,8 @@ def root():
 @app.route("/auth/login", methods=["OPTIONS"])
 @app.route("/control/pause", methods=["OPTIONS"])
 @app.route("/control/resume", methods=["OPTIONS"])
+@app.route("/control/pause_slot", methods=["OPTIONS"])
+@app.route("/control/resume_slot", methods=["OPTIONS"])
 @app.route("/control/close", methods=["OPTIONS"])
 @app.route("/control/close_all", methods=["OPTIONS"])
 @app.route("/control/approve", methods=["OPTIONS"])
@@ -1223,6 +1225,7 @@ def build_status() -> dict:
         "source": "cloud",
         "mode": mode,
         "paused": paused,
+        "paused_slots": state.get("paused_slots") or {},
         "health": _health(meta, paused),
         "balances": bals,
         "balances_map": bals_map,
@@ -1361,6 +1364,62 @@ def resume():
     try:
         StateStore().mutate(mut)
         return jsonify({"ok": True, "paused": False, "message": "已恢復自動交易"})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _slot_from_body() -> str:
+    body = request.get_json(silent=True) or {}
+    slot = str(body.get("slot") or "").strip()
+    return slot if 0 < len(slot) <= 64 else ""
+
+
+@app.route("/control/pause_slot", methods=["POST"])
+def pause_slot():
+    """Single-slot pause: no new entries for this slot; its open position is still managed."""
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    slot = _slot_from_body()
+    if not slot:
+        return jsonify({"ok": False, "error": "缺少 slot"}), 400
+
+    def mut(st):
+        ps = st.get("paused_slots") or {}
+        ps.setdefault(slot, {"paused_at": now_iso_taipei(), "paused_by": "api"})
+        st["paused_slots"] = ps
+        return st
+
+    try:
+        st = StateStore().mutate(mut)
+        return jsonify({"ok": True, "slot": slot, "slot_paused": True,
+                        "paused_slots": (st or {}).get("paused_slots") if isinstance(st, dict) else None,
+                        "message": f"已暫停 {slot} 開新倉（既有持倉續管止損／出場）"})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/control/resume_slot", methods=["POST"])
+def resume_slot():
+    """Lift a single-slot pause. Does NOT touch the global pause."""
+    ok, err, code = _check_pin()
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    slot = _slot_from_body()
+    if not slot:
+        return jsonify({"ok": False, "error": "缺少 slot"}), 400
+
+    def mut(st):
+        ps = dict(st.get("paused_slots") or {})
+        ps.pop(slot, None)
+        st["paused_slots"] = ps
+        return st
+
+    try:
+        st = StateStore().mutate(mut)
+        return jsonify({"ok": True, "slot": slot, "slot_paused": False,
+                        "global_paused": bool((st or {}).get("paused")) if isinstance(st, dict) else None,
+                        "message": f"已恢復 {slot} 開新倉（全域暫停狀態不變）"})
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500
 

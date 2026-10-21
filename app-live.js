@@ -266,6 +266,16 @@
     return "";
   }
 
+  // Actual Binance commissions (asset + amount) read back after each fill.
+  function commissionsText(t) {
+    var parts = [];
+    [["進", t.entry_commissions || (t.entry_fill && t.entry_fill.commissions)],
+     ["出", t.exit_commissions || (t.exit_fill && t.exit_fill.commissions)]].forEach(function (x) {
+      (x[1] || []).forEach(function (c) { parts.push(x[0] + " " + c.amount + " " + c.asset); });
+    });
+    return parts.join("；");
+  }
+
   async function loadSettlements() {
     if (cloud && Array.isArray(cloud.closed_trades) && cloud.closed_trades.length) {
       return cloud.closed_trades.map(function (t) {
@@ -278,6 +288,9 @@
           qty: t.qty,
           price: t.exit,
           realized_pnl_usdt: t.pnl_usdt,
+          fee: t.fee_usdt,
+          commissions_text: commissionsText(t),
+          fill_source: (t.exit_fill && t.exit_fill.complete) ? "binance" : "",
           reason: t.reason || "manual"
         };
       });
@@ -423,6 +436,10 @@
     return '<div class="health-bar ' + cls + '" id="systemHealth">' +
       '<span class="health-light ' + cls + '">● ' + esc(label) + '</span>' +
       '<span class="health-meta">狀態：' + esc(stateLabel) + '</span>' +
+      (function () {
+        var ps = Object.keys((cloud && cloud.paused_slots) || {});
+        return ps.length ? '<span class="health-meta">單槽暫停（不開新倉）：' + esc(ps.join("、")) + '</span>' : "";
+      })() +
       '<span class="health-meta">模式：' + esc((cloud && cloud.mode) || (book && book.mode) || "—") + '</span>' +
       '<span class="health-meta">上次任務：' + esc((cloud && cloud.last_job_run_at) || "—") + '</span>' +
       '</div>' +
@@ -666,7 +683,10 @@
       "<td>" + esc(String(side)) + "</td>" +
       '<td class="num">' + num(qty, 4) + "</td>" +
       '<td class="num">' + num(px, 4) + "</td>" +
-      '<td class="num">' + (fee == null || fee === "" ? '<span class="dim">無資料</span>' : num(fee, 4)) + "</td>" +
+      '<td class="num"' + (r.commissions_text ? ' title="' + esc(r.commissions_text) + '"' : "") + '>' +
+        (fee == null || fee === "" ? (r.commissions_text ? esc(r.commissions_text) : '<span class="dim">無資料</span>') : num(fee, 4)) +
+        (r.commissions_text ? '<div class="dim" style="font-size:11px">' + esc(r.commissions_text) + "</div>" : "") +
+        (r.fill_source === "binance" ? '<div class="dim" style="font-size:11px">幣安成交回讀</div>' : "") + "</td>" +
       '<td class="num ' + signedCls(pnl) + '">' + (pnl == null ? "—" : num(pnl, 2)) + "</td>" +
       "<td>" + esc(reason(r.reason || kind)) + "</td></tr>";
   }

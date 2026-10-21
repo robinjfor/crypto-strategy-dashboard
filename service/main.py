@@ -27,6 +27,7 @@ import time
 from datetime import datetime, timezone
 
 from binance_client import BinanceClient
+import fill_readback as fr
 from execution import client_order_id, market_close_slot, place_hard_stop, replace_trail_stop, spot_market_exit, net_filled_qty, fee_usdt_from_rows, finalize_closed_pnl
 from slots import MAX_NOTIONAL_USDT, SLOTS, SOL_SLOT, strategy_id_for_slot, slot_by_id, all_known_slots, FUTURES_FAMILIES, venue_for_family, DEFAULT_APPROVED, DEFAULT_SIGNAL_ONLY, approval_mode, is_approved_live, ensure_approved_families
 from allocation import resolve_allocation, live_slots as alloc_live_slots, slot_to_runtime, validate_allocation, normalize_family
@@ -84,6 +85,7 @@ def build_feed(client: BinanceClient | None, state: dict, signals: list[dict], m
         "engine": "binance_demo_cloudrun",
         "mode": mode,
         "paused": bool(state.get("paused")),
+        "paused_slots": state.get("paused_slots") or {},
         "trader_enabled": env_bool("TRADER_ENABLED", True),
         "region_hint": "asia-east1",
         "balances": balances,
@@ -164,9 +166,16 @@ def _approved_ids(state: dict) -> set[str]:
     return out
 
 
+def slot_paused(state: dict, slot_id: str | None) -> bool:
+    """Single-slot pause (/control/pause_slot): no new entries for that slot; positions still managed."""
+    return bool(slot_id) and slot_id in (state.get("paused_slots") or {})
+
+
 def _allow_entry_for_slot(state: dict, slot_id: str, *, paused: bool) -> tuple[bool, str]:
     if paused:
         return False, "paused_no_new_entries"
+    if slot_paused(state, slot_id):
+        return False, "slot_paused_no_new_entries"
     # Allocation first (resolve_allocation), hardcoded SLOTS only as fallback.
     slot = slot_by_id(slot_id) or {}
     sid = slot.get("strategy_id")
@@ -406,12 +415,10 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     "notional_usdt": opened["notional_usdt"],
                     **s_extra,
                 }
-                try:
-                    _ut = [t for t in (fc.user_trades(sig["symbol"], limit=20) or [])
-                           if str(t.get("orderId")) == str(order.get("orderId"))]
-                    positions[slot_id]["entry_fee_usdt"] = fee_usdt_from_rows(_ut, sig["symbol"])
-                except Exception as e:  # noqa: BLE001
-                    log.warning("entry_fee_lookup_fail slot=%s err=%s", slot_id, e)
+                _fb = fr.safe(fr.readback_futures, fc, sig["symbol"], order, coid=coid)
+                if _fb:
+                    fr.apply_entry_fill(positions[slot_id], _fb)
+                    px = float(positions[slot_id]["entry"])
                 if stop:
                     try:
                         stop_ord = place_stop_reduce_only(
@@ -465,6 +472,9 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 "filled_at": now_iso_taipei(),
                 "entry_fee_usdt": fee_usdt_from_rows(fills, sig["symbol"]),
             }
+            _fb = fr.safe(fr.readback_spot, client, sig["symbol"], order)
+            if _fb:
+                fr.apply_entry_fill(positions[slot_id], _fb)
             # Hard exchange stop immediately after fill (spot STOP_LOSS_LIMIT)
             try:
                 stop_ord = place_hard_stop(client, sig["symbol"], qty, stop, slot_id)
@@ -523,12 +533,10 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                     "closed_at": now_iso_taipei(), "order_id": order.get("orderId"),
                 }
                 _xf = None
-                try:
-                    _ut = [t for t in (fc.user_trades(sig["symbol"], limit=20) or [])
-                           if str(t.get("orderId")) == str(order.get("orderId"))]
-                    _xf = fee_usdt_from_rows(_ut, sig["symbol"])
-                except Exception as e:  # noqa: BLE001
-                    log.warning("exit_fee_lookup_fail slot=%s err=%s", slot_id, e)
+                _fb = fr.safe(fr.readback_futures, fc, sig["symbol"], order, coid=coid)
+                if _fb:
+                    fr.apply_exit_fill(closed, _fb)
+                    _xf = _fb.get("commission_quote")
                 finalize_closed_pnl(closed, pos, _xf)
                 if pos.get("family") in NEXT_OPEN_PERP_FAMILIES and pos.get("filled_ms"):
                     # S spec item 10 (also Z): exchange FUNDING_FEE income over the holding period
@@ -565,7 +573,13 @@ def apply_signal(client: BinanceClient, state: dict, sig: dict, live: bool, *, a
                 "closed_at": now_iso_taipei(),
                 "order_id": order.get("orderId"),
             }
-            finalize_closed_pnl(closed, pos, fee_usdt_from_rows(fills, sig["symbol"]))
+            _xf = fee_usdt_from_rows(fills, sig["symbol"])
+            _fb = fr.safe(fr.readback_spot, client, sig["symbol"], order)
+            if _fb:
+                fr.apply_exit_fill(closed, _fb)
+                if _fb.get("complete"):
+                    _xf = _fb.get("commission_quote")
+            finalize_closed_pnl(closed, pos, _xf)
             state.setdefault("closed_trades", []).append(closed)
             state["closed_trades"] = state["closed_trades"][-200:]
             positions.pop(slot_id, None)
@@ -729,7 +743,8 @@ def _run_u1_live(state: dict, paper_state: dict | None, *, live: bool, allow_ent
         from futures_client import FuturesDemoClient
         return u1_live.run_u1_live(state, paper_state, datetime.now(timezone.utc), alloc_doc=doc,
                                    approved_families=ensure_approved_families(state), live=live,
-                                   allow_increase=allow_entries, fc_factory=FuturesDemoClient,
+                                   allow_increase=allow_entries and not slot_paused(state, (slot or {}).get("slot")),
+                                   fc_factory=FuturesDemoClient,
                                    fetch_1h=_u1_fetch_1h)
     except Exception as e:  # noqa: BLE001
         log.exception("u1_live_fail err=%s", e)

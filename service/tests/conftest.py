@@ -12,6 +12,9 @@ sys.path.insert(0, str(SERVICE))
 FIXTURE_ALLOC = Path(__file__).resolve().parent / "fixtures" / "allocation.json"
 
 import allocation  # noqa: E402
+import fill_readback  # noqa: E402
+
+fill_readback.READBACK_TIMEOUT_S = 0.0
 
 # Patch at import time so module-level reads (e.g. parametrize lists) see the fixture too.
 allocation.REPO_ALLOC_PATH = FIXTURE_ALLOC
