@@ -841,6 +841,16 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     state = store.load()
     paused = bool(state.get("paused"))
     allow_entries = not paused
+    try:
+        import guards
+        _gb, _why = guards.entry_blocked(state) if os.environ.get("GUARDS_ENABLED", "1") == "1" else (False, "")
+        if _gb:
+            allow_entries = False
+            log.info("guard entry block: %s", _why)
+        import u1_live as _u1l
+        _u1l.LEVERAGE_OVERRIDE = guards.leverage_override(state)
+    except Exception as e:  # noqa: BLE001
+        log.warning("guard_check_fail err=%s", e)
     if paused:
         log.info("paused=True — managing exits/stops only; no new entries")
     log.info("approved_ids=%s", sorted(_approved_ids(state)))

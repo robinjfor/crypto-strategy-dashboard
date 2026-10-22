@@ -86,6 +86,7 @@ def _pm(sleeve: dict | None) -> dict:
     return perp_map((sleeve or {}).get("quote") or "USDT")
 MARGIN_TYPE = "CROSSED"
 EXCHANGE_LEVERAGE = 3            # Binance per-symbol leverage (initial margin only) = spec cap
+LEVERAGE_OVERRIDE = None         # set by the runner from guards (stablecoin depeg → 1); only ever lower
 NOTIONAL_CAP_MULT = P.LEV_CAP    # gross ≤ 3 × slot capital
 POS_CAP_MULT = P.SLEEVE * P.LEV_CAP  # per coin ≤ 1.5 × slot capital (w ≤ 0.5, L ≤ 3)
 IM_BUFFER = 1.10
@@ -317,7 +318,8 @@ def recover_unbooked(fc, sleeve: dict, fill_bar: str, now: datetime) -> list[dic
 
 def _prepare(fc, sym: str) -> None:
     fc.set_margin_type(sym, MARGIN_TYPE)
-    fc.set_leverage(sym, EXCHANGE_LEVERAGE, cap=EXCHANGE_LEVERAGE)
+    lev = min(EXCHANGE_LEVERAGE, LEVERAGE_OVERRIDE) if LEVERAGE_OVERRIDE else EXCHANGE_LEVERAGE
+    fc.set_leverage(sym, lev, cap=lev)
 
 
 def coin_conflicts(state: dict) -> dict:

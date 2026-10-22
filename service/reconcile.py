@@ -463,6 +463,48 @@ def record_asset_month(st: dict, ta: dict | None, at: str) -> None:
     st["asset_monthly"] = dict(sorted(mon.items())[-36:])
 
 
+def run_guards(state0: dict, fc=None) -> dict | None:
+    """Guards on a scratch copy (network outside the state mutation); merge_guards applies the result."""
+    import copy
+    import os
+    if os.environ.get("GUARDS_ENABLED", "1") != "1":
+        return None
+    try:
+        import guards
+        from slots import all_known_slots
+        scratch = copy.deepcopy({k: state0.get(k) for k in ("guard_blocks", "guard_seen_articles", "guard_depeg",
+                                                            "market_indicators", "paused_slots")})
+        scratch["control_log"], scratch["reconcile_alerts"] = [], []
+        if fc is None:
+            try:
+                from futures_client import FuturesDemoClient
+                fc = FuturesDemoClient()
+            except Exception:  # noqa: BLE001
+                fc = None
+        guards.run_all(scratch, slots=all_known_slots(), fc=fc)
+        return scratch
+    except Exception as e:  # noqa: BLE001
+        log.warning("guards_fail err=%s", e)
+        return None
+
+
+def merge_guards(s: dict, g: dict | None) -> None:
+    """Additive only: new pauses are added (never removed), blocks/flags replaced, log and alerts appended."""
+    if not g:
+        return
+    for k in ("guard_blocks", "guard_seen_articles", "guard_depeg", "market_indicators", "guards"):
+        if g.get(k) is not None:
+            s[k] = g[k]
+    ps = dict(s.get("paused_slots") or {})
+    for sid, v in (g.get("paused_slots") or {}).items():
+        if isinstance(v, dict) and v.get("paused_by") == "guard":
+            ps.setdefault(sid, v)
+    s["paused_slots"] = ps
+    s["control_log"] = (list(s.get("control_log") or []) + list(g.get("control_log") or []))[-200:]
+    if g.get("reconcile_alerts"):
+        s["reconcile_alerts"] = (list(s.get("reconcile_alerts") or []) + g["reconcile_alerts"])[-200:]
+
+
 def run_once(store=None, *, client=None, fc=None) -> dict:
     from state_store import StateStore
     store = store or StateStore()
@@ -475,10 +517,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     rep = build_report(state0, client=client, fc=fc)
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
     snap = asset_snapshot(client, fc) if client is not None else None
+    gres = run_guards(state0, fc)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
         record_asset_month(s, snap, now_iso_taipei())
+        merge_guards(s, gres)
         if daily is not None:
             s["asset_daily"] = daily
         if led_sum is not None:

@@ -75,6 +75,36 @@
       "</div></div></div></section>";
   }
 
+  function blockMarket(st) {
+    var m = st.market_indicators || {}, g = st.guards || {};
+    var c = m.crowding || {}, fg = m.fear_greed || {}, oi = m.open_interest || {}, etf = m.etf_flows || {};
+    var dot = {red: "🔴", yellow: "🟡", green: "🟢"}[c.light] || "⚪";
+    var etfDays = (etf.days || []).filter(function (d) { return d[1] !== 0; }).slice(-5);
+    var etfTxt = etfDays.map(function (d) { return d[0].slice(5).replace("-", "/") + " " + sn(d[1], 1); }).join(" · ");
+    var cal = (g.calendar || {}).next || [];
+    var gp = Object.keys(g.guard_paused_slots || {}).length;
+    var dep = g.depeg || {};
+    var guardLine = g.entry_blocked ? '<span class="tag bad">暫停新開倉</span> ' + esc(g.reason_zh) : '<span class="tag ok">正常</span> 目前沒有風控限制';
+    var logs = (st.control_log || []).filter(function (e) { return e.actor === "guard"; }).slice(-3).reverse()
+      .map(function (e) { return "<li>" + tpe(e.at) + "　" + esc(e.reason_zh || e.action) + "</li>"; }).join("");
+    return '<section class="h-sec"><h2>市場指標<span class="dim" style="font-size:12px;font-weight:400">每小時更新 · ' + tpe(m.at) + "</span></h2>" +
+      '<div class="h-kpis">' +
+      kpi("擁擠度燈號", dot + " " + esc(c.light_zh || "—"), "BTC 7 日平均資金費 " + n(c.funding_7d_avg_pct, 4) + "%（過去一年第 " + n(c.funding_percentile, 0) + " 百分位）· 基差 " + sn(c.basis_pct, 3) + "%") +
+      kpi("BTC 現貨 ETF 資金流", sn(etf.sum_5d, 1) + ' <span style="font-size:13px">百萬美元／近 5 日</span>', etfTxt || "—") +
+      kpi("恐懼貪婪指數", (fg.value == null ? "—" : fg.value) + " " + esc(fg.label_zh || ""), "一週前 " + (fg.week_ago == null ? "—" : fg.week_ago)) +
+      kpi("BTC 永續未平倉量", n((oi.btc_usd || 0) / 1e9, 2) + ' <span style="font-size:13px">十億美元</span>', "7 日 " + sn(oi.chg_7d_pct, 1) + "% · 30 日 " + sn(oi.chg_30d_pct, 1) + "%") +
+      "</div>" +
+      '<div style="margin-top:10px"><b>風控</b>　' + guardLine + "</div>" +
+      '<ul class="h-note" style="margin:6px 0 0 18px">' +
+      "<li>經濟數據：公布前 1 小時至後 4 小時暫停新開倉。下一個：" + (cal.length ? cal.slice(0, 2).map(function (e) { return esc(e.kind_zh) + " " + tpe(e.at); }).join("、") : "—") +
+      ((g.calendar || {}).calendar_stale ? "（⚠ 日曆需補充）" : "") + "</li>" +
+      "<li>幣安下市／合約調整公告：涉及的幣種暫停開新倉並提醒，不會自動平倉。" + (gp ? "目前因公告暫停 " + gp + " 個策略。" : "目前無。") + "</li>" +
+      "<li>穩定幣脫鉤（USDC/USDT 偏離超過 0.5%）：永續槓桿改為 1 倍並提醒。目前 " + n(((dep.usdc_usdt) || ((g.depeg || {}).usdc_usdt) || 1), 4) + (dep.active ? "，⚠ 已觸發" : "，正常") + "</li>" +
+      "<li>極端波動（15 分鐘振幅超過 4 倍標準差）：暫停新開倉 2 小時。</li>" +
+      "</ul>" + (logs ? '<div class="h-note">最近風控紀錄：<ul style="margin:2px 0 0 18px">' + logs + "</ul></div>" : "") +
+      '<div class="h-note">燈號、ETF、恐懼貪婪、未平倉量只供參考，不會自動交易。</div></section>';
+  }
+
   function approvedCodes(st, codes) {
     var ids = (st.approved || []).map(function (a) { return typeof a === "string" ? a : (a.strategy_id || a.id); });
     var out = {}, fams = (codes && codes.families) || {};
@@ -199,7 +229,7 @@
         for (var i = 0; i < abf.length; i++) sd.ab = sd.ab.concat(parseCsv(await (await fetch("./data/shadow/" + abf[i], {cache: "no-store"})).text()));
       } catch (e) {}
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockEval(ev, st, sd) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRunning(st) + blockMarket(st) + blockEval(ev, st, sd) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);

@@ -15,6 +15,8 @@ import allocation  # noqa: E402
 import fill_readback  # noqa: E402
 
 fill_readback.READBACK_TIMEOUT_S = 0.0
+import os as _os
+_os.environ.setdefault("GUARDS_ENABLED", "0")
 
 # Patch at import time so module-level reads (e.g. parametrize lists) see the fixture too.
 allocation.REPO_ALLOC_PATH = FIXTURE_ALLOC

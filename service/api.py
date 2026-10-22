@@ -1117,6 +1117,22 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
 STABLES = {"USDT", "USDC", "FDUSD", "BUSD"}
 
 
+def _guards_view(state: dict) -> dict:
+    try:
+        import guards
+        from datetime import datetime as _dt, timezone as _tz
+        now = _dt.now(_tz.utc)
+        blocked, why = guards.entry_blocked(state, now)
+        g = state.get("guards") or {}
+        return {"entry_blocked": blocked, "reason_zh": why, "blocks_active": guards.active_blocks(state, now),
+                "calendar": guards.check_calendar({}, now), "depeg": {**(g.get("depeg") or {}), **(state.get("guard_depeg") or {})},
+                "announcements": g.get("announcements"), "spike": g.get("spike"), "last_run": g.get("at"),
+                "guard_paused_slots": {k: v for k, v in (state.get("paused_slots") or {}).items()
+                                       if isinstance(v, dict) and v.get("paused_by") == "guard"}}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)[:200]}
+
+
 def _parity_summary(state: dict) -> dict:
     """Daily live-vs-backtest result at a glance: last run, status, counts, errors."""
     lv = state.get("live_vs_backtest") or {}
@@ -1328,6 +1344,8 @@ def build_status() -> dict:
         "control_log": list(state.get("control_log") or [])[-50:],
         "asset_monthly": state.get("asset_monthly") or {},
         "asset_daily": state.get("asset_daily") or {},
+        "guards": _guards_view(state),
+        "market_indicators": state.get("market_indicators") or {},
         "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),
         "balances": bals,
