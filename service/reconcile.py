@@ -417,6 +417,40 @@ def asset_snapshot(client, fc=None) -> dict | None:
         return None
 
 
+def build_asset_daily(store, client, fc=None, force: bool = False, prev: dict | None = None) -> dict | None:
+    """Once per Taipei day: reconstruct the daily total-asset series from Binance history (asset_history)."""
+    from datetime import datetime as _dt
+    import asset_history
+    today = _dt.now(asset_history.TZ).strftime("%Y-%m-%d")
+    if not force and (prev or {}).get("built_day") == today:
+        return None
+    try:
+        import api
+        import ledger
+        if fc is None:
+            from futures_client import FuturesDemoClient
+            fc = FuturesDemoClient()
+        doc = store.load_feed(object_name=ledger.LEDGER_OBJECT) or {}
+        spot = {}
+        for b in api._balances(client) or []:
+            spot[b["asset"]] = spot.get(b["asset"], 0.0) + float(b.get("free") or 0) + float(b.get("locked") or 0)
+        acct = fc.account() or {}
+        wal = {str(a["asset"]).upper(): float(a.get("walletBalance") or 0) for a in acct.get("assets") or []
+               if str(a.get("asset")).upper() in ("USDT", "USDC")}
+        pos = {}
+        for p in acct.get("positions") or []:
+            q = float(p.get("positionAmt") or 0)
+            if q:
+                from execution import base_asset
+                pos[p["symbol"]] = (base_asset(p["symbol"]), q, float(p.get("entryPrice") or 0))
+        out = asset_history.build(doc, spot, wal, pos, asset_history.kline_price_fn(), _dt.now(asset_history.TZ))
+        out["built_day"] = today
+        return out
+    except Exception as e:  # noqa: BLE001
+        log.warning("asset_daily_fail err=%s", e)
+        return {"error": str(e)[:200], "built_day": None, "points": (prev or {}).get("points") or []}
+
+
 def record_asset_month(st: dict, ta: dict | None, at: str) -> None:
     """Per Taipei month: first and latest Binance total. Feeds the homepage monthly chart."""
     if not ta:
@@ -441,9 +475,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     rep = build_report(state0, client=client, fc=fc)
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
     snap = asset_snapshot(client, fc) if client is not None else None
+    daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
         record_asset_month(s, snap, now_iso_taipei())
+        if daily is not None:
+            s["asset_daily"] = daily
         if led_sum is not None:
             s["ledger_summary"], s["ledger_diff"] = led_sum, led_diff
         if lvb is not None:

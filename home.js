@@ -29,24 +29,49 @@
       '</div><div class="h-note">來源：幣安 Demo 回讀（' + esc(ta.source || "binance") + '）。已實現損益為有幣安成交的已結算交易，未扣部分手續費。</div></section>';
   }
 
+  function tpe(iso, withDate) {
+    if (!iso) return "—";
+    var d = new Date(iso); if (isNaN(d)) return "—";
+    var p = new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).formatToParts(d);
+    var g = function (t) { return (p.find(function (x) { return x.type === t; }) || {}).value; };
+    return (withDate === false ? "" : g("month") + "/" + g("day") + " ") + g("hour") + ":" + g("minute");
+  }
+  function nextHourly(iso) {   // hourly job runs at :01 every hour
+    var d = iso ? new Date(iso) : new Date(); var n = new Date(Math.max(d.getTime(), Date.now()));
+    n.setUTCMinutes(1, 0, 0); if (n.getTime() <= Date.now()) n = new Date(n.getTime() + 3600e3);
+    return tpe(n.toISOString());
+  }
   function blockRunning(st) {
-    var u = (st.u1_live || {}).sleeve || {}, lr = u.last_run || (st.u1_live || {}).last_run || {};
-    var fut = ((st.books || {}).usdc || {}).futures || {}, sv = fut.u1_sleeve || {};
-    var eq = Number(sv.equity != null ? sv.equity : u.cash), cap = Number(u.capital_usdt || 0);
-    var units = u.units || {};
-    var posTxt = (fut.positions || []).map(function (p) { return esc(p.symbol) + " " + n(p.qty, 4); }).join(" · ") ||
-      ("BTC " + n(units.BTC, 4) + " · ETH " + n(units.ETH, 4) + "（空手）");
+    var ul = st.u1_live || {}, u = ul.sleeve || {}, lr = ul.last_run || u.last_run || {};
+    var fut = ((st.books || {}).usdc || {}).futures || {};
+    var held = (fut.positions || []).filter(function (p) { return Number(p.qty || p.positionAmt || 0) !== 0; });
+    var line;
+    if (held.length) {
+      line = held.map(function (p) {
+        var coin = String(p.symbol || "").replace(/USDC$|USDT$/, "");
+        return coin + " " + n(p.qty != null ? p.qty : p.positionAmt, 4) + " 顆，進場價 " + n(p.entry_price != null ? p.entry_price : p.entryPrice) +
+          "，未實現損益 " + sn(p.unrealized_pnl != null ? p.unrealized_pnl : p.unRealizedProfit) + " USDC";
+      }).join("；");
+    } else line = "空手中，等待進場訊號";
     var paused = !!(st.paused_slots || {})[u.slot] || !!st.paused;
-    var p = st.parity || {};
+    if (paused) line = "已暫停開新倉；" + line;
+    var mon = new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei", year: "numeric", month: "2-digit"}).format(new Date());
+    var closed = (st.closed_trades || []).filter(function (t) {
+      return t.code === "U1" && t.closed_at && new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei", year: "numeric", month: "2-digit"}).format(new Date(t.closed_at)) === mon;
+    });
+    var mreal = closed.reduce(function (s, t) { return s + Number(t.pnl_usdt != null ? t.pnl_usdt : (t.pnl || 0)); }, 0);
+    var gateOk = lr.gate === "ok";
     var rows = ((st.live_vs_backtest || {}).rows || []).filter(function (r) { return r.code === "U1"; });
-    var u1ok = rows.length ? rows.every(function (r) { return r.match !== false; }) : null;
-    var ptag = u1ok === null ? '<span class="tag">無 U1 比對</span>' : u1ok ? '<span class="tag ok">U1 一致（' + rows.length + ' 筆）</span>' : '<span class="tag bad">U1 不一致</span>';
-    return '<section class="h-sec"><h2>運行中策略<a href="./account.html">對帳／實盤 vs 回測 ›</a></h2>' +
-      '<div class="h-item open"><button type="button"><span class="code">U1</span><span class="nm">BTC/ETH USDC 1d 趨勢（' + esc(u.slot || "") + '）</span>' +
-      '<span class="tag ' + (paused ? "warn" : "ok") + '">' + (paused ? "已暫停" : "運行中") + '</span></button><div class="body">' +
-      '<div class="h-kpis">' + kpi("持倉", posTxt, "上次執行 " + esc(lr.at || "—") + " · gate " + esc(lr.gate || "—")) +
-      kpi("損益（USDC）", sn(eq - cap), "權益 " + n(eq) + " / 本金 " + n(cap) + " · 手續費 " + n(u.fees) + " · 資金費 " + sn(u.funding, 4)) +
-      kpi("Parity", ptag, "每日 " + esc(p.last_run_at || "—") + " · 全帳戶 " + esc(p.status || "—") + "（一致 " + (p.n_match == null ? "—" : p.n_match) + "／不一致 " + (p.n_mismatch == null ? "—" : p.n_mismatch) + "）") +
+    var parOk = rows.every(function (r) { return r.match !== false; });
+    return '<section class="h-sec"><h2>運行中策略<a href="./account.html">帳戶明細 ›</a></h2>' +
+      '<div class="h-item open"><div style="padding:12px 14px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:16px">U1｜BTC/ETH 日線趨勢</b>' +
+      '<span class="tag ' + (paused ? "warn" : "ok") + '">' + (paused ? "已暫停" : "運行中") + "</span></div>" +
+      '<div style="margin:8px 0;font-size:15px">' + line + "</div>" +
+      '<div class="h-kpis">' +
+      kpi("本月已實現損益", sn(mreal) + ' <span style="font-size:13px">USDC</span>', "本月交易 " + closed.length + " 筆") +
+      kpi("檢查", (gateOk ? "對帳正常 ✓" : "對帳異常 ✗"), "上次檢查 " + tpe(lr.at) + " · 下次執行 " + nextHourly(lr.at)) +
+      kpi("與回測比對", parOk ? "一致 ✓" : "不一致 ✗", "每日比對 " + tpe((st.parity || {}).last_run_at)) +
       "</div></div></div></section>";
   }
 
@@ -66,9 +91,24 @@
       (e.detail ? "<div>" + esc(e.detail) + "</div>" : "") + '<div><b>結論：</b>' + esc(e.conclusion) + '</div><div class="h-note">出處：' + esc(e.src) + "</div></div></div>";
   }
 
-  function blockEval(ev) {
+  function shadowHtml(v) {
+    if (!v || v.error) return '<div class="h-note">影子帳本尚無資料' + (v && v.error ? "（讀取失敗）" : "") + "</div>";
+    var u = v.units || {}, m = v.mark || {};
+    var pos = ["BTC", "ETH"].filter(function (k) { return Number(u[k]) !== 0; }).map(function (k) { return k + " " + n(u[k], 4) + " 顆"; }).join("、") || "空手中，等待進場訊號";
+    return '<div class="h-kpis" style="margin:6px 0 8px">' +
+      kpi("影子帳本權益", n(v.equity) + ' <span style="font-size:13px">USDC</span>', "起始 " + n(v.start_equity) + " · " + tpe(v.started_at_utc) + " 開始") +
+      kpi("持倉", '<span style="font-size:16px">' + pos + "</span>", "上次更新 " + tpe(v.updated_at_utc)) +
+      kpi("開始至今損益", sn(v.pnl), sn(v.return_pct) + "%") + "</div>" +
+      '<div class="h-note">只在雲端模擬記帳，不下任何單；與 U1 同一引擎、同一排程，目標波動 0.40、槓桿上限 3。</div>';
+  }
+  function blockEval(ev, st) {
+    var sh = ((st || {}).paper || {}).U1_TV40;
     return '<section class="h-sec"><h2>評估中策略<a href="./backtest.html">策略評分 ›</a></h2><div class="h-list">' +
-      (ev.evaluating || []).map(function (e) { return item(e, '<span class="tag">評估中</span>'); }).join("") + "</div></section>";
+      (ev.evaluating || []).map(function (e) {
+        var h = item(e, '<span class="tag">評估中</span>');
+        if (e.code === "U1-tv0.40") h = h.replace('<div class="body">', '<div class="body">' + shadowHtml(sh)) + "";
+        return h;
+      }).join("") + "</div></section>";
   }
 
   function blockRetired(ev, appr) {
@@ -77,26 +117,42 @@
       '</div><div class="h-note">' + esc(ev.note) + "</div></section>";
   }
 
-  function blockChart(st) {
-    var mon = st.asset_monthly || {}, keys = Object.keys(mon).filter(function (k) { return k >= "2026-10"; }).sort();
-    var rows = keys.map(function (k, i) {
-      var e = mon[k], prev = i ? mon[keys[i - 1]].last_total : e.first_total;
-      return {m: k, end: e.last_total, chg: e.last_total - prev, base: i ? "上月底" : "本月首筆快照 " + e.first_at};
+  function series(st) {
+    var pts = (((st.asset_daily || {}).points) || []).slice();
+    var ta = (st.total_assets || {}).total_usdt;
+    var today = new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei"}).format(new Date());
+    if (ta != null) { pts = pts.filter(function (p) { return p[0] !== today; }); pts.push([today, Number(ta)]); }
+    return pts.filter(function (p) { return p[0] >= "2026-10-01"; });
+  }
+  function months(pts) {
+    var by = {}, order = [];
+    pts.forEach(function (p, i) {
+      var m = p[0].slice(0, 7);
+      if (!by[m]) { by[m] = {start: i ? pts[i - 1][1] : p[1], startDay: i ? pts[i - 1][0] : p[0]}; order.push(m); }
+      by[m].end = p[1]; by[m].endDay = p[0];
     });
-    var tbl = rows.map(function (r) { return "<tr><td>" + r.m + "</td><td>" + n(r.end) + "</td><td>" + sn(r.chg) + "</td><td class=\"dim\">" + esc(r.base) + "</td></tr>"; }).join("");
-    return '<section class="h-sec"><h2>每月總資產變化</h2>' + (rows.length ? '<div style="height:220px"><canvas id="monChart"></canvas></div>' +
-      '<table class="h-tbl"><tr><th>月份</th><th>月底／最新總資產</th><th>變化</th><th>比較基準</th></tr>' + tbl + "</table>"
-      : '<div class="empty-state">尚無快照（對帳每 15 分鐘記錄一次幣安總資產）</div>') +
-      '<div class="h-note">當月為最新快照；2026-10 起算。</div></section>';
+    return order.map(function (m) { var e = by[m]; e.m = m; e.chg = e.end - e.start; e.pct = e.start ? e.chg / e.start * 100 : null; return e; });
+  }
+  function blockChart(st) {
+    var pts = series(st), ms = months(pts);
+    var ad = st.asset_daily || {};
+    var tbl = ms.map(function (r) { return "<tr><td>" + r.m.replace("-", " 年 ") + " 月</td><td>" + n(r.start) + "</td><td>" + n(r.end) + "</td><td>" + sn(r.chg) + "</td><td>" + sn(r.pct) + "%</td></tr>"; }).join("");
+    return '<section class="h-sec"><h2>總資產走勢</h2>' + (pts.length ? '<div style="height:260px"><canvas id="monChart"></canvas></div>' +
+      '<table class="h-tbl" style="margin-top:8px"><tr><th>月份</th><th>月初</th><th>月底</th><th>增減金額</th><th>增減%</th></tr>' + tbl + "</table>"
+      : '<div class="empty-state">尚無資料</div>') +
+      '<div class="h-note">每日點為台北時間日終總資產（USDT 計）；最後一點為即時值。10/1 起的歷史由幣安帳戶成交、資金費紀錄逆推，並以幣安收盤價估值' +
+      (ad.built_at ? "（重建於 " + tpe(ad.built_at) + "）" : "（雲端重建中）") + "。月初＝上月最後一日日終。</div></section>";
   }
 
   function drawChart(st) {
     var c = $("monChart"); if (!c || !window.Chart) return;
-    var mon = st.asset_monthly || {}, keys = Object.keys(mon).filter(function (k) { return k >= "2026-10"; }).sort();
-    var vals = keys.map(function (k, i) { return mon[k].last_total - (i ? mon[keys[i - 1]].last_total : mon[k].first_total); });
-    new Chart(c, {type: "bar", data: {labels: keys, datasets: [{label: "月變化（USDT）", data: vals,
-      backgroundColor: vals.map(function (v) { return v >= 0 ? "#22c55e99" : "#ef444499"; })}]},
-      options: {maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x: {ticks: {color: "#8b9bb0"}}, y: {ticks: {color: "#8b9bb0"}}}}});
+    var pts = series(st), labels = pts.map(function (p) { return p[0].slice(5).replace("-", "/"); }), vals = pts.map(function (p) { return p[1]; });
+    var isEnd = pts.map(function (p, i) { return i === pts.length - 1 || (pts[i + 1] && pts[i + 1][0].slice(0, 7) !== p[0].slice(0, 7)); });
+    new Chart(c, {type: "line", data: {labels: labels, datasets: [{label: "總資產（USDT）", data: vals, borderColor: "#3b82f6", backgroundColor: "#3b82f633",
+      tension: 0.2, pointRadius: isEnd.map(function (e) { return e ? 6 : 2; }), pointStyle: isEnd.map(function (e) { return e ? "rectRot" : "circle"; }),
+      pointBackgroundColor: isEnd.map(function (e) { return e ? "#f59e0b" : "#3b82f6"; })}]},
+      options: {maintainAspectRatio: false, plugins: {legend: {display: false}, tooltip: {callbacks: {label: function (x) { return n(x.parsed.y) + " USDT" + (isEnd[x.dataIndex] ? "（月底）" : ""); }}}},
+        scales: {x: {ticks: {color: "#8b9bb0", maxTicksLimit: 12}}, y: {beginAtZero: false, grace: "5%", ticks: {color: "#8b9bb0", callback: function (v) { return Number(v).toLocaleString("zh-TW"); }}}}}});
   }
 
   async function load() {
@@ -107,7 +163,7 @@
       var res = await Promise.all([j(base + "/status"), j("./config/strategy_eval.json"), j("./config/strategy_codes.json").catch(function () { return {}; })]);
       var st = res[0], ev = res[1], codes = res[2];
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockEval(ev) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRunning(st) + blockEval(ev, st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);

@@ -765,6 +765,18 @@ def _run_paper_u1() -> tuple[dict | None, dict | None]:
         return {"ok": False, "error": str(e)[:300]}, None
 
 
+def _run_paper_u1_tv40(main_state: dict | None) -> dict | None:
+    """U1 tv0.40 cap3 shadow book: paper only (own GCS object), never orders, failures never affect the run."""
+    if not env_bool("PAPER_U1_TV40_ENABLED", True):
+        return None
+    try:
+        import paper_u1_tv40
+        return paper_u1_tv40.run(main_state=main_state)
+    except Exception as e:  # noqa: BLE001
+        log.exception("paper_u1_tv40_fail err=%s", e)
+        return {"ok": False, "error": str(e)[:300]}
+
+
 def _run_paper_y1() -> dict | None:
     """Y1 / X1 paper (模擬倉) step — internal simulation in its own GCS object (trader/paper/y1_state.json).
     Never places orders (public GETs only); runs after the trader state and feed are saved, and any
@@ -1040,6 +1052,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
 
     # U1: paper step (own GCS object), then the live order path executing the same decision
     paper, paper_state = _run_paper_u1()
+    _run_paper_u1_tv40(paper_state)
     state.setdefault("meta", {})["u1_live_last"] = _run_u1_live(
         state, paper_state, live=live, allow_entries=allow_entries, only_slots=only_slots or None)
 

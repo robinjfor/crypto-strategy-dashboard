@@ -1327,6 +1327,7 @@ def build_status() -> dict:
         "parity": _parity_summary(state),
         "control_log": list(state.get("control_log") or [])[-50:],
         "asset_monthly": state.get("asset_monthly") or {},
+        "asset_daily": state.get("asset_daily") or {},
         "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),
         "balances": bals,
@@ -1409,6 +1410,11 @@ def _paper_public() -> dict:
         import paper_u1
         v = paper_u1.public_view(paper_u1.PaperStore().load())
         out = {"U1": v} if v else {"U1": None, "note": "尚無模擬紀錄"}
+        try:
+            import paper_u1_tv40
+            out["U1_TV40"] = paper_u1_tv40.public_view(paper_u1_tv40.store().load())
+        except Exception as e:  # noqa: BLE001
+            out["U1_TV40"] = {"error": str(e)[:200]}
     except Exception as e:  # noqa: BLE001
         log.warning("paper_view_fail err=%s", e)
         out = {"U1": None, "error": str(e)[:200]}
