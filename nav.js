@@ -10,6 +10,7 @@
   function pageId() {
     var p = (location.pathname || "").split("/").pop() || "";
     if (!p || p === "index.html") return "home";
+    if (p.indexOf("account") === 0) return "account";
     if (p.indexOf("history") === 0) return "history";
     if (p.indexOf("backtest") === 0) return "backtest";
     if (p.indexOf("watchlist") === 0) return "watchlist";
@@ -19,8 +20,15 @@
   var META = {
     home: {
       mark: "⚡",
-      title: "Binance Demo 帳戶（真實成交）",
-      sub: "Binance Demo · 訊號監控 · 靜態／GitHub Pages",
+      title: "總覽",
+      sub: "Binance Demo · 數字皆來自幣安回讀",
+      titleId: "pageTitle",
+      subId: "pageSub"
+    },
+    account: {
+      mark: "⚡",
+      title: "帳戶明細（真實成交）",
+      sub: "持倉 · 對帳 · 實盤 vs 回測 · 幣安掛單 · 幣安帳本",
       titleId: "pageTitle",
       subId: "pageSub"
     },
@@ -42,7 +50,8 @@
   };
 
   var TABS = [
-    { id: "home", href: "./", label: "帳戶總覽" },
+    { id: "home", href: "./", label: "總覽" },
+    { id: "account", href: "./account.html", label: "帳戶明細" },
     { id: "history", href: "./history.html", label: "成交歷史" },
     { id: "backtest", href: "./backtest.html", label: "策略評分" }
   ];

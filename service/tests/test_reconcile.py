@@ -102,3 +102,13 @@ def test_total_assets_includes_futures_wallets():
     assert t["total_usdt"] == 20007.32 and t["complete"]
     books["usdt"]["futures"] = {"error": "x"}
     assert api._total_assets(C(), bals, books)["complete"] is False
+
+
+def test_record_asset_month():
+    import reconcile
+    st = {}
+    reconcile.record_asset_month(st, {"total_usdt": 100.0}, "2026-10-22T10:00:00+08:00")
+    reconcile.record_asset_month(st, {"total_usdt": 110.0}, "2026-10-23T10:00:00+08:00")
+    reconcile.record_asset_month(st, None, "2026-10-23T11:00:00+08:00")
+    e = st["asset_monthly"]["2026-10"]
+    assert e["first_total"] == 100.0 and e["last_total"] == 110.0 and e["n"] == 2

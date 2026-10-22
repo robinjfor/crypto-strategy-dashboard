@@ -398,6 +398,37 @@ def _ledger_and_lvb(store, state: dict, client, fc):
 _PARITY_STATUS: dict = {}
 
 
+def asset_snapshot(client, fc=None) -> dict | None:
+    """Whole-account total in USDT from Binance (same math as /status total_assets). Read-only."""
+    try:
+        import api
+        if fc is None:
+            from futures_client import FuturesDemoClient
+            fc = FuturesDemoClient()
+        acct = fc.account() or {}
+        books = {}
+        for q in ("USDT", "USDC"):
+            row = next((a for a in acct.get("assets") or [] if str(a.get("asset")).upper() == q), None)
+            books[q.lower()] = {"futures": {"margin_balance": float(row["marginBalance"])} if row else {"error": "missing"}}
+        ta = api._total_assets(client, api._balances(client), books)
+        return ta if ta.get("complete") and ta.get("total_usdt") else None
+    except Exception as e:  # noqa: BLE001
+        log.warning("asset_snapshot_fail err=%s", e)
+        return None
+
+
+def record_asset_month(st: dict, ta: dict | None, at: str) -> None:
+    """Per Taipei month: first and latest Binance total. Feeds the homepage monthly chart."""
+    if not ta:
+        return
+    m = at[:7]
+    mon = dict(st.get("asset_monthly") or {})
+    e = dict(mon.get(m) or {"first_total": ta["total_usdt"], "first_at": at, "n": 0})
+    e.update(last_total=ta["total_usdt"], last_at=at, n=int(e.get("n") or 0) + 1)
+    mon[m] = e
+    st["asset_monthly"] = dict(sorted(mon.items())[-36:])
+
+
 def run_once(store=None, *, client=None, fc=None) -> dict:
     from state_store import StateStore
     store = store or StateStore()
@@ -409,8 +440,10 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     state0 = store.load()
     rep = build_report(state0, client=client, fc=fc)
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
+    snap = asset_snapshot(client, fc) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
+        record_asset_month(s, snap, now_iso_taipei())
         if led_sum is not None:
             s["ledger_summary"], s["ledger_diff"] = led_sum, led_diff
         if lvb is not None:

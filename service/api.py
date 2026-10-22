@@ -1326,6 +1326,7 @@ def build_status() -> dict:
         "live_vs_backtest": state.get("live_vs_backtest"),
         "parity": _parity_summary(state),
         "control_log": list(state.get("control_log") or [])[-50:],
+        "asset_monthly": state.get("asset_monthly") or {},
         "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),
         "balances": bals,

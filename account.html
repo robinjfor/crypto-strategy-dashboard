@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Binance Demo 帳戶 · 真實成交</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar" id="siteHeader">
+      <div class="brand">
+        <div class="brand-mark">⚡</div>
+        <div>
+          <h1 id="pageTitle">Binance Demo 帳戶（真實成交）</h1>
+          <div class="sub" id="pageSub">Binance Demo · 訊號監控 · 靜態／GitHub Pages</div>
+        </div>
+      </div>
+      <nav class="nav-links" aria-label="主選單">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link active" href="./account.html">帳戶明細</a>
+        <a class="nav-link" href="./history.html">成交歷史</a>
+        <a class="nav-link" href="./backtest.html">策略評分</a>
+      </nav>
+      <div class="controls">
+        <label class="ctrl auto-toggle" title="自動重整">
+          <span>自動重整</span>
+          <input type="checkbox" id="autoRefresh" checked />
+        </label>
+        <span class="meta-pill" id="countdownPill">倒數：—</span>
+        <button type="button" class="primary" id="btnRefresh">重整</button>
+        <span class="meta-pill" id="lastUpdated">最後更新：—</span>
+      </div>
+    </header>
+
+    <div class="cloud-banner hidden" id="cloudBanner">雲端連線失敗，顯示快取</div>
+    <div class="stale-banner hidden" id="staleBanner"></div>
+    <div class="err-banner" id="errBanner"></div>
+    <div id="main" class="loading">載入中…</div>
+    <div id="strategyModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" id="modalClose" aria-label="關閉">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./nav.js"></script>
+  <script src="./exit-reasons.js"></script>
+  <script src="./account-changes.js"></script>
+  <script src="./app-live.js"></script>
+</body>
+</html>
