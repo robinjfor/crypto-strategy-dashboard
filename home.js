@@ -116,10 +116,14 @@
     var r = function (name, eq, note) { return "<tr><td>" + name + "</td><td>" + (eq == null ? "—" : n(eq)) + "</td><td>" + (eq == null ? "—" : sn(Number(eq) - 1000)) + '</td><td class="dim">' + note + "</td></tr>"; };
     return '<div class="h-sec" style="margin:0 0 10px;padding:12px 14px"><b>影子帳本比較</b>（僅模擬記帳，不下單，無核准按鈕；起始皆 1,000 USDC，10/21 起）' +
       '<table class="h-tbl" style="margin-top:6px"><tr><th>帳本</th><th>權益</th><th>損益</th><th>說明</th></tr>' +
-      r("原版 U1（實盤）", sv.equity, "幣安回讀") +
+      r("原版 U1（實盤）", sv.equity, "幣安回讀；10/21 已人工平倉，目前空手") +
       r("原版 U1 回測對照", a60 && a60.equity, a60 ? "分析師帳本 " + a60.date : "尚無資料") +
-      r("目標波動 0.40", sh.equity, sh.equity == null ? "雲端影子帳本建立中（每小時與 U1 同排程）" :
-        "雲端計算" + (diff == null ? "" : "；分析師帳本 " + n(a40.equity) + "（" + a40.date + "），差 " + sn(diff) + (Math.abs(diff) <= 2 ? " ✓ 一致" : " ✗ 不一致"))) +
+      r("目標波動 0.40", sh.equity, sh.equity == null ? "雲端影子帳本建立中（每小時與 U1 同排程）" : (function () {
+        if (!a40) return "雲端計算";
+        var u = sh.units || {}, dB = (u.BTC / Number(a40.btc_units) - 1) * 100, dE = (u.ETH / Number(a40.eth_units) - 1) * 100;
+        var ok = Math.abs(dB) <= 3 && Math.abs(dE) <= 3;
+        return "雲端計算；對照分析師帳本（" + a40.date + " 權益 " + n(a40.equity) + "）：持倉數量差 BTC " + sn(dB, 1) + "%、ETH " + sn(dE, 1) + "% " + (ok ? "✓ 一致" : "✗ 不一致");
+      })()) +
       r("A：70% 波動 0.40＋30% 全市場多空趨勢", A && A.equity, A ? "分析師帳本 " + (A.date || "") : "10/23 08:20 起每日更新") +
       r("B：A × 1.5 槓桿", B && B.equity, B ? "分析師帳本 " + (B.date || "") : "10/23 08:20 起每日更新") +
       '</table><div class="h-note">A／B 需要全市場約 900 檔永續資料與分群計算，暫不在雲端計算；數字由分析師在研究主機每日 08:20 產生後同步到網站（' + esc(sd.synced_at ? tpe(sd.synced_at) : "尚未同步") + '）。回測參考：A（1 倍、70%）樣本外夏普 1.57、最大回撤 25%；B（1.5 倍、70%）夏普 1.23、最大回撤 31%（皆事後選參，非真正樣本外）。</div></div>';
