@@ -1325,6 +1325,8 @@ def build_status() -> dict:
         "ledger_diff": state.get("ledger_diff"),
         "live_vs_backtest": state.get("live_vs_backtest"),
         "parity": _parity_summary(state),
+        "control_log": list(state.get("control_log") or [])[-50:],
+        "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),
         "balances": bals,
         "balances_map": bals_map,
@@ -1430,6 +1432,19 @@ def paper_status():
     return jsonify({"ok": True, "label_zh": "模擬（非實盤）", "paper": _paper_public()})
 
 
+def _control_event(st: dict, action: str, slot: str | None = None, **extra) -> None:
+    """Append who/where/when for a control action to state["control_log"] (last 200)."""
+    body = request.get_json(silent=True) or {}
+    h = request.headers
+    ev = {"at": now_iso_taipei(), "action": action, "slot": slot,
+          "actor": str(body.get("actor") or h.get("X-Actor") or "unknown")[:64],
+          "source": str(body.get("source") or h.get("Origin") or h.get("Referer") or "direct")[:200],
+          "ip": str(h.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()[:64],
+          "user_agent": str(h.get("User-Agent") or "")[:160]}
+    ev.update(extra)
+    st["control_log"] = (list(st.get("control_log") or []) + [ev])[-200:]
+
+
 @app.route("/control/pause", methods=["POST"])
 def pause():
     ok, err, code = _check_pin()
@@ -1440,6 +1455,7 @@ def pause():
         st["paused"] = True
         st.setdefault("meta", {})["paused_at"] = now_iso_taipei()
         st["meta"]["paused_by"] = "api"
+        _control_event(st, "pause")
         return st
 
     try:
@@ -1458,6 +1474,7 @@ def resume():
     def mut(st):
         st["paused"] = False
         st.setdefault("meta", {})["resumed_at"] = now_iso_taipei()
+        _control_event(st, "resume")
         return st
 
     try:
@@ -1487,6 +1504,7 @@ def pause_slot():
         ps = st.get("paused_slots") or {}
         ps.setdefault(slot, {"paused_at": now_iso_taipei(), "paused_by": "api"})
         st["paused_slots"] = ps
+        _control_event(st, "pause_slot", slot)
         return st
 
     try:
@@ -1510,8 +1528,9 @@ def resume_slot():
 
     def mut(st):
         ps = dict(st.get("paused_slots") or {})
-        ps.pop(slot, None)
+        prev = ps.pop(slot, None)
         st["paused_slots"] = ps
+        _control_event(st, "resume_slot", slot, was_paused=prev is not None)
         return st
 
     try:

@@ -139,3 +139,12 @@ def test_readback_failure_is_safe():
     fb = fr.readback_spot(Bad(), "FILUSDT", {"orderId": 1, "fills": [
         {"price": "1", "qty": "2", "commission": "0.002", "commissionAsset": "USDT"}]})
     assert fb["complete"] and fb["commission_quote"] == 0.002
+
+
+def test_control_log_records_actor_source_time(client):
+    client.post("/control/pause_slot", json={"slot": "s9", "actor": "emily"}, headers={"Origin": "https://dash"})
+    client.post("/control/resume_slot", json={"slot": "s9"}, headers={"X-Actor": "bot"})
+    log = MemStore.state["control_log"][-2:]
+    assert [e["action"] for e in log] == ["pause_slot", "resume_slot"]
+    assert log[0]["actor"] == "emily" and log[0]["source"] == "https://dash" and log[0]["at"]
+    assert log[1]["actor"] == "bot" and log[1]["was_paused"] is True
