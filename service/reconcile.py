@@ -349,9 +349,13 @@ def apply_report(st: dict, rep: dict) -> dict:
     return st
 
 
+FORCE_PARITY = False
+
+
 def _ledger_and_lvb(store, state: dict, client, fc):
     """Incremental Binance ledger sync (backfill from 9/15 on first run) + daily live-vs-backtest."""
     led_sum = led_diff = lvb = None
+    parity_status: dict = {"attempted": False}
     try:
         import ledger
         from slots import all_known_slots, slot_by_id
@@ -368,7 +372,10 @@ def _ledger_and_lvb(store, state: dict, client, fc):
         led_sum = {**ledger.summarize(doc), "last_sync": summ}
         led_diff = ledger.diff_closed_trades(doc, state.get("closed_trades") or [])
         import live_vs_backtest
-        if client is not None and live_vs_backtest.due(state):
+        if client is None:
+            parity_status.update(ok=False, error="no_spot_client")
+        elif live_vs_backtest.due(state, force=FORCE_PARITY):
+            parity_status["attempted"] = True
             by_id = {k.get("id"): k for k in known}
             paper = None
             try:
@@ -380,7 +387,15 @@ def _ledger_and_lvb(store, state: dict, client, fc):
                                        slot_lookup=lambda i: slot_by_id(i) or by_id.get(i))
     except Exception as e:  # noqa: BLE001
         log.warning("ledger_or_lvb_fail err=%s", e)
+        parity_status.update(ok=False, error=str(e)[:300])
+    if parity_status.get("attempted") and lvb is not None:
+        parity_status["ok"] = True
+    _PARITY_STATUS.clear()
+    _PARITY_STATUS.update(parity_status, at=now_iso_taipei())
     return led_sum, led_diff, lvb
+
+
+_PARITY_STATUS: dict = {}
 
 
 def run_once(store=None, *, client=None, fc=None) -> dict:
@@ -401,6 +416,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         if lvb is not None:
             import live_vs_backtest
             s = live_vs_backtest.apply(s, lvb)
+        ps = dict(s.get("parity_status") or {})
+        ps["last_check_at"] = _PARITY_STATUS.get("at")
+        if _PARITY_STATUS.get("attempted") or _PARITY_STATUS.get("error"):
+            ps.update(last_attempt_at=_PARITY_STATUS.get("at"), last_ok=bool(_PARITY_STATUS.get("ok")),
+                      last_error=_PARITY_STATUS.get("error"))
+        s["parity_status"] = ps
         return s
     st = store.mutate(mut)
     out = (st or {}).get("reconcile") or rep
@@ -411,5 +432,6 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    FORCE_PARITY = "--force-parity" in sys.argv
     r = run_once()
     sys.exit(0)

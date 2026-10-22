@@ -1117,6 +1117,23 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
 STABLES = {"USDT", "USDC", "FDUSD", "BUSD"}
 
 
+def _parity_summary(state: dict) -> dict:
+    """Daily live-vs-backtest result at a glance: last run, status, counts, errors."""
+    lv = state.get("live_vs_backtest") or {}
+    ps = state.get("parity_status") or {}
+    rows = lv.get("rows") or []
+    errs = [f"{r.get('code')} {r.get('symbol')}: {p}" for r in rows for p in (r.get("problems") or [])
+            if str(p).startswith("error")]
+    if ps.get("last_error"):
+        errs.insert(0, ps["last_error"])
+    status = "never_run" if not lv else ("error" if errs else ("mismatch" if lv.get("n_mismatch") else "ok"))
+    return {"last_run_at": lv.get("at"), "day_utc": lv.get("day_utc"), "status": status,
+            "n_match": lv.get("n_match"), "n_mismatch": lv.get("n_mismatch"), "n_unsupported": lv.get("n_unsupported"),
+            "n_paused_now": sum(1 for r in rows if r.get("pause")), "errors": errs[:10],
+            "last_attempt_at": ps.get("last_attempt_at"), "last_check_at": ps.get("last_check_at"),
+            "schedule": "daily, first reconcile run after 00:30 UTC (08:30 UTC+8)"}
+
+
 def _open_orders(client, fc) -> dict:
     """Resting orders straight from Binance: spot openOrders, USD-M openOrders and openAlgoOrders
     (USDT- and USDC-margined share one futures account). Read-only; errors reported per venue."""
@@ -1307,6 +1324,7 @@ def build_status() -> dict:
         "ledger_summary": state.get("ledger_summary"),
         "ledger_diff": state.get("ledger_diff"),
         "live_vs_backtest": state.get("live_vs_backtest"),
+        "parity": _parity_summary(state),
         "health": _health(meta, paused),
         "balances": bals,
         "balances_map": bals_map,

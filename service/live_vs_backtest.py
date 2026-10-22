@@ -164,40 +164,43 @@ U1_WEIGHT_TOL = 0.10  # |live weight − paper target weight| as a fraction of t
 
 
 def u1_rows(state: dict, paper_u1: dict | None) -> list[dict]:
-    """U1 executes the paper engine's decision; each runner fill must match the paper fill on the same
-    coin and fill bar: direction, price vs the paper 1h open (<= 30 bps), resulting weight (<= 10%)."""
+    """U1 executes the paper engine's *decision* (targets for the fill bar), not the paper book's fills
+    (the paper book was already at target on 10/21, so it had no fill while the new live sleeve bought).
+    Each runner fill is checked against the paper decision with the same fill bar: direction toward the
+    target and resulting weight within 10% of targets_lev. Decisions older than the paper's retained
+    window give match=None (not a mismatch)."""
     sl = state.get("u1_live") or {}
-    paper = [f for f in (paper_u1 or {}).get("fills") or [] if f.get("book", "lev") == "lev"]
+    decs = {pd.Timestamp(d["fill_bar"]).tz_convert("UTC") if pd.Timestamp(d["fill_bar"]).tzinfo
+            else pd.Timestamp(d["fill_bar"], tz="UTC"): d
+            for d in (paper_u1 or {}).get("decisions") or [] if d.get("fill_bar")}
     rows = []
     for f in sl.get("fills") or []:
         if f.get("external") or f.get("manual"):
             continue
         coin = "BTC" if str(f.get("symbol", "")).startswith("BTC") else "ETH"
-        bar = pd.Timestamp(f.get("filled_at")).tz_convert("UTC").floor("h") if f.get("filled_at") else None
+        tag = str(f.get("fill_bar") or "")
+        bar = pd.Timestamp(tag[:8] + "T" + tag[8:10] + ":00:00", tz="UTC") if len(tag) >= 10 else (
+            pd.Timestamp(f["filled_at"]).tz_convert("UTC").floor("h") if f.get("filled_at") else None)
+        side = "LONG" if float(f.get("qty_signed") or 0) > 0 else "SHORT"
         base = {"slot": sl.get("slot") or "u1", "code": "U1", "symbol": f.get("symbol"), "family": U1_FAMILY,
-                "tf": "1h", "closed_at": f.get("filled_at"), "live_entry_bar": bar.isoformat() if bar is not None else None,
-                "live_side": "LONG" if float(f.get("qty_signed") or 0) > 0 else "SHORT", "live_entry_px": f.get("price")}
-        m = next((p for p in paper if str(p["symbol"]).startswith(coin)
-                  and bar is not None and pd.Timestamp(p.get("fill_time_utc")).floor("h") == bar), None)
-        if m is None:
-            rows.append({**base, "match": False, "problems": ["no_paper_fill_at_bar"]})
+                "tf": "1d", "closed_at": f.get("filled_at"), "live_entry_bar": bar.isoformat() if bar is not None else None,
+                "live_side": side, "live_entry_px": f.get("price")}
+        d = decs.get(bar) if bar is not None else None
+        if d is None:
+            rows.append({**base, "match": None, "problems": ["paper_decision_not_retained" if decs else "paper_state_unavailable"]})
             continue
+        tw = float((d.get("targets_lev") or {}).get(coin) or 0)
+        eq = float(f.get("equity_before") or sl.get("capital_usdt") or 0)
+        lw = float(f.get("units_after") or 0) * float(f.get("price") or 0) / eq if eq else None
+        wb = lw - float(f.get("qty_signed") or 0) * float(f.get("price") or 0) / eq if (eq and lw is not None) else None
         probs = []
-        if (float(m.get("qty_delta") or 0) > 0) != (float(f.get("qty_signed") or 0) > 0):
+        if wb is not None and ((tw - wb) > 0) != (side == "LONG"):
             probs.append("direction")
-        eb = _bps(f.get("price"), m.get("price"))
-        if eb is None or abs(eb) > PRICE_BPS_TOL:
-            probs.append("entry_price")
-        tw = float(m.get("target_weight") or 0)
-        eq = float(m.get("equity_before") or 0)
-        cap = float(sl.get("capital_usdt") or 0)
-        lw = (float(f.get("units_after") or 0) * float(f.get("price") or 0) / cap) if cap else None
-        if tw and lw is not None and abs(lw - tw) > U1_WEIGHT_TOL * abs(tw):
+        if lw is None or (abs(lw - tw) > U1_WEIGHT_TOL * max(abs(tw), 1e-9)):
             probs.append("weight")
-        rows.append({**base, "bt_entry_bar": pd.Timestamp(m["fill_time_utc"]).isoformat(), "bt_entry_px": m.get("price"),
-                     "bt_side": "LONG" if float(m.get("qty_delta") or 0) > 0 else "SHORT", "entry_bps": eb,
-                     "live_weight": round(lw, 4) if lw is not None else None, "bt_weight": tw,
-                     "paper_equity": eq, "match": not probs, "problems": probs})
+        rows.append({**base, "bt_entry_bar": bar.isoformat(), "bt_side": "LONG" if tw >= (wb or 0) else "SHORT",
+                     "live_weight": round(lw, 4) if lw is not None else None, "bt_weight": round(tw, 4),
+                     "decision_bar": d.get("decision_bar"), "match": not probs, "problems": probs})
     return rows
 
 
@@ -255,7 +258,9 @@ def run(state: dict, ledger_doc: dict, *, client, slot_lookup, now: datetime | N
             "tolerance_bps": PRICE_BPS_TOL, "pause_window_h": PAUSE_WINDOW_H}
 
 
-def due(state: dict, now: datetime | None = None) -> bool:
+def due(state: dict, now: datetime | None = None, force: bool = False) -> bool:
+    if force:
+        return True
     now = now or datetime.now(timezone.utc)
     last = (state.get("live_vs_backtest") or {}).get("day_utc")
     return (now.hour, now.minute) >= (0, 30) and last != now.date().isoformat()

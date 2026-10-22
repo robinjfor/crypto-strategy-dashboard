@@ -17,6 +17,10 @@ on:
         description: "After deploy, execute job once in futures-order-probe (order/test, no fills)"
         type: boolean
         default: false
+      run_parity_now:
+        description: "After deploy, execute the read-only reconcile job once with --force-parity (daily live-vs-backtest now)"
+        type: boolean
+        default: false
       run_once:
         description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
@@ -266,6 +270,15 @@ jobs:
               --uri="${URI}" --http-method=POST \
               --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
           fi
+
+      - name: Execute reconcile once with forced parity (read-only; may slot-pause on mismatch)
+        if: ${{ inputs.run_parity_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          gcloud run jobs execute "${RECONCILE_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --args=-u,reconcile.py,--force-parity --wait
 
       - name: Execute probe once
         if: ${{ inputs.run_probe }}

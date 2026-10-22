@@ -43,7 +43,7 @@ def test_next_open_compare_short():
     assert not lvb.compare_trade({**live, "side": "LONG"}, bt, "4h", "next_open")["match"]
 
 
-def test_u1_rows_vs_paper():
+def _old_u1_rows_vs_paper():
     st = {"u1_live": {"slot": "u1_btc_eth_usdc", "capital_usdt": 1000.0, "fills": [
         {"symbol": "BTCUSDC", "qty_signed": 0.011, "price": 82901.8, "units_after": 0.011,
          "filled_at": "2026-10-21T00:01:28+00:00"},
@@ -66,8 +66,36 @@ def test_recent_mismatch_pauses_old_does_not(monkeypatch):
          "filled_at": "2026-10-21T00:01:28+00:00"},
         {"symbol": "ETHUSDC", "qty_signed": 0.36, "price": 2443.0, "units_after": 0.36,
          "filled_at": "2026-10-15T00:01:28+00:00"}]}}
-    rep = lvb.run(st, {"fills": []}, client=None, slot_lookup=lambda i: None, now=now, paper_u1={"fills": []})
+    rep = lvb.run(st, {"fills": []}, client=None, slot_lookup=lambda i: None, now=now, paper_u1={"decisions": [
+        {"fill_bar": "2026-10-21T00:00:00+00:00", "targets_lev": {"BTC": 0.2, "ETH": 0.2}},
+        {"fill_bar": "2026-10-15T00:00:00+00:00", "targets_lev": {"BTC": 0.2, "ETH": 0.2}}]})
     by = {r["closed_at"][:10]: r for r in rep["rows"]}
     assert by["2026-10-21"]["pause"] is True and by["2026-10-15"]["pause"] is False
     out = lvb.apply({"paused": True, "paused_slots": {}, "approved": ["x"]}, rep)
     assert list(out["paused_slots"]) == ["u1_btc_eth_usdc"] and out["approved"] == ["x"]
+
+
+def test_u1_rows_use_paper_decision_not_paper_fills():
+    st = {"u1_live": {"slot": "u1_btc_eth_usdc", "capital_usdt": 1000.0, "fills": [
+        {"symbol": "BTCUSDC", "qty_signed": 0.011, "price": 82901.8, "units_after": 0.011, "equity_before": 1000.0,
+         "fill_bar": "2026102100", "filled_at": "2026-10-21T00:01:28+00:00"}]}}
+    paper = {"fills": [], "decisions": [{"decision_bar": "2026-10-20T23:00:00+00:00",
+                                         "fill_bar": "2026-10-21T00:00:00+00:00",
+                                         "targets_lev": {"BTC": 0.89, "ETH": 0.89}}]}
+    r = lvb.u1_rows(st, paper)[0]
+    assert r["match"] is True and r["bt_weight"] == 0.89, r
+    paper["decisions"][0]["targets_lev"]["BTC"] = 0.3
+    assert lvb.u1_rows(st, paper)[0]["problems"] == ["weight"]
+    assert lvb.u1_rows(st, {"decisions": []})[0]["match"] is None
+
+
+def test_parity_summary_in_status():
+    import api
+    s = api._parity_summary({})
+    assert s["status"] == "never_run"
+    st = {"live_vs_backtest": {"at": "t", "day_utc": "d", "n_match": 2, "n_mismatch": 1, "rows": [{"pause": True}]},
+          "parity_status": {"last_attempt_at": "t", "last_error": None}}
+    s = api._parity_summary(st)
+    assert s["status"] == "mismatch" and s["n_paused_now"] == 1 and s["last_run_at"] == "t"
+    st["parity_status"]["last_error"] = "boom"
+    assert api._parity_summary(st)["status"] == "error"
