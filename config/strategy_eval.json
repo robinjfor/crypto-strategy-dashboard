@@ -9,7 +9,7 @@
  "evaluating": [
   {
    "code": "U1-tv0.40",
-   "name": "U1 tv0.40 cap3 影子帳本",
+   "name": "U1 影子帳本（目標波動 0.40、槓桿上限 3）",
    "target": "BTC/ETH USDC 1d 趨勢",
    "metrics": [
     "OOS 夏普 1.50、CAGR 76%、最大回撤 29.5%、鄰居 80%、DSR（通縮夏普） 0.98（通過）",
@@ -60,7 +60,7 @@
   },
   {
    "code": "F1",
-   "name": "SOL 1d 多（BTC regime）",
+   "name": "SOL 1d 多（BTC 多空濾網）",
    "target": "SOL 1d 現貨多",
    "metrics": [
     "3y +546.9%，夏普 1.48／1.74／1.17，最大回撤 −37.8%",

@@ -28,7 +28,17 @@
     [/\bgate ok\b/gi, "檢查正常"], [/\bok\b/g, "正常"], [/\bOK\b/g, "正常"], [/\berror\b/gi, "錯誤"], [/\bunknown\b/gi, "未知"],
     [/\bentry\b/g, "進場"], [/\bexit\b/g, "出場"], [/\bstop(_loss)?\b/g, "停損"], [/\btrail(ing)?\b/g, "移動停利"],
     [/\bspot\b/g, "現貨"], [/\bfutures\b/g, "永續"], [/\bmanual\b/g, "人工單"], [/\bapi\b/g, "系統"], [/\bnone\b/g, "無"],
-    [/\bTPT\b/g, "台北時間"], [/\bCST\b/g, "台北時間"]
+    [/\bTPT\b/g, "台北時間"], [/\bCST\b/g, "台北時間"],
+    [/\bno_backtest_trade_at_entry_bar\b/g, "回測此時無交易"], [/\bno_paper_fill_at_bar\b/g, "模擬此時無成交"], [/\brebalance_band\b/g, "再平衡"],
+    [/\bexit_to_cash\b/g, "出場轉現金"], [/\bexternal_close(_adopted)?\b/g, "外部平倉"], [/\bclosed_trades\b/g, "已結算交易"],
+    [/\bentry_price\b/g, "進場價"], [/\bexit_price\b/g, "出場價"], [/\bexit_bar\b/g, "出場 K 棒"], [/\bentry_bar\b/g, "進場 K 棒"],
+    [/\blive_slots\.order_mode\b/g, "下單模式"], [/\bscores\.json\b/g, "評分檔"], [/\bcatalog(\.json)?\b/g, "策略目錄"],
+    [/\bmyTrades\b/g, "成交紀錄"], [/\brunner\b/gi, "自動交易程式"], [/\bbackfill\b/gi, "回補"], [/\bcloud\b/gi, "雲端"],
+    [/\bflip\b/g, "反手"], [/\blive\b/g, "實盤"], [/\bPAPER\b/gi, "模擬"], [/\bCROSS\b/gi, "全倉"], [/\bISOLATED\b/gi, "逐倉"],
+    [/\bfee\b/g, "手續費"], [/\bslip\b/g, "滑價"], [/\bbug\b/g, "程式錯誤"], [/\bfapi\b/g, "永續介面"],
+    [/\bMaxDD\b/g, "最大回撤"], [/\bOOS\b/g, "樣本外"], [/\bCAGR\b/g, "年化報酬"], [/\bCloud Run\b/g, "雲端主機"],
+    [/\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{6,40}\b/g, "（版本）"],
+    [/\b[a-z]+(?:_[a-z0-9]+)+\b/g, function (m) { return /donch/.test(m) ? "唐奇安通道族群" : /bb_squeeze/.test(m) ? "布林擠壓族群" : /ema/.test(m) ? "均線交叉族群" : /short/.test(m) ? "空頭趨勢族群" : /u1|btc_eth/.test(m) ? "BTC/ETH 趨勢族群" : "系統欄位"; }]
   ];
   var ISO = /\b(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})\b/g;
   var HMUTC = /\b(\d{1,2}):(\d{2})\s*UTC\b/g;
@@ -42,7 +52,7 @@
     t = t.replace(ISO, function (m) { var d = new Date(m.replace(" ", "T")); return isNaN(d) ? m : fmt(d); });
     t = t.replace(HMUTC, function (m, h, mi) { return "台北 " + String((+h + 8) % 24).padStart(2, "0") + ":" + mi; });
     t = t.replace(/\bUTC\s*\+?0?8\b/g, "台北時間").replace(/\(UTC\)|（UTC）/g, "（台北時間）").replace(/\bUTC\b/g, "台北時間");
-    t = t.replace(/\b[a-z0-9]+(?:_[a-z0-9.]+)*__[A-Z0-9_]+__\w+\b/g, function (m) { return CODES[m] || "策略"; });
+    t = t.replace(/\b[A-Za-z0-9.]+(?:_[A-Za-z0-9.]+)*__[A-Z0-9_]+__\w+\b/g, function (m) { return CODES[m] || "策略"; });
     t = t.replace(/\b(?:sat|short|ls|core|u1)_[a-z0-9_]+\b/g, function (m) { return slotName(m) || m; });
     t = t.replace(/\b(?:manual|u1-manualclose|u1)-[A-Za-z0-9-]+\b/g, "訂單");
     WORDS.forEach(function (w) { t = t.replace(w[0], w[1]); });
