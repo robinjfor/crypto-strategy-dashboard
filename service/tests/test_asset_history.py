@@ -17,4 +17,4 @@ def test_reconstruct_undo_and_value():
     pts = dict(out["points"])
     assert pts["2026-10-01"] == 1100.0          # before the buy: 1000 USDT + 100 USDC
     assert pts["2026-10-02"] == round(969.97 + 40 + 99, 2)
-    assert len(out["points"]) == 3 and out["perps_flat_at_start"]
+    assert len(out["points"]) == 4 and pts["2026-09-30"] == 1100.0 and out["perps_flat_at_start"]

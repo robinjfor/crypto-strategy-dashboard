@@ -67,6 +67,26 @@ def build(ledger_doc: dict, spot_now: dict, fut_wallet_now: dict, fut_pos_now: d
     pos = {s: [b, q, 0.0] for s, (b, q, _) in pos.items()}   # entry price unknown at start; perps assumed flat
     flat_at_start = all(abs(q) < 1e-12 for _, q, _ in pos.values())
     points, unpriced, i = [], set(), 0
+
+    def value(at):
+        tot = 0.0
+        eu = at.astimezone(timezone.utc)
+        for (venue, a), v in bal.items():
+            if abs(v) < 1e-12:
+                continue
+            px = 1.0 if a in STABLES else price_at(a, eu)
+            if px is None:
+                unpriced.add(a)
+                continue
+            tot += v * px
+        for s, (b, q, entry) in pos.items():
+            if q:
+                px = price_at(b, eu)
+                if px is not None:
+                    tot += q * (px - entry)
+        return round(tot, 2)
+
+    points.append([(start - timedelta(days=1)).strftime("%Y-%m-%d"), value(start)])   # day end before start
     day = start
     while True:
         end = day + timedelta(days=1)
@@ -85,22 +105,7 @@ def build(ledger_doc: dict, spot_now: dict, fut_wallet_now: dict, fut_pos_now: d
                     p[2] = (p[2] * abs(p[1]) + px * abs(dq)) / max(abs(nq), 1e-12)
                 p[1] = 0.0 if abs(nq) < 1e-12 else nq
             i += 1
-        tot = 0.0
-        eu = end.astimezone(timezone.utc)
-        for (venue, a), v in bal.items():
-            if abs(v) < 1e-12:
-                continue
-            px = 1.0 if a in STABLES else price_at(a, eu)
-            if px is None:
-                unpriced.add(a)
-                continue
-            tot += v * px
-        for s, (b, q, entry) in pos.items():
-            if q:
-                px = price_at(b, eu)
-                if px is not None:
-                    tot += q * (px - entry)
-        points.append([(end - timedelta(days=1)).strftime("%Y-%m-%d"), round(tot, 2)])
+        points.append([(end - timedelta(days=1)).strftime("%Y-%m-%d"), value(end)])
         day = end
     return {"points": points, "start": start.isoformat(), "unpriced": sorted(unpriced),
             "perps_flat_at_start": flat_at_start, "n_events": len(ev), "built_at": now.astimezone(TZ).isoformat(timespec="seconds"),

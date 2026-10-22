@@ -122,12 +122,13 @@
     var ta = (st.total_assets || {}).total_usdt;
     var today = new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei"}).format(new Date());
     if (ta != null) { pts = pts.filter(function (p) { return p[0] !== today; }); pts.push([today, Number(ta)]); }
-    return pts.filter(function (p) { return p[0] >= "2026-10-01"; });
+    return pts.filter(function (p) { return p[0] >= "2026-09-30"; });
   }
   function months(pts) {
     var by = {}, order = [];
     pts.forEach(function (p, i) {
       var m = p[0].slice(0, 7);
+      if (m < "2026-10") return;
       if (!by[m]) { by[m] = {start: i ? pts[i - 1][1] : p[1], startDay: i ? pts[i - 1][0] : p[0]}; order.push(m); }
       by[m].end = p[1]; by[m].endDay = p[0];
     });
