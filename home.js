@@ -101,9 +101,32 @@
       kpi("開始至今損益", sn(v.pnl), sn(v.return_pct) + "%") + "</div>" +
       '<div class="h-note">只在雲端模擬記帳，不下任何單；與 U1 同一引擎、同一排程，目標波動 0.40、槓桿上限 3。</div>';
   }
-  function blockEval(ev, st) {
+  function parseCsv(t) {
+    var L = String(t || "").trim().split(/\r?\n/); if (L.length < 2) return [];
+    var h = L[0].split(","); return L.slice(1).map(function (l) { var v = l.split(","), o = {}; h.forEach(function (k, i) { o[k.trim()] = v[i]; }); return o; });
+  }
+  function lastBy(rows) { var o = {}; rows.forEach(function (r) { var b = r.book || r.name; if (b) o[b] = r; }); return o; }
+  function shadowCompare(st, sd) {
+    var sh = ((st || {}).paper || {}).U1_TV40 || {}, an = lastBy(sd.analyst || []), ab = lastBy(sd.ab || []);
+    var sv = (((st.books || {}).usdc || {}).futures || {}).u1_sleeve || {};
+    var a40 = an.shadow_tv040, a60 = an.orig_tv060;
+    var diff = (a40 && sh.equity != null) ? sh.equity - Number(a40.equity) : null;
+    var findAB = function (re) { var k = Object.keys(ab).find(function (x) { return re.test(x); }); return k ? ab[k] : null; };
+    var A = findAB(/^A$|(^|_)A($|_)/i), B = findAB(/^B$|(^|_)B($|_)/i);
+    var r = function (name, eq, note) { return "<tr><td>" + name + "</td><td>" + (eq == null ? "—" : n(eq)) + "</td><td>" + (eq == null ? "—" : sn(Number(eq) - 1000)) + '</td><td class="dim">' + note + "</td></tr>"; };
+    return '<div class="h-sec" style="margin:0 0 10px;padding:12px 14px"><b>影子帳本比較</b>（僅模擬記帳，不下單，無核准按鈕；起始皆 1,000 USDC，10/21 起）' +
+      '<table class="h-tbl" style="margin-top:6px"><tr><th>帳本</th><th>權益</th><th>損益</th><th>說明</th></tr>' +
+      r("原版 U1（實盤）", sv.equity, "幣安回讀") +
+      r("原版 U1 回測對照", a60 && a60.equity, a60 ? "分析師帳本 " + a60.date : "尚無資料") +
+      r("目標波動 0.40", sh.equity, sh.equity == null ? "雲端影子帳本建立中（每小時與 U1 同排程）" :
+        "雲端計算" + (diff == null ? "" : "；分析師帳本 " + n(a40.equity) + "（" + a40.date + "），差 " + sn(diff) + (Math.abs(diff) <= 2 ? " ✓ 一致" : " ✗ 不一致"))) +
+      r("A：70% 波動 0.40＋30% 全市場多空趨勢", A && A.equity, A ? "分析師帳本 " + (A.date || "") : "10/23 08:20 起每日更新") +
+      r("B：A × 1.5 槓桿", B && B.equity, B ? "分析師帳本 " + (B.date || "") : "10/23 08:20 起每日更新") +
+      '</table><div class="h-note">A／B 需要全市場約 900 檔永續資料與分群計算，暫不在雲端計算；數字由分析師在研究主機每日 08:20 產生後同步到網站（' + esc(sd.synced_at ? tpe(sd.synced_at) : "尚未同步") + '）。回測參考：A（1 倍、70%）樣本外夏普 1.57、最大回撤 25%；B（1.5 倍、70%）夏普 1.23、最大回撤 31%（皆事後選參，非真正樣本外）。</div></div>';
+  }
+  function blockEval(ev, st, sd) {
     var sh = ((st || {}).paper || {}).U1_TV40;
-    return '<section class="h-sec"><h2>評估中策略<a href="./backtest.html">策略評分 ›</a></h2><div class="h-list">' +
+    return '<section class="h-sec"><h2>評估中策略<a href="./backtest.html">策略評分 ›</a></h2>' + shadowCompare(st, sd || {}) + '<div class="h-list">' +
       (ev.evaluating || []).map(function (e) {
         var h = item(e, '<span class="tag">評估中</span>');
         if (e.code === "U1-tv0.40") h = h.replace('<div class="body">', '<div class="body">' + shadowHtml(sh)) + "";
@@ -163,8 +186,16 @@
       var base = await apiBase();
       var res = await Promise.all([j(base + "/status"), j("./config/strategy_eval.json"), j("./config/strategy_codes.json").catch(function () { return {}; })]);
       var st = res[0], ev = res[1], codes = res[2];
+      var sd = {};
+      try {
+        var idx = await j("./data/shadow/index.json"); sd.synced_at = idx.synced_at;
+        sd.analyst = parseCsv(await (await fetch("./data/shadow/tv040_analyst.csv", {cache: "no-store"})).text());
+        var abf = (idx.files || []).filter(function (f) { return /^AB\/.*\.csv$/.test(f); });
+        sd.ab = [];
+        for (var i = 0; i < abf.length; i++) sd.ab = sd.ab.concat(parseCsv(await (await fetch("./data/shadow/" + abf[i], {cache: "no-store"})).text()));
+      } catch (e) {}
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockEval(ev, st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRunning(st) + blockEval(ev, st, sd) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);

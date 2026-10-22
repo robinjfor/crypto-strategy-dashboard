@@ -33,17 +33,47 @@ def params():
         P.ACCT_TV, P.LEV_CAP = old
 
 
+START_FILL_BAR = "2026-10-21T00:00:00+00:00"   # same start as live U1 and the analyst's shadow ledger
+
+
+def _aligned_start(main_state: dict | None):
+    """Decision for the 10/21 00:00 UTC fill, re-levered with tv0.40 (w1x and sigma60 are tv-independent)."""
+    if not main_state:
+        return None
+    dec = next((d for d in main_state.get("decisions") or [] if d.get("fill_bar") == START_FILL_BAR), None)
+    if not dec:
+        return None
+    day = dec["indicator_day"]
+    closes = main_state.get("e1x_closes") or []
+    rets = list(main_state.get("returns_1x") or [])
+    dates = [c[0] for c in closes][-len(rets):] if rets else []
+    rets = [r for d, r in zip(dates, rets) if d <= day][-P.SIG60_WIN:]
+    with params():
+        L, s60 = P.leverage_from_returns(rets)
+        tl = P.lev_targets(dec["w1x"], L)
+    pend = {**{k: dec[k] for k in ("decision_bar", "fill_bar", "indicator_day", "w1x")}, "L": L, "sigma60_1x": s60,
+            "targets_1x": dict(dec["w1x"]), "targets_lev": tl}
+    return rets, pend
+
+
 def initial_state(now: datetime, main_state: dict | None) -> dict:
     st = P.new_engine_state()
     st["books"] = {"x1": P.new_book(INITIAL), "lev": P.new_book(INITIAL)}
     st["e1x_prev"] = INITIAL
-    if main_state:
-        st["returns_1x"] = list(main_state.get("returns_1x") or [])[-P.SIG60_WIN:]
-    cur = pd.Timestamp(now.astimezone(timezone.utc)).floor("h")
-    st["last_closed_bar"] = P._iso(cur - P.H)
+    al = _aligned_start(main_state)
+    if al:
+        st["returns_1x"], st["pending"] = al
+        st["decisions"] = [al[1]]
+        st["last_closed_bar"] = al[1]["decision_bar"]
+    else:
+        if main_state:
+            st["returns_1x"] = list(main_state.get("returns_1x") or [])[-P.SIG60_WIN:]
+        cur = pd.Timestamp(now.astimezone(timezone.utc)).floor("h")
+        st["last_closed_bar"] = P._iso(cur - P.H)
     st.update({"code": CODE, "mode": "paper_only", "label_zh": "影子帳本（模擬，不下單）", "orders": "none",
                "params": {"acct_tv": ACCT_TV, "lev_cap": LEV_CAP, "asset_tv": P.ASSET_TV, "n_sma": P.N_SMA},
-               "paper_start": {"bar": st["last_closed_bar"], "equity": INITIAL, "at_utc": now.isoformat(),
+               "paper_start": {"bar": st["last_closed_bar"], "equity": INITIAL, "at_utc": START_FILL_BAR if al else now.isoformat(),
+                               "aligned_to_live_u1": bool(al), "created_utc": now.isoformat(),
                                "quote": "USDC"},
                "equity_hourly": [], "runs": [], "errors": []})
     return st
