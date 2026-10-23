@@ -1,4 +1,7 @@
-"""Demo slot R2S (top-10 perp trend long/short, smoothed + ADX hysteresis, <5U rule), 1,000 USDT x1 on Binance futures Demo.
+"""Demo slot R2S (top-10 perp trend long/short, smoothed + ADX hysteresis), 3,000 USDT x1 on Binance futures Demo.
+CURRENT SPEC (2026-10-24): research_regime_v2/SPEC_minnot.md + r2s_minnot.py (mode 2): per-symbol exchange min notional +
+stepSize from spec_2026-11/min_notional.json, WF re-selected at 3,000U -> decide_minnot() / parity_minnot().
+History below (1,000U, uniform <5U rule) kept for reference; plan()/parity() implement that older SPEC.md.
 DISABLED (enabled=False), NOT approved, NOT in DEMO_ACCEPTED, not in demo_candidates.CANDIDATES.
 Spec: strategy-unified-3y/spec_2026-11/research_regime_v2/SPEC.md (== research_v2.r2s_W + pnl(deadband_rel=0.25) + min5_check K=1000).
 This module re-implements the signal (universe, ATR/ADX/slope/vpct, hysteresis regime, 9 sub-engines, weights) and the
@@ -16,8 +19,8 @@ import numpy as np
 import pandas as pd
 
 log = logging.getLogger("demo_r2s")
-SLOT = "demo_r2s_top10_1x"
-CAPITAL, LEVERAGE = 1000.0, 1.0
+SLOT = "demo_r2s_top10_3k"
+CAPITAL, LEVERAGE = 3000.0, 1.0
 BAND, MIN_ORDER, SLOTS, SEPS = 0.25, 5.0, 10, 0.002
 INNER = [(N, k) for N in (20, 30, 40) for k in (2.0, 2.5, 3.0)]
 EXCHANGE_MIN_DEFAULT = {"BTCUSDT": 100.0, "ETHUSDT": 20.0}
@@ -119,6 +122,71 @@ def plan(target_w: dict, pos_notional: dict, equity: float, minord: float = MIN_
             out.append({"symbol": s, "notional": d, "abs_notional": abs(d), "kind": "skip_min"}); continue
         out.append({"symbol": s, "notional": d, "abs_notional": abs(d), "kind": "order"})
     return out
+
+
+# ---------------- SPEC_minnot rule 9 (per-symbol MN + stepSize), per coin, USDT ledger
+def decide_minnot(t: float, u: float, p: float, E: float, mn: float, step: float, band: float = BAND) -> tuple[float, str]:
+    """t target weight, u current qty, p open price, E equity (USDT). Returns (new qty, kind):
+    hold | close (target 0 / flip with open < MN / residual < MN, reduce-only) | flip | skip_min | order."""
+    h = u * p / E if E > 0 else 0.0
+    if not (abs(t - h) > band * abs(t) or (t == 0 and h != 0) or np.sign(t) != np.sign(h)):
+        return u, "hold"
+    q = t * E / p if E > 0 else 0.0
+    if step > 0:
+        q = float(np.trunc(q / step) * step)
+    if t == 0 or q == 0:
+        return 0.0, ("close" if u != 0 else "hold")
+    if u != 0 and (q > 0) != (u > 0):
+        return (0.0, "close") if abs(q) * p < mn else (q, "flip")
+    if abs(q - u) * p < mn:
+        return u, "skip_min"
+    if abs(q) * p < mn:
+        return 0.0, "close"
+    return q, "order"
+
+
+def load_mins(info: dict | None, syms) -> tuple[dict, dict]:
+    """Live: MIN_NOTIONAL.notional and MARKET_LOT_SIZE (else LOT_SIZE) stepSize from exchangeInfo."""
+    mn, st = {}, {}
+    by = {s.get("symbol"): s for s in (info or {}).get("symbols") or []}
+    for sym in syms:
+        f = {x.get("filterType"): x for x in (by.get(sym) or {}).get("filters") or []}
+        mn[sym] = float((f.get("MIN_NOTIONAL") or {}).get("notional") or EXCHANGE_MIN_DEFAULT.get(sym, MIN_ORDER))
+        stp = float((f.get("MARKET_LOT_SIZE") or {}).get("stepSize") or 0) or float((f.get("LOT_SIZE") or {}).get("stepSize") or 0)
+        st[sym] = stp
+    return mn, st
+
+
+def parity_minnot(led: dict, C: pd.DataFrame, H: pd.DataFrame, L: pd.DataFrame, QV: pd.DataFrame) -> dict:
+    """Trade-by-trade vs the r2s_minnot ledger capture: (1) target weights recomputed from raw prices, (2) every per-coin
+    decision (incl. holds / skips) recomputed by decide_minnot from the ledger's inputs."""
+    elig_all = universe(C, QV); ev = [c for c in C.columns if elig_all[c].any()]
+    I = indicators(C[ev], H[ev], L[ev]); elig = elig_all[ev].values
+    colpos = {c: j for j, c in enumerate(led["cols"])}; idx = led["idx"]; s0 = led["s0"]
+    Wg = np.zeros_like(led["W"]); cache = {}
+    for a, e, key in led["picks"]:
+        if key not in cache: cache[key] = weights(I, elig, parse_cfg(key))
+        for i in range(len(idx)):
+            dt = pd.Timestamp(idx[i]) + pd.Timedelta(days=1)
+            if pd.Timestamp(a) <= dt <= pd.Timestamp(e) and not Wg[i].any():
+                for j, sname in enumerate(ev): Wg[i, colpos[sname]] = cache[key][i, j]
+    Wl = led["W"][s0:len(idx) - 1]; sig_bad = int((np.abs(Wg[s0:len(idx) - 1] - Wl) > 1e-12).any(axis=1).sum())
+    bad, kinds, orders = [], {}, 0
+    for i, c, t, u, p, E, new in led["rec"]:
+        if abs(Wg[i, c] - t) > 1e-12:
+            bad.append((idx[i], led["cols"][c], "weight")); continue
+        got, kind = decide_minnot(Wg[i, c], u, p, E, float(led["mn"][c]), float(led["step"][c]))
+        kinds[kind] = kinds.get(kind, 0) + 1
+        orders += int(got != u)
+        if got != new:
+            bad.append((idx[i], led["cols"][c], kind))
+    led_orders = int(led["stats"]["orders"])
+    return {"decisions": len(led["rec"]), "ledger_orders": led_orders, "orders": orders, "kinds": kinds,
+            "signal_day_mismatches": sig_bad, "mismatches": len(bad), "first_mismatch": bad[:3],
+            "capture_vs_jit_max_rel": led["capture_vs_jit_max_rel"], "capital": led["K"], "picks": [p[2] for p in led["picks"]],
+            "ledger_sharpe": led["sharpe"], "ledger_cagr": led["cagr"], "ledger_maxdd": led["maxdd"], "min_notional_file": led["mn_path"],
+            "pass": not bad and sig_bad == 0 and orders == led_orders > 0 and led["capture_vs_jit_max_rel"] < 1e-9,
+            "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
 # ---------------- exchange per-symbol min notional (live only)
@@ -259,15 +327,18 @@ def order_test(fut, state: dict | None = None) -> dict:
         if sym in held:
             out["symbols"][sym] = {"skipped": "account already holds it"}; continue
         try:
-            mn = exchange_min(info, sym); px = float(fut.mark_price(sym)); tgt = max(mn, MIN_ORDER) * 1.3
+            mn = exchange_min(info, sym); px = float(fut.mark_price(sym)); tgt = max(mn, MIN_ORDER) * 1.6
             if tgt > 40: raise RuntimeError(f"min {mn} too large for a small test")
-            o = plan({sym: tgt / CAPITAL}, {}, CAPITAL)
+            mns, sts = load_mins(info, [sym])
+            q, kind = decide_minnot(tgt / CAPITAL, 0.0, px, CAPITAL, mns[sym], sts[sym])
+            o = [{"symbol": sym, "notional": q * px, "abs_notional": abs(q) * px, "kind": kind, "delta_qty": q}] if kind == "order" else []
             send, blk = exchange_filter(o, {sym: mn})
             r1 = send_orders(fut, info, send, {sym: px}, tag + "o"); out["orders"] += len(r1)
             time.sleep(1.0); amt = _amt(fut, sym)
             rec["open"] = {"notional": round(tgt, 2), "qty": r1[0].get("qty") if r1 else None, "status": r1[0]["status"] if r1 else None, "pos_after": amt}
             if amt > 0: out["filled"] += 1
-            cl = plan({}, {sym: amt * px}, CAPITAL)
+            q2, k2 = decide_minnot(0.0, amt, px, CAPITAL, mns[sym], sts[sym])
+            cl = [{"symbol": sym, "notional": -amt * px, "abs_notional": abs(amt) * px, "kind": k2}] if k2 == "close" else []
             cs, _ = exchange_filter(cl, {sym: mn})
             r2 = send_orders(fut, info, [{**c, "delta_qty": -amt} for c in cs], {sym: px}, tag + "c") if amt else []
             out["orders"] += len(r2); time.sleep(1.0); amt2 = _amt(fut, sym)

@@ -13,7 +13,7 @@ def test_slot_disabled_not_listed_or_accepted(monkeypatch):
     assert D.active(st) == (False, "未啟用")
     st["demo_candidates"][D.SLOT]["enabled"] = True
     assert D.active(st) == (False, "未批准")
-    assert D.CAPITAL == 1000.0 and D.LEVERAGE == 1.0 and D.MIN_ORDER == 5.0
+    assert D.CAPITAL == 3000.0 and D.SLOT == 'demo_r2s_top10_3k' and D.LEVERAGE == 1.0 and D.MIN_ORDER == 5.0
 
 
 def test_plan_band_min5_close_flip():
@@ -56,7 +56,19 @@ def test_regime_hysteresis_and_engine():
 
 def test_committed_parity_passes():
     p = json.load(open(Path(D.__file__).parent / "shadow_ab" / "parity_R2S.json"))
-    assert p["pass"] and p["mismatches"] == 0 and p["orders"] == p["ledger_orders"] > 0
+    assert p["pass"] and p["mismatches"] == 0 and p["orders"] == p["ledger_orders"] > 0 and p["capital"] == 3000.0
+
+
+def test_decide_minnot_rules():
+    E, p = 3000.0, 10.0
+    assert D.decide_minnot(0.0, 0.3, p, E, 5, 0) == (0.0, "close")             # a. target 0: full close even < MN
+    assert D.decide_minnot(-0.001, 1.0, p, E, 5, 0) == (0.0, "close")          # b. flip, open 3U < MN -> close only
+    assert D.decide_minnot(-0.1, 1.0, p, E, 5, 0)[1] == "flip"
+    assert D.decide_minnot(0.001, 0.0, p, E, 5, 0) == (0.0, "skip_min")        # c. new open 3U < MN -> skip
+    assert D.decide_minnot(0.1, 20.0, p, E, 150, 0) == (20.0, "skip_min")     # c. adjustment 100U < MN 150 -> keep
+    assert D.decide_minnot(0.01, 10.0, p, E, 50, 0) == (0.0, "close")         # d. residual 30U < MN 50 -> full close
+    assert D.decide_minnot(0.1, 0.0, p, E, 5, 0.7) == (29.4, "order")          # stepSize truncation toward 0
+    assert D.decide_minnot(0.1, 29.0, p, E, 5, 0)[1] == "hold"                 # inside 25% band
 
 
 class _Fut:
