@@ -172,7 +172,7 @@
   }
 
   function blockPending(st) {
-    var c = (st || {}).demo_candidates || []; if (!c.length) return "";
+    var c = ((st || {}).demo_candidates || []).filter(function (x) { return x.approvable; }); if (!c.length) return "";
     return '<div class="h-sec"><h2>待審核（測試網）</h2><table class="h-tbl"><tr><th>策略</th><th>資金</th><th>雲端下單測試</th><th>逐筆對帳</th><th>狀態</th></tr>' +
       c.map(function (x) {
         return "<tr><td>" + esc(x.name) + '<div class="dim">' + esc(x.spec) + "；" + esc(x.decision) + (x.warning ? "；⚠ " + esc(x.warning) : "") + "</div></td><td>" + n(x.capital_usdt) + " USDT</td><td>" +

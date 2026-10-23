@@ -1,4 +1,5 @@
-"""Initial stop must be fill_px - stop_m * ATR (backtest parity), not stale suggested_stop."""
+"""Initial stop rule (backtest-anchor fix a770d7e): close-fill families anchor at signal close x (1+20bps) - m*ATR;
+fallback to fill - m*ATR when the fill is >1% off the close. Never the stale suggested_stop."""
 from __future__ import annotations
 
 import sys
@@ -23,8 +24,11 @@ def test_fill_stop_math_matches_backtest():
     assert stop != suggested_stale
 
 
-def test_apply_signal_enter_uses_fill_minus_atr_not_suggested():
+def test_apply_signal_enter_late_fill_falls_back_to_fill_anchor(monkeypatch):
+    """Fill 0.2289 is 2.2% above close 0.2239 (>1%) -> 1% fallback: fill anchor, not suggested, not close anchor."""
     import main
+    monkeypatch.setattr(main, "_allow_entry_for_slot", lambda *a, **k: (True, ""))
+    monkeypatch.setattr(main, "exchange_entry_block", lambda *a, **k: None)  # pre-entry exchange check is covered elsewhere
     from tests.test_spot_exit_path import FakeSpot
 
     class BuySpot(FakeSpot):
@@ -68,11 +72,12 @@ def test_apply_signal_enter_uses_fill_minus_atr_not_suggested():
         "family": "donchian_atr", "venue": "spot",
     }
     out = main.apply_signal(c, st, sig, live=True, allow_entries=True)
-    assert out["executed"], out
+    assert out["executed"], out.get("reason")
     pos = st["positions"]["sat_fet_4h"]
     expected = 0.2289 - 2.0 * 0.009695
     assert abs(pos["stop"] - expected) < 1e-6
     assert abs(pos["stop"] - 0.204942) > 1e-4  # not the stale suggested
+    assert abs(pos["stop"] - main.spot_initial_stop(0.2289, 0.2239, 2.0, 0.009695)) < 1e-9
     assert pos["stop_order_id"] == 55
 
 

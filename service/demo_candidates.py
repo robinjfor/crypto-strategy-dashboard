@@ -15,8 +15,7 @@ CANDIDATES = [
      "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
     {"id": "demo_funding_arb_1x", "name": "資金費率套利：現貨多＋永續空，1 倍", "capital_usdt": 1000.0, "venue": "幣安測試網現貨＋永續",
      "spec": "funding_arb/SPEC.md，前推參數：出場門檻 0、最多 10 檔",
-     "decision": "每日 08:00（台北）決策，下一根開盤兩腳同時成交",
-     "warning": "規格文件標示已封存（10/21）、不建議實盤，需 Robin 確認"},
+     "decision": "每日 08:00（台北）決策，下一根開盤兩腳同時成交"},
 ]
 
 
@@ -27,7 +26,7 @@ def view(state: dict | None) -> list[dict]:
         g = st.get(c["id"]) or {}
         ordering, parity = bool(g.get("cloud_ordering_ok")), bool(g.get("parity_pass"))
         out.append({**c, "enabled": False, "cloud_ordering_ok": ordering, "parity_pass": parity,
-                    "parity_detail": g.get("parity_detail"), "approvable": ordering and parity,
+                    "parity_detail": g.get("parity_detail"), "ordering_detail": g.get("ordering_detail"), "approvable": ordering and parity,
                     "status": "等待雲端下單測試與逐筆對帳" if not (ordering and parity) else "可審核"})
     return out
 

@@ -4,7 +4,9 @@ single-slot pause (paused_slots, paused_by=reconcile) and an alert is recorded f
 It never resumes anything, never places/cancels orders and never touches approvals or allocation."""
 from __future__ import annotations
 
+import json
 import logging
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -505,6 +507,36 @@ def merge_guards(s: dict, g: dict | None) -> None:
         s["reconcile_alerts"] = (list(s.get("reconcile_alerts") or []) + g["reconcile_alerts"])[-200:]
 
 
+def run_demo_gates(state0: dict) -> dict | None:
+    """Once per Taipei day (or --force-parity): refresh demo slot E gates. Read-only + Demo order/test (no fills).
+    Never enables the slot, never touches approvals/allocation."""
+    if os.environ.get("DEMO_GATES_ENABLED", "1") != "1" or not os.environ.get("GCS_BUCKET"):
+        return None
+    import demo_e
+    day = now_iso_taipei()[:10]
+    prev = ((state0.get("demo_candidates") or {}).get(demo_e.SLOT) or {})
+    if prev.get("gates_day") == day and not FORCE_PARITY:
+        return None
+    try:
+        from google.cloud import storage
+        b = storage.Client().bucket(os.environ["GCS_BUCKET"])
+        def _j(n):
+            bl = b.blob("trader/shadow_ab/" + n)
+            return json.loads(bl.download_as_bytes()) if bl.exists() else None
+        par, tgt = _j("parity_E.json"), _j("e_targets.json")
+        out = {"gates_day": day, "parity_pass": bool(par and par.get("pass")), "parity_detail": par}
+        if tgt:
+            from futures_client import FuturesDemoClient
+            oc = demo_e.ordering_check(FuturesDemoClient(), tgt)
+        else:
+            oc = {"pass": False, "error": "no targets yet"}
+        out.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc)
+        return out
+    except Exception as e:  # noqa: BLE001
+        log.warning("demo_gates_fail err=%s", e)
+        return {"gates_day": day, "parity_pass": False, "cloud_ordering_ok": False, "error": str(e)[:200]}
+
+
 def run_once(store=None, *, client=None, fc=None) -> dict:
     from state_store import StateStore
     store = store or StateStore()
@@ -518,11 +550,17 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
     snap = asset_snapshot(client, fc) if client is not None else None
     gres = run_guards(state0, fc)
+    dgates = run_demo_gates(state0)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
         record_asset_month(s, snap, now_iso_taipei())
         merge_guards(s, gres)
+        if dgates is not None:
+            import demo_e
+            g = s.setdefault("demo_candidates", {}).setdefault(demo_e.SLOT, {})
+            g.update(dgates)
+            g["enabled"] = False  # stays disabled until Robin approves on the site
         if daily is not None:
             s["asset_daily"] = daily
         if led_sum is not None:

@@ -120,6 +120,20 @@ def main() -> int:
             subprocess.run([sys.executable, "shadow.py"], cwd=tv, check=True)
         except Exception as e:  # noqa: BLE001
             ok, err = False, (err or "") + f" tv040 {e}"[:200]
+    if not os.environ.get("LEDGER_TEST_START"):
+        try:
+            sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+            import e_capture, demo_e
+            par = e_capture.run(d, os.environ.get("E_PARITY_START", "2026-09-01"))
+            res = demo_e.parity(par["snaps"])
+            res["from"] = os.environ.get("E_PARITY_START", "2026-09-01")
+            bucket.blob(PREFIX + "parity_E.json").upload_from_string(json.dumps(res), content_type="application/json")
+            tgt = e_capture.run(d, None)["targets"]
+            bucket.blob(PREFIX + "e_targets.json").upload_from_string(json.dumps(tgt), content_type="application/json")
+            log.info("demo_e parity=%s targets_bar=%s", res, tgt["decided_bar"])
+        except Exception as e:  # noqa: BLE001
+            log.exception("demo_e parity failed")
+            bucket.blob(PREFIX + "parity_E.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
     out = push(d, bucket, ok, err)
     log.info("shadow_ab ok=%s ledgers=%s", ok, {k: v["n"] for k, v in out["ledgers"].items()})
     return 0 if ok else 1
