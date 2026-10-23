@@ -54,6 +54,44 @@ def _perp_fill(fut, sym: str, order: dict, coid: str) -> tuple[float, float]:
     return float(o.get("executedQty") or 0), float(o.get("avgPrice") or 0)
 
 
+SKIP = {"PUMPUSDT"}  # Demo futures has no PUMPUSDT contract (10/23 universe order test); never enter
+
+
+def open_px(sym: str, leg: str, open_ms: int) -> float | None:
+    """Backtest fill price = mainnet 1d open at open_ms (spot: api.binance.com, perp: fapi.binance.com), public data."""
+    import json as _j, urllib.request as _u
+    base = "https://api.binance.com/api/v3/klines" if leg == "spot" else "https://fapi.binance.com/fapi/v1/klines"
+    try:
+        r = _j.loads(_u.urlopen(f"{base}?symbol={sym}&interval=1d&startTime={open_ms}&limit=1", timeout=10).read())
+        return float(r[0][1]) if r and int(r[0][0]) == open_ms else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _slip(state, bar, sym, leg, side, fill, lag_s):
+    """Record per-fill slippage vs the backtest 08:00 (Taipei) open; bps > 0 = worse than backtest."""
+    import datetime as _dt
+    try:
+        op = _dt.datetime.fromisoformat(str(bar)).replace(tzinfo=_dt.timezone.utc) + _dt.timedelta(days=1)
+    except Exception:  # noqa: BLE001
+        return
+    ref = open_px(sym, leg, int(op.timestamp() * 1000))
+    bps = None
+    if ref and fill:
+        bps = round(((fill / ref - 1) if side == "BUY" else (ref / fill - 1)) * 1e4, 2)
+    rec = {"date": str(op.date()), "symbol": sym, "leg": leg, "side": side, "fill": fill, "open": ref, "bps": bps, "lag_s": lag_s}
+    state["demo_fa_slippage"] = (list(state.get("demo_fa_slippage") or []) + [rec])[-400:]
+
+
+def _lag(bar):
+    import datetime as _dt
+    try:
+        op = _dt.datetime.fromisoformat(str(bar)).replace(tzinfo=_dt.timezone.utc) + _dt.timedelta(days=1)
+        return round((_dt.datetime.now(_dt.timezone.utc) - op).total_seconds())
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def execute(state: dict, spot, fut, targets: dict | None) -> dict:
     ok, why = active(state)
     if not ok:
@@ -86,6 +124,8 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
             so = spot.market_sell(sym, sq, f"faX-s-{sym[:12]}-{tag}") if sq > 0 else {}
             sfq, spx = _spot_net_qty({**so, "fills": []}) if so else (0.0, 0.0)
             book.pop(sym)
+            if fq: _slip(state, bar, sym, "perp", "BUY", fpx, _lag(bar))
+            if sfq: _slip(state, bar, sym, "spot", "SELL", spx, _lag(bar))
             log_event(state, "fa_exit", demo_fa.SLOT, symbol=sym, perp_qty=fq, perp_px=fpx, spot_qty=sfq, spot_px=spx, bar=bar)
             out["exits"].append(sym)
         except Exception as e:  # noqa: BLE001
@@ -103,6 +143,8 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
         other = (same_coin_position_slot(state, demo_fa.SLOT, sym, "LONG") or opposite_position_slot(state, demo_fa.SLOT, sym, "LONG")
                  or ("futures_account" if sym in held_fut else None))
         bad = ((((state.get("demo_candidates") or {}).get(demo_fa.SLOT) or {}).get("ordering_detail") or {}).get("universe_check") or {}).get("failed") or {}
+        if sym in SKIP and sym not in bad:
+            bad = {**bad, sym: ["fixed skip"]}
         if sym in bad:
             log_event(state, "fa_entry_skip_untradable", demo_fa.SLOT, symbol=sym, why=bad[sym], bar=bar)
             out["skipped"].append(f"{sym} order test failed"); continue
@@ -127,6 +169,7 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
             except Exception as e:  # noqa: BLE001  unwind perp so we never hold a naked short
                 fut.new_order(symbol=sym, side="BUY", type="MARKET", quantity=pq, reduceOnly="true", newClientOrderId=f"faU-p-{sym[:12]}-{tag}")
                 log_event(state, "fa_entry_unwound", demo_fa.SLOT, symbol=sym, error=str(e)[:120]); out["skipped"].append(f"{sym} spot failed, unwound"); continue
+            _slip(state, bar, sym, "perp", "SELL", ppx, _lag(bar)); _slip(state, bar, sym, "spot", "BUY", spx, _lag(bar))
             book[sym] = {"spot_qty": sq, "perp_qty": pq, "spot_px": spx, "perp_px": ppx, "bar": bar}
             log_event(state, "fa_entry", demo_fa.SLOT, symbol=sym, spot_qty=sq, spot_px=spx, perp_qty=pq, perp_px=ppx, bar=bar)
             out["entries"].append(sym)

@@ -178,7 +178,18 @@
         return "<tr><td>" + esc(x.name) + '<div class="dim">' + esc(x.spec) + "；" + esc(x.decision) + (x.warning ? "；⚠ " + esc(x.warning) : "") + "</div></td><td>" + n(x.capital_usdt) + " USDT</td><td>" +
           (x.cloud_ordering_ok ? "✓ 通過" : "未完成") + "</td><td>" + (x.parity_pass ? "✓ 通過" : "未完成") + "</td><td>" +
           (x.approvable ? '<a class="btn" href="./backtest.html#pending">前往批准</a>' : "未啟用，" + esc(x.status)) + "</td></tr>";
-      }).join("") + '</table><div class="h-note">兩項檢查都通過後才會出現批准按鈕；啟用後每日對帳，每週與回測差距超過 0.5% 會自動暫停該策略。</div></div>';
+      }).join("") + '</table><div class="h-note">三項檢查（下單測試、逐筆對帳、資金控管驗收）都通過後才會出現批准按鈕；啟用後每日對帳，每週與回測差距超過 0.5% 會自動暫停該策略。</div></div>';
+  }
+  function blockFaSlip(st) {
+    var r = ((st || {}).demo_fa_slippage || []).slice(-40).reverse(); if (!r.length) return "";
+    var leg = { spot: "現貨", perp: "永續" }, side = { BUY: "買", SELL: "賣" };
+    var ok = r.filter(function (x) { return x.bps != null; });
+    var avg = ok.length ? ok.reduce(function (a, x) { return a + x.bps; }, 0) / ok.length : null;
+    return '<div class="h-sec"><h2>資金費率套利（測試網）成交滑價</h2><table class="h-tbl"><tr><th>日期</th><th>幣</th><th>腳</th><th>成交價</th><th>回測開盤價</th><th>滑價（基點）</th><th>晚於開盤</th></tr>' +
+      r.map(function (x) {
+        return "<tr><td>" + esc(x.date) + "</td><td>" + esc(String(x.symbol).replace(/USDT$/, "")) + "</td><td>" + (leg[x.leg] || "") + (side[x.side] || "") + "</td><td>" + n(x.fill) + "</td><td>" + (x.open == null ? "—" : n(x.open)) +
+          "</td><td>" + (x.bps == null ? "—" : x.bps.toFixed(1)) + "</td><td>" + (x.lag_s == null ? "—" : Math.round(x.lag_s / 60) + " 分") + "</td></tr>";
+      }).join("") + '</table><div class="h-note">回測以台北 08:00 開盤價成交；正值代表比回測差。' + (avg == null ? "" : "近期平均 " + avg.toFixed(1) + " 基點。") + "</div></div>";
   }
   function blockRetired(ev, appr) {
     return '<section class="h-sec"><h2>淘汰策略</h2><div class="h-list">' +
@@ -237,7 +248,7 @@
       sd.synced_at = sab.updated_at; sd.analyst = sab.tv040 || []; sd.ab = [];
       Object.keys(sab.ledgers || {}).forEach(function (k) { var L = sab.ledgers[k] || {}; if (L.last) { var o = Object.assign({}, L.last); o.book = k; sd.ab.push(o); } });
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRunning(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);

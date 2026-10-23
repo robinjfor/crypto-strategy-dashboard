@@ -44,6 +44,7 @@ def _state(**g):
 @pytest.fixture(autouse=True)
 def _accept(monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
+    monkeypatch.setattr(demo_fa_exec, "open_px", lambda *a: None)
 
 
 T1 = {"decided_bar": "2026-11-01", "K": 10, "held": ["AUSDT", "BUSDT"]}
@@ -132,3 +133,14 @@ def test_universe_check_reports_failures_per_coin():
         def test_order(self, **kw): return {}
     r = demo_fa.universe_check(S(), F(), {"universe": ["AUSDT", "BUSDT", "CUSDT"], "decided_bar": "d"})
     assert r["coins"] == 3 and r["orders"] == 6 and r["ok_coins"] == 2 and list(r["failed"]) == ["CUSDT"]
+
+
+def test_slippage_recorded_per_fill(monkeypatch):
+    monkeypatch.setattr(demo_fa_exec, "open_px", lambda s, leg, ms: 9.9 if leg == "spot" else 10.1)
+    st = _state()
+    demo_fa_exec.execute(st, Spot(), Fut(), {"decided_bar": "2026-11-01", "held": ["AUSDT", "PUMPUSDT"]})
+    rec = st["demo_fa_slippage"]
+    assert {(r["leg"], r["side"]) for r in rec} == {("perp", "SELL"), ("spot", "BUY")} and all(r["symbol"] == "AUSDT" for r in rec)
+    sp = next(r for r in rec if r["leg"] == "spot"); pp = next(r for r in rec if r["leg"] == "perp")
+    assert sp["date"] == "2026-11-02" and sp["bps"] == round((10 / 9.9 - 1) * 1e4, 2) and pp["bps"] == round((10.1 / 10 - 1) * 1e4, 2)
+    assert isinstance(sp["lag_s"], int)

@@ -1346,6 +1346,7 @@ def build_status() -> dict:
         "asset_daily": state.get("asset_daily") or {},
         "guards": _guards_view(state),
         "demo_candidates": __import__("demo_candidates").view(state),
+        "demo_fa_slippage": list(state.get("demo_fa_slippage") or [])[-80:],
         "market_indicators": state.get("market_indicators") or {},
         "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),

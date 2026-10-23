@@ -575,7 +575,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             fa_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_fa_positions", "paused_slots")})
             fa_scratch["control_log"] = []
             fa_spot, fa_fut = client or BinanceClient(), fc or FuturesDemoClient()
-            fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec")})
+            fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec", "demo_fa_slippage")})
             demo_fa_guard.run(fa_scratch, fa_spot, fa_fut)
             import demo_fa_exec
             if demo_fa_exec.active(fa_scratch)[0]:
@@ -594,6 +594,8 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             s["demo_fa_positions"] = fa_scratch.get("demo_fa_positions") or {}
             if fa_scratch.get("demo_fa_exec") is not None:
                 s["demo_fa_exec"] = fa_scratch["demo_fa_exec"]
+            if fa_scratch.get("demo_fa_slippage") is not None:
+                s["demo_fa_slippage"] = fa_scratch["demo_fa_slippage"]
             s["control_log"] = (list(s.get("control_log") or []) + fa_scratch["control_log"])[-200:]
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
