@@ -207,7 +207,7 @@ def main() -> int:
             mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
             try:
                 import urllib.request as _u
-                info = json.loads(_u.urlopen("https://fapi.binance.com/fapi/v1/exchangeInfo", timeout=20).read())
+                info = json.loads(_u.urlopen("https://demo-fapi.binance.com/fapi/v1/exchangeInfo", timeout=20).read())
                 mins.update({s["symbol"]: demo_e5.exchange_min(info, s["symbol"]) for s in info.get("symbols") or []})
             except Exception as e:  # noqa: BLE001
                 log.warning("demo_e5 exchangeInfo fail %s (fallback mins)", e)
