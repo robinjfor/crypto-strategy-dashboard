@@ -94,6 +94,10 @@ class FuturesDemoClient:
     def new_order(self, **params) -> dict:
         return self._signed("POST", "/fapi/v1/order", params)
 
+    def add_isolated_margin(self, symbol: str, amount: float) -> dict:
+        """POST /fapi/v1/positionMargin type=1 (add). Moves wallet USDT into the isolated position; no exposure change."""
+        return self._signed("POST", "/fapi/v1/positionMargin", {"symbol": symbol, "amount": f"{amount:.2f}", "type": 1})
+
     def test_order(self, **params) -> dict:
         """POST /fapi/v1/order/test — validates order, does not execute."""
         return self._signed("POST", "/fapi/v1/order/test", params)

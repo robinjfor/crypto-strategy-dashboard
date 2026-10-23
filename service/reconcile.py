@@ -563,11 +563,25 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     snap = asset_snapshot(client, fc) if client is not None else None
     gres = run_guards(state0, fc)
     dgates = run_demo_gates(state0)
+    fa_scratch = None
+    if ((state0.get("demo_candidates") or {}).get("demo_funding_arb_1x") or {}).get("enabled"):
+        try:  # live controls; only when Robin enabled the slot
+            import copy, demo_fa_guard
+            from binance_client import BinanceClient
+            from futures_client import FuturesDemoClient
+            fa_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_fa_positions", "paused_slots")})
+            fa_scratch["control_log"] = []
+            demo_fa_guard.run(fa_scratch, client or BinanceClient(), fc or FuturesDemoClient())
+        except Exception as e:  # noqa: BLE001
+            log.warning("fa_guard_fail err=%s", e); fa_scratch = None
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
         record_asset_month(s, snap, now_iso_taipei())
         merge_guards(s, gres)
+        if fa_scratch is not None:
+            s["demo_fa_positions"] = fa_scratch.get("demo_fa_positions") or {}
+            s["control_log"] = (list(s.get("control_log") or []) + fa_scratch["control_log"])[-200:]
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
             g.update(dg)
