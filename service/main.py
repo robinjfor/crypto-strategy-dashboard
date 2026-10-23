@@ -280,6 +280,8 @@ def _next_open_perp_module(family):
 def opposite_position_slot(state: dict, slot_id: str, symbol: str, side: str) -> str | None:
     """Slot id of an open position on the same coin (any venue/quote) in the opposite direction."""
     base, want = _base_asset(symbol), str(side or "LONG").upper()
+    if slot_id != "demo_funding_arb_1x" and any(_base_asset(k) == base for k in (state.get("demo_fa_positions") or {})):
+        return "demo_funding_arb_1x"  # funding-arb pair (spot long + perp short) owns this coin
     for pid, p in (state.get("positions") or {}).items():
         if pid == slot_id or not isinstance(p, dict) or p.get("status") != "FILLED":
             continue
@@ -342,6 +344,8 @@ def same_coin_position_slot(state: dict, slot_id: str, symbol: str, side: str) -
     USDT or USDC), incl. the U1 sleeve. Emily 2026-10-21: one position per coin, e.g. C5 spot DOT long
     blocks Z4 perp DOT long."""
     base, want = _base_asset(symbol), str(side or "LONG").upper()
+    if slot_id != "demo_funding_arb_1x" and any(_base_asset(k) == base for k in (state.get("demo_fa_positions") or {})):
+        return "demo_funding_arb_1x"  # funding-arb pair (spot long + perp short) owns this coin
     for pid, p in (state.get("positions") or {}).items():
         if pid == slot_id or not isinstance(p, dict) or p.get("status") != "FILLED":
             continue

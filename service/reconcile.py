@@ -571,7 +571,15 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             from futures_client import FuturesDemoClient
             fa_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_fa_positions", "paused_slots")})
             fa_scratch["control_log"] = []
-            demo_fa_guard.run(fa_scratch, client or BinanceClient(), fc or FuturesDemoClient())
+            fa_spot, fa_fut = client or BinanceClient(), fc or FuturesDemoClient()
+            fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec")})
+            demo_fa_guard.run(fa_scratch, fa_spot, fa_fut)
+            import demo_fa_exec
+            if demo_fa_exec.active(fa_scratch)[0]:
+                from google.cloud import storage
+                bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/fa_targets.json")
+                tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
+                log.info("fa_exec %s", demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt))
         except Exception as e:  # noqa: BLE001
             log.warning("fa_guard_fail err=%s", e); fa_scratch = None
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
@@ -581,6 +589,8 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         merge_guards(s, gres)
         if fa_scratch is not None:
             s["demo_fa_positions"] = fa_scratch.get("demo_fa_positions") or {}
+            if fa_scratch.get("demo_fa_exec") is not None:
+                s["demo_fa_exec"] = fa_scratch["demo_fa_exec"]
             s["control_log"] = (list(s.get("control_log") or []) + fa_scratch["control_log"])[-200:]
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
