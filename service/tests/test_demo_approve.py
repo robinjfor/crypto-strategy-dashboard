@@ -68,3 +68,11 @@ def test_demo_approve_actor_defaults_to_site(app, monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
     assert c.post("/control/approve", json={"strategy_id": demo_fa.SLOT}).status_code == 200
     assert store["control_log"][-1]["actor"] == "site"
+
+
+def test_demo_approve_x_actor_percent_encoded(app, monkeypatch):
+    from urllib.parse import quote
+    c, store = app
+    monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
+    assert c.post("/control/approve", json={"strategy_id": demo_fa.SLOT}, headers={"X-Actor": quote("自動交易專家")}).status_code == 200
+    assert store["control_log"][-1]["actor"] == "自動交易專家"

@@ -2029,6 +2029,17 @@ def _sync_approved_from_families(st: dict) -> None:
                 approved[sid] = {**meta, "approved": True, "mode": "live", "family": fam}
     st["approved"] = approved
 
+def _header_actor() -> str:
+    """X-Actor may be percent-encoded UTF-8 or raw UTF-8 bytes (WSGI hands those over as latin-1)."""
+    from urllib.parse import unquote
+    raw = (request.headers.get("X-Actor") or "").strip()
+    try:
+        raw = raw.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    return unquote(raw).strip()[:64]
+
+
 def _approve_demo(slot_id: str):
     """Site approval of a Demo candidate (PIN already checked). Sets ONLY demo_candidates[slot].approved;
     refuses unless all three gates pass right now. Never touches allocation / approved / catalog."""
@@ -2038,7 +2049,7 @@ def _approve_demo(slot_id: str):
     if not v["approvable"]:
         return jsonify({"ok": False, "error": "尚未通過三項檢查，無法批准：" + v["status"]}), 400
     at = now_iso_taipei()
-    actor = (request.headers.get("X-Actor") or "").strip()[:64] or "site"
+    actor = _header_actor() or "site"
     def mut(st):
         g = st.setdefault("demo_candidates", {}).setdefault(slot_id, {})
         g.update({"approved": True, "enabled": True, "approved_at": at, "approved_by": actor})
