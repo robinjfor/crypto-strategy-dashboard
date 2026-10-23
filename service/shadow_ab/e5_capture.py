@@ -26,6 +26,8 @@ def _patched_sim(mod):
     src = inspect.getsource(mod.sim.py_func if hasattr(mod.sim, "py_func") else mod.sim)
     src = textwrap.dedent(src)
     src = "\n".join(l for l in src.splitlines() if not l.startswith("@njit"))
+    assert src.count("\n    return eq, st") == 1
+    src = src.replace("\n    return eq, st", "\n    _R.append(('fin', m, x1r[max(0, nx1-60):nx1].copy()))\n    return eq, st")
     for a in (U1_PRE, U1_POST, S5_PRE, S5_POST):
         assert src.count(a) == 1, a
     src = src.replace(U1_PRE, "                _R.append(('u1', i, r.copy(), m, uu.copy(), o2.copy(), eu, W1[i-1].copy()))\n" + U1_PRE)
@@ -71,5 +73,8 @@ def run(K: float = K_DEMO, shadow_dir: Path = SHADOW, data_dir: Path | None = No
            "w1": [float(x) for x in L.W1[last]], "ws": {c: float(v) for c, v in zip(L.cols, L.WS[k, last]) if v != 0},
            "dbs": {c: float(v) for c, v in zip(L.cols, L.DBS[k, last]) if v != 0}, "lv": L.LV, "w_u1": L.W_U1,
            "min_notional": {c: float(L.MN[j]) for j, c in enumerate(L.cols)}, "step": {c: float(L.STEP[j]) for j, c in enumerate(L.cols) if L.STEP[j]}, "K": K}
+    fin = [r for r in rec if r[0] == "fin"]
+    if fin:  # ledger state after the decided bar -> inputs of the next open's decision (m = drawdown regime, rw = U1 returns)
+        tgt["m"] = float(fin[-1][1]); tgt["rw"] = [float(x) for x in fin[-1][2]]
     return {"rec": rec, "cols": L.cols, "idx": [str(d.date()) for d in L.IDX], "stats": st, "stats_jit": st_j,
             "capture_vs_jit_max_rel": same, "targets": tgt, "iB": L.iB, "iE": L.iE, "mn": L.MN.copy(), "step": L.STEP.copy(), "mn_path": L.MN_PATH}

@@ -196,9 +196,11 @@ def main() -> int:
             import e5_data
             dv = e5_data.ensure(WORK / "e5data", bucket)
             log.info("e5_data %s", dv)
+            import e5_live
+            lv = e5_live.extend(WORK / "e5data", WORK / "e5live")   # + completed days up to yesterday (UTC) for live targets
             prev = os.environ.get("SPEC_DATA_DIR")
             try:
-                cap = e5_capture.run(demo_e5.CAPITAL, d, WORK / "e5data")
+                cap = e5_capture.run(demo_e5.CAPITAL, d, WORK / "e5live")
             finally:
                 if prev is None:
                     os.environ.pop("SPEC_DATA_DIR", None)
@@ -213,7 +215,9 @@ def main() -> int:
                 log.warning("demo_e5 exchangeInfo fail %s (fallback mins)", e)
             res = demo_e5.parity(cap, mins)
             bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
-            bucket.blob(PREFIX + "e5_targets.json").upload_from_string(json.dumps(cap["targets"]), content_type="application/json")
+            res["live_data"] = lv
+            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
+            bucket.blob(PREFIX + "e5_targets.json").upload_from_string(json.dumps({**cap["targets"], "live_data": lv}), content_type="application/json")
             log.info("demo_e5 parity=%s", {k: res[k] for k in ("orders", "mismatches", "pass")})
         except Exception as e:  # noqa: BLE001
             log.exception("demo_e5 parity failed")
