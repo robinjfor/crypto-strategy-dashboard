@@ -32,4 +32,4 @@ jobs:
           B="${{ vars.GCS_BUCKET }}"
           gcloud storage cat "gs://${B}/trader/state.json" > /tmp/s.json
           python3 -c "import json,os;d=json.load(open('/tmp/s.json'));print(json.dumps((d.get('demo_candidates') or {}).get(os.environ['SLOT']),indent=1,default=str)[:20000]);print([e for e in (d.get('control_log') or []) if e.get('slot')==os.environ['SLOT']][-20:])"
-          [ -n "${OBJ}" ] && gcloud storage cat "gs://${B}/trader/shadow_ab/${OBJ}" | head -c 4000 || true
+          [ -n "${OBJ}" ] && gcloud storage cat "gs://${B}/trader/shadow_ab/${OBJ}" | head -c 300000 || true

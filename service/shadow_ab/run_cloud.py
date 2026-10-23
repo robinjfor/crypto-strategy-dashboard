@@ -171,7 +171,37 @@ def main() -> int:
         try:  # demo_e5 (E-min5, 5,000U): trade-by-trade parity over the full OOS history + next-open targets
             sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
             import e5_capture, demo_e5
-            cap = e5_capture.run(demo_e5.CAPITAL, d)
+            import e5_data
+            dv = e5_data.ensure(WORK / "e5data", bucket)
+            log.info("e5_data %s", dv)
+            prev = os.environ.get("SPEC_DATA_DIR")
+            try:
+                cap = e5_capture.run(demo_e5.CAPITAL, d, WORK / "e5data")
+            finally:
+                if prev is None:
+                    os.environ.pop("SPEC_DATA_DIR", None)
+                else:
+                    os.environ["SPEC_DATA_DIR"] = prev
+            try:  # Demo futures + spot exchangeInfo min notional (public endpoints) for spec_2026-11/min_notional.json
+                import urllib.request as _u, datetime as _dt
+                mn = {"source": {"futures": "https://demo-fapi.binance.com/fapi/v1/exchangeInfo",
+                                 "spot": "https://demo-api.binance.com/api/v3/exchangeInfo"},
+                      "date": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"), "futures": {}, "spot": {}}
+                for k, u in mn["source"].items():
+                    try:
+                        inf = json.loads(_u.urlopen(u, timeout=30).read())
+                        for s in inf.get("symbols") or []:
+                            for f in s.get("filters") or []:
+                                if f.get("filterType") in ("MIN_NOTIONAL", "NOTIONAL"):
+                                    v = f.get("notional") or f.get("minNotional")
+                                    if v is not None:
+                                        mn[k][s["symbol"]] = float(v)
+                    except Exception as e:  # noqa: BLE001
+                        mn[k + "_error"] = str(e)[:200]
+                mn["e5_cols"] = list(cap["cols"])
+                bucket.blob(PREFIX + "min_notional.json").upload_from_string(json.dumps(mn), content_type="application/json")
+            except Exception:  # noqa: BLE001
+                log.exception("min_notional fetch failed")
             mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
             try:
                 import urllib.request as _u

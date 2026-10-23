@@ -39,7 +39,11 @@ def _patched_sim(mod):
     return g["sim"], rec
 
 
-def load(shadow_dir: Path = SHADOW):
+def load(shadow_dir: Path = SHADOW, data_dir: Path | None = None):
+    if data_dir is not None:  # common.py reads SPEC_DATA_DIR at import; other ledgers may have imported it already
+        os.environ["SPEC_DATA_DIR"] = str(data_dir)
+        for m in [m for m in sys.modules if m in ("lib", "common", "ledger_e_min5") or m.startswith("s5_")]:
+            del sys.modules[m]
     sys.path.insert(0, str(shadow_dir))
     cwd = os.getcwd(); os.chdir(shadow_dir)
     try:
@@ -49,8 +53,8 @@ def load(shadow_dir: Path = SHADOW):
     return L
 
 
-def run(K: float = K_DEMO, shadow_dir: Path = SHADOW) -> dict:
-    L = load(shadow_dir)
+def run(K: float = K_DEMO, shadow_dir: Path = SHADOW, data_dir: Path | None = None) -> dict:
+    L = load(shadow_dir, data_dir)
     start = int(np.searchsorted(L.IDX, L.OOS_START))
     sched, picks = L.wf_sched(K, L.MIN_ORDER)              # jitted, same as the study
     sim, rec = _patched_sim(L)
