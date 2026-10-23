@@ -94,3 +94,10 @@ def test_foreign_holder_and_entry_block_skip_opens_but_not_closes(monkeypatch):
     last = f.orders[-1]
     assert last["symbol"] == "BTCUSDT" and last["side"] == "SELL" and last.get("reduceOnly") == "true"
     assert "BTCUSDT" not in st["demo_e5_exec"]["book"]
+
+
+def test_missed_open_window(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
+    f = Fut(PX)
+    late = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)
+    assert X.execute(_state(), f, _tgt(), late)["skipped"].startswith("missed open window") and not f.orders

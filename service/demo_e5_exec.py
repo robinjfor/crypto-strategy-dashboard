@@ -21,6 +21,7 @@ from guards import log_event
 
 log = logging.getLogger("demo_e5_exec")
 LEVERAGE = 3          # isolated, per symbol (futures_client hard cap 3)
+MAX_LAG_H = 4         # execute only within 4h after the 00:00 UTC (08:00 Taipei) open
 FEE = 0.0005          # taker estimate for the virtual equity when the fill has no commission field
 
 
@@ -33,6 +34,9 @@ def fresh(targets: dict | None, now: datetime | None = None) -> tuple[bool, str]
     want = str((now - timedelta(days=1)).date())
     if str(targets["decided_bar"]) != want:
         return False, f"stale targets {targets['decided_bar']} (want {want})"
+    lag_h = (now - datetime(now.year, now.month, now.day, tzinfo=timezone.utc)).total_seconds() / 3600
+    if lag_h > MAX_LAG_H:  # spec fills at the 08:00 (Taipei) open; never chase a missed open later in the day
+        return False, f"missed open window ({lag_h:.1f}h > {MAX_LAG_H}h after 08:00 Taipei)"
     return True, ""
 
 
