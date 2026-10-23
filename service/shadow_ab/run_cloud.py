@@ -134,6 +134,17 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001
             log.exception("demo_e parity failed")
             bucket.blob(PREFIX + "parity_E.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
+    if not os.environ.get("LEDGER_TEST_START"):
+        try:
+            sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+            import fa_capture
+            fa = fa_capture.run(ROOT / "spec_2026-11", ROOT / "spec_2026-11" / "research_1022" / "shadow_AB" / "data", os.environ.get("FA_PARITY_START", "2026-06-01"))
+            bucket.blob(PREFIX + "parity_FA.json").upload_from_string(json.dumps(fa["parity"]), content_type="application/json")
+            bucket.blob(PREFIX + "fa_targets.json").upload_from_string(json.dumps(fa["targets"]), content_type="application/json")
+            log.info("demo_fa parity=%s held=%s", fa["parity"], fa["targets"]["held"])
+        except Exception as e:  # noqa: BLE001
+            log.exception("demo_fa parity failed")
+            bucket.blob(PREFIX + "parity_FA.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
     out = push(d, bucket, ok, err)
     log.info("shadow_ab ok=%s ledgers=%s", ok, {k: v["n"] for k, v in out["ledgers"].items()})
     return 0 if ok else 1

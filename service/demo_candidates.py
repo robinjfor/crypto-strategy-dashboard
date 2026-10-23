@@ -14,7 +14,7 @@ CANDIDATES = [
      "spec": "research_1022/shadow_AB/ledger_e.py + README.md（80% 波動 0.40 趨勢＋20% 全市場多空，1.75 倍，回撤保護）",
      "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
     {"id": "demo_funding_arb_1x", "name": "資金費率套利：現貨多＋永續空，1 倍", "capital_usdt": 1000.0, "venue": "幣安測試網現貨＋永續",
-     "spec": "funding_arb/SPEC.md，前推參數：出場門檻 0、最多 10 檔",
+     "spec": "funding_arb/SPEC.md＋research_1023/REPORT.md（10/23 前推再次通過），出場門檻 0、最多 10 檔；觀察倉，後半段報酬接近現金",
      "decision": "每日 08:00（台北）決策，下一根開盤兩腳同時成交"},
 ]
 

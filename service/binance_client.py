@@ -93,6 +93,10 @@ class BinanceClient:
         params = {"symbol": symbol} if symbol else {}
         return self._signed("GET", "/api/v3/openOrders", params)
 
+    def test_order(self, **params) -> dict:
+        """POST /api/v3/order/test — validates only, never executes."""
+        return self._signed("POST", "/api/v3/order/test", params)
+
     def exchange_info(self, symbol: str) -> dict:
         return self._public("/api/v3/exchangeInfo", {"symbol": symbol}, base=self.base_url)
 

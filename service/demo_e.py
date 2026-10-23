@@ -93,7 +93,9 @@ def first_day_orders(targets: dict, prices: dict, equity: float = CAPITAL) -> li
 
 def ordering_check(client, targets: dict) -> dict:
     """Validate every first-day order on Demo with /fapi/v1/order/test (no fills). Returns summary."""
-    from futures_client import round_qty_futures
+    from futures_client import round_qty_futures, _filters
+    below: list[str] = []
+    bsl: dict[str, int] = {}
     info = client.exchange_info()
     prices = {}
     for sym in list((targets.get("u1_w") or {})) + list((targets.get("s5_w") or {})):
@@ -106,8 +108,12 @@ def ordering_check(client, targets: dict) -> dict:
     errs = []
     for o in orders:
         q = round_qty_futures(info, o["symbol"], o["qty"])
-        if q <= 0:
+        mnf = (_filters(info, o["symbol"]).get("MIN_NOTIONAL") or {})
+        mn = float(mnf.get("notional") or mnf.get("minNotional") or 5.0)
+        if q <= 0 or q * prices[o["symbol"]] < mn:
             skipped_min += 1
+            bsl[o["sleeve"]] = bsl.get(o["sleeve"], 0) + 1
+            below.append(f"{o['symbol']} {o['qty'] * prices[o['symbol']]:.2f}U<{mn:g}U")
             continue
         try:
             client.test_order(symbol=o["symbol"], side=o["side"], type="MARKET", quantity=q,
@@ -116,14 +122,17 @@ def ordering_check(client, targets: dict) -> dict:
         except Exception as e:  # noqa: BLE001
             fail += 1
             errs.append(f"{o['symbol']}: {str(e)[:80]}")
-    return {"orders": len(orders), "accepted": ok, "rejected": fail, "below_min_qty": skipped_min, "errors": errs[:10],
-            "pass": len(orders) > 0 and fail == 0, "decided_bar": targets.get("decided_bar"),
+    return {"orders": len(orders), "accepted": ok, "rejected": fail, "below_min_qty": skipped_min, "below_min_examples": below[:10],
+            "orders_by_sleeve": {k: sum(1 for o in orders if o["sleeve"] == k) for k in ("u1", "s5")},
+            "below_min_by_sleeve": bsl,
+            "errors": errs[:10],
+            "pass": len(orders) > 0 and fail == 0 and skipped_min == 0, "decided_bar": targets.get("decided_bar"),
             "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
 # ---------------- daily reconcile / weekly deviation pause (only when enabled)
-def reconcile(state: dict, ledger_equity: float | None, demo_equity: float | None, today: str) -> dict | None:
-    g = state.setdefault("demo_candidates", {}).setdefault(SLOT, {})
+def reconcile(state: dict, ledger_equity: float | None, demo_equity: float | None, today: str, slot: str = SLOT) -> dict | None:
+    g = state.setdefault("demo_candidates", {}).setdefault(slot, {})
     if not g.get("enabled") or ledger_equity is None or demo_equity is None:
         return None
     hist = g.setdefault("daily", [])
@@ -133,7 +142,7 @@ def reconcile(state: dict, ledger_equity: float | None, demo_equity: float | Non
     if len(hist) >= 7 and datetime.fromisoformat(today).weekday() == 0:
         dev = hist[-1]["dev"]
         if abs(dev) > WEEKLY_DEV_LIMIT:
-            state.setdefault("paused_slots", {})[SLOT] = {"by": "reconcile", "reason": f"每週偏差 {dev*100:.2f}% 超過 0.5%", "at": today}
+            state.setdefault("paused_slots", {})[slot] = {"by": "reconcile", "reason": f"每週偏差 {dev*100:.2f}% 超過 0.5%", "at": today}
             log.warning("demo_e weekly_dev_pause dev=%.4f", dev)
             return {"paused": True, "dev": dev}
     return {"paused": False, "dev": hist[-1]["dev"]}
