@@ -527,7 +527,8 @@ def run_demo_gates(state0: dict) -> dict:
         return json.loads(bl.download_as_bytes()) if bl.exists() else None
     for slot, pf, tf in ((demo_e.SLOT, "parity_E.json", "e_targets.json"), (demo_fa.SLOT, "parity_FA.json", "fa_targets.json")):
         prev = cands.get(slot) or {}
-        if prev.get("gates_day") == day and prev.get("ordering_detail", {}).get("decided_bar") and not FORCE_PARITY:
+        od = prev.get("ordering_detail") or {}
+        if prev.get("gates_day") == day and od.get("decided_bar") and not FORCE_PARITY and (slot != demo_fa.SLOT or od.get("universe_check")):
             continue
         try:
             par, tgt = _j(pf), _j(tf)
@@ -541,6 +542,8 @@ def run_demo_gates(state0: dict) -> dict:
                 else:
                     from binance_client import BinanceClient
                     oc = demo_fa.ordering_check(BinanceClient(), FuturesDemoClient(), tgt)
+                    if tgt.get("universe"):
+                        oc["universe_check"] = demo_fa.universe_check(BinanceClient(), FuturesDemoClient(), tgt)
             g.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc)
         except Exception as e:  # noqa: BLE001
             log.warning("demo_gates_fail slot=%s err=%s", slot, e)

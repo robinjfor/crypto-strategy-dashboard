@@ -63,5 +63,6 @@ def run(spec_root: Path, data_dir: Path, parity_start: str) -> dict:
     tgt = {"decided_bar": str(idx[-1].date()), "K": demo_fa.K, "exit_thr": demo_fa.EXIT_THR,
            "held": [syms[j] for j in np.where(held)[0]],
            "f7": {syms[j]: float(f7[-1][j]) for j in np.where(held)[0]},
+           "universe": sorted(set([s for s in syms if bool(g["UNI"][s].iloc[-1])]) | {syms[j] for j in np.where(held)[0]}),
            "probe": str(liq_last.idxmax()) if liq_last.notna().any() else "BTCUSDT"}
     return {"parity": par, "targets": tgt}

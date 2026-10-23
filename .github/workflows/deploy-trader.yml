@@ -21,6 +21,10 @@ on:
         description: "After deploy, execute the read-only reconcile job once with --force-parity (daily live-vs-backtest now)"
         type: boolean
         default: false
+      run_fa_now:
+        description: "After deploy, start the funding-arb target job once (public data; then one reconcile tick)"
+        type: boolean
+        default: false
       run_shadow_ab_now:
         description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
         type: boolean
@@ -55,6 +59,8 @@ env:
   RECONCILE_JOB: crypto-trader-reconcile
   SCHEDULER_RECONCILE: crypto-trader-reconcile-15m
   SHADOW_JOB: crypto-shadow-ab
+  FA_JOB: crypto-fa-daily
+  SCHEDULER_FA: crypto-fa-daily-0001
   SCHEDULER_SHADOW: crypto-shadow-ab-daily
   REPO_NAME: trader
   IMAGE_NAME: crypto-trader
@@ -318,6 +324,33 @@ jobs:
             --schedule="20 0 * * *" --time-zone="UTC" \
             --uri="${URI}" --http-method=POST \
             --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Deploy funding-arb target job + scheduler (UTC 00:01 = Taipei 08:01; public data, no keys; then starts reconcile)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          REC_URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${RECONCILE_JOB}:run"
+          gcloud run jobs deploy "${FA_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" --task-timeout=1800 --max-retries=0 \
+            --set-env-vars="GCS_BUCKET=${BUCKET},FA_ONLY=1,RECONCILE_JOB_URI=${REC_URI}" \
+            --clear-secrets --command=python --args=-u,shadow_ab/run_cloud.py --memory=4Gi --cpu=2
+          gcloud run jobs add-iam-policy-binding "${FA_JOB}" --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${FA_JOB}:run"
+          VERB=create
+          if gcloud scheduler jobs describe "${SCHEDULER_FA}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then VERB=update; fi
+          gcloud scheduler jobs ${VERB} http "${SCHEDULER_FA}" \
+            --project="${PROJECT}" --location="${REGION}" \
+            --schedule="1 0 * * *" --time-zone="UTC" \
+            --uri="${URI}" --http-method=POST \
+            --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Start funding-arb target job once (async)
+        if: ${{ inputs.run_fa_now }}
+        run: gcloud run jobs execute "${FA_JOB}" --project="${{ vars.GCP_PROJECT_ID }}" --region="${REGION}" --async
 
       - name: Start shadow A–E job once (async)
         if: ${{ inputs.run_shadow_ab_now }}

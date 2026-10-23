@@ -62,7 +62,19 @@ def first_day_orders(targets: dict, equity: float = CAPITAL) -> list[dict]:
     return out
 
 
-def ordering_check(spot, fut, targets: dict) -> dict:
+def universe_check(spot, fut, targets: dict) -> dict:
+    """Order-test BOTH legs for every coin in the FA universe (targets['universe']); */order/test only."""
+    uni = list(targets.get("universe") or [])
+    r = ordering_check(spot, fut, {**targets, "held": uni, "probe": None}, max_errs=10_000)
+    failed: dict[str, list[str]] = {}
+    for e in r["errors"]:
+        sym, why = e.split(" ", 1)
+        failed.setdefault(sym, []).append(why)
+    return {"coins": len(uni), "orders": r["orders"], "accepted": r["accepted"], "failed": failed,
+            "ok_coins": len(uni) - len(failed), "decided_bar": targets.get("decided_bar"), "checked_at": r["checked_at"]}
+
+
+def ordering_check(spot, fut, targets: dict, max_errs: int = 10) -> dict:
     """spot: BinanceClient (Demo spot), fut: FuturesDemoClient. Only */order/test endpoints are called."""
     from futures_client import round_qty_futures, _filters
     info = fut.exchange_info()
@@ -85,7 +97,7 @@ def ordering_check(spot, fut, targets: dict) -> dict:
             ok += 1
         except Exception as e:  # noqa: BLE001
             rej += 1; errs.append(f"{s} {o['leg']}: {str(e)[:80]}")
-    return {"orders": len(orders), "accepted": ok, "rejected": rej, "below_min": below, "errors": errs[:10],
+    return {"orders": len(orders), "accepted": ok, "rejected": rej, "below_min": below, "errors": errs[:max_errs],
             "held": targets.get("held"), "decided_bar": targets.get("decided_bar"),
             "probe": None if targets.get("held") else targets.get("probe"),
             "pass": len(orders) > 0 and rej == 0 and below == 0,

@@ -32,9 +32,10 @@ def view(state: dict | None) -> list[dict]:
         ordering, parity = bool(g.get("cloud_ordering_ok")), bool(g.get("parity_pass"))
         acc = accepted(c["id"])
         out.append({**c, "enabled": False, "cloud_ordering_ok": ordering, "parity_pass": parity,
-                    "parity_detail": g.get("parity_detail"), "ordering_detail": g.get("ordering_detail"), "accepted": acc, "approvable": ordering and parity and acc,
+                    "parity_detail": g.get("parity_detail"), "ordering_detail": g.get("ordering_detail"), "accepted": acc, "approvable": ordering and parity and acc and not g.get("approved"),
+                    "approved": bool(g.get("approved")), "approved_at": g.get("approved_at"),
                     "status": ("等待雲端下單測試與逐筆對帳" if not (ordering and parity)
-                               else "等待資金控管驗收" if not acc else "可審核")})
+                               else "等待資金控管驗收" if not acc else "已批准" if g.get("approved") else "可審核")})
     return out
 
 

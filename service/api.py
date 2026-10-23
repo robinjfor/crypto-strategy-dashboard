@@ -2028,6 +2028,24 @@ def _sync_approved_from_families(st: dict) -> None:
                 approved[sid] = {**meta, "approved": True, "mode": "live", "family": fam}
     st["approved"] = approved
 
+def _approve_demo(slot_id: str):
+    """Site approval of a Demo candidate (PIN already checked). Sets ONLY demo_candidates[slot].approved;
+    refuses unless all three gates pass right now. Never touches allocation / approved / catalog."""
+    import demo_candidates as _dc
+    st0 = StateStore().load() or {}
+    v = next(x for x in _dc.view(st0) if x["id"] == slot_id)
+    if not v["approvable"]:
+        return jsonify({"ok": False, "error": "尚未通過三項檢查，無法批准：" + v["status"]}), 400
+    at = now_iso_taipei()
+    def mut(st):
+        g = st.setdefault("demo_candidates", {}).setdefault(slot_id, {})
+        g.update({"approved": True, "approved_at": at, "approved_by": "site"})
+        st["control_log"] = (list(st.get("control_log") or []) + [{"at": at, "actor": "site", "action": "demo_approve", "slot": slot_id}])[-200:]
+        return st
+    StateStore().mutate(mut)
+    return jsonify({"ok": True, "message": "已批准（測試網）", "strategy_id": slot_id})
+
+
 @app.route("/control/approve", methods=["POST"])
 def approve():
     ok, err, code = _check_pin()
@@ -2037,6 +2055,9 @@ def approve():
     strategy_id = (body.get("strategy_id") or "").strip()
     if not strategy_id:
         return jsonify({"ok": False, "error": "缺少 strategy_id"}), 400
+    import demo_candidates as _dc
+    if strategy_id in {c["id"] for c in _dc.CANDIDATES}:
+        return _approve_demo(strategy_id)
     slot = slot_by_strategy_id(strategy_id)
     family = (body.get("family") or (slot or {}).get("family") or "").lower()
     if body.get("passed_threshold") is False:

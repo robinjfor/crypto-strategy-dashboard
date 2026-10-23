@@ -99,8 +99,41 @@ def push(d: Path, bucket, ok: bool, err: str | None) -> dict:
     return out
 
 
+def fa_only() -> int:
+    """FA_ONLY=1 (job crypto-fa-daily, 00:01 UTC = 08:01 Taipei): refresh public data, compute funding-arb
+    targets, upload them, then start the reconcile job at once so the Demo legs fill close to the 08:00 open.
+    Does not push the data cache or ledgers (the 08:20 full job still does)."""
+    import time
+    t0 = time.time()
+    d = setup(); bucket = _bucket(); pull_cache(d, bucket)
+    src = (d / "ledger_c.py").read_text()
+    cut = src.index('if "--no-fetch" not in sys.argv')
+    g = {"__name__": "fa_refresh", "__file__": str(d / "ledger_c.py")}
+    exec(compile(src[:cut], g["__file__"], "exec"), g)
+    g["refresh"]()
+    t1 = time.time()
+    sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+    import fa_capture
+    fa = fa_capture.run(ROOT / "spec_2026-11", d / "data", os.environ.get("FA_PARITY_START", "2026-06-01"))
+    t2 = time.time()
+    fa["targets"]["computed_at"] = datetime.now(TZ).isoformat(timespec="seconds")
+    fa["targets"]["timing_s"] = {"refresh": round(t1 - t0), "compute": round(t2 - t1)}
+    bucket.blob(PREFIX + "parity_FA.json").upload_from_string(json.dumps(fa["parity"]), content_type="application/json")
+    bucket.blob(PREFIX + "fa_targets.json").upload_from_string(json.dumps(fa["targets"]), content_type="application/json")
+    log.info("fa_only targets bar=%s held=%s timing=%s", fa["targets"]["decided_bar"], fa["targets"]["held"], fa["targets"]["timing_s"])
+    job = os.environ.get("RECONCILE_JOB_URI")
+    if job:
+        import google.auth, google.auth.transport.requests
+        cred, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        r = google.auth.transport.requests.AuthorizedSession(cred).post(job, json={}, timeout=30)
+        log.info("fa_only reconcile trigger status=%s", r.status_code)
+    return 0
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    if os.environ.get("FA_ONLY"):
+        return fa_only()
     d = setup()
     bucket = _bucket()
     had = pull_cache(d, bucket)

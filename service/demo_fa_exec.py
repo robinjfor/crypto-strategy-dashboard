@@ -102,6 +102,10 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
     for sym in new:
         other = (same_coin_position_slot(state, demo_fa.SLOT, sym, "LONG") or opposite_position_slot(state, demo_fa.SLOT, sym, "LONG")
                  or ("futures_account" if sym in held_fut else None))
+        bad = ((((state.get("demo_candidates") or {}).get(demo_fa.SLOT) or {}).get("ordering_detail") or {}).get("universe_check") or {}).get("failed") or {}
+        if sym in bad:
+            log_event(state, "fa_entry_skip_untradable", demo_fa.SLOT, symbol=sym, why=bad[sym], bar=bar)
+            out["skipped"].append(f"{sym} order test failed"); continue
         if other:
             log_event(state, "fa_entry_skip_same_coin", demo_fa.SLOT, symbol=sym, held_by=other, bar=bar)
             out["skipped"].append(f"{sym} held by {other}"); continue
@@ -128,5 +132,12 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
             out["entries"].append(sym)
         except Exception as e:  # noqa: BLE001
             log_event(state, "fa_entry_error", demo_fa.SLOT, symbol=sym, error=str(e)[:120]); out["skipped"].append(f"{sym} error")
+    import datetime as _dt
+    try:  # residual gap vs the spec fill (open of the bar after decided_bar = decided_bar+1d 00:00 UTC = 08:00 Taipei)
+        op = _dt.datetime.fromisoformat(str(bar)).replace(tzinfo=_dt.timezone.utc) + _dt.timedelta(days=1)
+        out["lag_s"] = round((_dt.datetime.now(_dt.timezone.utc) - op).total_seconds())
+    except Exception:  # noqa: BLE001
+        pass
     ex.update(last_bar=bar, last=out)
+    ex["lags"] = (list(ex.get("lags") or []) + ([[str(bar), out["lag_s"]]] if "lag_s" in out else []))[-60:]
     return out

@@ -286,6 +286,39 @@
     return window.TRADER_API_BASE || "";
   }
 
+  // 測試網候選：三項檢查都通過才有批准按鈕（同一 PIN 流程；伺服器端再驗一次）
+  async function loadDemoPending() {
+    if (!apiBase) return;
+    var host = $("demoPending");
+    if (!host) { host = document.createElement("div"); host.id = "demoPending"; $("main").parentNode.insertBefore(host, $("main")); }
+    try {
+      var d = await getJSON(apiBase + "/status");
+      var c = (d.demo_candidates || []).filter(function (x) { return x.approvable || x.approved; });
+      if (!c.length) { host.innerHTML = ""; return; }
+      host.innerHTML = '<div class="meta-box" id="pending"><b>待審核（測試網）</b>' + c.map(function (x) {
+        return '<div>' + esc(x.name) + "（" + esc(String(x.capital_usdt)) + " USDT）：" +
+          (x.approved ? "已批准" : '<button type="button" class="btn-demo-approve" data-sid="' + esc(x.id) + '">批准</button>') + "</div>";
+      }).join("") + "</div>";
+      host.querySelectorAll(".btn-demo-approve").forEach(function (btn) {
+        btn.onclick = function () {
+          var sid = btn.getAttribute("data-sid");
+          var row = c.find(function (x) { return x.id === sid; }) || {};
+          openPinModal({
+            title: "批准 · 測試網",
+            confirmText: "批准「" + (row.name || "") + "」在測試網下單？",
+            onSubmit: function (pin, resultEl) {
+              resultEl.textContent = "處理中…";
+              postControl("/control/approve", pin, { strategy_id: sid }).then(function (r) {
+                resultEl.textContent = r.message || "已批准";
+                setTimeout(function () { closeModal(); loadDemoPending(); }, 500);
+              }).catch(function (e) { resultEl.textContent = "失敗：" + (e.message || e); });
+            }
+          });
+        };
+      });
+    } catch (e) {}
+  }
+
   async function loadApproved() {
     if (!apiBase) return;
     try {
@@ -1316,6 +1349,7 @@
         }
       } catch (eFam) { /* ignore */ }
         await loadApproved();
+        loadDemoPending();
         scores = await getJSON(SCORES_URL);
         catalog = null;
         try {

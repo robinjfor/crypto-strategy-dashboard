@@ -114,3 +114,21 @@ def test_guard_sees_executed_positions():
     sp.px = 11.0                         # spot leg drifts ~10% above perp
     acts = demo_fa_guard.run(st, sp, f)
     assert {a["symbol"] for a in acts if a["action"] == "fa_rebalance"} == {"AUSDT", "BUSDT"}
+
+
+def test_untradable_coin_skipped():
+    st, f = _state(), Fut()
+    st["demo_candidates"][demo_fa.SLOT]["ordering_detail"] = {"universe_check": {"failed": {"AUSDT": ["spot: invalid symbol"]}}}
+    r = demo_fa_exec.execute(st, Spot(), f, T1)
+    assert r["entries"] == ["BUSDT"] and "lag_s" in r and st["demo_fa_exec"]["lags"][-1][0] == "2026-11-01"
+
+
+def test_universe_check_reports_failures_per_coin():
+    class S(Spot):
+        def round_qty(self, s, q, px): return round(q, 3)
+        def test_order(self, **kw):
+            if kw["symbol"] == "CUSDT": raise RuntimeError("Invalid symbol")
+    class F(Fut):
+        def test_order(self, **kw): return {}
+    r = demo_fa.universe_check(S(), F(), {"universe": ["AUSDT", "BUSDT", "CUSDT"], "decided_bar": "d"})
+    assert r["coins"] == 3 and r["orders"] == 6 and r["ok_coins"] == 2 and list(r["failed"]) == ["CUSDT"]
