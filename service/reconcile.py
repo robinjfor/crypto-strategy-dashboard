@@ -549,6 +549,23 @@ def run_demo_gates(state0: dict) -> dict:
             log.warning("demo_gates_fail slot=%s err=%s", slot, e)
             g = {"gates_day": day, "parity_pass": False, "cloud_ordering_ok": False, "error": str(e)[:200]}
         out[slot] = g
+    try:  # demo_e5 (E-min5): parity from the shadow job; small real Demo test orders only on --force-parity, until passed
+        import demo_e5
+        prev = cands.get(demo_e5.SLOT) or {}
+        if prev.get("gates_day") == day and not FORCE_PARITY:
+            raise StopIteration
+        par = _j("parity_E5.json")
+        g = {"gates_day": day, "parity_pass": bool(par and par.get("pass")), "parity_detail": par}
+        if FORCE_PARITY and not prev.get("cloud_ordering_ok"):
+            from futures_client import FuturesDemoClient
+            oc = demo_e5.order_test(FuturesDemoClient(), {})
+            log.info("demo_e5 order_test %s", oc)
+            g.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc)
+        out[demo_e5.SLOT] = g
+    except StopIteration:
+        pass
+    except Exception as e:  # noqa: BLE001
+        log.warning("demo_gates_fail slot=demo_e5 err=%s", e)
     return out
 
 

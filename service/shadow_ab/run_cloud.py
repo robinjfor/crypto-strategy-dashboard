@@ -168,6 +168,25 @@ def main() -> int:
             log.exception("demo_e parity failed")
             bucket.blob(PREFIX + "parity_E.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
     if not os.environ.get("LEDGER_TEST_START"):
+        try:  # demo_e5 (E-min5, 5,000U): trade-by-trade parity over the full OOS history + next-open targets
+            sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+            import e5_capture, demo_e5
+            cap = e5_capture.run(demo_e5.CAPITAL, d)
+            mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
+            try:
+                import urllib.request as _u
+                info = json.loads(_u.urlopen("https://fapi.binance.com/fapi/v1/exchangeInfo", timeout=20).read())
+                mins.update({s["symbol"]: demo_e5.exchange_min(info, s["symbol"]) for s in info.get("symbols") or []})
+            except Exception as e:  # noqa: BLE001
+                log.warning("demo_e5 exchangeInfo fail %s (fallback mins)", e)
+            res = demo_e5.parity(cap, mins)
+            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
+            bucket.blob(PREFIX + "e5_targets.json").upload_from_string(json.dumps(cap["targets"]), content_type="application/json")
+            log.info("demo_e5 parity=%s", {k: res[k] for k in ("orders", "mismatches", "pass")})
+        except Exception as e:  # noqa: BLE001
+            log.exception("demo_e5 parity failed")
+            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
+    if not os.environ.get("LEDGER_TEST_START"):
         try:
             sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
             import fa_capture
