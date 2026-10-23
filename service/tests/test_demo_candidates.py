@@ -6,7 +6,8 @@ def test_disabled_and_not_approvable_by_default():
     assert len(v) == 2 and all(x["enabled"] is False and x["approvable"] is False for x in v)
 
 
-def test_approvable_needs_both_gates():
+def test_approvable_needs_all_three_gates(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", "demo_e_8020_x175")
     s = {"demo_candidates": {"demo_e_8020_x175": {"cloud_ordering_ok": True}}}
     assert not dc.view(s)[0]["approvable"]
     s["demo_candidates"]["demo_e_8020_x175"]["parity_pass"] = True
@@ -40,3 +41,13 @@ def test_demo_e_weekly_pause_only_when_enabled():
     st = {"demo_candidates": {demo_e.SLOT: {"enabled": True, "daily": [{"date": f"2026-10-{d}", "demo": 1, "ledger": 1, "dev": 0} for d in range(26, 32)]}}}
     r = demo_e.reconcile(st, 1000, 990, "2026-11-02")
     assert r["paused"] and demo_e.SLOT in st["paused_slots"]
+
+
+def test_accepted_gate_default_false(monkeypatch):
+    import demo_candidates as dc
+    st = {"demo_candidates": {"demo_funding_arb_1x": {"cloud_ordering_ok": True, "parity_pass": True}}}
+    monkeypatch.delenv("DEMO_ACCEPTED", raising=False)
+    v = {x["id"]: x for x in dc.view(st)}["demo_funding_arb_1x"]
+    assert not v["accepted"] and not v["approvable"] and v["status"] == "等待資金控管驗收"
+    monkeypatch.setenv("DEMO_ACCEPTED", "demo_funding_arb_1x")
+    assert {x["id"]: x for x in dc.view(st)}["demo_funding_arb_1x"]["approvable"]

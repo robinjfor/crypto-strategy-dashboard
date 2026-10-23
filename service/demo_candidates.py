@@ -8,6 +8,11 @@ Risk rule once enabled: daily reconcile; weekly |live − backtest| equity devia
 from __future__ import annotations
 
 WEEKLY_DEV_LIMIT = 0.005
+# Third gate: acceptance by fund control (自動交易專家). Config flag, default false for every slot.
+# Set via env DEMO_ACCEPTED="slot_id,slot_id" on the trader service; nothing in code flips it.
+import os as _os
+def accepted(slot_id: str) -> bool:
+    return slot_id in {x.strip() for x in _os.environ.get("DEMO_ACCEPTED", "").split(",") if x.strip()}
 
 CANDIDATES = [
     {"id": "demo_e_8020_x175", "name": "E：80%／20% 組合 × 1.75 槓桿", "capital_usdt": 1000.0, "venue": "幣安測試網永續",
@@ -25,9 +30,11 @@ def view(state: dict | None) -> list[dict]:
     for c in CANDIDATES:
         g = st.get(c["id"]) or {}
         ordering, parity = bool(g.get("cloud_ordering_ok")), bool(g.get("parity_pass"))
+        acc = accepted(c["id"])
         out.append({**c, "enabled": False, "cloud_ordering_ok": ordering, "parity_pass": parity,
-                    "parity_detail": g.get("parity_detail"), "ordering_detail": g.get("ordering_detail"), "approvable": ordering and parity,
-                    "status": "等待雲端下單測試與逐筆對帳" if not (ordering and parity) else "可審核"})
+                    "parity_detail": g.get("parity_detail"), "ordering_detail": g.get("ordering_detail"), "accepted": acc, "approvable": ordering and parity and acc,
+                    "status": ("等待雲端下單測試與逐筆對帳" if not (ordering and parity)
+                               else "等待資金控管驗收" if not acc else "可審核")})
     return out
 
 
