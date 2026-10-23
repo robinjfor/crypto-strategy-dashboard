@@ -566,6 +566,31 @@ def run_demo_gates(state0: dict) -> dict:
         pass
     except Exception as e:  # noqa: BLE001
         log.warning("demo_gates_fail slot=demo_e5 err=%s", e)
+    try:  # demo_r2s (R2S, 1,000U x1): parity is box-side (committed parity_R2S.json); here: real exchange mins vs the
+        # backtest ledger + small real Demo test orders (only on --force-parity, until passed). DISABLED / not approved.
+        import demo_r2s
+        prev = cands.get(demo_r2s.SLOT) or {}
+        if prev.get("gates_day") == day and not FORCE_PARITY:
+            raise StopIteration
+        _h = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shadow_ab")
+        par = json.load(open(os.path.join(_h, "parity_R2S.json")))
+        g = {"gates_day": day, "parity_pass": bool(par.get("pass")), "parity_detail": par}
+        if FORCE_PARITY and not prev.get("cloud_ordering_ok"):
+            from futures_client import FuturesDemoClient
+            fut = FuturesDemoClient(); info = fut.exchange_info()
+            led = json.load(open(os.path.join(_h, "r2s_ledger_orders.json")))["orders"]
+            mins = {s: demo_r2s.exchange_min(info, s) for s in {o[1] for o in led}}
+            g["exchange_min_divergence"] = demo_r2s.min_divergence(led, mins)
+            g["exchange_mins"] = {s: v for s, v in mins.items() if v != demo_r2s.MIN_ORDER}
+            oc = demo_r2s.order_test(fut, {})
+            log.info("demo_r2s order_test %s", json.dumps(oc, default=str))
+            log.info("demo_r2s min_divergence %s", json.dumps(g["exchange_min_divergence"], default=str))
+            g.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc)
+        out[demo_r2s.SLOT] = g
+    except StopIteration:
+        pass
+    except Exception as e:  # noqa: BLE001
+        log.warning("demo_gates_fail slot=demo_r2s err=%s", e)
     return out
 
 

@@ -1,0 +1,34 @@
+{
+ "days": 1096,
+ "ledger_orders": 685,
+ "orders": 685,
+ "signal_day_mismatches": 0,
+ "skipped_lt5": 31,
+ "full_closes": 135,
+ "mismatches": 0,
+ "first_mismatch": [],
+ "ledger_sharpe": 0.8849709322286528,
+ "pass": true,
+ "checked_at": "2026-10-23T16:02:29+00:00",
+ "min_divergence_fallback_mins": {
+  "n": 59,
+  "lt5_opens": 0,
+  "by_symbol": {
+   "ETHUSDT": 13,
+   "BTCUSDT": 46
+  },
+  "examples": [
+   "2023-11-22 ETHUSDT 19.86U<20U",
+   "2023-11-23 BTCUSDT 63.15U<100U",
+   "2023-11-24 BTCUSDT 54.46U<100U",
+   "2023-11-25 BTCUSDT 55.38U<100U",
+   "2023-11-26 BTCUSDT 54.89U<100U",
+   "2023-11-27 BTCUSDT 53.97U<100U",
+   "2023-11-30 BTCUSDT 53.92U<100U",
+   "2023-12-02 BTCUSDT 56.25U<100U",
+   "2023-12-03 BTCUSDT 28.34U<100U",
+   "2023-12-04 BTCUSDT 27.35U<100U"
+  ],
+  "blocked_total": 59
+ }
+}
