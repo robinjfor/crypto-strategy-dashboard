@@ -12,7 +12,8 @@ WEEKLY_DEV_LIMIT = 0.005
 # Set via env DEMO_ACCEPTED="slot_id,slot_id" on the trader service; nothing in code flips it.
 import os as _os
 def accepted(slot_id: str) -> bool:
-    return slot_id in {x.strip() for x in _os.environ.get("DEMO_ACCEPTED", "").split(",") if x.strip()}
+    # ';' also accepted: gcloud --set-env-vars uses ',' as its own separator
+    return slot_id in {x.strip() for x in _os.environ.get("DEMO_ACCEPTED", "").replace(";", ",").split(",") if x.strip()}
 
 CANDIDATES = [
     {"id": "demo_e_8020_x175", "name": "E：80%／20% 組合 × 1.75 槓桿", "capital_usdt": 1000.0, "venue": "幣安測試網永續",
@@ -21,6 +22,9 @@ CANDIDATES = [
     {"id": "demo_funding_arb_1x", "name": "資金費率套利：現貨多＋永續空，1 倍", "capital_usdt": 1000.0, "venue": "幣安測試網現貨＋永續",
      "spec": "funding_arb/SPEC.md＋research_1023/REPORT.md（10/23 前推再次通過），出場門檻 0、最多 10 檔；觀察倉，後半段報酬接近現金",
      "decision": "每日 08:00（台北）決策，下一根開盤兩腳同時成交"},
+    {"id": "demo_r2s_top10_3k", "name": "R2S：前 10 大幣趨勢多空（平滑＋遲滯，最小下單額）", "capital_usdt": 3000.0, "venue": "幣安測試網永續",
+     "spec": "research_regime_v2/r2s_minnot.py＋SPEC_minnot.md（逐幣交易所最小下單額＋stepSize，1 倍）",
+     "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
 ]
 
 

@@ -5,10 +5,12 @@ import demo_r2s as D
 import demo_candidates
 
 
-def test_slot_disabled_not_listed_or_accepted(monkeypatch):
+def test_slot_listed_and_accepted_via_env(monkeypatch):
     monkeypatch.delenv("DEMO_ACCEPTED", raising=False)
-    assert D.SLOT not in {c["id"] for c in demo_candidates.CANDIDATES}
+    assert D.SLOT in {c["id"] for c in demo_candidates.CANDIDATES}
     assert not demo_candidates.accepted(D.SLOT)
+    monkeypatch.setenv("DEMO_ACCEPTED", "demo_funding_arb_1x;demo_r2s_top10_3k")
+    assert demo_candidates.accepted(D.SLOT) and demo_candidates.accepted("demo_funding_arb_1x")
     st = {"demo_candidates": {D.SLOT: {"parity_pass": True, "cloud_ordering_ok": True}}}
     assert D.active(st) == (False, "未啟用")
     st["demo_candidates"][D.SLOT]["enabled"] = True

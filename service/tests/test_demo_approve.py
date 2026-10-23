@@ -52,3 +52,19 @@ def test_reconcile_keeps_enabled_only_if_approved():
     import demo_candidates
     v = demo_candidates.view({"demo_candidates": {demo_fa.SLOT: {"enabled": True}}})
     assert next(x for x in v if x["id"] == demo_fa.SLOT)["enabled"] is False
+
+
+def test_demo_approve_records_x_actor(app, monkeypatch):
+    c, store = app
+    monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
+    r = c.post("/control/approve", json={"strategy_id": demo_fa.SLOT}, headers={"X-Actor": "自動交易專家"})
+    assert r.status_code == 200
+    assert store["demo_candidates"][demo_fa.SLOT]["approved_by"] == "自動交易專家"
+    assert store["control_log"][-1]["actor"] == "自動交易專家"
+
+
+def test_demo_approve_actor_defaults_to_site(app, monkeypatch):
+    c, store = app
+    monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
+    assert c.post("/control/approve", json={"strategy_id": demo_fa.SLOT}).status_code == 200
+    assert store["control_log"][-1]["actor"] == "site"

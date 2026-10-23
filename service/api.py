@@ -2038,10 +2038,11 @@ def _approve_demo(slot_id: str):
     if not v["approvable"]:
         return jsonify({"ok": False, "error": "尚未通過三項檢查，無法批准：" + v["status"]}), 400
     at = now_iso_taipei()
+    actor = (request.headers.get("X-Actor") or "").strip()[:64] or "site"
     def mut(st):
         g = st.setdefault("demo_candidates", {}).setdefault(slot_id, {})
-        g.update({"approved": True, "enabled": True, "approved_at": at, "approved_by": "site"})
-        st["control_log"] = (list(st.get("control_log") or []) + [{"at": at, "actor": "site", "action": "demo_approve", "slot": slot_id}])[-200:]
+        g.update({"approved": True, "enabled": True, "approved_at": at, "approved_by": actor})
+        st["control_log"] = (list(st.get("control_log") or []) + [{"at": at, "actor": actor, "action": "demo_approve", "slot": slot_id}])[-200:]
         return st
     StateStore().mutate(mut)
     return jsonify({"ok": True, "message": "已批准（測試網）", "strategy_id": slot_id})
