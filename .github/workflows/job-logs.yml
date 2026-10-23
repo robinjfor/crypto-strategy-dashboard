@@ -1,0 +1,35 @@
+# Manual only. READ-ONLY: reads Cloud Run JOB app logs (e.g. crypto-trader-reconcile, crypto-shadow-ab) matching a text.
+name: job-logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      job: { description: "Cloud Run job name", required: true, default: "crypto-trader-reconcile" }
+      match: { description: "Substring to match in textPayload", required: true, default: "demo_e5" }
+      freshness: { description: "gcloud --freshness", required: false, default: "2h" }
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Read job logs (read-only)
+        env:
+          JOB: ${{ inputs.job }}
+          MATCH: ${{ inputs.match }}
+          FRESH: ${{ inputs.freshness }}
+        run: |
+          set -euo pipefail
+          gcloud logging read "resource.type=cloud_run_job AND resource.labels.job_name=${JOB} AND textPayload:\"${MATCH}\"" \
+            --project="${{ vars.GCP_PROJECT_ID }}" --freshness="${FRESH}" --limit=50 --format="value(timestamp,textPayload)"
