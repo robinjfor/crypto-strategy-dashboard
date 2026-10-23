@@ -297,8 +297,24 @@
       if (!c.length) { host.innerHTML = ""; return; }
       host.innerHTML = '<div class="meta-box" id="pending"><b>待審核（測試網）</b>' + c.map(function (x) {
         return '<div>' + esc(x.name) + "（" + esc(String(x.capital_usdt)) + " USDT）：" +
-          (x.approved ? "已批准" : '<button type="button" class="btn-demo-approve" data-sid="' + esc(x.id) + '">批准</button>') + "</div>";
+          (x.approved ? '已批准並啟用 <button type="button" class="btn-demo-revoke" data-sid="' + esc(x.id) + '">退回</button>' : '<button type="button" class="btn-demo-approve" data-sid="' + esc(x.id) + '">批准</button>') + "</div>";
       }).join("") + "</div>";
+      host.querySelectorAll(".btn-demo-revoke").forEach(function (btn) {
+        btn.onclick = function () {
+          var sid = btn.getAttribute("data-sid");
+          openPinModal({
+            title: "退回 · 測試網",
+            confirmText: "確定退回並停用此測試網策略？不再新開倉。",
+            onSubmit: function (pin, resultEl) {
+              resultEl.textContent = "處理中…";
+              postControl("/control/revoke", pin, { strategy_id: sid }).then(function (r) {
+                resultEl.textContent = r.message || "已退回";
+                setTimeout(function () { closeModal(); loadDemoPending(); }, 500);
+              }).catch(function (e) { resultEl.textContent = "失敗：" + (e.message || e); });
+            }
+          });
+        };
+      });
       host.querySelectorAll(".btn-demo-approve").forEach(function (btn) {
         btn.onclick = function () {
           var sid = btn.getAttribute("data-sid");

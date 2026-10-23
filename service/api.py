@@ -2039,7 +2039,7 @@ def _approve_demo(slot_id: str):
     at = now_iso_taipei()
     def mut(st):
         g = st.setdefault("demo_candidates", {}).setdefault(slot_id, {})
-        g.update({"approved": True, "approved_at": at, "approved_by": "site"})
+        g.update({"approved": True, "enabled": True, "approved_at": at, "approved_by": "site"})
         st["control_log"] = (list(st.get("control_log") or []) + [{"at": at, "actor": "site", "action": "demo_approve", "slot": slot_id}])[-200:]
         return st
     StateStore().mutate(mut)
@@ -2165,6 +2165,16 @@ def revoke():
     strategy_id = (body.get("strategy_id") or "").strip()
     if not strategy_id:
         return jsonify({"ok": False, "error": "缺少 strategy_id"}), 400
+    import demo_candidates as _dc
+    if strategy_id in {c["id"] for c in _dc.CANDIDATES}:
+        at = now_iso_taipei()
+        def dmut(st):
+            g = st.setdefault("demo_candidates", {}).setdefault(strategy_id, {})
+            g.update({"approved": False, "enabled": False, "revoked_at": at, "revoked_by": "site"})
+            st["control_log"] = (list(st.get("control_log") or []) + [{"at": at, "actor": "site", "action": "demo_revoke", "slot": strategy_id}])[-200:]
+            return st
+        StateStore().mutate(dmut)
+        return jsonify({"ok": True, "message": "已退回（測試網），不再新開倉", "strategy_id": strategy_id})
     result = {"had_position": False}
 
     def mut(st):

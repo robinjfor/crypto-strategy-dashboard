@@ -598,7 +598,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
             g.update(dg)
-            g["enabled"] = False  # stays disabled until Robin approves on the site
+            g["enabled"] = bool(g.get("approved") and g.get("enabled"))  # only Robin's site approval enables; unapproved forced off
         if daily is not None:
             s["asset_daily"] = daily
         if led_sum is not None:

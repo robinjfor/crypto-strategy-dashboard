@@ -23,7 +23,7 @@ def test_demo_approve_requires_all_gates_and_sets_flag_only(app, monkeypatch):
     r = c.post("/control/approve", json={"strategy_id": demo_fa.SLOT})
     assert r.status_code == 200
     g = store["demo_candidates"][demo_fa.SLOT]
-    assert g["approved"] is True and g["enabled"] is False and "approved" not in store
+    assert g["approved"] is True and g["enabled"] is True and "approved" not in store
     assert store["control_log"][-1]["action"] == "demo_approve"
 
 
@@ -32,3 +32,23 @@ def test_demo_approve_needs_pin(app, monkeypatch):
     c, store = app
     monkeypatch.setattr(api, "_check_pin", lambda: (False, "PIN 錯誤", 401))
     assert c.post("/control/approve", json={"strategy_id": demo_fa.SLOT}).status_code == 401
+
+
+def test_demo_revoke_disables(app, monkeypatch):
+    import demo_candidates
+    c, store = app
+    monkeypatch.setenv("DEMO_ACCEPTED", demo_fa.SLOT)
+    c.post("/control/approve", json={"strategy_id": demo_fa.SLOT})
+    assert next(x for x in demo_candidates.view(store) if x["id"] == demo_fa.SLOT)["enabled"] is True
+    r = c.post("/control/revoke", json={"strategy_id": demo_fa.SLOT})
+    g = store["demo_candidates"][demo_fa.SLOT]
+    assert r.status_code == 200 and g["approved"] is False and g["enabled"] is False
+    assert store["control_log"][-1]["action"] == "demo_revoke"
+
+
+def test_reconcile_keeps_enabled_only_if_approved():
+    import inspect, reconcile
+    assert 'g["enabled"] = bool(g.get("approved") and g.get("enabled"))' in inspect.getsource(reconcile)
+    import demo_candidates
+    v = demo_candidates.view({"demo_candidates": {demo_fa.SLOT: {"enabled": True}}})
+    assert next(x for x in v if x["id"] == demo_fa.SLOT)["enabled"] is False
