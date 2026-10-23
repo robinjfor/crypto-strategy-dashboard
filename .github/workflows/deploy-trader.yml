@@ -21,6 +21,14 @@ on:
         description: "After deploy, execute the read-only reconcile job once with --force-parity (daily live-vs-backtest now)"
         type: boolean
         default: false
+      run_shadow_ab_now:
+        description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
+        type: boolean
+        default: false
+      shadow_ab_test_start:
+        description: "Optional: LEDGER_TEST_START for that one shadow run (dry-run test ledgers, e.g. 2026-09-01)"
+        type: string
+        default: ""
       run_once:
         description: "After deploy, execute job once (uses TRADER_MODE)"
         type: boolean
@@ -46,6 +54,8 @@ env:
   SCHEDULER_DAILY_SOL: crypto-trader-daily-sol
   RECONCILE_JOB: crypto-trader-reconcile
   SCHEDULER_RECONCILE: crypto-trader-reconcile-15m
+  SHADOW_JOB: crypto-shadow-ab
+  SCHEDULER_SHADOW: crypto-shadow-ab-daily
   REPO_NAME: trader
   IMAGE_NAME: crypto-trader
   CORS_ORIGIN: https://robinjfor.github.io
@@ -162,6 +172,26 @@ jobs:
             --memory=512Mi \
             --cpu=1
 
+      - name: Deploy Cloud Run Job (shadow ledgers A–E, paper only, public data, no API keys)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs deploy "${SHADOW_JOB}" \
+            --project="${PROJECT}" \
+            --region="${REGION}" \
+            --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" \
+            --task-timeout=10800 \
+            --max-retries=0 \
+            --set-env-vars="GCS_BUCKET=${BUCKET}" \
+            --clear-secrets \
+            --command=python \
+            --args=-u,shadow_ab/run_cloud.py \
+            --memory=4Gi \
+            --cpu=2
+
       - name: Deploy Cloud Run Service (status/control API)
         id: svc
         env:
@@ -270,6 +300,33 @@ jobs:
               --uri="${URI}" --http-method=POST \
               --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
           fi
+
+      - name: Ensure daily shadow A–E scheduler (UTC 00:20 = Taipei 08:20)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${SHADOW_JOB}:run"
+          gcloud run jobs add-iam-policy-binding "${SHADOW_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" \
+            --role="roles/run.invoker" || true
+          VERB=create
+          if gcloud scheduler jobs describe "${SCHEDULER_SHADOW}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then VERB=update; fi
+          gcloud scheduler jobs ${VERB} http "${SCHEDULER_SHADOW}" \
+            --project="${PROJECT}" --location="${REGION}" \
+            --schedule="20 0 * * *" --time-zone="UTC" \
+            --uri="${URI}" --http-method=POST \
+            --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Start shadow A–E job once (async)
+        if: ${{ inputs.run_shadow_ab_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          EXTRA=()
+          if [ -n "${{ inputs.shadow_ab_test_start }}" ]; then EXTRA=(--update-env-vars="LEDGER_TEST_START=${{ inputs.shadow_ab_test_start }}"); fi
+          gcloud run jobs execute "${SHADOW_JOB}" --project="${PROJECT}" --region="${REGION}" "${EXTRA[@]}" --async
 
       - name: Execute reconcile once with forced parity (read-only; may slot-pause on mismatch)
         if: ${{ inputs.run_parity_now }}

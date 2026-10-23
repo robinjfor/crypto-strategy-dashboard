@@ -1345,6 +1345,7 @@ def build_status() -> dict:
         "asset_monthly": state.get("asset_monthly") or {},
         "asset_daily": state.get("asset_daily") or {},
         "guards": _guards_view(state),
+        "demo_candidates": __import__("demo_candidates").view(state),
         "market_indicators": state.get("market_indicators") or {},
         "control_meta": {k: (state.get("meta") or {}).get(k) for k in ("paused_at", "paused_by", "resumed_at")},
         "health": _health(meta, paused),
@@ -1422,6 +1423,32 @@ def _u1_live_public(state: dict, positions: list | None = None) -> dict:
         return {"error": str(e)[:200]}
 
 
+_SHADOW_AB_CACHE: dict = {"t": 0.0, "v": None}
+
+
+def _shadow_ab_public() -> dict | None:
+    """Cloud shadow ledgers A–E (job crypto-shadow-ab) from gs://.../trader/shadow_ab/latest.json; 5-min cache."""
+    if time.time() - _SHADOW_AB_CACHE["t"] < 300:
+        return _SHADOW_AB_CACHE["v"]
+    v = None
+    try:
+        bucket = os.environ.get("GCS_BUCKET")
+        if bucket:
+            from google.cloud import storage
+            b = storage.Client().bucket(bucket).blob("trader/shadow_ab/latest.json")
+            v = json.loads(b.download_as_bytes()) if b.exists() else {"note": "尚無雲端紀錄"}
+            tb = storage.Client().bucket(bucket).blob("trader/shadow_ab/test/latest.json")
+            if tb.exists():
+                t = json.loads(tb.download_as_bytes())
+                v["test"] = {"updated_at": t.get("updated_at"), "ok": t.get("ok"), "test_start": t.get("test_start"),
+                             "ledgers": {k: {"n": x.get("n"), "last": x.get("last")} for k, x in (t.get("ledgers") or {}).items()},
+                             "files": t.get("test_ledgers")}
+    except Exception as e:  # noqa: BLE001
+        v = {"error": str(e)[:200]}
+    _SHADOW_AB_CACHE.update(t=time.time(), v=v)
+    return v
+
+
 def _paper_public() -> dict:
     """Read-only U1 paper (模擬倉) view from its own GCS object — never trader state, never the books."""
     try:
@@ -1433,6 +1460,7 @@ def _paper_public() -> dict:
             out["U1_TV40"] = paper_u1_tv40.public_view(paper_u1_tv40.store().load())
         except Exception as e:  # noqa: BLE001
             out["U1_TV40"] = {"error": str(e)[:200]}
+        out["SHADOW_AB"] = _shadow_ab_public()
     except Exception as e:  # noqa: BLE001
         log.warning("paper_view_fail err=%s", e)
         out = {"U1": None, "error": str(e)[:200]}
