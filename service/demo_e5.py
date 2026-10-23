@@ -1,5 +1,5 @@
 """Demo slot E-minnot (rule-finalized E): 80% U1 tv0.40 x1.75 (BTCUSDT/ETHUSDT perps) + 20% S5 long/short x1.75,
-5,000 USDT on Binance futures Demo. DISABLED (enabled=False), NOT approved, NOT in DEMO_ACCEPTED.
+5,000 USDT on Binance futures Demo. Listed in CANDIDATES + DEMO_ACCEPTED; trades only after /control/approve (4 gates).
 Slot id kept as demo_e5_min5_x175 (state key); spec is now research_1022/shadow_AB/ledger_e_minnot.py + MINNOTIONAL.md
 (mode 2: per-symbol min notional + stepSize from spec_2026-11/min_notional.json, real Demo exchangeInfo values).
 Live still enforces the exchange MIN_NOTIONAL as a safety filter (blocked orders logged as e5_order_blocked_min);

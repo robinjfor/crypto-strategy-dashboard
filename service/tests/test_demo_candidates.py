@@ -3,7 +3,7 @@ import demo_candidates as dc
 
 def test_disabled_and_not_approvable_by_default():
     v = dc.view({})
-    assert len(v) == 2 and all(x["enabled"] is False and x["approvable"] is False for x in v)
+    assert len(v) == len(dc.CANDIDATES) and all(x["enabled"] is False and x["approvable"] is False for x in v)
 
 
 def test_approvable_needs_all_three_gates(monkeypatch):

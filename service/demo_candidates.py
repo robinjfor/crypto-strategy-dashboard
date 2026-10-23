@@ -25,6 +25,9 @@ CANDIDATES = [
     {"id": "demo_r2s_top10_3k", "name": "R2S：前 10 大幣趨勢多空（平滑＋遲滯，最小下單額）", "capital_usdt": 3000.0, "venue": "幣安測試網永續",
      "spec": "research_regime_v2/r2s_minnot.py＋SPEC_minnot.md（逐幣交易所最小下單額＋stepSize，1 倍）",
      "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
+    {"id": "demo_e5_min5_x175", "name": "E：80%／20% 組合 × 1.75 槓桿（逐幣最小下單額）", "capital_usdt": 5000.0, "venue": "幣安測試網永續",
+     "spec": "research_1022/shadow_AB/ledger_e_minnot.py＋MINNOTIONAL.md（逐幣交易所最小下單額＋stepSize，5,000U）",
+     "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
 ]
 
 

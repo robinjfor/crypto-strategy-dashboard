@@ -5,8 +5,8 @@ import demo_candidates
 
 def test_slot_not_listed_or_accepted(monkeypatch):
     monkeypatch.delenv("DEMO_ACCEPTED", raising=False)
-    assert D.SLOT not in {c["id"] for c in demo_candidates.CANDIDATES}
-    assert not demo_candidates.accepted(D.SLOT)
+    assert D.SLOT in {c["id"] for c in demo_candidates.CANDIDATES}
+    assert not demo_candidates.accepted(D.SLOT)  # only via DEMO_ACCEPTED env on the service
     st = {"demo_candidates": {D.SLOT: {"parity_pass": True, "cloud_ordering_ok": True}}}
     assert D.active(st) == (False, "未啟用")
     assert D.CAPITAL == 5000.0 and D.MIN_ORDER == 5.0
