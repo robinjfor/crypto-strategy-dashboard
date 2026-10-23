@@ -22,6 +22,21 @@ def test_u1_min_order_skip_and_full_close():
     assert uu.tolist() == [0.0, 0.0] and od[0][3] == "skip_min"
 
 
+def test_leg_minnot_rules():
+    # step truncation toward 0, then adjust < mn skipped
+    assert D.plan_leg(0.0, 0.0567, 1000.0, 50.0, 0.01, False) == (0.05, [(0.05, 50.0, "order")])
+    q, od = D.plan_leg(0.05, 0.054, 1000.0, 50.0, 0.0, False); assert q == 0.05 and od[0][2] == "skip_min"
+    # residual below mn -> full close
+    q, od = D.plan_leg(0.06, 0.005, 1000.0, 50.0, 0.0, False); assert q == 0.0 and od == [(-0.06, 60.0, "residual_close")]
+    # flip: close, open only if >= mn
+    q, od = D.plan_leg(0.06, -0.01, 1000.0, 50.0, 0.0, False); assert q == 0.0 and [k for *_, k in od] == ["close", "skip_min"]
+    q, od = D.plan_leg(0.06, -0.1, 1000.0, 50.0, 0.0, False); assert q == -0.1 and [k for *_, k in od] == ["close", "order"]
+    # target 0 -> full close regardless of size
+    q, od = D.plan_leg(0.001, 0.0, 1000.0, 50.0, 0.0, True); assert q == 0.0 and od[0][2] == "close"
+    send, blk = D.exchange_filter([{"symbol": "BTCUSDT", "delta_qty": -0.001, "notional": 1.0, "kind": "residual_close"}], {"BTCUSDT": 50.0})
+    assert not blk and send[0]["reduce_only"]
+
+
 def test_s5_buffer_and_min():
     ov = np.array([1.0, 2.0, np.nan]); u5 = np.array([0.0, 3.0, 1.0])
     ws = np.array([0.1, 0.0, 0.5]); dbs = np.array([0.0, 0.0, 0.0])
@@ -44,9 +59,11 @@ def test_exchange_filter_blocks_below_symbol_min():
 
 def test_parity_detects_mismatch_and_divergence():
     o2 = np.array([100.0, 10.0]); r = np.zeros(5)
-    uu_exp, _ = D.plan_u1([0.0, 0.0], [0.5, 0.1], 1.0, 1.0, o2, 400.0)
+    mn = np.array([50.0, 20.0]); stp = np.zeros(2)
+    uu_exp, _ = D.plan_u1([0.0, 0.0], [0.5, 0.1], 1.0, 1.0, o2, 400.0, mn, stp)
     cap = {"cols": ["BTCUSDT", "ETHUSDT"], "idx": ["d0", "d1"], "iB": 0, "iE": 1, "stats": [2], "capture_vs_jit_max_rel": 0.0,
-           "rec": [("u1", 1, r, 1.0, np.zeros(2), o2, 400.0, np.array([0.5, 0.1]), 5.0), ("u1post", 1, uu_exp, 1.0)]}
+           "mn": mn, "step": stp,
+           "rec": [("u1", 1, r, 1.0, np.zeros(2), o2, 400.0, np.array([0.5, 0.1])), ("u1post", 1, uu_exp, 1.0)]}
     p = D.parity(cap, {"BTCUSDT": 100.0, "ETHUSDT": 20.0})
     assert p["pass"] and p["mismatches"] == 0 and p["exchange_min_divergence"]["n"] == 0
     p2 = D.parity(cap, {"BTCUSDT": 1000.0, "ETHUSDT": 20.0})

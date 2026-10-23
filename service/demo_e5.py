@@ -1,10 +1,9 @@
-"""Demo slot E-min5 (rule-finalized E): 80% U1 tv0.40 x1.75 (BTCUSDT/ETHUSDT perps) + 20% S5 long/short x1.75,
+"""Demo slot E-minnot (rule-finalized E): 80% U1 tv0.40 x1.75 (BTCUSDT/ETHUSDT perps) + 20% S5 long/short x1.75,
 5,000 USDT on Binance futures Demo. DISABLED (enabled=False), NOT approved, NOT in DEMO_ACCEPTED.
-Spec: research_1022/shadow_AB/ledger_e_min5.py + E_MINORDER.md (MIN_ORDER=5U: an adjustment < 5U is not sent and
-the leg keeps its position; target 0 -> always close in full, reduce-only, even if the residual is < 5U).
-Live-only extra rule: the exchange per-symbol MIN_NOTIONAL (e.g. BTCUSDT 100U, ETHUSDT 20U) is enforced on top;
-a non-closing order below it is BLOCKED and logged (event e5_order_blocked_min). The ledger does NOT model this
-(it only uses 5U) -> see parity()["exchange_min_divergence"]; live will diverge from the backtest on those orders.
+Slot id kept as demo_e5_min5_x175 (state key); spec is now research_1022/shadow_AB/ledger_e_minnot.py + MINNOTIONAL.md
+(mode 2: per-symbol min notional + stepSize from spec_2026-11/min_notional.json, real Demo exchangeInfo values).
+Live still enforces the exchange MIN_NOTIONAL as a safety filter (blocked orders logged as e5_order_blocked_min);
+with real values in min_notional.json the ledger already skips those orders -> parity()["exchange_min_divergence"] == 0.
 The planner functions below are the decision logic; parity() checks them trade-by-trade vs the ledger capture
 (shadow_ab/e5_capture.py). Gates (state["demo_candidates"][SLOT]): cloud_ordering_ok, parity_pass, DEMO_ACCEPTED."""
 from __future__ import annotations
@@ -21,10 +20,10 @@ CAPITAL = 5000.0
 W_U1, LV, CAP, BAND, MIN_ORDER = 0.8, 1.75, 3.0, 0.25, 5.0
 U1_SYMS = ("BTCUSDT", "ETHUSDT")
 # fallback when exchangeInfo is unavailable; live always reads the real filter
-EXCHANGE_MIN_DEFAULT = {"BTCUSDT": 100.0, "ETHUSDT": 20.0}
+EXCHANGE_MIN_DEFAULT = {"BTCUSDT": 50.0, "ETHUSDT": 20.0}
 
 
-# ---------------- planner (must equal ledger_e_min5.sim rebalance rules)
+# ---------------- planner (must equal ledger_e_minnot.sim / leg rebalance rules, mode 2 = per-symbol min notional)
 def plan_lt(r: np.ndarray, m: float, lv: float = LV, cap: float = CAP) -> float:
     if len(r) >= 20:
         mu = r.mean(); sd = math.sqrt(((r - mu) ** 2).sum() / (len(r) - 1)) * math.sqrt(365)
@@ -32,36 +31,55 @@ def plan_lt(r: np.ndarray, m: float, lv: float = LV, cap: float = CAP) -> float:
     return 1.0
 
 
-def plan_u1(uu, w1, lt: float, m: float, o2, eu: float, minord: float = MIN_ORDER):
-    """Returns (new units, orders[(j, delta_units, notional, kind)]) kind: order|skip_min|close."""
+def plan_leg(u: float, nu: float, p: float, mn: float, step: float, closing: bool):
+    """Per-symbol min-notional rules (MINNOTIONAL.md): (0) truncate to step; (1) non-closing adjust < mn not sent;
+    (2) target 0 -> full reduce-only close; (3) residual < mn -> full close; (4) flip = close + open (open only if >= mn).
+    Returns (new qty, [(delta, notional, kind)]) kind: order|close|skip_min|residual_close."""
+    if step > 0:
+        nu = math.trunc(nu / step) * step
+    if closing or nu == 0.0:
+        return 0.0, ([(-u, abs(u) * p, "close")] if u != 0.0 else [])
+    if u != 0.0 and (nu > 0) != (u > 0):
+        od = [(-u, abs(u) * p, "close")]
+        if abs(nu) * p < mn:
+            return 0.0, od + [(nu, abs(nu) * p, "skip_min")]
+        return nu, od + [(nu, abs(nu) * p, "order")]
+    d = nu - u; notl = abs(d) * p
+    if notl == 0.0:
+        return u, []
+    if notl < mn:
+        return u, [(d, notl, "skip_min")]
+    if abs(nu) * p < mn:
+        return 0.0, [(-u, abs(u) * p, "residual_close")]
+    return nu, [(d, notl, "order")]
+
+
+def plan_u1(uu, w1, lt: float, m: float, o2, eu: float, mn=(50.0, 20.0), step=(0.0, 0.0)):
+    """Returns (new units, orders[(j, delta_units, notional, kind)])."""
     uu = np.array(uu, dtype=float).copy(); orders = []
     for j in range(2):
         wt = w1[j] * lt if m > 0 else 0.0
         wc = uu[j] * o2[j] / eu if eu > 0 else 0.0
         tr = (uu[j] != 0) if wt == 0 else (wc == 0 or (wt > 0) != (wc > 0) or abs(wt - wc) > BAND * abs(wt))
         if tr and eu > 0:
-            nu = wt * eu / o2[j]; d = nu - uu[j]; notl = abs(d) * o2[j]
-            if wt != 0 and notl < minord:
-                orders.append((j, d, notl, "skip_min")); continue
-            if notl > 0:
-                orders.append((j, d, notl, "close" if wt == 0 else "order"))
-            uu[j] = nu
+            q, od = plan_leg(uu[j], wt * eu / o2[j], o2[j], float(mn[j]), float(step[j]), wt == 0)
+            orders += [(j, d, n, k) for d, n, k in od]; uu[j] = q
     return uu, orders
 
 
-def plan_s5(u5, ov, ws, dbs, es: float, lv: float, mm: float, minord: float = MIN_ORDER):
+def plan_s5(u5, ov, ws, dbs, es: float, lv: float, mm: float, mn=None, step=None):
     u5 = np.array(u5, dtype=float).copy(); orders = []
+    mn = np.full(len(u5), MIN_ORDER) if mn is None else mn; step = np.zeros(len(u5)) if step is None else step
     for c in range(len(u5)):
         if np.isnan(ov[c]): continue
         tw = ws[c] * lv * mm; db = dbs[c] * lv * mm
         cw = u5[c] * ov[c] / es if es > 0 else 0.0
         tr = (abs(tw - cw) > db) or (tw == 0 and cw != 0) or (np.sign(tw) != np.sign(cw))
         if not tr: continue
-        nu = tw * es / ov[c] if tw != 0 else 0.0; d = nu - u5[c]; notl = abs(d) * ov[c]
-        if notl == 0: continue
-        if tw != 0 and notl < minord:
-            orders.append((c, d, notl, "skip_min")); continue
-        orders.append((c, d, notl, "close" if tw == 0 else "order")); u5[c] = nu
+        nu = tw * es / ov[c] if tw != 0 else 0.0
+        if nu == u5[c]: continue
+        q, od = plan_leg(u5[c], nu, ov[c], float(mn[c]), float(step[c]), tw == 0)
+        orders += [(c, d, n, k) for d, n, k in od]; u5[c] = q
     return u5, orders
 
 
@@ -84,9 +102,10 @@ def exchange_filter(orders: list[dict], mins: dict) -> tuple[list[dict], list[di
         if o["kind"] == "skip_min":
             continue
         mn = float(mins.get(o["symbol"], MIN_ORDER))
-        if o["kind"] != "close" and o["notional"] < mn:
+        full = o["kind"] in ("close", "residual_close")
+        if not full and o["notional"] < mn:
             blocked.append({**o, "min": mn}); continue
-        send.append({**o, "reduce_only": o["kind"] == "close"})
+        send.append({**o, "reduce_only": full})
     return send, blocked
 
 
@@ -107,8 +126,8 @@ def parity(cap: dict, mins: dict | None = None) -> dict:
     for r in cap["rec"]:
         t = r[0]
         if t == "u1":
-            _, i, rw, m, uu, o2, eu, w1, mo = r
-            lt = plan_lt(rw, m); got, od = plan_u1(uu, w1, lt, m, o2, eu, mo); pend = ("u1", i, uu, got, od, lt, [cols[iB], cols[iE]])
+            _, i, rw, m, uu, o2, eu, w1 = r
+            lt = plan_lt(rw, m); got, od = plan_u1(uu, w1, lt, m, o2, eu, cap["mn"][[iB, iE]], cap["step"][[iB, iE]]); pend = ("u1", i, uu, got, od, lt, [cols[iB], cols[iE]])
         elif t == "u1post":
             _, i, exp, lt_exp = r
             _, i0, pre, got, od, lt, syms = pend
@@ -117,8 +136,8 @@ def parity(cap: dict, mins: dict | None = None) -> dict:
                 bad += 1; first_bad = first_bad or (idx[i], "u1")
             orders, skips, closes = _acc(od, syms, pre, exp, orders, skips, closes, mins, div, idx[i])
         elif t == "s5":
-            _, i, u5, es, k, mm, ov, ws, dbs, lv, mo = r
-            got, od = plan_s5(u5, ov, ws, dbs, es, lv, mm, mo); pend = ("s5", i, u5, got, od, None, cols)
+            _, i, u5, es, k, mm, ov, ws, dbs, lv = r
+            got, od = plan_s5(u5, ov, ws, dbs, es, lv, mm, cap["mn"], cap["step"]); pend = ("s5", i, u5, got, od, None, cols)
         elif t == "s5post":
             _, i, exp = r
             _, i0, pre, got, od, _, syms = pend
@@ -126,7 +145,7 @@ def parity(cap: dict, mins: dict | None = None) -> dict:
                 bad += 1; first_bad = first_bad or (idx[i], "s5")
             orders, skips, closes = _acc(od, syms, pre, exp, orders, skips, closes, mins, div, idx[i])
     led_orders = int(cap["stats"][0])
-    return {"days": days, "orders": orders, "ledger_orders": led_orders, "skipped_lt5": skips, "full_closes": closes,
+    return {"days": days, "orders": orders, "ledger_orders": led_orders, "skipped_lt_min": skips, "full_closes": closes,
             "mismatches": bad, "first_mismatch": first_bad, "capture_vs_jit_max_rel": cap.get("capture_vs_jit_max_rel"),
             "exchange_min_divergence": div,
             "pass": days > 0 and bad == 0 and orders == led_orders and (cap.get("capture_vs_jit_max_rel") or 0) < 1e-9,
@@ -138,7 +157,7 @@ def _acc(od, syms, pre, exp, orders, skips, closes, mins, div, day):
         if kind == "skip_min":
             skips += 1; continue
         orders += 1
-        if kind == "close":
+        if kind in ("close", "residual_close"):
             closes += 1; continue
         mn = float(mins.get(syms[c], MIN_ORDER))
         if notl < mn:
@@ -149,16 +168,19 @@ def _acc(od, syms, pre, exp, orders, skips, closes, mins, div, day):
 
 
 # ---------------- live order plan from targets + real book (used once enabled)
-def plan_live(targets: dict, book: dict, prices: dict, equity: float, m: float = 1.0, lt: float = 1.0) -> list[dict]:
+def plan_live(targets: dict, book: dict, prices: dict, equity: float, m: float = 1.0, lt: float = 1.0,
+              mins: dict | None = None, steps: dict | None = None) -> list[dict]:
+    mins = {**EXCHANGE_MIN_DEFAULT, **(mins or {})}; steps = steps or {}
+    _mn = lambda ss: np.array([float(mins.get(x, MIN_ORDER)) for x in ss]); _st = lambda ss: np.array([float(steps.get(x, 0.0)) for x in ss])
     cols = list(targets.get("cols") or [])
     eu, es = W_U1 * equity, (1 - W_U1) * equity
     uu = np.array([float(book.get(s, 0.0)) for s in U1_SYMS]); o2 = np.array([float(prices.get(s) or np.nan) for s in U1_SYMS])
-    _, od1 = plan_u1(uu, targets["w1"], lt, m, o2, eu)
+    _, od1 = plan_u1(uu, targets["w1"], lt, m, o2, eu, _mn(U1_SYMS), _st(U1_SYMS))
     out = [{"symbol": U1_SYMS[j], "delta_qty": d, "notional": n, "kind": k, "sleeve": "u1"} for j, d, n, k in od1]
     syms = sorted(set(targets.get("ws") or {}) | {s for s in book if s not in U1_SYMS})
     u5 = np.array([float(book.get(s, 0.0)) for s in syms]); ov = np.array([float(prices.get(s) or np.nan) for s in syms])
     ws = np.array([float((targets.get("ws") or {}).get(s, 0.0)) for s in syms]); dbs = np.array([float((targets.get("dbs") or {}).get(s, 0.0)) for s in syms])
-    _, od5 = plan_s5(u5, ov, ws, dbs, es, LV, m)
+    _, od5 = plan_s5(u5, ov, ws, dbs, es, LV, m, _mn(syms), _st(syms))
     out += [{"symbol": syms[c], "delta_qty": d, "notional": n, "kind": k, "sleeve": "s5"} for c, d, n, k in od5]
     _ = cols
     return out

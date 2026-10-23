@@ -136,6 +136,28 @@ def main() -> int:
         return fa_only()
     d = setup()
     bucket = _bucket()
+    try:  # Demo futures + spot exchangeInfo min notional (public endpoints) for spec_2026-11/min_notional.json
+        import urllib.request as _u, datetime as _dt
+        mn = {"source": {"futures": "https://demo-fapi.binance.com/fapi/v1/exchangeInfo",
+                         "spot": "https://demo-api.binance.com/api/v3/exchangeInfo"},
+              "date": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"), "futures": {}, "spot": {}}
+        for k, u in mn["source"].items():
+            try:
+                inf = json.loads(_u.urlopen(u, timeout=30).read())
+                mn[k + "_step"] = {}
+                for s in inf.get("symbols") or []:
+                    for f in s.get("filters") or []:
+                        if f.get("filterType") in ("MIN_NOTIONAL", "NOTIONAL"):
+                            v = f.get("notional") or f.get("minNotional")
+                            if v is not None:
+                                mn[k][s["symbol"]] = float(v)
+                        if f.get("filterType") in ("LOT_SIZE", "MARKET_LOT_SIZE") and f.get("stepSize"):
+                            mn[k + "_step"][s["symbol"]] = max(float(f["stepSize"]), mn[k + "_step"].get(s["symbol"], 0.0))
+            except Exception as e:  # noqa: BLE001
+                mn[k + "_error"] = str(e)[:200]
+        bucket.blob(PREFIX + "min_notional.json").upload_from_string(json.dumps(mn), content_type="application/json")
+    except Exception:  # noqa: BLE001
+        log.exception("min_notional fetch failed")
     had = pull_cache(d, bucket)
     log.info("shadow_ab cache=%s", had)
     ok, err = True, None
@@ -182,26 +204,6 @@ def main() -> int:
                     os.environ.pop("SPEC_DATA_DIR", None)
                 else:
                     os.environ["SPEC_DATA_DIR"] = prev
-            try:  # Demo futures + spot exchangeInfo min notional (public endpoints) for spec_2026-11/min_notional.json
-                import urllib.request as _u, datetime as _dt
-                mn = {"source": {"futures": "https://demo-fapi.binance.com/fapi/v1/exchangeInfo",
-                                 "spot": "https://demo-api.binance.com/api/v3/exchangeInfo"},
-                      "date": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"), "futures": {}, "spot": {}}
-                for k, u in mn["source"].items():
-                    try:
-                        inf = json.loads(_u.urlopen(u, timeout=30).read())
-                        for s in inf.get("symbols") or []:
-                            for f in s.get("filters") or []:
-                                if f.get("filterType") in ("MIN_NOTIONAL", "NOTIONAL"):
-                                    v = f.get("notional") or f.get("minNotional")
-                                    if v is not None:
-                                        mn[k][s["symbol"]] = float(v)
-                    except Exception as e:  # noqa: BLE001
-                        mn[k + "_error"] = str(e)[:200]
-                mn["e5_cols"] = list(cap["cols"])
-                bucket.blob(PREFIX + "min_notional.json").upload_from_string(json.dumps(mn), content_type="application/json")
-            except Exception:  # noqa: BLE001
-                log.exception("min_notional fetch failed")
             mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
             try:
                 import urllib.request as _u
