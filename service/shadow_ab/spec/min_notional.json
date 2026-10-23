@@ -1,8 +1,6721 @@
 {
- "_note": "Per-symbol Binance USDT-M min notional (USDT) and stepSize (qty). Defaults are placeholders; engineers: overwrite with real values from fapi /exchangeInfo (MIN_NOTIONAL.notional, LOT_SIZE/MARKET_LOT_SIZE.stepSize). step_size 0 = not applied. Override path via env MIN_NOTIONAL_JSON.",
- "default": {"min_notional": 5.0, "step_size": 0.0},
+ "_note": "Per-symbol Binance USDT-M min notional (USDT) and stepSize (qty). Real values from Binance Demo exchangeInfo, fetched on a Cloud Run run (crypto-shadow-ab). min_notional = MIN_NOTIONAL.notional; step_size = max(LOT_SIZE, MARKET_LOT_SIZE).stepSize. Symbols not listed on Demo futures (delisted) fall back to default. Override path via env MIN_NOTIONAL_JSON.",
+ "source": {
+  "futures": "https://demo-fapi.binance.com/fapi/v1/exchangeInfo",
+  "spot": "https://demo-api.binance.com/api/v3/exchangeInfo"
+ },
+ "date": "2026-10-23T16:53:54+00:00",
+ "date_taipei": "2026-10-24T00:53:54+08:00",
+ "default": {
+  "min_notional": 5.0,
+  "step_size": 0.0
+ },
  "symbols": {
-  "BTCUSDT": {"min_notional": 50.0, "step_size": 0.0},
-  "ETHUSDT": {"min_notional": 20.0, "step_size": 0.0}
+  "0GUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000000BOBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000000MOGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "1000BONKUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000BONKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000CATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000CHEEMSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000FLOKIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000LUNCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000PEPEUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000PEPEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000RATSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000SATSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000SHIBUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000SHIBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000WHYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000XECUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1000XUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1INCHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "1MBABYDOGEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "2ZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "42USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "4USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "A2ZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AAVEUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AAVEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ABCCCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ABCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ACEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ACHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ACTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ACUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ACXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ADAUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ADAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AERGOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AEROUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AEVOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AGIXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AGLDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AGTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AI16ZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AIOTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AIOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AIXBTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AKEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AKTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ALCHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ALGOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ALICEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ALLOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ALLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ALPACAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ALPHAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ALPINEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ALTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AMBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AMZNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ANIMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ANKRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ANTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "APEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "API3USDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "APRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "APTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ARBUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ARBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ARCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ARIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ARKMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ARKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 3.0
+  },
+  "ARPAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ARUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ASRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ASTERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ASTRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ATAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ATHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ATOMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AUCTIONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "AUDIOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AVAAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AVAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AVAXUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "AVAXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AVNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AWEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AXLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "AXSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "AZTECUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "B2USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "B3USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BABYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BADGERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BAKEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BANANAS31USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BANANAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BANDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BANKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BANUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BARDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BASUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BCHUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BCHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BDXNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BEAMXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BEATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BELUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BERAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BICOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BIDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BIGTIMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BIOUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BIOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BIRBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BLESSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BLUAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BLUEBIRDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BLURUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BMNRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "BMTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BNBUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "BNBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "BNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BNXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BOBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BOMEUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BOMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BONDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BRETTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BREVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BROCCOLI714USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BROCCOLIF3BUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BSBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BSBUSDT_260618": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BSBUSDT_260625": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BSVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BSWUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BTCDOMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "BTCU": {
+   "min_notional": 5.0,
+   "step_size": 0.0001
+  },
+  "BTCUSD1": {
+   "min_notional": 50.0,
+   "step_size": 0.0001
+  },
+  "BTCUSDC": {
+   "min_notional": 100.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT": {
+   "min_notional": 50.0,
+   "step_size": 0.0001
+  },
+  "BTCUSDT_250627": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_250926": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_251226": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_260327": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_260626": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_260925": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_261225": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTCUSDT_270326": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "BTRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BULLAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "BUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "C98USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CAKEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CARVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CATIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CELOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "CELRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CETUSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CFXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CGPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CHESSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CHILLGUYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CHRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CHZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CKBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CLANKERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "CLOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "COLLECTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COMBOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "COMMONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COMPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "COOKIEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COPPERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "COSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COTIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "COWUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CRCLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "CROSSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CRVUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "CRVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "CSOPSAMSUNG2LUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "CTKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CTSIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CUDISUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CVXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "CYBERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "CYSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DAMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DARUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "DASHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "DEEPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DEFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "DEGENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DEGOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "DENTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DEXEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "DFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DGBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DISUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "DMCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DODOXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOGEUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOGEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOGSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOLOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOODUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DOTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "DRIFTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DUSKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "DYDXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "DYMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EDENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "EDGEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "EDUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "EGLDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EIGENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ELSAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ENAUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ENAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ENJUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ENSOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ENSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EOSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EPICUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ERAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ESPORTSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ESPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ETCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ETHBTC": {
+   "min_notional": 0.001,
+   "step_size": 0.01
+  },
+  "ETHFIUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ETHFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ETHU": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSD1": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDC": {
+   "min_notional": 20.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT": {
+   "min_notional": 20.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_250627": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_250926": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_251226": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_260327": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_260626": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_260925": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_261225": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHUSDT_270326": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ETHWUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "EULUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EVAAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "EWJUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "FAHOODUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "FAKEKR000660USDT": {
+   "min_notional": 5.0,
+   "step_size": 1e-06
+  },
+  "FARTCOINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FETUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FHEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FIDAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FIGHTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FILUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FILUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FIOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FISUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FLMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FLOCKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FLOWUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FLUIDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FLUXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FOGOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FOLKSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FOOTBALLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "FORMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FORTHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "FRAXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FTMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FUNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "FXSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "GAIBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GALAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GASUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "GHSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GIGGLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "GLMRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GLMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GMTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GMXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "GOATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GOOGLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "GOOGLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "GPSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GRASSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "GRIFFAINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GRTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GTCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "GUAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GUNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "GWEIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HAEDALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HANAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HBARUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HBARUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HEIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "HEMIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HFTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HIFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HIGHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "HIPPOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HIVEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HK0700USDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "HK1810USDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "HMSTRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HOLOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HOMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HOODUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "HOOKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "HOTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HUMAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HYPERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "HYPEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ICNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ICXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IDEXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IDOL": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IDOLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ILVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "IMXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "INITUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "INJUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "INTCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "INUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "INXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IOSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IOTAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "IOTXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "IOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "IPUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "IPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "IRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JASMYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JCTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JELLYJELLYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JOEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JTOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "JUPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KAIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KAITOUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "KAITOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "KASUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KAVAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "KDAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KERNELUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KEYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KGENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KITEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KLAYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "KMNOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KNCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KOMAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "KORUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "KSMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LABUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LAYERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LDOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LEVERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LIGHTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LINAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LINEAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LINKUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "LINKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "LISTAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LITUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LOKAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LOOMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LQTYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LRCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LSKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LTCUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "LTCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "LUMIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "LUNA2USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "LYNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MAGICUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "MAGMAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MANAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MANTAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "MANTRAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MASKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MAVIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MAVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MBLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MBOXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MDTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MEGAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MELANIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MEMEFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MEMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MERLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "METAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "METISUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "METUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "MEWUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MILKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MINAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MINIMAXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MIRAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MITOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MKRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "MLNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MMTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MOCAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MOODENGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MORPHOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "MOVEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MOVRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MSTRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MTLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MUBARAKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MVLLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "MYROUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "MYXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NAORISUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NEARUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NEARUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NEIROETHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NEIROUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NEOUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "NEOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "NEWTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NFPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "NIGHTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NILUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "NKNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NMRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "NOMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NOTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NTRNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NULSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "NVDAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "NXPCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "OBOLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "OCEANUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "OGNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "OGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "OLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "OMGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "OMNIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "OMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ONDOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ONEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ONGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ONTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "OPENAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "OPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ORBSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ORCAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ORDERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ORDIUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ORDIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "OXTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PARTIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PAXGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "PAYPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "PENDLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PENGUUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PENGUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PEOPLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PERPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "PHAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PHBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PIEVERSEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PIPPINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PIXELUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PLAYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PLTRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "PLUMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PNUTUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PNUTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "POLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "POLYXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PONKEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "POPCATUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PORT3USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PORTALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "POWERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "POWRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PROMPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PROMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "PROVEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "PTBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PUFFERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PUMPBTCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PUMPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PUNDIXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "PYTHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "QNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "QNTXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "QQQUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "QTUMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "QUICKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "QUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RADUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RAREUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RAVEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RAYSOLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "RDNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RECALLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "REDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "REEFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "REIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RENDERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "RENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RESOLVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "REZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RIFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RIVERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "RLCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ROBOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RONINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ROSEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RPLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "RSRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RUNEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RVNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "RVVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SAFEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SAGAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SAHARAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SAMSUNGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SANDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SANTOSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SAPIENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SCRTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SCRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SEIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SENTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SFPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SHELLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SIGNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SIRENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SKATEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SKHYNIXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SKLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SKRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SKYAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SKYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SLERFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SLPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SNTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SNXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SOLUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SOLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SOLVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SOMIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SONICUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SOONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SOPHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SOXLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SOXSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SPACEFAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SPACEFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SPACEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPCXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPELLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPORTFUNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SPYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "SQDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SSVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "STABLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STBLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STEEMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STMXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STORJUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STRAXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "STRKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "STXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SUIUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SUIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SUNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SUPERUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SUSHIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SWARMSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SWELLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SXPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "SXTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SYNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SYRUPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "SYSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TACUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TAGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TAIKOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TAKEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TANSSIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TAOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "TAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TENCENTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "THETAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "THEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "TIAUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TNSRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "TOKENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TOMOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TONUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "TOSHIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TOWNSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRADOORUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "TREEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRIAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TROYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRUMPUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "TRUMPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "TRUSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRUTHUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TRXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TSLAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "TSTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TURBOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TURTLEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "TUTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "TWTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "UAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "UBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "UMAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "UNFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "UNIUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "UNIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "USDCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "USELESSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "USTCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "USUALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "USUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "UXLINKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VANAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "VANRYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VELODROMEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VELVETUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VETUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VFYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VICUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VIDTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VINEUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VIRTUALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "VOXELUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VTHOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "VVVUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "WALUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WAVESUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "WAXPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WCTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WETUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WIFUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "WIFUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "WLDUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "WLDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WLFIUSDC": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WLFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WOOUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "WUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "XAGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "XAIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XANUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XAUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "XCNUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XEMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XLMUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XMRUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "XNYUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XPDUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "XPINUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XPLUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XPTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "XRPUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "XRPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "XTZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "XVGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "XVSUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "XYZUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "YALAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "YBUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "YFIUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "YGGUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZAMAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZBTUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZECUSDC": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ZECUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.001
+  },
+  "ZENUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ZEREBROUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZETAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZHIPUUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.01
+  },
+  "ZILUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZKCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZKJUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ZKPUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZKUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZORAUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZRCUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "ZROUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "ZRXUSDT": {
+   "min_notional": 5.0,
+   "step_size": 0.1
+  },
+  "\u54c8\u57fa\u7c73USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "\u5e01\u5b89\u4eba\u751fUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "\u6211\u8e0f\u9a6c\u6765\u4e86USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "\u6d4b\u8bd5\u6d4b\u8bd5USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "\u725b\u6765USDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  },
+  "\u9f99\u867eUSDT": {
+   "min_notional": 5.0,
+   "step_size": 1.0
+  }
+ },
+ "spot_min_notional": {
+  "0GBNB": 0.01,
+  "0GFDUSD": 5.0,
+  "0GTRY": 10.0,
+  "0GUSDC": 5.0,
+  "0GUSDT": 5.0,
+  "1000CATBNB": 0.01,
+  "1000CATFDUSD": 1.0,
+  "1000CATTRY": 10.0,
+  "1000CATUSDC": 1.0,
+  "1000CATUSDT": 1.0,
+  "1000CHEEMSUSDC": 1.0,
+  "1000CHEEMSUSDT": 1.0,
+  "1000SATSFDUSD": 1.0,
+  "1000SATSTRY": 10.0,
+  "1000SATSUSDC": 1.0,
+  "1000SATSUSDT": 1.0,
+  "1INCHBTC": 0.0001,
+  "1INCHBUSD": 10.0,
+  "1INCHDOWNUSDT": 10.0,
+  "1INCHUPUSDT": 10.0,
+  "1INCHUSDC": 5.0,
+  "1INCHUSDT": 5.0,
+  "1MBABYDOGEFDUSD": 1.0,
+  "1MBABYDOGETRY": 10.0,
+  "1MBABYDOGEUSDC": 1.0,
+  "1MBABYDOGEUSDT": 1.0,
+  "2ZBNB": 0.01,
+  "2ZFDUSD": 5.0,
+  "2ZTRY": 10.0,
+  "2ZUSDC": 5.0,
+  "2ZUSDT": 5.0,
+  "A2ZUSDC": 5.0,
+  "A2ZUSDT": 5.0,
+  "AAOIBUSDT": 5.0,
+  "AAPLBUSDT": 5.0,
+  "AAVEBKRW": 1000.0,
+  "AAVEBNB": 0.01,
+  "AAVEBRL": 10.0,
+  "AAVEBTC": 0.0001,
+  "AAVEBUSD": 5.0,
+  "AAVEDOWNUSDT": 10.0,
+  "AAVEETH": 0.001,
+  "AAVEFDUSD": 5.0,
+  "AAVETRY": 10.0,
+  "AAVEU": 5.0,
+  "AAVEUPUSDT": 10.0,
+  "AAVEUSDC": 5.0,
+  "AAVEUSDT": 5.0,
+  "ABTC": 0.0001,
+  "ACABTC": 0.0001,
+  "ACABUSD": 10.0,
+  "ACATRY": 10.0,
+  "ACAUSDT": 5.0,
+  "ACEBNB": 0.01,
+  "ACEBTC": 0.0001,
+  "ACEFDUSD": 5.0,
+  "ACETRY": 10.0,
+  "ACEUSDC": 5.0,
+  "ACEUSDT": 5.0,
+  "ACHBTC": 0.0001,
+  "ACHBUSD": 10.0,
+  "ACHTRY": 10.0,
+  "ACHUSDC": 5.0,
+  "ACHUSDT": 5.0,
+  "ACMBTC": 0.0001,
+  "ACMBUSD": 10.0,
+  "ACMTRY": 10.0,
+  "ACMUSDT": 5.0,
+  "ACTBRL": 10.0,
+  "ACTEUR": 1.0,
+  "ACTFDUSD": 1.0,
+  "ACTTRY": 10.0,
+  "ACTUSDC": 1.0,
+  "ACTUSDT": 1.0,
+  "ACXFDUSD": 5.0,
+  "ACXTRY": 10.0,
+  "ACXUSDC": 5.0,
+  "ACXUSDT": 5.0,
+  "ADAAUD": 5.0,
+  "ADABIDR": 20000.0,
+  "ADABKRW": 1000.0,
+  "ADABNB": 0.01,
+  "ADABRL": 10.0,
+  "ADABTC": 0.0001,
+  "ADABUSD": 5.0,
+  "ADADOWNUSDT": 10.0,
+  "ADAETH": 0.001,
+  "ADAEUR": 5.0,
+  "ADAFDUSD": 5.0,
+  "ADAGBP": 5.0,
+  "ADAIDR": 20000.0,
+  "ADAJPY": 100.0,
+  "ADAPAX": 10.0,
+  "ADARUB": 100.0,
+  "ADATRY": 10.0,
+  "ADATUSD": 5.0,
+  "ADAU": 5.0,
+  "ADAUPUSDT": 10.0,
+  "ADAUSD1": 5.0,
+  "ADAUSDC": 5.0,
+  "ADAUSDT": 5.0,
+  "ADBEBUSDT": 5.0,
+  "ADXBNB": 0.05,
+  "ADXBTC": 0.0001,
+  "ADXBUSD": 10.0,
+  "ADXETH": 0.001,
+  "ADXUSDT": 5.0,
+  "AEBNB": 0.05,
+  "AEBTC": 0.0001,
+  "AEETH": 0.005,
+  "AERGOBTC": 0.0001,
+  "AERGOBUSD": 10.0,
+  "AERGOUSDT": 5.0,
+  "AEROTRY": 10.0,
+  "AEROUSDC": 5.0,
+  "AEROUSDT": 5.0,
+  "AETH": 0.001,
+  "AEURUSDT": 5.0,
+  "AEVOBNB": 0.01,
+  "AEVOBTC": 0.0001,
+  "AEVOFDUSD": 5.0,
+  "AEVOTRY": 10.0,
+  "AEVOUSDC": 5.0,
+  "AEVOUSDT": 5.0,
+  "AFDUSD": 5.0,
+  "AGIBNB": 0.05,
+  "AGIBTC": 0.0001,
+  "AGIETH": 0.005,
+  "AGIXBTC": 0.0001,
+  "AGIXBUSD": 10.0,
+  "AGIXFDUSD": 5.0,
+  "AGIXTRY": 10.0,
+  "AGIXUSDT": 5.0,
+  "AGLDBNB": 0.05,
+  "AGLDBTC": 0.0001,
+  "AGLDBUSD": 10.0,
+  "AGLDUSDT": 5.0,
+  "AGPUBUSDT": 5.0,
+  "AIBNB": 0.01,
+  "AIBTC": 0.0001,
+  "AIFDUSD": 5.0,
+  "AIGENSYNTRY": 10.0,
+  "AIGENSYNUSDC": 5.0,
+  "AIGENSYNUSDT": 5.0,
+  "AIONBNB": 0.05,
+  "AIONBTC": 0.0001,
+  "AIONBUSD": 10.0,
+  "AIONETH": 0.005,
+  "AIONUSDT": 10.0,
+  "AITRY": 10.0,
+  "AITUSD": 5.0,
+  "AIUSDT": 5.0,
+  "AIXBTTRY": 10.0,
+  "AIXBTUSDC": 5.0,
+  "AIXBTUSDT": 5.0,
+  "AKROBTC": 0.0001,
+  "AKROBUSD": 10.0,
+  "AKROUSDT": 1.0,
+  "ALABBUSDT": 5.0,
+  "ALCXBTC": 0.0001,
+  "ALCXBUSD": 10.0,
+  "ALCXUSDT": 5.0,
+  "ALGOBIDR": 20000.0,
+  "ALGOBNB": 0.01,
+  "ALGOBTC": 0.0001,
+  "ALGOBUSD": 5.0,
+  "ALGOETH": 0.001,
+  "ALGOFDUSD": 5.0,
+  "ALGOPAX": 10.0,
+  "ALGORUB": 100.0,
+  "ALGOTRY": 10.0,
+  "ALGOTUSD": 10.0,
+  "ALGOUSDC": 5.0,
+  "ALGOUSDT": 5.0,
+  "ALICEBIDR": 20000.0,
+  "ALICEBNB": 0.05,
+  "ALICEBTC": 0.0001,
+  "ALICEBUSD": 10.0,
+  "ALICETRY": 10.0,
+  "ALICEUSDT": 5.0,
+  "ALLOBNB": 0.01,
+  "ALLOTRY": 10.0,
+  "ALLOUSDC": 5.0,
+  "ALLOUSDT": 5.0,
+  "ALPACABNB": 0.05,
+  "ALPACABTC": 0.0001,
+  "ALPACABUSD": 10.0,
+  "ALPACAUSDT": 5.0,
+  "ALPHABNB": 0.05,
+  "ALPHABTC": 0.0001,
+  "ALPHABUSD": 10.0,
+  "ALPHAUSDT": 5.0,
+  "ALPINEBTC": 0.0001,
+  "ALPINEBUSD": 10.0,
+  "ALPINEEUR": 5.0,
+  "ALPINETRY": 10.0,
+  "ALPINEUSDT": 5.0,
+  "ALTBNB": 0.01,
+  "ALTBTC": 0.0001,
+  "ALTFDUSD": 5.0,
+  "ALTTRY": 10.0,
+  "ALTUSDC": 5.0,
+  "ALTUSDT": 5.0,
+  "AMATBUSDT": 5.0,
+  "AMBBNB": 0.05,
+  "AMBBTC": 0.0001,
+  "AMBBUSD": 10.0,
+  "AMBETH": 0.005,
+  "AMBUSDT": 5.0,
+  "AMCBUSDT": 5.0,
+  "AMDBUSDT": 5.0,
+  "AMPBNB": 0.05,
+  "AMPBTC": 0.0001,
+  "AMPBUSD": 10.0,
+  "AMPTRY": 10.0,
+  "AMPUSDT": 5.0,
+  "AMZNBUSDT": 5.0,
+  "ANCBNB": 0.05,
+  "ANCBTC": 0.0001,
+  "ANCBUSD": 10.0,
+  "ANCUSDT": 10.0,
+  "ANIMEBNB": 0.01,
+  "ANIMEFDUSD": 5.0,
+  "ANIMETRY": 10.0,
+  "ANIMEUSDC": 5.0,
+  "ANIMEUSDT": 5.0,
+  "ANKRBNB": 0.01,
+  "ANKRBTC": 0.0001,
+  "ANKRBUSD": 10.0,
+  "ANKRPAX": 10.0,
+  "ANKRTRY": 10.0,
+  "ANKRTUSD": 10.0,
+  "ANKRUSDC": 10.0,
+  "ANKRUSDT": 5.0,
+  "ANTBNB": 0.01,
+  "ANTBTC": 0.0001,
+  "ANTBUSD": 10.0,
+  "ANTUSDT": 5.0,
+  "ANYBTC": 0.0001,
+  "ANYBUSD": 10.0,
+  "ANYUSDT": 10.0,
+  "APEAUD": 5.0,
+  "APEBNB": 0.01,
+  "APEBRL": 10.0,
+  "APEBTC": 0.0001,
+  "APEBUSD": 5.0,
+  "APEETH": 0.001,
+  "APEEUR": 5.0,
+  "APEFDUSD": 5.0,
+  "APEGBP": 10.0,
+  "APETRY": 10.0,
+  "APEUSDC": 5.0,
+  "APEUSDT": 5.0,
+  "API3BNB": 0.05,
+  "API3BTC": 0.0001,
+  "API3BUSD": 10.0,
+  "API3TRY": 10.0,
+  "API3USDC": 5.0,
+  "API3USDT": 5.0,
+  "APPCBNB": 0.05,
+  "APPCBTC": 0.0001,
+  "APPCETH": 0.005,
+  "APTBRL": 10.0,
+  "APTBTC": 0.0001,
+  "APTBUSD": 10.0,
+  "APTETH": 0.001,
+  "APTEUR": 5.0,
+  "APTFDUSD": 5.0,
+  "APTJPY": 100.0,
+  "APTTRY": 10.0,
+  "APTU": 5.0,
+  "APTUSDC": 5.0,
+  "APTUSDT": 5.0,
+  "ARBBTC": 0.0001,
+  "ARBETH": 0.001,
+  "ARBEUR": 5.0,
+  "ARBFDUSD": 5.0,
+  "ARBIDR": 20000.0,
+  "ARBNB": 0.05,
+  "ARBRUB": 100.0,
+  "ARBTC": 0.0001,
+  "ARBTRY": 10.0,
+  "ARBTUSD": 5.0,
+  "ARBU": 5.0,
+  "ARBUSD": 10.0,
+  "ARBUSDC": 5.0,
+  "ARBUSDT": 5.0,
+  "ARDRBNB": 0.05,
+  "ARDRBTC": 0.0001,
+  "ARDRETH": 0.005,
+  "ARDRUSDT": 5.0,
+  "ARFDUSD": 5.0,
+  "ARKBTC": 0.0001,
+  "ARKBUSD": 10.0,
+  "ARKETH": 0.005,
+  "ARKMBNB": 0.01,
+  "ARKMBTC": 0.0001,
+  "ARKMFDUSD": 5.0,
+  "ARKMRUB": 100.0,
+  "ARKMTRY": 10.0,
+  "ARKMTUSD": 5.0,
+  "ARKMUSDC": 5.0,
+  "ARKMUSDT": 5.0,
+  "ARKTRY": 10.0,
+  "ARKUSDT": 5.0,
+  "ARMBUSDT": 5.0,
+  "ARNBTC": 0.0001,
+  "ARNETH": 0.005,
+  "ARPABNB": 0.01,
+  "ARPABTC": 0.0001,
+  "ARPABUSD": 10.0,
+  "ARPAETH": 0.001,
+  "ARPARUB": 100.0,
+  "ARPATRY": 10.0,
+  "ARPAUSDT": 5.0,
+  "ARTRY": 10.0,
+  "ARUSDC": 5.0,
+  "ARUSDT": 5.0,
+  "ASMLBUSDT": 5.0,
+  "ASRBTC": 0.0001,
+  "ASRBUSD": 10.0,
+  "ASRTRY": 10.0,
+  "ASRUSDT": 5.0,
+  "ASTBTC": 0.0001,
+  "ASTERIDR": 20000.0,
+  "ASTERTHB": 100.0,
+  "ASTERTRY": 10.0,
+  "ASTERU": 5.0,
+  "ASTERUSD1": 5.0,
+  "ASTERUSDC": 5.0,
+  "ASTERUSDT": 5.0,
+  "ASTETH": 0.005,
+  "ASTRBTC": 0.0001,
+  "ASTRBUSD": 10.0,
+  "ASTRETH": 0.005,
+  "ASTRUSDT": 5.0,
+  "ASTSBUSDT": 5.0,
+  "ASTUSDT": 5.0,
+  "ATABNB": 0.05,
+  "ATABTC": 0.0001,
+  "ATABUSD": 10.0,
+  "ATAUSDT": 5.0,
+  "ATBNB": 0.01,
+  "ATMBTC": 0.0001,
+  "ATMBUSD": 10.0,
+  "ATMTRY": 10.0,
+  "ATMUSDT": 5.0,
+  "ATOMBIDR": 20000.0,
+  "ATOMBNB": 0.01,
+  "ATOMBRL": 10.0,
+  "ATOMBTC": 0.0001,
+  "ATOMBUSD": 5.0,
+  "ATOMETH": 0.001,
+  "ATOMEUR": 5.0,
+  "ATOMFDUSD": 5.0,
+  "ATOMPAX": 10.0,
+  "ATOMTRY": 10.0,
+  "ATOMTUSD": 10.0,
+  "ATOMUSDC": 5.0,
+  "ATOMUSDT": 5.0,
+  "ATRY": 10.0,
+  "ATTRY": 10.0,
+  "ATUSDC": 5.0,
+  "ATUSDT": 5.0,
+  "AUCTIONBTC": 0.0001,
+  "AUCTIONBUSD": 10.0,
+  "AUCTIONFDUSD": 5.0,
+  "AUCTIONTRY": 10.0,
+  "AUCTIONUSDC": 5.0,
+  "AUCTIONUSDT": 5.0,
+  "AUDBUSD": 10.0,
+  "AUDIOBTC": 0.0001,
+  "AUDIOBUSD": 10.0,
+  "AUDIOTRY": 10.0,
+  "AUDIOUSDT": 5.0,
+  "AUDUSDC": 10.0,
+  "AUDUSDT": 10.0,
+  "AUSDC": 5.0,
+  "AUSDT": 5.0,
+  "AUTOBTC": 0.0001,
+  "AUTOBUSD": 10.0,
+  "AUTOUSDT": 10.0,
+  "AVABNB": 0.05,
+  "AVABTC": 0.0001,
+  "AVABUSD": 10.0,
+  "AVAUSDT": 5.0,
+  "AVAXAUD": 5.0,
+  "AVAXBIDR": 20000.0,
+  "AVAXBNB": 0.01,
+  "AVAXBRL": 10.0,
+  "AVAXBTC": 0.0001,
+  "AVAXBUSD": 5.0,
+  "AVAXETH": 0.001,
+  "AVAXEUR": 5.0,
+  "AVAXFDUSD": 5.0,
+  "AVAXGBP": 5.0,
+  "AVAXIDR": 20000.0,
+  "AVAXTRY": 10.0,
+  "AVAXTUSD": 5.0,
+  "AVAXU": 5.0,
+  "AVAXUSD1": 5.0,
+  "AVAXUSDC": 5.0,
+  "AVAXUSDT": 5.0,
+  "AVGOBUSDT": 5.0,
+  "AVNTTRY": 10.0,
+  "AVNTU": 5.0,
+  "AVNTUSDC": 5.0,
+  "AVNTUSDT": 5.0,
+  "AWEBTC": 0.0001,
+  "AWEUSDT": 5.0,
+  "AXLBTC": 0.0001,
+  "AXLFDUSD": 5.0,
+  "AXLTRY": 10.0,
+  "AXLUSDT": 5.0,
+  "AXSAUD": 5.0,
+  "AXSBNB": 0.01,
+  "AXSBRL": 10.0,
+  "AXSBTC": 0.0001,
+  "AXSBUSD": 5.0,
+  "AXSETH": 0.001,
+  "AXSTRY": 10.0,
+  "AXSUSDC": 5.0,
+  "AXSUSDT": 5.0,
+  "AXTIBUSDT": 5.0,
+  "BABABUSDT": 5.0,
+  "BABYBNB": 0.01,
+  "BABYEUR": 5.0,
+  "BABYFDUSD": 5.0,
+  "BABYTRY": 10.0,
+  "BABYUSDC": 5.0,
+  "BABYUSDT": 5.0,
+  "BADGERBTC": 0.0001,
+  "BADGERBUSD": 10.0,
+  "BADGERUSDT": 5.0,
+  "BAKEBNB": 0.01,
+  "BAKEBTC": 0.0001,
+  "BAKEBUSD": 10.0,
+  "BAKETRY": 10.0,
+  "BAKEUSDT": 5.0,
+  "BALBNB": 0.05,
+  "BALBTC": 0.0001,
+  "BALBUSD": 10.0,
+  "BALUSDT": 5.0,
+  "BANANABNB": 0.01,
+  "BANANABTC": 0.0001,
+  "BANANAFDUSD": 5.0,
+  "BANANAS31USDC": 1.0,
+  "BANANAS31USDT": 1.0,
+  "BANANATRY": 10.0,
+  "BANANAUSDC": 5.0,
+  "BANANAUSDT": 5.0,
+  "BANDBNB": 0.05,
+  "BANDBTC": 0.0001,
+  "BANDBUSD": 10.0,
+  "BANDTRY": 10.0,
+  "BANDUSDT": 5.0,
+  "BANKTRY": 10.0,
+  "BANKUSDC": 5.0,
+  "BANKUSDT": 5.0,
+  "BARBTC": 0.0001,
+  "BARBUSD": 10.0,
+  "BARDBNB": 0.01,
+  "BARDFDUSD": 5.0,
+  "BARDTRY": 10.0,
+  "BARDUSDC": 5.0,
+  "BARDUSDT": 5.0,
+  "BARTRY": 10.0,
+  "BARUSDT": 5.0,
+  "BATBNB": 0.05,
+  "BATBTC": 0.0001,
+  "BATBUSD": 10.0,
+  "BATETH": 0.001,
+  "BATPAX": 10.0,
+  "BATTUSD": 10.0,
+  "BATUSDC": 10.0,
+  "BATUSDT": 5.0,
+  "BBBNB": 0.01,
+  "BBBTC": 0.0001,
+  "BBBUSDT": 5.0,
+  "BBFDUSD": 5.0,
+  "BBTRY": 10.0,
+  "BBUSDC": 5.0,
+  "BBUSDT": 5.0,
+  "BCCBNB": 0.05,
+  "BCCBTC": 0.0001,
+  "BCCETH": 0.005,
+  "BCCUSDT": 10.0,
+  "BCDBTC": 0.0001,
+  "BCDETH": 0.005,
+  "BCHABCBTC": 0.0001,
+  "BCHABCBUSD": 10.0,
+  "BCHABCPAX": 10.0,
+  "BCHABCTUSD": 10.0,
+  "BCHABCUSDC": 10.0,
+  "BCHABCUSDT": 10.0,
+  "BCHABUSD": 10.0,
+  "BCHBNB": 0.01,
+  "BCHBTC": 0.0001,
+  "BCHBUSD": 10.0,
+  "BCHDOWNUSDT": 10.0,
+  "BCHEUR": 5.0,
+  "BCHFDUSD": 5.0,
+  "BCHJPY": 100.0,
+  "BCHPAX": 10.0,
+  "BCHSVBTC": 0.0001,
+  "BCHSVPAX": 10.0,
+  "BCHSVTUSD": 10.0,
+  "BCHSVUSDC": 10.0,
+  "BCHSVUSDT": 10.0,
+  "BCHTRY": 10.0,
+  "BCHTUSD": 5.0,
+  "BCHU": 5.0,
+  "BCHUPUSDT": 10.0,
+  "BCHUSD1": 5.0,
+  "BCHUSDC": 5.0,
+  "BCHUSDT": 5.0,
+  "BCNBNB": 0.05,
+  "BCNBTC": 0.0001,
+  "BCNETH": 0.005,
+  "BCPTBNB": 0.05,
+  "BCPTBTC": 0.0001,
+  "BCPTETH": 0.005,
+  "BCPTPAX": 10.0,
+  "BCPTTUSD": 10.0,
+  "BCPTUSDC": 10.0,
+  "BDOTDOT": 0.3,
+  "BEAMBNB": 0.05,
+  "BEAMBTC": 0.0001,
+  "BEAMUSDT": 10.0,
+  "BEAMXTRY": 10.0,
+  "BEAMXUSDC": 5.0,
+  "BEAMXUSDT": 5.0,
+  "BEARBUSD": 10.0,
+  "BEARUSDT": 10.0,
+  "BEBUSDT": 5.0,
+  "BELBNB": 0.01,
+  "BELBTC": 0.0001,
+  "BELBUSD": 10.0,
+  "BELETH": 0.005,
+  "BELTRY": 10.0,
+  "BELUSDT": 5.0,
+  "BERABNB": 0.01,
+  "BERABTC": 0.0001,
+  "BERAFDUSD": 5.0,
+  "BERATRY": 10.0,
+  "BERAUSDC": 5.0,
+  "BERAUSDT": 5.0,
+  "BETABNB": 0.05,
+  "BETABTC": 0.0001,
+  "BETABUSD": 10.0,
+  "BETAETH": 0.001,
+  "BETAUSDT": 5.0,
+  "BETHBUSD": 10.0,
+  "BETHETH": 0.001,
+  "BETHUSDT": 5.0,
+  "BFUSDUSDC": 5.0,
+  "BFUSDUSDT": 5.0,
+  "BGBPUSDC": 10.0,
+  "BICOBTC": 0.0001,
+  "BICOBUSD": 10.0,
+  "BICOUSDT": 5.0,
+  "BIFIBNB": 0.05,
+  "BIFIBUSD": 10.0,
+  "BIFIUSDT": 5.0,
+  "BIGTIMEUSDC": 5.0,
+  "BIGTIMEUSDT": 5.0,
+  "BIOBNB": 0.01,
+  "BIOFDUSD": 5.0,
+  "BIOTRY": 10.0,
+  "BIOU": 5.0,
+  "BIOUSDC": 5.0,
+  "BIOUSDT": 5.0,
+  "BKRWBUSD": 10.0,
+  "BKRWUSDT": 10.0,
+  "BLURBTC": 0.0001,
+  "BLURFDUSD": 5.0,
+  "BLURTRY": 10.0,
+  "BLURUSDC": 5.0,
+  "BLURUSDT": 5.0,
+  "BLZBNB": 0.05,
+  "BLZBTC": 0.0001,
+  "BLZBUSD": 10.0,
+  "BLZETH": 0.005,
+  "BLZFDUSD": 5.0,
+  "BLZUSDT": 5.0,
+  "BMNRBUSDT": 5.0,
+  "BMTBNB": 0.01,
+  "BMTFDUSD": 5.0,
+  "BMTTRY": 10.0,
+  "BMTUSDC": 5.0,
+  "BMTUSDT": 5.0,
+  "BNBARS": 2000.0,
+  "BNBAUD": 5.0,
+  "BNBBEARBUSD": 10.0,
+  "BNBBEARUSDT": 10.0,
+  "BNBBIDR": 20000.0,
+  "BNBBKRW": 1000.0,
+  "BNBBRL": 10.0,
+  "BNBBTC": 0.0001,
+  "BNBBULLBUSD": 10.0,
+  "BNBBULLUSDT": 10.0,
+  "BNBBUSD": 5.0,
+  "BNBDAI": 5.0,
+  "BNBDOWNUSDT": 10.0,
+  "BNBETH": 0.001,
+  "BNBEUR": 5.0,
+  "BNBFDUSD": 5.0,
+  "BNBGBP": 5.0,
+  "BNBIDR": 20000.0,
+  "BNBIDRT": 20000.0,
+  "BNBJPY": 100.0,
+  "BNBNGN": 500.0,
+  "BNBPAX": 10.0,
+  "BNBRUB": 100.0,
+  "BNBTHB": 100.0,
+  "BNBTRY": 10.0,
+  "BNBTUSD": 5.0,
+  "BNBU": 5.0,
+  "BNBUAH": 100.0,
+  "BNBUPUSDT": 10.0,
+  "BNBUSD": 5.0,
+  "BNBUSD1": 5.0,
+  "BNBUSDC": 5.0,
+  "BNBUSDP": 10.0,
+  "BNBUSDSOLD": 10.0,
+  "BNBUSDT": 5.0,
+  "BNBUST": 10.0,
+  "BNBZAR": 100.0,
+  "BNCBUSDT": 5.0,
+  "BNSOLSOL": 0.05,
+  "BNSOLUSDT": 5.0,
+  "BNTBTC": 0.0001,
+  "BNTBUSD": 10.0,
+  "BNTETH": 0.001,
+  "BNTUSDT": 5.0,
+  "BNXBNB": 0.01,
+  "BNXBTC": 0.0001,
+  "BNXBUSD": 10.0,
+  "BNXTRY": 10.0,
+  "BNXUSDC": 5.0,
+  "BNXUSDT": 5.0,
+  "BOMEBTC": 0.0001,
+  "BOMEEUR": 1.0,
+  "BOMEFDUSD": 1.0,
+  "BOMEIDR": 20000.0,
+  "BOMETRY": 10.0,
+  "BOMEUSDC": 1.0,
+  "BOMEUSDT": 1.0,
+  "BONDBNB": 0.05,
+  "BONDBTC": 0.0001,
+  "BONDBUSD": 10.0,
+  "BONDETH": 0.005,
+  "BONDUSDT": 5.0,
+  "BONKBRL": 10.0,
+  "BONKFDUSD": 1.0,
+  "BONKTRY": 10.0,
+  "BONKUSDC": 1.0,
+  "BONKUSDT": 1.0,
+  "BOTBTC": 0.0001,
+  "BOTBUSD": 10.0,
+  "BOTBUSDT": 5.0,
+  "BQXBTC": 0.0001,
+  "BQXETH": 0.005,
+  "BRDBNB": 0.05,
+  "BRDBTC": 0.0001,
+  "BRDETH": 0.005,
+  "BREVBNB": 0.01,
+  "BREVTRY": 10.0,
+  "BREVUSDC": 5.0,
+  "BREVUSDT": 5.0,
+  "BRKBBUSDT": 5.0,
+  "BROCCOLI714USDC": 1.0,
+  "BROCCOLI714USDT": 1.0,
+  "BSWBNB": 0.01,
+  "BSWBUSD": 10.0,
+  "BSWETH": 0.005,
+  "BSWTRY": 10.0,
+  "BSWUSDT": 5.0,
+  "BTCAEUR": 5.0,
+  "BTCARS": 2000.0,
+  "BTCAUD": 10.0,
+  "BTCBBTC": 0.0001,
+  "BTCBIDR": 20000.0,
+  "BTCBKRW": 1000.0,
+  "BTCBRL": 10.0,
+  "BTCBUSD": 10.0,
+  "BTCDAI": 5.0,
+  "BTCDOWNUSDT": 10.0,
+  "BTCEUR": 5.0,
+  "BTCEURI": 5.0,
+  "BTCFDUSD": 5.0,
+  "BTCGBP": 5.0,
+  "BTCIDR": 20000.0,
+  "BTCIDRT": 20000.0,
+  "BTCJPY": 100.0,
+  "BTCMXN": 150.0,
+  "BTCNGN": 500.0,
+  "BTCPAX": 10.0,
+  "BTCPLN": 25.0,
+  "BTCRON": 20.0,
+  "BTCRUB": 100.0,
+  "BTCSTBTC": 0.0001,
+  "BTCSTBUSD": 10.0,
+  "BTCSTUSDT": 10.0,
+  "BTCTHB": 100.0,
+  "BTCTRY": 10.0,
+  "BTCTUSD": 5.0,
+  "BTCU": 5.0,
+  "BTCUAH": 100.0,
+  "BTCUPUSDT": 10.0,
+  "BTCUSD": 5.0,
+  "BTCUSD1": 5.0,
+  "BTCUSDC": 5.0,
+  "BTCUSDP": 10.0,
+  "BTCUSDS": 5.0,
+  "BTCUSDSOLD": 10.0,
+  "BTCUSDT": 5.0,
+  "BTCUST": 10.0,
+  "BTCVAI": 10.0,
+  "BTCZAR": 100.0,
+  "BTGBTC": 0.0001,
+  "BTGBUSD": 10.0,
+  "BTGETH": 0.005,
+  "BTGUSDT": 10.0,
+  "BTSBNB": 0.05,
+  "BTSBTC": 0.0001,
+  "BTSBUSD": 10.0,
+  "BTSETH": 0.005,
+  "BTSUSDT": 5.0,
+  "BTTBNB": 0.05,
+  "BTTBRL": 10.0,
+  "BTTBTC": 0.0001,
+  "BTTBUSD": 10.0,
+  "BTTCBUSD": 10.0,
+  "BTTCTRY": 10.0,
+  "BTTCUSDC": 10.0,
+  "BTTCUSDT": 5.0,
+  "BTTEUR": 10.0,
+  "BTTPAX": 10.0,
+  "BTTTRX": 100.0,
+  "BTTTRY": 10.0,
+  "BTTTUSD": 10.0,
+  "BTTUSDC": 10.0,
+  "BTTUSDT": 10.0,
+  "BULLBUSD": 10.0,
+  "BULLUSDT": 10.0,
+  "BURGERBNB": 0.05,
+  "BURGERBUSD": 10.0,
+  "BURGERETH": 0.005,
+  "BURGERUSDT": 5.0,
+  "BUSDBIDR": 20000.0,
+  "BUSDBKRW": 1000.0,
+  "BUSDBRL": 10.0,
+  "BUSDBVND": 30000.0,
+  "BUSDDAI": 5.0,
+  "BUSDIDRT": 20000.0,
+  "BUSDNGN": 500.0,
+  "BUSDPLN": 25.0,
+  "BUSDRON": 20.0,
+  "BUSDRUB": 100.0,
+  "BUSDTRY": 10.0,
+  "BUSDUAH": 100.0,
+  "BUSDUSDT": 5.0,
+  "BUSDVAI": 5.0,
+  "BUSDZAR": 100.0,
+  "BZRXBNB": 0.05,
+  "BZRXBTC": 0.0001,
+  "BZRXBUSD": 10.0,
+  "BZRXUSDT": 10.0,
+  "C98BNB": 0.05,
+  "C98BRL": 10.0,
+  "C98BTC": 0.0001,
+  "C98BUSD": 10.0,
+  "C98USDT": 5.0,
+  "CAKEAUD": 10.0,
+  "CAKEBNB": 0.01,
+  "CAKEBRL": 10.0,
+  "CAKEBTC": 0.0001,
+  "CAKEBUSD": 10.0,
+  "CAKEGBP": 10.0,
+  "CAKETRY": 10.0,
+  "CAKETUSD": 5.0,
+  "CAKEUSDC": 5.0,
+  "CAKEUSDT": 5.0,
+  "CATIBNB": 0.01,
+  "CATIBRL": 10.0,
+  "CATIFDUSD": 1.0,
+  "CATITRY": 10.0,
+  "CATIUSDC": 1.0,
+  "CATIUSDT": 1.0,
+  "CBNB": 0.01,
+  "CBRSBUSDT": 5.0,
+  "CDTBTC": 0.0001,
+  "CDTETH": 0.005,
+  "CELOBTC": 0.0001,
+  "CELOBUSD": 10.0,
+  "CELOTRY": 10.0,
+  "CELOUSDT": 5.0,
+  "CELRBNB": 0.05,
+  "CELRBTC": 0.0001,
+  "CELRBUSD": 10.0,
+  "CELRETH": 0.005,
+  "CELRUSDT": 5.0,
+  "CETUSTRY": 10.0,
+  "CETUSUSDC": 5.0,
+  "CETUSUSDT": 5.0,
+  "CFDUSD": 5.0,
+  "CFGTRY": 10.0,
+  "CFGUSDC": 5.0,
+  "CFGUSDT": 5.0,
+  "CFXBTC": 0.0001,
+  "CFXBUSD": 10.0,
+  "CFXTRY": 10.0,
+  "CFXTUSD": 5.0,
+  "CFXUSDC": 5.0,
+  "CFXUSDT": 5.0,
+  "CGPTUSDC": 5.0,
+  "CGPTUSDT": 5.0,
+  "CHATBTC": 0.0001,
+  "CHATETH": 0.005,
+  "CHESSBNB": 0.05,
+  "CHESSBTC": 0.0001,
+  "CHESSBUSD": 10.0,
+  "CHESSUSDC": 5.0,
+  "CHESSUSDT": 5.0,
+  "CHIPTRY": 10.0,
+  "CHIPU": 5.0,
+  "CHIPUSD1": 5.0,
+  "CHIPUSDC": 5.0,
+  "CHIPUSDT": 5.0,
+  "CHRBNB": 0.01,
+  "CHRBTC": 0.0001,
+  "CHRBUSD": 10.0,
+  "CHRETH": 0.001,
+  "CHRUSDT": 5.0,
+  "CHZBNB": 0.01,
+  "CHZBRL": 10.0,
+  "CHZBTC": 0.0001,
+  "CHZBUSD": 5.0,
+  "CHZEUR": 5.0,
+  "CHZFDUSD": 5.0,
+  "CHZGBP": 5.0,
+  "CHZTRY": 10.0,
+  "CHZUSDC": 5.0,
+  "CHZUSDT": 5.0,
+  "CITYBNB": 0.05,
+  "CITYBTC": 0.0001,
+  "CITYBUSD": 10.0,
+  "CITYTRY": 10.0,
+  "CITYUSDT": 5.0,
+  "CKBBTC": 0.0001,
+  "CKBBUSD": 10.0,
+  "CKBTRY": 10.0,
+  "CKBUSDC": 5.0,
+  "CKBUSDT": 5.0,
+  "CLOAKBTC": 0.0001,
+  "CLOAKETH": 0.005,
+  "CLVBNB": 0.05,
+  "CLVBTC": 0.0001,
+  "CLVBUSD": 10.0,
+  "CLVUSDT": 5.0,
+  "CMTBNB": 0.05,
+  "CMTBTC": 0.0001,
+  "CMTETH": 0.005,
+  "CNDBNB": 0.05,
+  "CNDBTC": 0.0001,
+  "CNDETH": 0.005,
+  "COCOSBNB": 0.05,
+  "COCOSBTC": 0.0001,
+  "COCOSBUSD": 10.0,
+  "COCOSTRY": 10.0,
+  "COCOSUSDT": 10.0,
+  "COHRBUSDT": 5.0,
+  "COINBUSDT": 5.0,
+  "COMBOBNB": 0.01,
+  "COMBOTRY": 10.0,
+  "COMBOUSDT": 5.0,
+  "COMPBNB": 0.05,
+  "COMPBTC": 0.0001,
+  "COMPBUSD": 10.0,
+  "COMPTRY": 10.0,
+  "COMPTUSD": 5.0,
+  "COMPUSDC": 5.0,
+  "COMPUSDT": 5.0,
+  "COOKIEUSDC": 5.0,
+  "COOKIEUSDT": 5.0,
+  "COSBNB": 0.01,
+  "COSBTC": 0.0001,
+  "COSBUSD": 10.0,
+  "COSTRY": 10.0,
+  "COSUSDT": 5.0,
+  "COTIBNB": 0.01,
+  "COTIBTC": 0.0001,
+  "COTIBUSD": 10.0,
+  "COTITRY": 10.0,
+  "COTIUSDC": 5.0,
+  "COTIUSDT": 5.0,
+  "COVERBUSD": 10.0,
+  "COVERETH": 0.005,
+  "COWTRY": 10.0,
+  "COWUSDC": 5.0,
+  "COWUSDT": 5.0,
+  "CRCLBUSDT": 5.0,
+  "CRDOBUSDT": 5.0,
+  "CREAMBNB": 0.05,
+  "CREAMBUSD": 10.0,
+  "CREAMUSDT": 1.0,
+  "CRMBUSDT": 5.0,
+  "CRVBNB": 0.05,
+  "CRVBTC": 0.0001,
+  "CRVBUSD": 10.0,
+  "CRVETH": 0.001,
+  "CRVTRY": 10.0,
+  "CRVUSDC": 5.0,
+  "CRVUSDT": 5.0,
+  "CRWDBUSDT": 5.0,
+  "CRWVBUSDT": 5.0,
+  "CTKBNB": 0.01,
+  "CTKBTC": 0.0001,
+  "CTKBUSD": 10.0,
+  "CTKUSDT": 5.0,
+  "CTRY": 10.0,
+  "CTSIBNB": 0.01,
+  "CTSIBTC": 0.0001,
+  "CTSIBUSD": 10.0,
+  "CTSIUSDT": 5.0,
+  "CTXCBNB": 0.05,
+  "CTXCBTC": 0.0001,
+  "CTXCBUSD": 10.0,
+  "CTXCUSDT": 5.0,
+  "CUSDC": 5.0,
+  "CUSDT": 5.0,
+  "CVCBNB": 0.05,
+  "CVCBTC": 0.0001,
+  "CVCBUSD": 10.0,
+  "CVCETH": 0.005,
+  "CVCUSDC": 5.0,
+  "CVCUSDT": 5.0,
+  "CVPBUSD": 10.0,
+  "CVPETH": 0.005,
+  "CVPUSDT": 5.0,
+  "CVXBTC": 0.0001,
+  "CVXBUSD": 10.0,
+  "CVXUSDC": 5.0,
+  "CVXUSDT": 5.0,
+  "CYBERBNB": 0.01,
+  "CYBERBTC": 0.0001,
+  "CYBERETH": 0.001,
+  "CYBERFDUSD": 5.0,
+  "CYBERTRY": 10.0,
+  "CYBERTUSD": 5.0,
+  "CYBERUSDC": 5.0,
+  "CYBERUSDT": 5.0,
+  "CYPHBUSDT": 5.0,
+  "DAIBNB": 0.05,
+  "DAIBTC": 0.0001,
+  "DAIBUSD": 10.0,
+  "DAIJPY": 100.0,
+  "DAIUSDT": 10.0,
+  "DARBNB": 0.01,
+  "DARBTC": 0.0001,
+  "DARBUSD": 10.0,
+  "DARETH": 0.005,
+  "DAREUR": 5.0,
+  "DARTRY": 10.0,
+  "DARUSDT": 5.0,
+  "DASHBNB": 0.05,
+  "DASHBTC": 0.0001,
+  "DASHBUSD": 10.0,
+  "DASHETH": 0.001,
+  "DASHTRY": 10.0,
+  "DASHUSDC": 5.0,
+  "DASHUSDT": 5.0,
+  "DATABTC": 0.0001,
+  "DATABUSD": 10.0,
+  "DATAETH": 0.005,
+  "DATAUSDT": 5.0,
+  "DCRBNB": 0.05,
+  "DCRBTC": 0.0001,
+  "DCRBUSD": 10.0,
+  "DCRUSDT": 5.0,
+  "DEGOBTC": 0.0001,
+  "DEGOBUSD": 10.0,
+  "DEGOUSDT": 5.0,
+  "DELLBUSDT": 5.0,
+  "DENTBTC": 0.0001,
+  "DENTBUSD": 10.0,
+  "DENTETH": 0.001,
+  "DENTTRY": 10.0,
+  "DENTUSDT": 5.0,
+  "DEXEBUSD": 10.0,
+  "DEXEETH": 0.001,
+  "DEXEUSDT": 5.0,
+  "DFBUSD": 10.0,
+  "DFETH": 0.005,
+  "DFUSDC": 5.0,
+  "DFUSDT": 5.0,
+  "DGBBTC": 0.0001,
+  "DGBBUSD": 10.0,
+  "DGBUSDT": 5.0,
+  "DGDBTC": 0.0001,
+  "DGDETH": 0.005,
+  "DIABNB": 0.05,
+  "DIABTC": 0.0001,
+  "DIABUSD": 10.0,
+  "DIAUSDT": 5.0,
+  "DJTBUSDT": 5.0,
+  "DLTBNB": 0.05,
+  "DLTBTC": 0.0001,
+  "DLTETH": 0.005,
+  "DNTBTC": 0.0001,
+  "DNTBUSD": 10.0,
+  "DNTETH": 0.005,
+  "DNTUSDT": 10.0,
+  "DOCKBTC": 0.0001,
+  "DOCKBUSD": 10.0,
+  "DOCKETH": 0.005,
+  "DOCKUSDT": 5.0,
+  "DODOBTC": 0.0001,
+  "DODOBUSD": 10.0,
+  "DODOTRY": 10.0,
+  "DODOUSDT": 5.0,
+  "DOGEAUD": 5.0,
+  "DOGEBIDR": 20000.0,
+  "DOGEBNB": 0.05,
+  "DOGEBRL": 10.0,
+  "DOGEBTC": 0.0001,
+  "DOGEBUSD": 5.0,
+  "DOGEEUR": 1.0,
+  "DOGEFDUSD": 1.0,
+  "DOGEGBP": 5.0,
+  "DOGEIDR": 20000.0,
+  "DOGEJPY": 100.0,
+  "DOGEPAX": 10.0,
+  "DOGERUB": 100.0,
+  "DOGETRY": 10.0,
+  "DOGETUSD": 1.0,
+  "DOGEU": 1.0,
+  "DOGEUSD1": 1.0,
+  "DOGEUSDC": 1.0,
+  "DOGEUSDT": 1.0,
+  "DOGSBNB": 0.01,
+  "DOGSBRL": 10.0,
+  "DOGSFDUSD": 1.0,
+  "DOGSIDR": 20000.0,
+  "DOGSTRY": 10.0,
+  "DOGSUSDC": 1.0,
+  "DOGSUSDT": 1.0,
+  "DOLOBNB": 0.01,
+  "DOLOFDUSD": 5.0,
+  "DOLOTRY": 10.0,
+  "DOLOUSDC": 5.0,
+  "DOLOUSDT": 5.0,
+  "DOTAUD": 5.0,
+  "DOTBIDR": 20000.0,
+  "DOTBKRW": 1000.0,
+  "DOTBNB": 0.01,
+  "DOTBRL": 10.0,
+  "DOTBTC": 0.0001,
+  "DOTBUSD": 5.0,
+  "DOTDOWNUSDT": 10.0,
+  "DOTETH": 0.001,
+  "DOTEUR": 5.0,
+  "DOTFDUSD": 5.0,
+  "DOTGBP": 5.0,
+  "DOTNGN": 500.0,
+  "DOTRUB": 100.0,
+  "DOTTRY": 10.0,
+  "DOTTUSD": 5.0,
+  "DOTUPUSDT": 10.0,
+  "DOTUSDC": 5.0,
+  "DOTUSDT": 5.0,
+  "DRAMBUSDT": 5.0,
+  "DREPBNB": 0.05,
+  "DREPBTC": 0.0001,
+  "DREPBUSD": 10.0,
+  "DREPUSDT": 5.0,
+  "DTRY": 10.0,
+  "DUSDT": 5.0,
+  "DUSKBNB": 0.05,
+  "DUSKBTC": 0.0001,
+  "DUSKBUSD": 10.0,
+  "DUSKPAX": 10.0,
+  "DUSKUSDC": 10.0,
+  "DUSKUSDT": 5.0,
+  "DYDXBNB": 0.01,
+  "DYDXBTC": 0.0001,
+  "DYDXBUSD": 10.0,
+  "DYDXETH": 0.005,
+  "DYDXFDUSD": 5.0,
+  "DYDXTRY": 10.0,
+  "DYDXUSDC": 5.0,
+  "DYDXUSDT": 5.0,
+  "DYMBTC": 0.0001,
+  "DYMFDUSD": 5.0,
+  "DYMTRY": 10.0,
+  "DYMUSDC": 5.0,
+  "DYMUSDT": 5.0,
+  "EASYBTC": 0.0001,
+  "EASYETH": 0.005,
+  "EDENBNB": 0.01,
+  "EDENFDUSD": 5.0,
+  "EDENTRY": 10.0,
+  "EDENUSDC": 5.0,
+  "EDENUSDT": 5.0,
+  "EDOBTC": 0.0001,
+  "EDOETH": 0.005,
+  "EDUBNB": 0.01,
+  "EDUBTC": 0.0001,
+  "EDUEUR": 5.0,
+  "EDUTRY": 10.0,
+  "EDUTUSD": 5.0,
+  "EDUUSDT": 5.0,
+  "EGLDBNB": 0.01,
+  "EGLDBTC": 0.0001,
+  "EGLDBUSD": 10.0,
+  "EGLDETH": 0.001,
+  "EGLDEUR": 5.0,
+  "EGLDFDUSD": 5.0,
+  "EGLDRON": 20.0,
+  "EGLDTRY": 10.0,
+  "EGLDUSDC": 5.0,
+  "EGLDUSDT": 5.0,
+  "EIGENBTC": 0.0001,
+  "EIGENFDUSD": 5.0,
+  "EIGENTRY": 10.0,
+  "EIGENUSDC": 5.0,
+  "EIGENUSDT": 5.0,
+  "ELFBTC": 0.0001,
+  "ELFBUSD": 10.0,
+  "ELFETH": 0.001,
+  "ELFUSDT": 5.0,
+  "ENABNB": 0.01,
+  "ENABRL": 10.0,
+  "ENABTC": 0.0001,
+  "ENAEUR": 5.0,
+  "ENAFDUSD": 5.0,
+  "ENATRY": 10.0,
+  "ENAU": 5.0,
+  "ENAUSD1": 5.0,
+  "ENAUSDC": 5.0,
+  "ENAUSDT": 5.0,
+  "ENGBTC": 0.0001,
+  "ENGETH": 0.005,
+  "ENJBNB": 0.05,
+  "ENJBRL": 10.0,
+  "ENJBTC": 0.0001,
+  "ENJBUSD": 10.0,
+  "ENJETH": 0.001,
+  "ENJEUR": 5.0,
+  "ENJGBP": 10.0,
+  "ENJTRY": 10.0,
+  "ENJU": 5.0,
+  "ENJUSDC": 5.0,
+  "ENJUSDT": 5.0,
+  "ENSBNB": 0.01,
+  "ENSBTC": 0.0001,
+  "ENSBUSD": 10.0,
+  "ENSFDUSD": 5.0,
+  "ENSOBNB": 0.01,
+  "ENSOFDUSD": 5.0,
+  "ENSOTRY": 10.0,
+  "ENSOUSDC": 5.0,
+  "ENSOUSDT": 5.0,
+  "ENSTRY": 10.0,
+  "ENSUSDC": 5.0,
+  "ENSUSDT": 5.0,
+  "EOSAUD": 10.0,
+  "EOSBEARBUSD": 10.0,
+  "EOSBEARUSDT": 10.0,
+  "EOSBNB": 0.01,
+  "EOSBTC": 0.0001,
+  "EOSBULLBUSD": 10.0,
+  "EOSBULLUSDT": 10.0,
+  "EOSBUSD": 10.0,
+  "EOSDOWNUSDT": 10.0,
+  "EOSETH": 0.001,
+  "EOSEUR": 5.0,
+  "EOSFDUSD": 5.0,
+  "EOSPAX": 10.0,
+  "EOSTRY": 10.0,
+  "EOSTUSD": 10.0,
+  "EOSUPUSDT": 10.0,
+  "EOSUSDC": 5.0,
+  "EOSUSDT": 5.0,
+  "EPICUSDC": 5.0,
+  "EPICUSDT": 5.0,
+  "EPSBTC": 0.0001,
+  "EPSBUSD": 10.0,
+  "EPSUSDT": 10.0,
+  "EPXBUSD": 10.0,
+  "EPXUSDT": 5.0,
+  "ERABNB": 0.01,
+  "ERAFDUSD": 5.0,
+  "ERATRY": 10.0,
+  "ERAUSDC": 5.0,
+  "ERAUSDT": 5.0,
+  "ERDBNB": 0.05,
+  "ERDBTC": 0.0001,
+  "ERDBUSD": 10.0,
+  "ERDPAX": 10.0,
+  "ERDUSDC": 10.0,
+  "ERDUSDT": 10.0,
+  "ERNBNB": 0.05,
+  "ERNBUSD": 10.0,
+  "ERNUSDT": 5.0,
+  "ESPTRY": 10.0,
+  "ESPUSDC": 5.0,
+  "ESPUSDT": 5.0,
+  "ETCBNB": 0.01,
+  "ETCBRL": 10.0,
+  "ETCBTC": 0.0001,
+  "ETCBUSD": 5.0,
+  "ETCETH": 0.001,
+  "ETCEUR": 5.0,
+  "ETCFDUSD": 5.0,
+  "ETCGBP": 10.0,
+  "ETCPAX": 10.0,
+  "ETCTRY": 10.0,
+  "ETCTUSD": 10.0,
+  "ETCUSDC": 5.0,
+  "ETCUSDT": 5.0,
+  "ETHAEUR": 5.0,
+  "ETHARS": 2000.0,
+  "ETHAUD": 10.0,
+  "ETHBEARBUSD": 10.0,
+  "ETHBEARUSDT": 10.0,
+  "ETHBIDR": 20000.0,
+  "ETHBKRW": 1000.0,
+  "ETHBRL": 10.0,
+  "ETHBTC": 0.0001,
+  "ETHBULLBUSD": 10.0,
+  "ETHBULLUSDT": 10.0,
+  "ETHBUSD": 10.0,
+  "ETHDAI": 5.0,
+  "ETHDOWNUSDT": 10.0,
+  "ETHEUR": 5.0,
+  "ETHEURI": 5.0,
+  "ETHFDUSD": 5.0,
+  "ETHFIBNB": 0.01,
+  "ETHFIBTC": 0.0001,
+  "ETHFIFDUSD": 5.0,
+  "ETHFITRY": 10.0,
+  "ETHFIUSDC": 5.0,
+  "ETHFIUSDT": 5.0,
+  "ETHGBP": 5.0,
+  "ETHIDR": 20000.0,
+  "ETHJPY": 100.0,
+  "ETHMXN": 150.0,
+  "ETHNGN": 500.0,
+  "ETHPAX": 10.0,
+  "ETHPLN": 25.0,
+  "ETHRUB": 100.0,
+  "ETHTHB": 100.0,
+  "ETHTRY": 10.0,
+  "ETHTUSD": 5.0,
+  "ETHU": 5.0,
+  "ETHUAH": 100.0,
+  "ETHUPUSDT": 10.0,
+  "ETHUSD": 5.0,
+  "ETHUSD1": 5.0,
+  "ETHUSDC": 5.0,
+  "ETHUSDP": 10.0,
+  "ETHUSDS": 5.0,
+  "ETHUSDT": 5.0,
+  "ETHUST": 10.0,
+  "ETHZAR": 100.0,
+  "EULBNB": 0.01,
+  "EULFDUSD": 5.0,
+  "EULTRY": 10.0,
+  "EULUSDC": 5.0,
+  "EULUSDT": 5.0,
+  "EURAEUR": 5.0,
+  "EURBUSD": 10.0,
+  "EUREURI": 5.0,
+  "EURIUSDC": 5.0,
+  "EURIUSDT": 5.0,
+  "EURUSDC": 5.0,
+  "EURUSDT": 5.0,
+  "EVXBTC": 0.0001,
+  "EVXETH": 0.005,
+  "EWYBUSDT": 5.0,
+  "EZBTC": 0.0001,
+  "EZETH": 0.005,
+  "FARMBNB": 0.05,
+  "FARMBTC": 0.0001,
+  "FARMBUSD": 10.0,
+  "FARMETH": 0.005,
+  "FARMUSDT": 5.0,
+  "FDUSDBUSD": 10.0,
+  "FDUSDTRY": 10.0,
+  "FDUSDUSDC": 5.0,
+  "FDUSDUSDT": 5.0,
+  "FETBNB": 0.01,
+  "FETBRL": 10.0,
+  "FETBTC": 0.0001,
+  "FETBUSD": 10.0,
+  "FETFDUSD": 5.0,
+  "FETJPY": 100.0,
+  "FETTRY": 10.0,
+  "FETU": 5.0,
+  "FETUSDC": 5.0,
+  "FETUSDT": 5.0,
+  "FFBNB": 0.01,
+  "FFFDUSD": 5.0,
+  "FFTRY": 10.0,
+  "FFUSDC": 5.0,
+  "FFUSDT": 5.0,
+  "FIDABNB": 0.05,
+  "FIDABTC": 0.0001,
+  "FIDABUSD": 10.0,
+  "FIDATRY": 10.0,
+  "FIDAUSDT": 5.0,
+  "FILBNB": 0.01,
+  "FILBTC": 0.0001,
+  "FILBUSD": 5.0,
+  "FILDOWNUSDT": 10.0,
+  "FILETH": 0.001,
+  "FILFDUSD": 5.0,
+  "FILTRY": 10.0,
+  "FILUPUSDT": 10.0,
+  "FILUSDC": 5.0,
+  "FILUSDT": 5.0,
+  "FIOBNB": 0.05,
+  "FIOBTC": 0.0001,
+  "FIOBUSD": 10.0,
+  "FIOUSDT": 5.0,
+  "FIROBTC": 0.0001,
+  "FIROBUSD": 10.0,
+  "FIROETH": 0.005,
+  "FIROUSDT": 5.0,
+  "FISBIDR": 20000.0,
+  "FISBRL": 10.0,
+  "FISBTC": 0.0001,
+  "FISBUSD": 10.0,
+  "FISTRY": 10.0,
+  "FISUSDT": 5.0,
+  "FLMBNB": 0.05,
+  "FLMBTC": 0.0001,
+  "FLMBUSD": 10.0,
+  "FLMUSDT": 5.0,
+  "FLNCBUSDT": 5.0,
+  "FLOKIFDUSD": 1.0,
+  "FLOKIIDR": 20000.0,
+  "FLOKITRY": 10.0,
+  "FLOKITUSD": 1.0,
+  "FLOKIUSDC": 1.0,
+  "FLOKIUSDT": 1.0,
+  "FLOWBNB": 0.01,
+  "FLOWBTC": 0.0001,
+  "FLOWBUSD": 10.0,
+  "FLOWUSDT": 5.0,
+  "FLUXBTC": 0.0001,
+  "FLUXBUSD": 10.0,
+  "FLUXUSDC": 5.0,
+  "FLUXUSDT": 5.0,
+  "FOGOTRY": 10.0,
+  "FOGOUSDC": 5.0,
+  "FOGOUSDT": 5.0,
+  "FORBNB": 0.05,
+  "FORBTC": 0.0001,
+  "FORBUSD": 10.0,
+  "FORMTRY": 5.0,
+  "FORMUSDC": 5.0,
+  "FORMUSDT": 5.0,
+  "FORTHBTC": 0.0001,
+  "FORTHBUSD": 10.0,
+  "FORTHUSDT": 5.0,
+  "FORUSDT": 5.0,
+  "FRAXUSDT": 5.0,
+  "FRONTBTC": 0.0001,
+  "FRONTBUSD": 10.0,
+  "FRONTETH": 0.005,
+  "FRONTTRY": 10.0,
+  "FRONTTUSD": 5.0,
+  "FRONTUSDC": 5.0,
+  "FRONTUSDT": 5.0,
+  "FTMAUD": 5.0,
+  "FTMBIDR": 20000.0,
+  "FTMBNB": 0.01,
+  "FTMBRL": 10.0,
+  "FTMBTC": 0.0001,
+  "FTMBUSD": 5.0,
+  "FTMETH": 0.001,
+  "FTMEUR": 5.0,
+  "FTMFDUSD": 5.0,
+  "FTMPAX": 10.0,
+  "FTMRUB": 100.0,
+  "FTMTRY": 10.0,
+  "FTMTUSD": 10.0,
+  "FTMUSDC": 5.0,
+  "FTMUSDT": 5.0,
+  "FTRY": 10.0,
+  "FTTBNB": 0.05,
+  "FTTBTC": 0.0001,
+  "FTTBUSD": 10.0,
+  "FTTETH": 0.005,
+  "FTTUSDT": 5.0,
+  "FUELBTC": 0.0001,
+  "FUELETH": 0.005,
+  "FUNBNB": 0.01,
+  "FUNBTC": 0.0001,
+  "FUNETH": 0.001,
+  "FUNUSDC": 5.0,
+  "FUNUSDT": 5.0,
+  "FUSDC": 5.0,
+  "FUSDT": 5.0,
+  "FWDIBUSDT": 5.0,
+  "FXSBTC": 0.0001,
+  "FXSBUSD": 10.0,
+  "FXSUSDT": 5.0,
+  "GALAAUD": 5.0,
+  "GALABNB": 0.01,
+  "GALABRL": 10.0,
+  "GALABTC": 0.0001,
+  "GALABUSD": 5.0,
+  "GALAETH": 0.001,
+  "GALAEUR": 5.0,
+  "GALAFDUSD": 5.0,
+  "GALATRY": 10.0,
+  "GALAUSDC": 5.0,
+  "GALAUSDT": 5.0,
+  "GALBNB": 0.05,
+  "GALBRL": 10.0,
+  "GALBTC": 0.0001,
+  "GALBUSD": 10.0,
+  "GALETH": 0.005,
+  "GALEUR": 10.0,
+  "GALTRY": 10.0,
+  "GALUSDT": 5.0,
+  "GASBTC": 0.0001,
+  "GASBUSD": 10.0,
+  "GASFDUSD": 5.0,
+  "GASTRY": 10.0,
+  "GASUSDT": 5.0,
+  "GBPBUSD": 10.0,
+  "GBPUSDT": 5.0,
+  "GENIUSTRY": 10.0,
+  "GENIUSUSDC": 5.0,
+  "GENIUSUSDT": 5.0,
+  "GFTBUSD": 10.0,
+  "GFTUSDT": 1.0,
+  "GHSTBUSD": 10.0,
+  "GHSTETH": 0.005,
+  "GHSTUSDT": 5.0,
+  "GIGGLEJPY": 100.0,
+  "GIGGLETRY": 10.0,
+  "GIGGLEU": 5.0,
+  "GIGGLEUSDC": 1.0,
+  "GIGGLEUSDT": 1.0,
+  "GLMBTC": 0.0001,
+  "GLMBUSD": 10.0,
+  "GLMETH": 0.005,
+  "GLMRBNB": 0.05,
+  "GLMRBTC": 0.0001,
+  "GLMRBUSD": 10.0,
+  "GLMRUSDT": 5.0,
+  "GLMUSDT": 5.0,
+  "GLWBUSDT": 5.0,
+  "GMEBUSDT": 5.0,
+  "GMTAUD": 5.0,
+  "GMTBNB": 0.01,
+  "GMTBRL": 10.0,
+  "GMTBTC": 0.0001,
+  "GMTBUSD": 5.0,
+  "GMTETH": 0.001,
+  "GMTEUR": 5.0,
+  "GMTGBP": 5.0,
+  "GMTTRY": 10.0,
+  "GMTUSDC": 5.0,
+  "GMTUSDT": 5.0,
+  "GMXBTC": 0.0001,
+  "GMXBUSD": 10.0,
+  "GMXUSDC": 5.0,
+  "GMXUSDT": 5.0,
+  "GNOBNB": 0.05,
+  "GNOBTC": 0.0001,
+  "GNOBUSD": 10.0,
+  "GNOUSDT": 5.0,
+  "GNSBTC": 0.0001,
+  "GNSUSDT": 5.0,
+  "GNTBNB": 0.05,
+  "GNTBTC": 0.0001,
+  "GNTETH": 0.005,
+  "GOBNB": 0.05,
+  "GOBTC": 0.0001,
+  "GOOGLBUSDT": 5.0,
+  "GPROBUSDT": 5.0,
+  "GPSBNB": 0.01,
+  "GPSFDUSD": 5.0,
+  "GPSTRY": 10.0,
+  "GPSUSDC": 5.0,
+  "GPSUSDT": 5.0,
+  "GRAMFDUSD": 5.0,
+  "GRAMIDR": 20000.0,
+  "GRAMTRY": 10.0,
+  "GRAMU": 5.0,
+  "GRAMUSD1": 5.0,
+  "GRAMUSDC": 5.0,
+  "GRAMUSDT": 5.0,
+  "GRSBTC": 0.0001,
+  "GRSETH": 0.005,
+  "GRTBTC": 0.0001,
+  "GRTBUSD": 10.0,
+  "GRTETH": 0.001,
+  "GRTEUR": 5.0,
+  "GRTFDUSD": 5.0,
+  "GRTTRY": 10.0,
+  "GRTUSDC": 5.0,
+  "GRTUSDT": 5.0,
+  "GSBUSDT": 5.0,
+  "GTCBNB": 0.05,
+  "GTCBTC": 0.0001,
+  "GTCBUSD": 10.0,
+  "GTCUSDT": 5.0,
+  "GTOBNB": 0.05,
+  "GTOBTC": 0.0001,
+  "GTOBUSD": 10.0,
+  "GTOETH": 0.005,
+  "GTOPAX": 10.0,
+  "GTOTUSD": 10.0,
+  "GTOUSDC": 10.0,
+  "GTOUSDT": 10.0,
+  "GTRY": 10.0,
+  "GUNBNB": 0.01,
+  "GUNFDUSD": 5.0,
+  "GUNTRY": 10.0,
+  "GUNUSDC": 5.0,
+  "GUNUSDT": 5.0,
+  "GUSDT": 5.0,
+  "GVTBTC": 0.0001,
+  "GVTETH": 0.005,
+  "GXSBNB": 0.05,
+  "GXSBTC": 0.0001,
+  "GXSETH": 0.005,
+  "GXSUSDT": 10.0,
+  "HAEDALBNB": 0.01,
+  "HAEDALFDUSD": 5.0,
+  "HAEDALTRY": 10.0,
+  "HAEDALUSDC": 5.0,
+  "HAEDALUSDT": 5.0,
+  "HARDBNB": 0.01,
+  "HARDBTC": 0.0001,
+  "HARDBUSD": 10.0,
+  "HARDUSDT": 5.0,
+  "HBARBNB": 0.01,
+  "HBARBTC": 0.0001,
+  "HBARBUSD": 10.0,
+  "HBARFDUSD": 5.0,
+  "HBARIDR": 20000.0,
+  "HBARTRY": 10.0,
+  "HBARUSDC": 5.0,
+  "HBARUSDT": 5.0,
+  "HCBTC": 0.0001,
+  "HCETH": 0.005,
+  "HCUSDT": 10.0,
+  "HEGICBUSD": 10.0,
+  "HEGICETH": 0.005,
+  "HEIBTC": 0.0001,
+  "HEITRY": 10.0,
+  "HEIUSDC": 5.0,
+  "HEIUSDT": 5.0,
+  "HEMIBNB": 0.01,
+  "HEMIFDUSD": 5.0,
+  "HEMITRY": 10.0,
+  "HEMIUSDC": 5.0,
+  "HEMIUSDT": 5.0,
+  "HFTBTC": 0.0001,
+  "HFTBUSD": 10.0,
+  "HFTUSDT": 5.0,
+  "HIFIETH": 0.001,
+  "HIFIUSDT": 5.0,
+  "HIGHBNB": 0.01,
+  "HIGHBTC": 0.0001,
+  "HIGHBUSD": 10.0,
+  "HIGHTRY": 10.0,
+  "HIGHUSDT": 5.0,
+  "HIMSBUSDT": 5.0,
+  "HIVEBNB": 0.05,
+  "HIVEBTC": 0.0001,
+  "HIVEBUSD": 10.0,
+  "HIVEFDUSD": 5.0,
+  "HIVETRY": 10.0,
+  "HIVEUSDC": 5.0,
+  "HIVEUSDT": 5.0,
+  "HMSTRBNB": 0.01,
+  "HMSTRFDUSD": 5.0,
+  "HMSTRTRY": 10.0,
+  "HMSTRUSDC": 5.0,
+  "HMSTRUSDT": 5.0,
+  "HNTBTC": 0.0001,
+  "HNTBUSD": 10.0,
+  "HNTUSDT": 10.0,
+  "HOLOBNB": 0.01,
+  "HOLOFDUSD": 5.0,
+  "HOLOTRY": 10.0,
+  "HOLOUSDC": 5.0,
+  "HOLOUSDT": 5.0,
+  "HOMEBNB": 0.01,
+  "HOMEFDUSD": 5.0,
+  "HOMETRY": 10.0,
+  "HOMEUSDC": 5.0,
+  "HOMEUSDT": 5.0,
+  "HOODBUSDT": 5.0,
+  "HOOKBNB": 0.01,
+  "HOOKBTC": 0.0001,
+  "HOOKBUSD": 10.0,
+  "HOOKUSDT": 5.0,
+  "HOTBNB": 0.05,
+  "HOTBRL": 10.0,
+  "HOTBTC": 0.0001,
+  "HOTBUSD": 10.0,
+  "HOTETH": 0.001,
+  "HOTEUR": 10.0,
+  "HOTTRY": 10.0,
+  "HOTUSDT": 5.0,
+  "HPEBUSDT": 5.0,
+  "HSRBTC": 0.0001,
+  "HSRETH": 0.005,
+  "HUMABNB": 0.01,
+  "HUMAFDUSD": 5.0,
+  "HUMATRY": 10.0,
+  "HUMAUSDC": 5.0,
+  "HUMAUSDT": 5.0,
+  "HYPERBNB": 0.01,
+  "HYPERFDUSD": 5.0,
+  "HYPERTRY": 10.0,
+  "HYPERUSDC": 5.0,
+  "HYPERUSDT": 5.0,
+  "HYPETRY": 10.0,
+  "HYPEUSDC": 5.0,
+  "HYPEUSDT": 5.0,
+  "IBMBUSDT": 5.0,
+  "ICNBTC": 0.0001,
+  "ICNETH": 0.005,
+  "ICPBNB": 0.01,
+  "ICPBTC": 0.0001,
+  "ICPBUSD": 10.0,
+  "ICPETH": 0.001,
+  "ICPEUR": 5.0,
+  "ICPFDUSD": 5.0,
+  "ICPRUB": 100.0,
+  "ICPTRY": 10.0,
+  "ICPUSDC": 5.0,
+  "ICPUSDT": 5.0,
+  "ICXBNB": 0.05,
+  "ICXBTC": 0.0001,
+  "ICXBUSD": 10.0,
+  "ICXETH": 0.005,
+  "ICXUSDT": 5.0,
+  "IDBNB": 0.01,
+  "IDBTC": 0.0001,
+  "IDEUR": 5.0,
+  "IDEXBNB": 0.01,
+  "IDEXBTC": 0.0001,
+  "IDEXBUSD": 10.0,
+  "IDEXFDUSD": 5.0,
+  "IDEXUSDC": 5.0,
+  "IDEXUSDT": 5.0,
+  "IDTRY": 10.0,
+  "IDTUSD": 5.0,
+  "IDUSDT": 5.0,
+  "ILVBNB": 0.05,
+  "ILVBTC": 0.0001,
+  "ILVBUSD": 10.0,
+  "ILVUSDC": 5.0,
+  "ILVUSDT": 5.0,
+  "IMXBNB": 0.01,
+  "IMXBTC": 0.0001,
+  "IMXBUSD": 10.0,
+  "IMXTRY": 10.0,
+  "IMXUSDC": 5.0,
+  "IMXUSDT": 5.0,
+  "INITBNB": 0.01,
+  "INITFDUSD": 5.0,
+  "INITTRY": 10.0,
+  "INITUSDC": 5.0,
+  "INITUSDT": 5.0,
+  "INJBNB": 0.01,
+  "INJBTC": 0.0001,
+  "INJBUSD": 10.0,
+  "INJETH": 0.001,
+  "INJFDUSD": 5.0,
+  "INJTRY": 10.0,
+  "INJTUSD": 5.0,
+  "INJUSDC": 5.0,
+  "INJUSDT": 5.0,
+  "INSBTC": 0.0001,
+  "INSETH": 0.005,
+  "INTCBUSDT": 5.0,
+  "INTWBUSDT": 5.0,
+  "IOBNB": 0.01,
+  "IOBTC": 0.0001,
+  "IOFDUSD": 5.0,
+  "IOSTBTC": 0.0001,
+  "IOSTBUSD": 10.0,
+  "IOSTETH": 0.001,
+  "IOSTUSDT": 5.0,
+  "IOTABNB": 0.01,
+  "IOTABTC": 0.0001,
+  "IOTABUSD": 10.0,
+  "IOTAETH": 0.001,
+  "IOTAFDUSD": 5.0,
+  "IOTATRY": 10.0,
+  "IOTAUSDC": 5.0,
+  "IOTAUSDT": 5.0,
+  "IOTRY": 10.0,
+  "IOTXBTC": 0.0001,
+  "IOTXBUSD": 10.0,
+  "IOTXETH": 0.001,
+  "IOTXJPY": 100.0,
+  "IOTXUSDT": 5.0,
+  "IOUSDC": 5.0,
+  "IOUSDT": 5.0,
+  "IQBNB": 0.05,
+  "IQBUSD": 10.0,
+  "IQUSDT": 5.0,
+  "IRENBUSDT": 5.0,
+  "IRISBNB": 0.05,
+  "IRISBTC": 0.0001,
+  "IRISBUSD": 10.0,
+  "IRISUSDT": 5.0,
+  "JASMYBNB": 0.05,
+  "JASMYBTC": 0.0001,
+  "JASMYBUSD": 10.0,
+  "JASMYETH": 0.005,
+  "JASMYEUR": 10.0,
+  "JASMYTRY": 10.0,
+  "JASMYUSDT": 5.0,
+  "JOEBTC": 0.0001,
+  "JOEBUSD": 10.0,
+  "JOETRY": 10.0,
+  "JOEUSDT": 5.0,
+  "JPMBUSDT": 5.0,
+  "JSTBNB": 0.05,
+  "JSTBTC": 0.0001,
+  "JSTBUSD": 10.0,
+  "JSTUSDT": 5.0,
+  "JTOFDUSD": 5.0,
+  "JTOTRY": 10.0,
+  "JTOUSDC": 5.0,
+  "JTOUSDT": 5.0,
+  "JUPFDUSD": 5.0,
+  "JUPTRY": 10.0,
+  "JUPUSDC": 5.0,
+  "JUPUSDT": 5.0,
+  "JUVBTC": 0.0001,
+  "JUVBUSD": 10.0,
+  "JUVTRY": 10.0,
+  "JUVUSDC": 5.0,
+  "JUVUSDT": 5.0,
+  "KAIAUSDC": 5.0,
+  "KAIAUSDT": 5.0,
+  "KAITOBNB": 0.01,
+  "KAITOBRL": 10.0,
+  "KAITOBTC": 0.0001,
+  "KAITOFDUSD": 5.0,
+  "KAITOTRY": 10.0,
+  "KAITOUSDC": 5.0,
+  "KAITOUSDT": 5.0,
+  "KATTRY": 10.0,
+  "KATU": 5.0,
+  "KATUSDC": 5.0,
+  "KATUSDT": 5.0,
+  "KAVABNB": 0.01,
+  "KAVABTC": 0.0001,
+  "KAVABUSD": 10.0,
+  "KAVAETH": 0.001,
+  "KAVAUSDT": 5.0,
+  "KDABTC": 0.0001,
+  "KDABUSD": 10.0,
+  "KDAUSDT": 5.0,
+  "KEEPBNB": 0.05,
+  "KEEPBTC": 0.0001,
+  "KEEPBUSD": 10.0,
+  "KEEPUSDT": 10.0,
+  "KERNELBNB": 0.01,
+  "KERNELFDUSD": 5.0,
+  "KERNELTRY": 10.0,
+  "KERNELUSDC": 5.0,
+  "KERNELUSDT": 5.0,
+  "KEYBTC": 0.0001,
+  "KEYBUSD": 10.0,
+  "KEYETH": 0.005,
+  "KEYUSDT": 5.0,
+  "KGSTU": 5.0,
+  "KGSTUSDT": 5.0,
+  "KITEBNB": 0.01,
+  "KITETRY": 10.0,
+  "KITEUSDC": 5.0,
+  "KITEUSDT": 5.0,
+  "KLAYBNB": 0.05,
+  "KLAYBTC": 0.0001,
+  "KLAYBUSD": 10.0,
+  "KLAYUSDT": 5.0,
+  "KMDBTC": 0.0001,
+  "KMDBUSD": 10.0,
+  "KMDETH": 0.005,
+  "KMDUSDT": 5.0,
+  "KMNOUSDC": 5.0,
+  "KMNOUSDT": 5.0,
+  "KNCBNB": 0.01,
+  "KNCBTC": 0.0001,
+  "KNCBUSD": 10.0,
+  "KNCETH": 0.005,
+  "KNCUSDT": 5.0,
+  "KORUBUSDT": 5.0,
+  "KP3RBNB": 0.05,
+  "KP3RBUSD": 10.0,
+  "KP3RUSDT": 5.0,
+  "KSMAUD": 10.0,
+  "KSMBNB": 0.05,
+  "KSMBTC": 0.0001,
+  "KSMBUSD": 10.0,
+  "KSMETH": 0.005,
+  "KSMTRY": 10.0,
+  "KSMUSDT": 5.0,
+  "KSTRBUSDT": 5.0,
+  "LABNB": 0.01,
+  "LAFDUSD": 5.0,
+  "LATRY": 10.0,
+  "LAUSDC": 5.0,
+  "LAUSDT": 5.0,
+  "LAYERBNB": 0.01,
+  "LAYERBTC": 0.0001,
+  "LAYERFDUSD": 5.0,
+  "LAYERTRY": 10.0,
+  "LAYERUSDC": 5.0,
+  "LAYERUSDT": 5.0,
+  "LAZIOBTC": 0.0001,
+  "LAZIOBUSD": 10.0,
+  "LAZIOEUR": 5.0,
+  "LAZIOTRY": 10.0,
+  "LAZIOUSDT": 5.0,
+  "LDOBTC": 0.0001,
+  "LDOBUSD": 10.0,
+  "LDOFDUSD": 5.0,
+  "LDOTRY": 10.0,
+  "LDOTUSD": 5.0,
+  "LDOUSDC": 5.0,
+  "LDOUSDT": 5.0,
+  "LENDBKRW": 1000.0,
+  "LENDBTC": 0.0001,
+  "LENDBUSD": 10.0,
+  "LENDETH": 0.005,
+  "LENDUSDT": 10.0,
+  "LEVERBUSD": 10.0,
+  "LEVERTRY": 10.0,
+  "LEVERUSDT": 5.0,
+  "LINABNB": 0.05,
+  "LINABTC": 0.0001,
+  "LINABUSD": 10.0,
+  "LINAUSDT": 5.0,
+  "LINEABNB": 0.01,
+  "LINEAFDUSD": 5.0,
+  "LINEATRY": 10.0,
+  "LINEAUSDC": 5.0,
+  "LINEAUSDT": 5.0,
+  "LINKAUD": 5.0,
+  "LINKBKRW": 1000.0,
+  "LINKBNB": 0.01,
+  "LINKBRL": 10.0,
+  "LINKBTC": 0.0001,
+  "LINKBUSD": 5.0,
+  "LINKDOWNUSDT": 10.0,
+  "LINKETH": 0.001,
+  "LINKEUR": 5.0,
+  "LINKFDUSD": 5.0,
+  "LINKGBP": 5.0,
+  "LINKJPY": 100.0,
+  "LINKNGN": 500.0,
+  "LINKPAX": 10.0,
+  "LINKTRY": 10.0,
+  "LINKTUSD": 5.0,
+  "LINKU": 5.0,
+  "LINKUPUSDT": 10.0,
+  "LINKUSD1": 5.0,
+  "LINKUSDC": 5.0,
+  "LINKUSDT": 5.0,
+  "LISTABNB": 0.01,
+  "LISTABRL": 10.0,
+  "LISTAFDUSD": 5.0,
+  "LISTATRY": 10.0,
+  "LISTAUSDC": 5.0,
+  "LISTAUSDT": 5.0,
+  "LITBTC": 0.0001,
+  "LITBUSD": 10.0,
+  "LITEBUSDT": 5.0,
+  "LITETH": 0.005,
+  "LITUSDT": 5.0,
+  "LLYBUSDT": 5.0,
+  "LOKABNB": 0.01,
+  "LOKABTC": 0.0001,
+  "LOKABUSD": 10.0,
+  "LOKAUSDT": 5.0,
+  "LOOMBNB": 0.05,
+  "LOOMBTC": 0.0001,
+  "LOOMBUSD": 10.0,
+  "LOOMETH": 0.005,
+  "LOOMTRY": 10.0,
+  "LOOMUSDT": 1.0,
+  "LPTBNB": 0.01,
+  "LPTBTC": 0.0001,
+  "LPTBUSD": 10.0,
+  "LPTJPY": 100.0,
+  "LPTTRY": 10.0,
+  "LPTUSDC": 5.0,
+  "LPTUSDT": 5.0,
+  "LQTYBTC": 0.0001,
+  "LQTYFDUSD": 5.0,
+  "LQTYUSDT": 5.0,
+  "LRCBNB": 0.01,
+  "LRCBTC": 0.0001,
+  "LRCBUSD": 10.0,
+  "LRCETH": 0.001,
+  "LRCTRY": 10.0,
+  "LRCUSDT": 5.0,
+  "LSKBNB": 0.05,
+  "LSKBTC": 0.0001,
+  "LSKBUSD": 10.0,
+  "LSKETH": 0.001,
+  "LSKUSDC": 5.0,
+  "LSKUSDT": 5.0,
+  "LTCBNB": 0.01,
+  "LTCBRL": 10.0,
+  "LTCBTC": 0.0001,
+  "LTCBUSD": 5.0,
+  "LTCDOWNUSDT": 10.0,
+  "LTCETH": 0.001,
+  "LTCEUR": 5.0,
+  "LTCFDUSD": 5.0,
+  "LTCGBP": 5.0,
+  "LTCJPY": 100.0,
+  "LTCNGN": 500.0,
+  "LTCPAX": 10.0,
+  "LTCRUB": 100.0,
+  "LTCTRY": 10.0,
+  "LTCTUSD": 5.0,
+  "LTCU": 5.0,
+  "LTCUAH": 100.0,
+  "LTCUPUSDT": 10.0,
+  "LTCUSD1": 5.0,
+  "LTCUSDC": 5.0,
+  "LTCUSDT": 5.0,
+  "LTOBNB": 0.05,
+  "LTOBTC": 0.0001,
+  "LTOBUSD": 10.0,
+  "LTOUSDT": 5.0,
+  "LUMIATRY": 10.0,
+  "LUMIAUSDT": 5.0,
+  "LUNAAUD": 10.0,
+  "LUNABIDR": 20000.0,
+  "LUNABNB": 0.05,
+  "LUNABRL": 10.0,
+  "LUNABTC": 0.0001,
+  "LUNABUSD": 10.0,
+  "LUNAETH": 0.005,
+  "LUNAEUR": 10.0,
+  "LUNAGBP": 10.0,
+  "LUNATRY": 10.0,
+  "LUNAUSDC": 5.0,
+  "LUNAUSDT": 5.0,
+  "LUNAUST": 10.0,
+  "LUNBTC": 0.0001,
+  "LUNCBUSD": 5.0,
+  "LUNCTRY": 10.0,
+  "LUNCUSDC": 5.0,
+  "LUNCUSDT": 5.0,
+  "LUNETH": 0.005,
+  "MAGICBTC": 0.0001,
+  "MAGICBUSD": 10.0,
+  "MAGICFDUSD": 5.0,
+  "MAGICTRY": 10.0,
+  "MAGICUSDC": 5.0,
+  "MAGICUSDT": 5.0,
+  "MANABIDR": 20000.0,
+  "MANABNB": 0.05,
+  "MANABRL": 10.0,
+  "MANABTC": 0.0001,
+  "MANABUSD": 5.0,
+  "MANAETH": 0.001,
+  "MANATRY": 10.0,
+  "MANAUSDT": 5.0,
+  "MANTABNB": 0.01,
+  "MANTABTC": 0.0001,
+  "MANTAFDUSD": 5.0,
+  "MANTAIDR": 20000.0,
+  "MANTATRY": 10.0,
+  "MANTAUSDC": 5.0,
+  "MANTAUSDT": 5.0,
+  "MANTRATRY": 10.0,
+  "MANTRAUSDC": 5.0,
+  "MANTRAUSDT": 5.0,
+  "MARSCOINTRY": 10.0,
+  "MARSCOINUSDC": 5.0,
+  "MARSCOINUSDT": 5.0,
+  "MASKBNB": 0.01,
+  "MASKBUSD": 10.0,
+  "MASKTRY": 10.0,
+  "MASKUSDC": 5.0,
+  "MASKUSDT": 5.0,
+  "MATICAUD": 5.0,
+  "MATICBIDR": 20000.0,
+  "MATICBNB": 0.01,
+  "MATICBRL": 10.0,
+  "MATICBTC": 0.0001,
+  "MATICBUSD": 5.0,
+  "MATICETH": 0.001,
+  "MATICEUR": 5.0,
+  "MATICFDUSD": 5.0,
+  "MATICGBP": 5.0,
+  "MATICJPY": 100.0,
+  "MATICRUB": 100.0,
+  "MATICTRY": 10.0,
+  "MATICTUSD": 5.0,
+  "MATICUSDC": 5.0,
+  "MATICUSDT": 5.0,
+  "MAVBTC": 0.0001,
+  "MAVTRY": 10.0,
+  "MAVTUSD": 5.0,
+  "MAVUSDC": 5.0,
+  "MAVUSDT": 5.0,
+  "MBLBNB": 0.05,
+  "MBLBTC": 0.0001,
+  "MBLBUSD": 10.0,
+  "MBLUSDT": 5.0,
+  "MBOXBNB": 0.01,
+  "MBOXBTC": 0.0001,
+  "MBOXBUSD": 10.0,
+  "MBOXTRY": 10.0,
+  "MBOXUSDT": 5.0,
+  "MCBNB": 0.05,
+  "MCBTC": 0.0001,
+  "MCBUSD": 10.0,
+  "MCOBNB": 0.05,
+  "MCOBTC": 0.0001,
+  "MCOETH": 0.005,
+  "MCOUSDT": 10.0,
+  "MCUSDT": 5.0,
+  "MDABTC": 0.0001,
+  "MDAETH": 0.005,
+  "MDBBUSDT": 5.0,
+  "MDTBNB": 0.05,
+  "MDTBTC": 0.0001,
+  "MDTBUSD": 10.0,
+  "MDTUSDT": 5.0,
+  "MDXBNB": 0.05,
+  "MDXBTC": 0.0001,
+  "MDXBUSD": 10.0,
+  "MDXUSDT": 5.0,
+  "MEBTC": 0.0001,
+  "MEFDUSD": 5.0,
+  "MEGATRY": 10.0,
+  "MEGAU": 5.0,
+  "MEGAUSDC": 5.0,
+  "MEGAUSDT": 5.0,
+  "MEMEBNB": 0.01,
+  "MEMEETH": 0.001,
+  "MEMEFDUSD": 1.0,
+  "MEMEJPY": 100.0,
+  "MEMETRY": 10.0,
+  "MEMETUSD": 1.0,
+  "MEMEUSDC": 1.0,
+  "MEMEUSDT": 1.0,
+  "METABUSDT": 5.0,
+  "METISBTC": 0.0001,
+  "METISFDUSD": 5.0,
+  "METISTRY": 10.0,
+  "METISUSDT": 5.0,
+  "METRY": 10.0,
+  "METTRY": 10.0,
+  "METUSDC": 5.0,
+  "METUSDT": 5.0,
+  "MEUSDC": 5.0,
+  "MEUSDT": 5.0,
+  "MFTBNB": 0.05,
+  "MFTBTC": 0.0001,
+  "MFTETH": 0.005,
+  "MFTUSDT": 10.0,
+  "MINABNB": 0.05,
+  "MINABTC": 0.0001,
+  "MINABUSD": 10.0,
+  "MINATRY": 10.0,
+  "MINAUSDC": 5.0,
+  "MINAUSDT": 5.0,
+  "MIRABNB": 0.01,
+  "MIRAFDUSD": 5.0,
+  "MIRATRY": 10.0,
+  "MIRAUSDC": 5.0,
+  "MIRAUSDT": 5.0,
+  "MIRBTC": 0.0001,
+  "MIRBUSD": 10.0,
+  "MIRUSDT": 10.0,
+  "MITHBNB": 0.05,
+  "MITHBTC": 0.0001,
+  "MITHUSDT": 10.0,
+  "MITOBNB": 0.01,
+  "MITOFDUSD": 5.0,
+  "MITOTRY": 10.0,
+  "MITOUSDC": 5.0,
+  "MITOUSDT": 5.0,
+  "MKRBNB": 0.05,
+  "MKRBTC": 0.0001,
+  "MKRBUSD": 10.0,
+  "MKRTRY": 10.0,
+  "MKRUSDC": 5.0,
+  "MKRUSDT": 5.0,
+  "MLNBNB": 0.05,
+  "MLNBTC": 0.0001,
+  "MLNBUSD": 10.0,
+  "MLNUSDT": 5.0,
+  "MMTBNB": 0.01,
+  "MMTTRY": 10.0,
+  "MMTUSDC": 5.0,
+  "MMTUSDT": 5.0,
+  "MOBBTC": 0.0001,
+  "MOBBUSD": 10.0,
+  "MOBUSDT": 5.0,
+  "MODBTC": 0.0001,
+  "MODETH": 0.005,
+  "MORPHOBNB": 0.01,
+  "MORPHOFDUSD": 5.0,
+  "MORPHOTRY": 10.0,
+  "MORPHOUSDC": 5.0,
+  "MORPHOUSDT": 5.0,
+  "MOVEBNB": 0.01,
+  "MOVEBTC": 0.0001,
+  "MOVEFDUSD": 5.0,
+  "MOVETRY": 10.0,
+  "MOVEUSDC": 5.0,
+  "MOVEUSDT": 5.0,
+  "MOVRBNB": 0.05,
+  "MOVRBTC": 0.0001,
+  "MOVRBUSD": 10.0,
+  "MOVRTRY": 10.0,
+  "MOVRUSDT": 5.0,
+  "MRNABUSDT": 5.0,
+  "MRVLBUSDT": 5.0,
+  "MSFTBUSDT": 5.0,
+  "MSTRBUSDT": 5.0,
+  "MTHBTC": 0.0001,
+  "MTHETH": 0.005,
+  "MTLBTC": 0.0001,
+  "MTLBUSD": 10.0,
+  "MTLETH": 0.001,
+  "MTLTRY": 10.0,
+  "MTLUSDT": 5.0,
+  "MUBARAKTRY": 10.0,
+  "MUBARAKUSDC": 1.0,
+  "MUBARAKUSDT": 1.0,
+  "MUBUSDT": 5.0,
+  "MULTIBTC": 0.0001,
+  "MULTIBUSD": 10.0,
+  "MULTIUSDT": 1.0,
+  "MUUBUSDT": 5.0,
+  "MVLLBUSDT": 5.0,
+  "NANOBNB": 0.05,
+  "NANOBTC": 0.0001,
+  "NANOBUSD": 10.0,
+  "NANOETH": 0.005,
+  "NANOUSDT": 10.0,
+  "NASBNB": 0.05,
+  "NASBTC": 0.0001,
+  "NASETH": 0.005,
+  "NAVBNB": 0.05,
+  "NAVBTC": 0.0001,
+  "NAVETH": 0.005,
+  "NBISBUSDT": 5.0,
+  "NBSBTC": 0.0001,
+  "NBSUSDT": 5.0,
+  "NCASHBNB": 0.05,
+  "NCASHBTC": 0.0001,
+  "NCASHETH": 0.005,
+  "NEARBNB": 0.01,
+  "NEARBRL": 10.0,
+  "NEARBTC": 0.0001,
+  "NEARBUSD": 5.0,
+  "NEARETH": 0.001,
+  "NEAREUR": 5.0,
+  "NEARFDUSD": 5.0,
+  "NEARJPY": 100.0,
+  "NEARRUB": 100.0,
+  "NEARTRY": 10.0,
+  "NEARU": 5.0,
+  "NEARUSD1": 5.0,
+  "NEARUSDC": 5.0,
+  "NEARUSDT": 5.0,
+  "NEBLBNB": 0.05,
+  "NEBLBTC": 0.0001,
+  "NEBLBUSD": 10.0,
+  "NEBLUSDT": 10.0,
+  "NEIROBRL": 10.0,
+  "NEIROEUR": 1.0,
+  "NEIROFDUSD": 1.0,
+  "NEIROIDR": 20000.0,
+  "NEIROJPY": 100.0,
+  "NEIROTRY": 10.0,
+  "NEIROUSDC": 1.0,
+  "NEIROUSDT": 1.0,
+  "NEOBNB": 0.01,
+  "NEOBTC": 0.0001,
+  "NEOBUSD": 10.0,
+  "NEOETH": 0.001,
+  "NEOPAX": 10.0,
+  "NEORUB": 100.0,
+  "NEOTRY": 10.0,
+  "NEOTUSD": 10.0,
+  "NEOUSDC": 5.0,
+  "NEOUSDT": 5.0,
+  "NEWTBNB": 0.01,
+  "NEWTFDUSD": 5.0,
+  "NEWTTRY": 10.0,
+  "NEWTUSDC": 5.0,
+  "NEWTUSDT": 5.0,
+  "NEXOBTC": 0.0001,
+  "NEXOBUSD": 10.0,
+  "NEXOUSDT": 5.0,
+  "NFLXBUSDT": 5.0,
+  "NFPBNB": 0.01,
+  "NFPBTC": 0.0001,
+  "NFPFDUSD": 5.0,
+  "NFPTRY": 10.0,
+  "NFPTUSD": 5.0,
+  "NFPUSDT": 5.0,
+  "NIGHTBNB": 0.01,
+  "NIGHTTRY": 10.0,
+  "NIGHTU": 5.0,
+  "NIGHTUSDC": 5.0,
+  "NIGHTUSDT": 5.0,
+  "NILBNB": 0.01,
+  "NILFDUSD": 5.0,
+  "NILTRY": 10.0,
+  "NILUSDC": 5.0,
+  "NILUSDT": 5.0,
+  "NKNBNB": 0.05,
+  "NKNBTC": 0.0001,
+  "NKNBUSD": 10.0,
+  "NKNUSDT": 5.0,
+  "NMRBTC": 0.0001,
+  "NMRBUSD": 10.0,
+  "NMRTRY": 10.0,
+  "NMRUSDC": 5.0,
+  "NMRUSDT": 5.0,
+  "NOKBUSDT": 5.0,
+  "NOMFDUSD": 5.0,
+  "NOMTRY": 10.0,
+  "NOMUSDC": 5.0,
+  "NOMUSDT": 5.0,
+  "NOTBNB": 0.01,
+  "NOTBRL": 10.0,
+  "NOTEUR": 5.0,
+  "NOTFDUSD": 5.0,
+  "NOTTRY": 10.0,
+  "NOTUSDC": 5.0,
+  "NOTUSDT": 5.0,
+  "NPXSBTC": 0.0001,
+  "NPXSETH": 0.005,
+  "NPXSUSDC": 10.0,
+  "NPXSUSDT": 10.0,
+  "NTRNBNB": 0.01,
+  "NTRNBTC": 0.0001,
+  "NTRNTRY": 10.0,
+  "NTRNUSDT": 5.0,
+  "NUAUD": 10.0,
+  "NUBNB": 0.05,
+  "NUBTC": 0.0001,
+  "NUBUSD": 10.0,
+  "NULSBNB": 0.05,
+  "NULSBTC": 0.0001,
+  "NULSBUSD": 10.0,
+  "NULSETH": 0.005,
+  "NULSUSDT": 5.0,
+  "NURUB": 100.0,
+  "NUUSDT": 10.0,
+  "NVDABUSDT": 5.0,
+  "NXPCBNB": 0.01,
+  "NXPCFDUSD": 5.0,
+  "NXPCTRY": 10.0,
+  "NXPCUSDC": 5.0,
+  "NXPCUSDT": 5.0,
+  "NXSBNB": 0.05,
+  "NXSBTC": 0.0001,
+  "NXSETH": 0.005,
+  "OAXBTC": 0.0001,
+  "OAXETH": 0.005,
+  "OAXUSDT": 1.0,
+  "OCEANBNB": 0.01,
+  "OCEANBTC": 0.0001,
+  "OCEANBUSD": 10.0,
+  "OCEANTRY": 10.0,
+  "OCEANUSDT": 5.0,
+  "OGBTC": 0.0001,
+  "OGBUSD": 10.0,
+  "OGNBNB": 0.05,
+  "OGNBTC": 0.0001,
+  "OGNBUSD": 10.0,
+  "OGNTRY": 10.0,
+  "OGNUSDT": 5.0,
+  "OGTRY": 10.0,
+  "OGUSDT": 5.0,
+  "OMBTC": 0.0001,
+  "OMBUSD": 10.0,
+  "OMGBNB": 0.05,
+  "OMGBTC": 0.0001,
+  "OMGBUSD": 10.0,
+  "OMGETH": 0.005,
+  "OMGUSDT": 5.0,
+  "OMNIBNB": 0.01,
+  "OMNIBRL": 10.0,
+  "OMNIBTC": 0.0001,
+  "OMNIFDUSD": 5.0,
+  "OMNITRY": 10.0,
+  "OMNIUSDC": 5.0,
+  "OMNIUSDT": 5.0,
+  "OMTRY": 10.0,
+  "OMUSDC": 5.0,
+  "OMUSDT": 5.0,
+  "ONDOIDR": 20000.0,
+  "ONDOTRY": 10.0,
+  "ONDOUSDC": 5.0,
+  "ONDOUSDT": 5.0,
+  "ONEBIDR": 20000.0,
+  "ONEBNB": 0.01,
+  "ONEBTC": 0.0001,
+  "ONEBUSD": 10.0,
+  "ONEETH": 0.005,
+  "ONEPAX": 10.0,
+  "ONETRY": 10.0,
+  "ONETUSD": 10.0,
+  "ONEUSDC": 10.0,
+  "ONEUSDT": 5.0,
+  "ONGBNB": 0.05,
+  "ONGBTC": 0.0001,
+  "ONGUSDT": 5.0,
+  "ONTBNB": 0.05,
+  "ONTBTC": 0.0001,
+  "ONTBUSD": 10.0,
+  "ONTETH": 0.005,
+  "ONTPAX": 10.0,
+  "ONTTRY": 10.0,
+  "ONTUSDC": 5.0,
+  "ONTUSDT": 5.0,
+  "OOKIBNB": 0.05,
+  "OOKIBUSD": 10.0,
+  "OOKIETH": 0.005,
+  "OOKIUSDT": 5.0,
+  "OPBNB": 0.01,
+  "OPBTC": 0.0001,
+  "OPBUSD": 5.0,
+  "OPENBNB": 0.01,
+  "OPENFDUSD": 5.0,
+  "OPENTRY": 10.0,
+  "OPENUSDC": 5.0,
+  "OPENUSDT": 5.0,
+  "OPETH": 0.001,
+  "OPEUR": 5.0,
+  "OPFDUSD": 5.0,
+  "OPGTRY": 10.0,
+  "OPGUSDC": 5.0,
+  "OPGUSDT": 5.0,
+  "OPNBNB": 0.01,
+  "OPNTRY": 10.0,
+  "OPNU": 5.0,
+  "OPNUSD1": 5.0,
+  "OPNUSDC": 5.0,
+  "OPNUSDT": 5.0,
+  "OPTRY": 10.0,
+  "OPTUSD": 5.0,
+  "OPUSDC": 5.0,
+  "OPUSDT": 5.0,
+  "ORCAFDUSD": 5.0,
+  "ORCATRY": 10.0,
+  "ORCAUSDC": 5.0,
+  "ORCAUSDT": 5.0,
+  "ORCLBUSDT": 5.0,
+  "ORDIBTC": 0.0001,
+  "ORDIFDUSD": 5.0,
+  "ORDITRY": 10.0,
+  "ORDITUSD": 5.0,
+  "ORDIU": 5.0,
+  "ORDIUSDC": 5.0,
+  "ORDIUSDT": 5.0,
+  "ORNBTC": 0.0001,
+  "ORNBUSD": 10.0,
+  "ORNUSDT": 5.0,
+  "OSMOBTC": 0.0001,
+  "OSMOBUSD": 10.0,
+  "OSMOUSDC": 5.0,
+  "OSMOUSDT": 5.0,
+  "OSTBNB": 0.05,
+  "OSTBTC": 0.0001,
+  "OSTETH": 0.005,
+  "OXTBTC": 0.0001,
+  "OXTBUSD": 10.0,
+  "OXTUSDT": 5.0,
+  "PARTIBNB": 0.01,
+  "PARTIFDUSD": 5.0,
+  "PARTITRY": 10.0,
+  "PARTIUSDC": 5.0,
+  "PARTIUSDT": 5.0,
+  "PAXBNB": 0.05,
+  "PAXBTC": 0.0001,
+  "PAXBUSD": 10.0,
+  "PAXETH": 0.005,
+  "PAXGBNB": 0.01,
+  "PAXGBTC": 0.0001,
+  "PAXGBUSD": 10.0,
+  "PAXGTRY": 10.0,
+  "PAXGU": 5.0,
+  "PAXGUSD1": 5.0,
+  "PAXGUSDC": 5.0,
+  "PAXGUSDT": 5.0,
+  "PAXTUSD": 10.0,
+  "PAXUSDT": 10.0,
+  "PDABTC": 0.0001,
+  "PDAUSDT": 5.0,
+  "PDDBUSDT": 5.0,
+  "PENDLEBTC": 0.0001,
+  "PENDLEFDUSD": 5.0,
+  "PENDLETRY": 10.0,
+  "PENDLETUSD": 5.0,
+  "PENDLEUSDC": 5.0,
+  "PENDLEUSDT": 5.0,
+  "PENGBUSDT": 5.0,
+  "PENGUBNB": 0.01,
+  "PENGUFDUSD": 1.0,
+  "PENGUTRY": 10.0,
+  "PENGUUSDC": 1.0,
+  "PENGUUSDT": 1.0,
+  "PEOPLEBNB": 0.05,
+  "PEOPLEBTC": 0.0001,
+  "PEOPLEBUSD": 10.0,
+  "PEOPLEETH": 0.005,
+  "PEOPLEFDUSD": 1.0,
+  "PEOPLETRY": 10.0,
+  "PEOPLEUSDC": 1.0,
+  "PEOPLEUSDT": 1.0,
+  "PEPEBRL": 10.0,
+  "PEPEEUR": 1.0,
+  "PEPEFDUSD": 1.0,
+  "PEPEJPY": 100.0,
+  "PEPETRY": 10.0,
+  "PEPETUSD": 1.0,
+  "PEPEU": 1.0,
+  "PEPEUSD1": 1.0,
+  "PEPEUSDC": 1.0,
+  "PEPEUSDT": 1.0,
+  "PERLBNB": 0.05,
+  "PERLBTC": 0.0001,
+  "PERLUSDC": 10.0,
+  "PERLUSDT": 5.0,
+  "PERPBTC": 0.0001,
+  "PERPBUSD": 10.0,
+  "PERPUSDT": 5.0,
+  "PHABTC": 0.0001,
+  "PHABUSD": 10.0,
+  "PHATRY": 10.0,
+  "PHAUSDC": 5.0,
+  "PHAUSDT": 5.0,
+  "PHBBNB": 0.05,
+  "PHBBTC": 0.0001,
+  "PHBBUSD": 10.0,
+  "PHBPAX": 10.0,
+  "PHBTRY": 10.0,
+  "PHBTUSD": 10.0,
+  "PHBUSDC": 10.0,
+  "PHBUSDT": 5.0,
+  "PHXBNB": 0.05,
+  "PHXBTC": 0.0001,
+  "PHXETH": 0.005,
+  "PIVXBNB": 0.05,
+  "PIVXBTC": 0.0001,
+  "PIVXUSDT": 5.0,
+  "PIXELBNB": 0.01,
+  "PIXELBTC": 0.0001,
+  "PIXELFDUSD": 5.0,
+  "PIXELTRY": 10.0,
+  "PIXELUSDC": 5.0,
+  "PIXELUSDT": 5.0,
+  "PLABNB": 0.05,
+  "PLABTC": 0.0001,
+  "PLABUSD": 10.0,
+  "PLAUSDT": 5.0,
+  "PLTRBUSDT": 5.0,
+  "PLUMEBNB": 0.01,
+  "PLUMEFDUSD": 5.0,
+  "PLUMETHB": 100.0,
+  "PLUMETRY": 10.0,
+  "PLUMEUSDC": 5.0,
+  "PLUMEUSDT": 5.0,
+  "PNTBTC": 0.0001,
+  "PNTUSDT": 5.0,
+  "PNUTBRL": 10.0,
+  "PNUTBTC": 0.0001,
+  "PNUTEUR": 1.0,
+  "PNUTFDUSD": 1.0,
+  "PNUTTRY": 10.0,
+  "PNUTUSDC": 1.0,
+  "PNUTUSDT": 1.0,
+  "POABNB": 0.05,
+  "POABTC": 0.0001,
+  "POAETH": 0.005,
+  "POEBTC": 0.0001,
+  "POEETH": 0.005,
+  "POLBNB": 0.01,
+  "POLBRL": 10.0,
+  "POLBTC": 0.0001,
+  "POLETH": 0.001,
+  "POLEUR": 5.0,
+  "POLFDUSD": 5.0,
+  "POLIDR": 20000.0,
+  "POLJPY": 100.0,
+  "POLSBNB": 0.01,
+  "POLSBTC": 0.0001,
+  "POLSBUSD": 10.0,
+  "POLSUSDT": 5.0,
+  "POLTRY": 10.0,
+  "POLUSDC": 5.0,
+  "POLUSDT": 5.0,
+  "POLYBNB": 0.05,
+  "POLYBTC": 0.0001,
+  "POLYBUSD": 10.0,
+  "POLYUSDT": 10.0,
+  "POLYXBTC": 0.0001,
+  "POLYXBUSD": 10.0,
+  "POLYXTRY": 10.0,
+  "POLYXUSDT": 5.0,
+  "PONDBTC": 0.0001,
+  "PONDBUSD": 10.0,
+  "PONDUSDT": 5.0,
+  "PORTALBNB": 0.01,
+  "PORTALBTC": 0.0001,
+  "PORTALFDUSD": 5.0,
+  "PORTALTRY": 10.0,
+  "PORTALUSDT": 5.0,
+  "PORTOBTC": 0.0001,
+  "PORTOBUSD": 10.0,
+  "PORTOEUR": 5.0,
+  "PORTOTRY": 10.0,
+  "PORTOUSDT": 5.0,
+  "POWRBNB": 0.05,
+  "POWRBTC": 0.0001,
+  "POWRBUSD": 10.0,
+  "POWRETH": 0.001,
+  "POWRUSDT": 5.0,
+  "PPTBTC": 0.0001,
+  "PPTETH": 0.005,
+  "PROMBNB": 0.05,
+  "PROMBTC": 0.0001,
+  "PROMBUSD": 10.0,
+  "PROMUSDT": 5.0,
+  "PROSBUSD": 10.0,
+  "PROSETH": 0.005,
+  "PROSUSDT": 5.0,
+  "PROVEBNB": 0.01,
+  "PROVEFDUSD": 5.0,
+  "PROVETRY": 10.0,
+  "PROVEUSDC": 5.0,
+  "PROVEUSDT": 5.0,
+  "PSGBTC": 0.0001,
+  "PSGBUSD": 10.0,
+  "PSGTRY": 10.0,
+  "PSGUSDT": 5.0,
+  "PUMPTRY": 10.0,
+  "PUMPU": 5.0,
+  "PUMPUSDC": 5.0,
+  "PUMPUSDT": 5.0,
+  "PUNDIXBUSD": 10.0,
+  "PUNDIXETH": 0.001,
+  "PUNDIXUSDC": 5.0,
+  "PUNDIXUSDT": 5.0,
+  "PYPLBUSDT": 5.0,
+  "PYRBTC": 0.0001,
+  "PYRBUSD": 10.0,
+  "PYRUSDT": 5.0,
+  "PYTHBTC": 0.0001,
+  "PYTHFDUSD": 5.0,
+  "PYTHTRY": 10.0,
+  "PYTHUSDC": 5.0,
+  "PYTHUSDT": 5.0,
+  "QCOMBUSDT": 5.0,
+  "QIBNB": 0.05,
+  "QIBTC": 0.0001,
+  "QIBUSD": 10.0,
+  "QIUSDT": 5.0,
+  "QKCBTC": 0.0001,
+  "QKCBUSD": 10.0,
+  "QKCETH": 0.001,
+  "QKCUSDT": 5.0,
+  "QLCBNB": 0.05,
+  "QLCBTC": 0.0001,
+  "QLCETH": 0.005,
+  "QNTBNB": 0.05,
+  "QNTBTC": 0.0001,
+  "QNTBUSD": 10.0,
+  "QNTBUSDT": 5.0,
+  "QNTUSDC": 5.0,
+  "QNTUSDT": 5.0,
+  "QQQBUSDT": 5.0,
+  "QSPBNB": 0.05,
+  "QSPBTC": 0.0001,
+  "QSPETH": 0.005,
+  "QTUMBNB": 0.05,
+  "QTUMBTC": 0.0001,
+  "QTUMBUSD": 10.0,
+  "QTUMETH": 0.001,
+  "QTUMTRY": 10.0,
+  "QTUMUSDC": 5.0,
+  "QTUMUSDT": 5.0,
+  "QUICKBNB": 0.05,
+  "QUICKBTC": 0.0001,
+  "QUICKBUSD": 10.0,
+  "QUICKTUSD": 5.0,
+  "QUICKUSDT": 5.0,
+  "RADBNB": 0.05,
+  "RADBTC": 0.0001,
+  "RADBUSD": 10.0,
+  "RADTRY": 10.0,
+  "RADUSDT": 5.0,
+  "RAMPBTC": 0.0001,
+  "RAMPBUSD": 10.0,
+  "RAMPUSDT": 10.0,
+  "RAREBNB": 0.05,
+  "RAREBRL": 10.0,
+  "RAREBTC": 0.0001,
+  "RAREBUSD": 10.0,
+  "RARETRY": 10.0,
+  "RAREUSDC": 5.0,
+  "RAREUSDT": 5.0,
+  "RAYBNB": 0.01,
+  "RAYBUSD": 10.0,
+  "RAYFDUSD": 5.0,
+  "RAYTRY": 10.0,
+  "RAYUSDC": 5.0,
+  "RAYUSDT": 5.0,
+  "RCNBNB": 0.05,
+  "RCNBTC": 0.0001,
+  "RCNETH": 0.005,
+  "RDDTBUSDT": 5.0,
+  "RDNBNB": 0.05,
+  "RDNBTC": 0.0001,
+  "RDNETH": 0.005,
+  "RDNTBTC": 0.0001,
+  "RDNTTRY": 10.0,
+  "RDNTTUSD": 5.0,
+  "RDNTUSDT": 5.0,
+  "REDBTC": 0.0001,
+  "REDFDUSD": 5.0,
+  "REDTRY": 10.0,
+  "REDUSDC": 5.0,
+  "REDUSDT": 5.0,
+  "REEFBIDR": 20000.0,
+  "REEFBTC": 0.0001,
+  "REEFBUSD": 10.0,
+  "REEFTRY": 10.0,
+  "REEFUSDT": 5.0,
+  "REIBNB": 0.05,
+  "REIBUSD": 10.0,
+  "REIETH": 0.005,
+  "REIUSDT": 1.0,
+  "RENBNB": 0.05,
+  "RENBTC": 0.0001,
+  "RENBTCBTC": 0.0001,
+  "RENBTCETH": 0.005,
+  "RENBUSD": 10.0,
+  "RENDERBRL": 10.0,
+  "RENDERBTC": 0.0001,
+  "RENDEREUR": 5.0,
+  "RENDERFDUSD": 5.0,
+  "RENDERIDR": 20000.0,
+  "RENDERTRY": 10.0,
+  "RENDERUSDC": 5.0,
+  "RENDERUSDT": 5.0,
+  "RENUSDT": 5.0,
+  "REPBNB": 0.05,
+  "REPBTC": 0.0001,
+  "REPBUSD": 10.0,
+  "REPUSDT": 10.0,
+  "REQBTC": 0.0001,
+  "REQBUSD": 10.0,
+  "REQETH": 0.005,
+  "REQUSDT": 5.0,
+  "RESOLVBNB": 0.01,
+  "RESOLVFDUSD": 5.0,
+  "RESOLVTRY": 10.0,
+  "RESOLVUSDC": 5.0,
+  "RESOLVUSDT": 5.0,
+  "RETRY": 10.0,
+  "REU": 5.0,
+  "REUSD1": 5.0,
+  "REUSDC": 5.0,
+  "REUSDT": 5.0,
+  "REZBNB": 0.01,
+  "REZBTC": 0.0001,
+  "REZFDUSD": 5.0,
+  "REZTRY": 10.0,
+  "REZUSDC": 5.0,
+  "REZUSDT": 5.0,
+  "RGTBNB": 0.05,
+  "RGTBTC": 0.0001,
+  "RGTBUSD": 10.0,
+  "RGTUSDT": 10.0,
+  "RIFBTC": 0.0001,
+  "RIFUSDT": 5.0,
+  "RKLBBUSDT": 5.0,
+  "RLCBNB": 0.05,
+  "RLCBTC": 0.0001,
+  "RLCBUSD": 10.0,
+  "RLCETH": 0.001,
+  "RLCUSDT": 5.0,
+  "RLUSDU": 5.0,
+  "RLUSDUSDT": 5.0,
+  "RNDRBRL": 10.0,
+  "RNDRBTC": 0.0001,
+  "RNDRBUSD": 10.0,
+  "RNDREUR": 5.0,
+  "RNDRFDUSD": 5.0,
+  "RNDRTRY": 10.0,
+  "RNDRUSDC": 5.0,
+  "RNDRUSDT": 5.0,
+  "ROBOTRY": 10.0,
+  "ROBOUSDC": 5.0,
+  "ROBOUSDT": 5.0,
+  "RONINBTC": 0.0001,
+  "RONINFDUSD": 5.0,
+  "RONINTRY": 10.0,
+  "RONINUSDT": 5.0,
+  "ROSEBNB": 0.05,
+  "ROSEBTC": 0.0001,
+  "ROSEBUSD": 10.0,
+  "ROSEETH": 0.001,
+  "ROSETRY": 10.0,
+  "ROSEUSDC": 5.0,
+  "ROSEUSDT": 5.0,
+  "RPLBTC": 0.0001,
+  "RPLBUSD": 10.0,
+  "RPLUSDC": 5.0,
+  "RPLUSDT": 5.0,
+  "RPXBNB": 0.05,
+  "RPXBTC": 0.0001,
+  "RPXETH": 0.005,
+  "RSRBNB": 0.01,
+  "RSRBTC": 0.0001,
+  "RSRBUSD": 10.0,
+  "RSRFDUSD": 5.0,
+  "RSRTRY": 10.0,
+  "RSRUSDC": 5.0,
+  "RSRUSDT": 5.0,
+  "RUNEAUD": 10.0,
+  "RUNEBNB": 0.01,
+  "RUNEBTC": 0.0001,
+  "RUNEBUSD": 10.0,
+  "RUNEETH": 0.001,
+  "RUNEEUR": 5.0,
+  "RUNEFDUSD": 5.0,
+  "RUNEGBP": 10.0,
+  "RUNETRY": 10.0,
+  "RUNETUSD": 5.0,
+  "RUNEUSDC": 5.0,
+  "RUNEUSDT": 5.0,
+  "RVNBTC": 0.0001,
+  "RVNBUSD": 10.0,
+  "RVNTRY": 10.0,
+  "RVNUSDC": 5.0,
+  "RVNUSDT": 5.0,
+  "RWUSDUSDT": 5.0,
+  "SAGABNB": 0.01,
+  "SAGABTC": 0.0001,
+  "SAGAFDUSD": 5.0,
+  "SAGATRY": 10.0,
+  "SAGAUSDC": 5.0,
+  "SAGAUSDT": 5.0,
+  "SAHARABNB": 0.01,
+  "SAHARAFDUSD": 5.0,
+  "SAHARATRY": 10.0,
+  "SAHARAUSDC": 5.0,
+  "SAHARAUSDT": 5.0,
+  "SALTBTC": 0.0001,
+  "SALTETH": 0.005,
+  "SANDAUD": 5.0,
+  "SANDBIDR": 20000.0,
+  "SANDBNB": 0.01,
+  "SANDBRL": 10.0,
+  "SANDBTC": 0.0001,
+  "SANDBUSD": 5.0,
+  "SANDETH": 0.001,
+  "SANDFDUSD": 5.0,
+  "SANDTRY": 10.0,
+  "SANDUSDC": 5.0,
+  "SANDUSDT": 5.0,
+  "SANTOSBRL": 10.0,
+  "SANTOSBTC": 0.0001,
+  "SANTOSBUSD": 10.0,
+  "SANTOSTRY": 10.0,
+  "SANTOSUSDT": 5.0,
+  "SAPIENBNB": 0.01,
+  "SAPIENTRY": 10.0,
+  "SAPIENUSDC": 5.0,
+  "SAPIENUSDT": 5.0,
+  "SBNB": 0.01,
+  "SBTC": 0.0001,
+  "SCBTC": 0.0001,
+  "SCBUSD": 10.0,
+  "SCETH": 0.001,
+  "SCRBTC": 0.0001,
+  "SCRFDUSD": 5.0,
+  "SCRIDR": 20000.0,
+  "SCRTBTC": 0.0001,
+  "SCRTBUSD": 10.0,
+  "SCRTETH": 0.001,
+  "SCRTRY": 10.0,
+  "SCRTUSDT": 5.0,
+  "SCRUSDT": 5.0,
+  "SCUSDT": 5.0,
+  "SECZBUSDT": 5.0,
+  "SEIBNB": 0.01,
+  "SEIBTC": 0.0001,
+  "SEIFDUSD": 5.0,
+  "SEIJPY": 100.0,
+  "SEITRY": 10.0,
+  "SEITUSD": 5.0,
+  "SEIUSDC": 5.0,
+  "SEIUSDT": 5.0,
+  "SENTTRY": 10.0,
+  "SENTUSDC": 5.0,
+  "SENTUSDT": 5.0,
+  "SETH": 0.001,
+  "SEUR": 5.0,
+  "SFDUSD": 5.0,
+  "SFPBTC": 0.0001,
+  "SFPBUSD": 10.0,
+  "SFPUSDT": 5.0,
+  "SHAZBUSDT": 5.0,
+  "SHELLBNB": 0.01,
+  "SHELLBTC": 0.0001,
+  "SHELLFDUSD": 5.0,
+  "SHELLTRY": 10.0,
+  "SHELLUSDC": 5.0,
+  "SHELLUSDT": 5.0,
+  "SHIBAUD": 5.0,
+  "SHIBBRL": 10.0,
+  "SHIBBUSD": 5.0,
+  "SHIBDOGE": 30.0,
+  "SHIBEUR": 1.0,
+  "SHIBFDUSD": 1.0,
+  "SHIBGBP": 10.0,
+  "SHIBJPY": 100.0,
+  "SHIBRUB": 100.0,
+  "SHIBTRY": 10.0,
+  "SHIBTUSD": 1.0,
+  "SHIBUAH": 100.0,
+  "SHIBUSDC": 1.0,
+  "SHIBUSDT": 1.0,
+  "SIGNBNB": 0.01,
+  "SIGNFDUSD": 5.0,
+  "SIGNTRY": 10.0,
+  "SIGNUSDC": 5.0,
+  "SIGNUSDT": 5.0,
+  "SKHYBUSDT": 5.0,
+  "SKLBTC": 0.0001,
+  "SKLBUSD": 10.0,
+  "SKLTRY": 10.0,
+  "SKLUSDC": 5.0,
+  "SKLUSDT": 5.0,
+  "SKYBTC": 0.0001,
+  "SKYCOINBNB": 0.05,
+  "SKYCOINBTC": 0.0001,
+  "SKYCOINETH": 0.005,
+  "SKYTRY": 10.0,
+  "SKYUSDC": 5.0,
+  "SKYUSDT": 5.0,
+  "SLFBTC": 0.0001,
+  "SLFTRY": 10.0,
+  "SLFUSDC": 5.0,
+  "SLFUSDT": 5.0,
+  "SLPBIDR": 20000.0,
+  "SLPBNB": 0.05,
+  "SLPBUSD": 10.0,
+  "SLPETH": 0.001,
+  "SLPTRY": 10.0,
+  "SLPUSDT": 5.0,
+  "SMCIBUSDT": 5.0,
+  "SMHBUSDT": 5.0,
+  "SNDKBUSDT": 5.0,
+  "SNGLSBTC": 0.0001,
+  "SNGLSETH": 0.005,
+  "SNMBTC": 0.0001,
+  "SNMBUSD": 10.0,
+  "SNMETH": 0.005,
+  "SNTBTC": 0.0001,
+  "SNTBUSD": 10.0,
+  "SNTETH": 0.001,
+  "SNTUSDT": 5.0,
+  "SNXBNB": 0.01,
+  "SNXBTC": 0.0001,
+  "SNXBUSD": 10.0,
+  "SNXETH": 0.001,
+  "SNXTRY": 10.0,
+  "SNXUSDC": 5.0,
+  "SNXUSDT": 5.0,
+  "SNXXBUSDT": 5.0,
+  "SOLARS": 2000.0,
+  "SOLAUD": 5.0,
+  "SOLBIDR": 20000.0,
+  "SOLBNB": 0.01,
+  "SOLBRL": 10.0,
+  "SOLBTC": 0.0001,
+  "SOLBUSD": 5.0,
+  "SOLETH": 0.001,
+  "SOLEUR": 5.0,
+  "SOLFDUSD": 5.0,
+  "SOLGBP": 5.0,
+  "SOLIDR": 20000.0,
+  "SOLJPY": 100.0,
+  "SOLMXN": 150.0,
+  "SOLRUB": 100.0,
+  "SOLTHB": 100.0,
+  "SOLTRY": 10.0,
+  "SOLTUSD": 5.0,
+  "SOLU": 5.0,
+  "SOLUSD": 5.0,
+  "SOLUSD1": 5.0,
+  "SOLUSDC": 5.0,
+  "SOLUSDT": 5.0,
+  "SOLVBNB": 0.01,
+  "SOLVFDUSD": 5.0,
+  "SOLVTRY": 10.0,
+  "SOLVUSDC": 5.0,
+  "SOLVUSDT": 5.0,
+  "SOMIBNB": 0.01,
+  "SOMIFDUSD": 5.0,
+  "SOMITRY": 10.0,
+  "SOMIUSDC": 5.0,
+  "SOMIUSDT": 5.0,
+  "SOPHBNB": 0.01,
+  "SOPHFDUSD": 5.0,
+  "SOPHTRY": 10.0,
+  "SOPHUSDC": 5.0,
+  "SOPHUSDT": 5.0,
+  "SOXLBUSDT": 5.0,
+  "SOXSBUSDT": 5.0,
+  "SPARTABNB": 0.05,
+  "SPCXBUSDT": 5.0,
+  "SPELLBNB": 0.05,
+  "SPELLBTC": 0.0001,
+  "SPELLBUSD": 10.0,
+  "SPELLTRY": 10.0,
+  "SPELLUSDT": 5.0,
+  "SPKBNB": 0.01,
+  "SPKFDUSD": 5.0,
+  "SPKTRY": 10.0,
+  "SPKUSDC": 5.0,
+  "SPKUSDT": 5.0,
+  "SPYBUSDT": 5.0,
+  "SQQQBUSDT": 5.0,
+  "SRMBIDR": 20000.0,
+  "SRMBNB": 0.05,
+  "SRMBTC": 0.0001,
+  "SRMBUSD": 10.0,
+  "SRMUSDT": 10.0,
+  "SSVBTC": 0.0001,
+  "SSVBUSD": 10.0,
+  "SSVETH": 0.001,
+  "SSVTUSD": 5.0,
+  "SSVUSDC": 5.0,
+  "SSVUSDT": 5.0,
+  "STEEMBNB": 0.05,
+  "STEEMBTC": 0.0001,
+  "STEEMBUSD": 10.0,
+  "STEEMETH": 0.001,
+  "STEEMUSDC": 5.0,
+  "STEEMUSDT": 5.0,
+  "STGBTC": 0.0001,
+  "STGBUSD": 10.0,
+  "STGUSDT": 5.0,
+  "STMXBTC": 0.0001,
+  "STMXBUSD": 10.0,
+  "STMXETH": 0.005,
+  "STMXTRY": 10.0,
+  "STMXUSDT": 5.0,
+  "STOBNB": 0.01,
+  "STOFDUSD": 5.0,
+  "STORJBTC": 0.0001,
+  "STORJBUSD": 10.0,
+  "STORJETH": 0.005,
+  "STORJTRY": 10.0,
+  "STORJUSDT": 5.0,
+  "STORMBNB": 0.05,
+  "STORMBTC": 0.0001,
+  "STORMETH": 0.005,
+  "STORMUSDT": 10.0,
+  "STOTRY": 10.0,
+  "STOUSDC": 5.0,
+  "STOUSDT": 5.0,
+  "STPTBNB": 0.05,
+  "STPTBTC": 0.0001,
+  "STPTBUSD": 10.0,
+  "STPTUSDT": 5.0,
+  "STRATBNB": 0.05,
+  "STRATBTC": 0.0001,
+  "STRATBUSD": 10.0,
+  "STRATETH": 0.005,
+  "STRATUSDT": 10.0,
+  "STRAXBTC": 0.0001,
+  "STRAXBUSD": 10.0,
+  "STRAXETH": 0.005,
+  "STRAXTRY": 10.0,
+  "STRAXUSDT": 5.0,
+  "STRKBTC": 0.0001,
+  "STRKFDUSD": 5.0,
+  "STRKTRY": 10.0,
+  "STRKUSDC": 5.0,
+  "STRKUSDT": 5.0,
+  "STRY": 10.0,
+  "STXBNB": 0.01,
+  "STXBTC": 0.0001,
+  "STXBUSD": 10.0,
+  "STXBUSDT": 5.0,
+  "STXFDUSD": 5.0,
+  "STXTRY": 10.0,
+  "STXUSDC": 5.0,
+  "STXUSDT": 5.0,
+  "SUBBTC": 0.0001,
+  "SUBETH": 0.005,
+  "SUIBNB": 0.01,
+  "SUIBRL": 10.0,
+  "SUIBTC": 0.0001,
+  "SUIEUR": 5.0,
+  "SUIFDUSD": 5.0,
+  "SUIIDR": 20000.0,
+  "SUIJPY": 100.0,
+  "SUITRY": 10.0,
+  "SUITUSD": 5.0,
+  "SUIU": 5.0,
+  "SUIUSD1": 5.0,
+  "SUIUSDC": 5.0,
+  "SUIUSDT": 5.0,
+  "SUNBTC": 0.0001,
+  "SUNBUSD": 10.0,
+  "SUNTRY": 10.0,
+  "SUNUSDT": 5.0,
+  "SUPERBTC": 0.0001,
+  "SUPERBUSD": 10.0,
+  "SUPERFDUSD": 5.0,
+  "SUPERTRY": 10.0,
+  "SUPERUSDT": 5.0,
+  "SUSDBTC": 0.0001,
+  "SUSDC": 5.0,
+  "SUSDETH": 0.005,
+  "SUSDT": 5.0,
+  "SUSDUSDT": 10.0,
+  "SUSHIBNB": 0.01,
+  "SUSHIBTC": 0.0001,
+  "SUSHIBUSD": 10.0,
+  "SUSHIDOWNUSDT": 10.0,
+  "SUSHITRY": 10.0,
+  "SUSHIUPUSDT": 10.0,
+  "SUSHIUSDC": 5.0,
+  "SUSHIUSDT": 5.0,
+  "SWRVBNB": 0.05,
+  "SWRVBUSD": 10.0,
+  "SXPAUD": 10.0,
+  "SXPBIDR": 20000.0,
+  "SXPBNB": 0.01,
+  "SXPBTC": 0.0001,
+  "SXPBUSD": 10.0,
+  "SXPDOWNUSDT": 10.0,
+  "SXPEUR": 10.0,
+  "SXPGBP": 10.0,
+  "SXPTRY": 10.0,
+  "SXPUPUSDT": 10.0,
+  "SXPUSDT": 5.0,
+  "SXTBNB": 0.01,
+  "SXTFDUSD": 5.0,
+  "SXTTRY": 10.0,
+  "SXTUSDC": 5.0,
+  "SXTUSDT": 5.0,
+  "SYNBTC": 0.0001,
+  "SYNUSDC": 5.0,
+  "SYNUSDT": 5.0,
+  "SYRUPTRY": 10.0,
+  "SYRUPUSDC": 5.0,
+  "SYRUPUSDT": 5.0,
+  "SYSBNB": 0.05,
+  "SYSBTC": 0.0001,
+  "SYSBUSD": 10.0,
+  "SYSETH": 0.005,
+  "SYSUSDT": 5.0,
+  "TAOBTC": 0.0001,
+  "TAOFDUSD": 5.0,
+  "TAOIDR": 20000.0,
+  "TAOJPY": 100.0,
+  "TAOTRY": 10.0,
+  "TAOU": 5.0,
+  "TAOUSD1": 5.0,
+  "TAOUSDC": 5.0,
+  "TAOUSDT": 5.0,
+  "TBUSD": 10.0,
+  "TCTBNB": 0.05,
+  "TCTBTC": 0.0001,
+  "TCTUSDT": 10.0,
+  "TFUELBNB": 0.05,
+  "TFUELBTC": 0.0001,
+  "TFUELBUSD": 10.0,
+  "TFUELPAX": 10.0,
+  "TFUELTUSD": 10.0,
+  "TFUELUSDC": 10.0,
+  "TFUELUSDT": 5.0,
+  "THEBNB": 0.01,
+  "THEBTC": 0.0001,
+  "THEFDUSD": 5.0,
+  "THETABNB": 0.01,
+  "THETABTC": 0.0001,
+  "THETABUSD": 10.0,
+  "THETAETH": 0.001,
+  "THETAEUR": 5.0,
+  "THETAFDUSD": 5.0,
+  "THETATRY": 10.0,
+  "THETAUSDC": 5.0,
+  "THETAUSDT": 5.0,
+  "THETRY": 10.0,
+  "THEUSDC": 5.0,
+  "THEUSDT": 5.0,
+  "TIABTC": 0.0001,
+  "TIAFDUSD": 5.0,
+  "TIAIDR": 20000.0,
+  "TIATRY": 10.0,
+  "TIATUSD": 5.0,
+  "TIAUSDC": 5.0,
+  "TIAUSDT": 5.0,
+  "TKOBIDR": 20000.0,
+  "TKOBTC": 0.0001,
+  "TKOBUSD": 10.0,
+  "TKOIDR": 20000.0,
+  "TKOUSDT": 5.0,
+  "TLMBNB": 0.05,
+  "TLMBTC": 0.0001,
+  "TLMBUSD": 10.0,
+  "TLMFDUSD": 5.0,
+  "TLMTRY": 10.0,
+  "TLMUSDC": 5.0,
+  "TLMUSDT": 5.0,
+  "TMFBUSDT": 5.0,
+  "TNBBTC": 0.0001,
+  "TNBETH": 0.005,
+  "TNSRBTC": 0.0001,
+  "TNSRFDUSD": 5.0,
+  "TNSRTRY": 10.0,
+  "TNSRUSDC": 5.0,
+  "TNSRUSDT": 5.0,
+  "TNTBTC": 0.0001,
+  "TNTETH": 0.005,
+  "TOMOBNB": 0.05,
+  "TOMOBTC": 0.0001,
+  "TOMOBUSD": 10.0,
+  "TOMOTRY": 10.0,
+  "TOMOUSDC": 10.0,
+  "TOMOUSDT": 5.0,
+  "TONBTC": 0.0001,
+  "TONFDUSD": 5.0,
+  "TONIDR": 20000.0,
+  "TONTRY": 10.0,
+  "TONU": 5.0,
+  "TONUSD1": 5.0,
+  "TONUSDC": 5.0,
+  "TONUSDT": 5.0,
+  "TORNBNB": 0.05,
+  "TORNBTC": 0.0001,
+  "TORNBUSD": 10.0,
+  "TORNUSDT": 10.0,
+  "TOWNSBNB": 0.01,
+  "TOWNSFDUSD": 5.0,
+  "TOWNSTRY": 10.0,
+  "TOWNSUSDC": 5.0,
+  "TOWNSUSDT": 5.0,
+  "TQQQBUSDT": 5.0,
+  "TRBBNB": 0.05,
+  "TRBBTC": 0.0001,
+  "TRBBUSD": 10.0,
+  "TRBFDUSD": 5.0,
+  "TRBJPY": 100.0,
+  "TRBTRY": 10.0,
+  "TRBUSDC": 5.0,
+  "TRBUSDT": 5.0,
+  "TREEBNB": 0.01,
+  "TREEFDUSD": 5.0,
+  "TREETRY": 10.0,
+  "TREEUSDC": 5.0,
+  "TREEUSDT": 5.0,
+  "TRIBEBNB": 0.05,
+  "TRIBEBTC": 0.0001,
+  "TRIBEBUSD": 10.0,
+  "TRIBEUSDT": 10.0,
+  "TRIGBNB": 0.05,
+  "TRIGBTC": 0.0001,
+  "TRIGETH": 0.005,
+  "TROYBNB": 0.05,
+  "TROYBTC": 0.0001,
+  "TROYBUSD": 10.0,
+  "TROYTRY": 10.0,
+  "TROYUSDC": 5.0,
+  "TROYUSDT": 5.0,
+  "TRUBTC": 0.0001,
+  "TRUBUSD": 10.0,
+  "TRUMPBRL": 10.0,
+  "TRUMPEUR": 1.0,
+  "TRUMPFDUSD": 1.0,
+  "TRUMPJPY": 100.0,
+  "TRUMPTRY": 10.0,
+  "TRUMPU": 5.0,
+  "TRUMPUSD1": 5.0,
+  "TRUMPUSDC": 1.0,
+  "TRUMPUSDT": 1.0,
+  "TRURUB": 100.0,
+  "TRUTRY": 10.0,
+  "TRUUSDT": 5.0,
+  "TRXAUD": 10.0,
+  "TRXBNB": 0.01,
+  "TRXBTC": 0.0001,
+  "TRXBUSD": 5.0,
+  "TRXDOWNUSDT": 10.0,
+  "TRXETH": 0.001,
+  "TRXEUR": 5.0,
+  "TRXFDUSD": 5.0,
+  "TRXJPY": 100.0,
+  "TRXNGN": 500.0,
+  "TRXPAX": 10.0,
+  "TRXTRY": 10.0,
+  "TRXTUSD": 10.0,
+  "TRXU": 5.0,
+  "TRXUPUSDT": 10.0,
+  "TRXUSD1": 5.0,
+  "TRXUSDC": 5.0,
+  "TRXUSDT": 5.0,
+  "TRXXRP": 10.0,
+  "TSLABUSDT": 5.0,
+  "TSMBUSDT": 5.0,
+  "TSTFDUSD": 1.0,
+  "TSTTRY": 10.0,
+  "TSTUSDC": 1.0,
+  "TSTUSDT": 1.0,
+  "TURBOFDUSD": 1.0,
+  "TURBOTRY": 10.0,
+  "TURBOUSDC": 1.0,
+  "TURBOUSDT": 1.0,
+  "TURTLEBNB": 0.01,
+  "TURTLEFDUSD": 5.0,
+  "TURTLETRY": 10.0,
+  "TURTLEUSDC": 5.0,
+  "TURTLEUSDT": 5.0,
+  "TUSDBNB": 0.05,
+  "TUSDBTC": 0.0001,
+  "TUSDBTUSD": 10.0,
+  "TUSDBUSD": 10.0,
+  "TUSDC": 5.0,
+  "TUSDETH": 0.005,
+  "TUSDT": 5.0,
+  "TUSDTRY": 10.0,
+  "TUSDUSDT": 5.0,
+  "TUTUSDC": 1.0,
+  "TUTUSDT": 1.0,
+  "TVKBTC": 0.0001,
+  "TVKBUSD": 10.0,
+  "TVKUSDT": 5.0,
+  "TWTBTC": 0.0001,
+  "TWTBUSD": 5.0,
+  "TWTTRY": 10.0,
+  "TWTUSDC": 5.0,
+  "TWTUSDT": 5.0,
+  "UFTBUSD": 10.0,
+  "UFTETH": 0.001,
+  "UFTUSDT": 5.0,
+  "UIDR": 20000.0,
+  "UMABTC": 0.0001,
+  "UMABUSD": 10.0,
+  "UMATRY": 10.0,
+  "UMAUSDC": 5.0,
+  "UMAUSDT": 5.0,
+  "UNFIBNB": 0.05,
+  "UNFIBTC": 0.0001,
+  "UNFIBUSD": 10.0,
+  "UNFIETH": 0.005,
+  "UNFITRY": 10.0,
+  "UNFIUSDT": 5.0,
+  "UNIAUD": 10.0,
+  "UNIBNB": 0.01,
+  "UNIBTC": 0.0001,
+  "UNIBUSD": 5.0,
+  "UNIDOWNUSDT": 10.0,
+  "UNIETH": 0.001,
+  "UNIEUR": 5.0,
+  "UNIFDUSD": 5.0,
+  "UNITRY": 10.0,
+  "UNIU": 5.0,
+  "UNIUPUSDT": 10.0,
+  "UNIUSD1": 5.0,
+  "UNIUSDC": 5.0,
+  "UNIUSDT": 5.0,
+  "USARBUSDT": 5.0,
+  "USD1TRY": 10.0,
+  "USD1U": 5.0,
+  "USD1USDC": 5.0,
+  "USD1USDT": 5.0,
+  "USDCARS": 2000.0,
+  "USDCBNB": 0.05,
+  "USDCBRL": 10.0,
+  "USDCBUSD": 10.0,
+  "USDCCZK": 200.0,
+  "USDCIDR": 20000.0,
+  "USDCMXN": 150.0,
+  "USDCPAX": 10.0,
+  "USDCPLN": 25.0,
+  "USDCRON": 20.0,
+  "USDCTRY": 10.0,
+  "USDCTUSD": 10.0,
+  "USDCUSD": 5.0,
+  "USDCUSDT": 5.0,
+  "USDEBUSDT": 5.0,
+  "USDEUSDC": 5.0,
+  "USDEUSDT": 5.0,
+  "USDPBUSD": 10.0,
+  "USDPUSDT": 5.0,
+  "USDSBUSDSOLD": 10.0,
+  "USDSBUSDT": 10.0,
+  "USDSOLDPAX": 10.0,
+  "USDSOLDTUSD": 10.0,
+  "USDSOLDUSDC": 10.0,
+  "USDSOLDUSDT": 10.0,
+  "USDSUSDT": 5.0,
+  "USDTAED": 10.0,
+  "USDTARS": 2000.0,
+  "USDTBIDR": 20000.0,
+  "USDTBKRW": 1000.0,
+  "USDTBRL": 10.0,
+  "USDTBVND": 30000.0,
+  "USDTCOP": 4000.0,
+  "USDTCZK": 200.0,
+  "USDTDAI": 5.0,
+  "USDTIDR": 20000.0,
+  "USDTIDRT": 20000.0,
+  "USDTKZT": 3000.0,
+  "USDTMXN": 150.0,
+  "USDTNGN": 500.0,
+  "USDTPLN": 25.0,
+  "USDTRON": 20.0,
+  "USDTRUB": 100.0,
+  "USDTTHB": 100.0,
+  "USDTTRY": 10.0,
+  "USDTUAH": 100.0,
+  "USDTUSD": 5.0,
+  "USDTVAI": 5.0,
+  "USDTZAR": 100.0,
+  "USTBTC": 0.0001,
+  "USTBUSD": 10.0,
+  "USTCBUSD": 10.0,
+  "USTCFDUSD": 5.0,
+  "USTCTRY": 10.0,
+  "USTCUSDT": 5.0,
+  "USTUSDT": 10.0,
+  "USUALBTC": 0.0001,
+  "USUALFDUSD": 5.0,
+  "USUALTRY": 10.0,
+  "USUALUSDC": 5.0,
+  "USUALUSDT": 5.0,
+  "UTKBTC": 0.0001,
+  "UTKBUSD": 10.0,
+  "UTKUSDC": 5.0,
+  "UTKUSDT": 5.0,
+  "UTRY": 10.0,
+  "UUSD": 5.0,
+  "UUSDC": 5.0,
+  "UUSDT": 5.0,
+  "UVXYBUSDT": 5.0,
+  "VANABNB": 0.01,
+  "VANAFDUSD": 5.0,
+  "VANATRY": 10.0,
+  "VANAUSDC": 5.0,
+  "VANAUSDT": 5.0,
+  "VANRYBTC": 0.0001,
+  "VANRYTRY": 10.0,
+  "VANRYUSDC": 5.0,
+  "VANRYUSDT": 5.0,
+  "VELODROMEUSDC": 5.0,
+  "VELODROMEUSDT": 5.0,
+  "VENBNB": 0.05,
+  "VENBTC": 0.0001,
+  "VENETH": 0.005,
+  "VENUSDT": 10.0,
+  "VETBNB": 0.01,
+  "VETBTC": 0.0001,
+  "VETBUSD": 10.0,
+  "VETETH": 0.001,
+  "VETEUR": 5.0,
+  "VETGBP": 10.0,
+  "VETTRY": 10.0,
+  "VETUSDC": 5.0,
+  "VETUSDT": 5.0,
+  "VGXBTC": 0.0001,
+  "VGXETH": 0.005,
+  "VGXUSDT": 5.0,
+  "VIABNB": 0.05,
+  "VIABTC": 0.0001,
+  "VIAETH": 0.005,
+  "VIBBTC": 0.0001,
+  "VIBBUSD": 10.0,
+  "VIBEBTC": 0.0001,
+  "VIBEETH": 0.005,
+  "VIBETH": 0.005,
+  "VIBUSDT": 5.0,
+  "VICBTC": 0.0001,
+  "VICTRY": 10.0,
+  "VICUSDT": 5.0,
+  "VIDTBTC": 0.0001,
+  "VIDTBUSD": 10.0,
+  "VIDTUSDT": 5.0,
+  "VIRTUALIDR": 20000.0,
+  "VIRTUALTRY": 10.0,
+  "VIRTUALUSDC": 5.0,
+  "VIRTUALUSDT": 5.0,
+  "VITEBNB": 0.05,
+  "VITEBTC": 0.0001,
+  "VITEBUSD": 10.0,
+  "VITEUSDT": 5.0,
+  "VOXELBNB": 0.05,
+  "VOXELBTC": 0.0001,
+  "VOXELBUSD": 10.0,
+  "VOXELETH": 0.005,
+  "VOXELUSDT": 5.0,
+  "VSTBUSDT": 5.0,
+  "VTHOBNB": 0.05,
+  "VTHOBUSD": 10.0,
+  "VTHOTRY": 10.0,
+  "VTHOUSDT": 1.0,
+  "WABIBNB": 0.05,
+  "WABIBTC": 0.0001,
+  "WABIETH": 0.005,
+  "WALBNB": 0.01,
+  "WALFDUSD": 5.0,
+  "WALTRY": 10.0,
+  "WALUSDC": 5.0,
+  "WALUSDT": 5.0,
+  "WANBNB": 0.05,
+  "WANBTC": 0.0001,
+  "WANETH": 0.001,
+  "WANUSDT": 5.0,
+  "WAVESBNB": 0.05,
+  "WAVESBTC": 0.0001,
+  "WAVESBUSD": 10.0,
+  "WAVESETH": 0.001,
+  "WAVESEUR": 5.0,
+  "WAVESPAX": 10.0,
+  "WAVESRUB": 100.0,
+  "WAVESTRY": 10.0,
+  "WAVESTUSD": 10.0,
+  "WAVESUSDC": 10.0,
+  "WAVESUSDT": 5.0,
+  "WAXPBNB": 0.05,
+  "WAXPBTC": 0.0001,
+  "WAXPBUSD": 10.0,
+  "WAXPUSDT": 5.0,
+  "WBETHETH": 0.001,
+  "WBETHUSDT": 5.0,
+  "WBTC": 0.0001,
+  "WBTCBTC": 0.0001,
+  "WBTCBUSD": 10.0,
+  "WBTCETH": 0.001,
+  "WBTCUSDT": 5.0,
+  "WCTBNB": 0.01,
+  "WCTFDUSD": 5.0,
+  "WCTTRY": 10.0,
+  "WCTUSDC": 5.0,
+  "WCTUSDT": 5.0,
+  "WDCBUSDT": 5.0,
+  "WENBUSDT": 5.0,
+  "WFDUSD": 5.0,
+  "WIFBRL": 10.0,
+  "WIFBTC": 0.0001,
+  "WIFEUR": 1.0,
+  "WIFFDUSD": 1.0,
+  "WIFIDR": 20000.0,
+  "WIFTRY": 10.0,
+  "WIFUSDC": 1.0,
+  "WIFUSDT": 1.0,
+  "WINBNB": 0.01,
+  "WINBRL": 10.0,
+  "WINBTC": 0.0001,
+  "WINBUSD": 10.0,
+  "WINEUR": 5.0,
+  "WINGBNB": 0.05,
+  "WINGBTC": 0.0001,
+  "WINGBUSD": 10.0,
+  "WINGETH": 0.005,
+  "WINGSBTC": 0.0001,
+  "WINGSETH": 0.005,
+  "WINGUSDT": 5.0,
+  "WINTRX": 100.0,
+  "WINUSDC": 10.0,
+  "WINUSDT": 5.0,
+  "WLDBTC": 0.0001,
+  "WLDEUR": 5.0,
+  "WLDFDUSD": 5.0,
+  "WLDIDR": 20000.0,
+  "WLDRUB": 100.0,
+  "WLDTRY": 10.0,
+  "WLDU": 5.0,
+  "WLDUSDC": 5.0,
+  "WLDUSDT": 5.0,
+  "WLFIBRL": 10.0,
+  "WLFIEUR": 5.0,
+  "WLFITRY": 10.0,
+  "WLFIU": 5.0,
+  "WLFIUSD1": 5.0,
+  "WLFIUSDC": 5.0,
+  "WLFIUSDT": 5.0,
+  "WNXMBNB": 0.05,
+  "WNXMBTC": 0.0001,
+  "WNXMBUSD": 10.0,
+  "WNXMUSDT": 5.0,
+  "WOOBNB": 0.01,
+  "WOOBTC": 0.0001,
+  "WOOBUSD": 10.0,
+  "WOOUSDT": 5.0,
+  "WPRBTC": 0.0001,
+  "WPRETH": 0.005,
+  "WRXBNB": 0.05,
+  "WRXBTC": 0.0001,
+  "WRXBUSD": 10.0,
+  "WRXEUR": 10.0,
+  "WRXUSDT": 5.0,
+  "WTCBNB": 0.05,
+  "WTCBTC": 0.0001,
+  "WTCETH": 0.005,
+  "WTCUSDT": 5.0,
+  "WTRY": 10.0,
+  "WUSDC": 5.0,
+  "WUSDT": 5.0,
+  "XAIBNB": 0.01,
+  "XAIBTC": 0.0001,
+  "XAIFDUSD": 5.0,
+  "XAITRY": 10.0,
+  "XAITUSD": 5.0,
+  "XAIUSDC": 5.0,
+  "XAIUSDT": 5.0,
+  "XAUTBTC": 0.0001,
+  "XAUTTRY": 10.0,
+  "XAUTU": 5.0,
+  "XAUTUSD1": 5.0,
+  "XAUTUSDC": 5.0,
+  "XAUTUSDT": 5.0,
+  "XECBUSD": 10.0,
+  "XECTRY": 10.0,
+  "XECUSDT": 5.0,
+  "XEMBNB": 0.05,
+  "XEMBTC": 0.0001,
+  "XEMBUSD": 10.0,
+  "XEMETH": 0.005,
+  "XEMUSDT": 5.0,
+  "XLMBNB": 0.01,
+  "XLMBTC": 0.0001,
+  "XLMBUSD": 10.0,
+  "XLMDOWNUSDT": 10.0,
+  "XLMETH": 0.001,
+  "XLMEUR": 5.0,
+  "XLMFDUSD": 5.0,
+  "XLMJPY": 100.0,
+  "XLMPAX": 10.0,
+  "XLMTRY": 10.0,
+  "XLMTUSD": 10.0,
+  "XLMU": 5.0,
+  "XLMUPUSDT": 10.0,
+  "XLMUSD1": 5.0,
+  "XLMUSDC": 5.0,
+  "XLMUSDT": 5.0,
+  "XMRBNB": 0.01,
+  "XMRBTC": 0.0001,
+  "XMRBUSD": 5.0,
+  "XMRETH": 0.001,
+  "XMRUSDT": 5.0,
+  "XNOBTC": 0.0001,
+  "XNOBUSD": 10.0,
+  "XNOETH": 0.005,
+  "XNOUSDT": 5.0,
+  "XPLBNB": 0.01,
+  "XPLFDUSD": 5.0,
+  "XPLTRY": 10.0,
+  "XPLU": 5.0,
+  "XPLUSD1": 5.0,
+  "XPLUSDC": 5.0,
+  "XPLUSDT": 5.0,
+  "XRPAUD": 5.0,
+  "XRPBEARBUSD": 10.0,
+  "XRPBEARUSDT": 10.0,
+  "XRPBIDR": 20000.0,
+  "XRPBKRW": 1000.0,
+  "XRPBNB": 0.01,
+  "XRPBRL": 10.0,
+  "XRPBTC": 0.0001,
+  "XRPBULLBUSD": 10.0,
+  "XRPBULLUSDT": 10.0,
+  "XRPBUSD": 5.0,
+  "XRPDOWNUSDT": 10.0,
+  "XRPETH": 0.001,
+  "XRPEUR": 5.0,
+  "XRPFDUSD": 5.0,
+  "XRPGBP": 5.0,
+  "XRPIDR": 20000.0,
+  "XRPJPY": 100.0,
+  "XRPMXN": 150.0,
+  "XRPNGN": 500.0,
+  "XRPPAX": 10.0,
+  "XRPRLUSD": 5.0,
+  "XRPRUB": 100.0,
+  "XRPTHB": 100.0,
+  "XRPTRY": 10.0,
+  "XRPTUSD": 5.0,
+  "XRPU": 5.0,
+  "XRPUPUSDT": 10.0,
+  "XRPUSD1": 5.0,
+  "XRPUSDC": 5.0,
+  "XRPUSDT": 5.0,
+  "XTZBNB": 0.05,
+  "XTZBTC": 0.0001,
+  "XTZBUSD": 10.0,
+  "XTZDOWNUSDT": 10.0,
+  "XTZETH": 0.005,
+  "XTZTRY": 10.0,
+  "XTZUPUSDT": 10.0,
+  "XTZUSDC": 5.0,
+  "XTZUSDT": 5.0,
+  "XUSDUSDT": 5.0,
+  "XVGBTC": 0.0001,
+  "XVGBUSD": 10.0,
+  "XVGETH": 0.001,
+  "XVGTRY": 10.0,
+  "XVGTUSD": 5.0,
+  "XVGUSDC": 5.0,
+  "XVGUSDT": 5.0,
+  "XVSBNB": 0.01,
+  "XVSBTC": 0.0001,
+  "XVSBUSD": 10.0,
+  "XVSTRY": 10.0,
+  "XVSUSDT": 5.0,
+  "XZCBNB": 0.05,
+  "XZCBTC": 0.0001,
+  "XZCETH": 0.005,
+  "XZCUSDT": 10.0,
+  "XZCXRP": 10.0,
+  "YBBNB": 0.01,
+  "YBFDUSD": 5.0,
+  "YBTRY": 10.0,
+  "YBUSDC": 5.0,
+  "YBUSDT": 5.0,
+  "YFIBNB": 0.05,
+  "YFIBTC": 0.0001,
+  "YFIBUSD": 10.0,
+  "YFIDOWNUSDT": 10.0,
+  "YFIEUR": 5.0,
+  "YFIIBNB": 0.05,
+  "YFIIBTC": 0.0001,
+  "YFIIBUSD": 10.0,
+  "YFIIUSDT": 10.0,
+  "YFIUPUSDT": 10.0,
+  "YFIUSDT": 5.0,
+  "YGGBNB": 0.05,
+  "YGGBTC": 0.0001,
+  "YGGBUSD": 10.0,
+  "YGGTRY": 10.0,
+  "YGGUSDC": 5.0,
+  "YGGUSDT": 5.0,
+  "YOYOBNB": 0.05,
+  "YOYOBTC": 0.0001,
+  "YOYOETH": 0.005,
+  "ZAMATRY": 10.0,
+  "ZAMAUSDC": 5.0,
+  "ZAMAUSDT": 5.0,
+  "ZBTBNB": 0.01,
+  "ZBTFDUSD": 5.0,
+  "ZBTTRY": 10.0,
+  "ZBTUSDC": 5.0,
+  "ZBTUSDT": 5.0,
+  "ZECBNB": 0.05,
+  "ZECBTC": 0.0001,
+  "ZECBUSD": 10.0,
+  "ZECETH": 0.001,
+  "ZECPAX": 10.0,
+  "ZECTUSD": 10.0,
+  "ZECU": 5.0,
+  "ZECUSD1": 5.0,
+  "ZECUSDC": 5.0,
+  "ZECUSDT": 5.0,
+  "ZENBNB": 0.05,
+  "ZENBTC": 0.0001,
+  "ZENBUSD": 10.0,
+  "ZENETH": 0.001,
+  "ZENUSDC": 5.0,
+  "ZENUSDT": 5.0,
+  "ZILBIDR": 20000.0,
+  "ZILBNB": 0.01,
+  "ZILBTC": 0.0001,
+  "ZILBUSD": 10.0,
+  "ZILETH": 0.001,
+  "ZILEUR": 10.0,
+  "ZILIDR": 20000.0,
+  "ZILTRY": 10.0,
+  "ZILUSDT": 5.0,
+  "ZKBTC": 0.0001,
+  "ZKCBNB": 0.01,
+  "ZKCFDUSD": 5.0,
+  "ZKCTRY": 10.0,
+  "ZKCUSDC": 5.0,
+  "ZKCUSDT": 5.0,
+  "ZKFDUSD": 5.0,
+  "ZKPTRY": 10.0,
+  "ZKPUSDC": 5.0,
+  "ZKPUSDT": 5.0,
+  "ZKTRY": 10.0,
+  "ZKUSDC": 5.0,
+  "ZKUSDT": 5.0,
+  "ZMBUSDT": 5.0,
+  "ZROBTC": 0.0001,
+  "ZROFDUSD": 5.0,
+  "ZROTRY": 10.0,
+  "ZROUSDC": 5.0,
+  "ZROUSDT": 5.0,
+  "ZRXBNB": 0.05,
+  "ZRXBTC": 0.0001,
+  "ZRXBUSD": 10.0,
+  "ZRXETH": 0.005,
+  "ZRXUSDT": 5.0,
+  "\u5e01\u5b89\u4eba\u751fTRY": 10.0,
+  "\u5e01\u5b89\u4eba\u751fU": 5.0,
+  "\u5e01\u5b89\u4eba\u751fUSD1": 5.0,
+  "\u5e01\u5b89\u4eba\u751fUSDC": 1.0,
+  "\u5e01\u5b89\u4eba\u751fUSDT": 1.0,
+  "\u725b\u6765USDC": 1.0,
+  "\u725b\u6765USDT": 1.0
  }
 }
