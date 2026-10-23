@@ -660,6 +660,17 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             log.info("e5_exec %s", json.dumps(demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt), default=str)[:3000])
         except Exception as e:  # noqa: BLE001
             log.warning("e5_exec_fail err=%s", e); e5_scratch = None
+    r2s_scratch = None
+    if ((state0.get("demo_candidates") or {}).get("demo_r2s_top10_3k") or {}).get("enabled"):
+        try:  # demo_r2s daily execution; only when approved+enabled (demo_r2s_exec.execute re-checks all gates)
+            import copy, demo_r2s_exec
+            from futures_client import FuturesDemoClient
+            r2s_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_r2s_exec", "demo_fa_positions", "paused",
+                                                                     "paused_slots", "guard_blocks", "positions", "u1_live")})
+            r2s_scratch["control_log"] = []
+            log.info("r2s_exec %s", json.dumps(demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient()), default=str)[:3000])
+        except Exception as e:  # noqa: BLE001
+            log.warning("r2s_exec_fail err=%s", e); r2s_scratch = None
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
@@ -676,6 +687,10 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             if e5_scratch.get("demo_e5_exec") is not None:
                 s["demo_e5_exec"] = e5_scratch["demo_e5_exec"]
             s["control_log"] = (list(s.get("control_log") or []) + e5_scratch["control_log"])[-200:]
+        if r2s_scratch is not None:
+            if r2s_scratch.get("demo_r2s_exec") is not None:
+                s["demo_r2s_exec"] = r2s_scratch["demo_r2s_exec"]
+            s["control_log"] = (list(s.get("control_log") or []) + r2s_scratch["control_log"])[-200:]
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
             g.update(dg)
