@@ -549,18 +549,37 @@ def run_demo_gates(state0: dict) -> dict:
             log.warning("demo_gates_fail slot=%s err=%s", slot, e)
             g = {"gates_day": day, "parity_pass": False, "cloud_ordering_ok": False, "error": str(e)[:200]}
         out[slot] = g
-    try:  # demo_e5 (E-min5): parity from the shadow job; small real Demo test orders only on --force-parity, until passed
+    try:  # demo_e5 (E-minnot): parity is box-side (committed parity_E5.json); small real Demo test orders only on --force-parity, until passed
         import demo_e5
         prev = cands.get(demo_e5.SLOT) or {}
         if prev.get("gates_day") == day and not FORCE_PARITY:
             raise StopIteration
-        par = _j("parity_E5.json")
-        g = {"gates_day": day, "parity_pass": bool(par and par.get("pass")), "parity_detail": par}
-        if FORCE_PARITY and not prev.get("cloud_ordering_ok"):
+        _h = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shadow_ab")
+        par = json.load(open(os.path.join(_h, "parity_E5.json")))  # box-side parity (ledger_e_minnot), committed
+        used = par.get("mins_used") or {}
+        g = {"gates_day": day, "parity_pass": bool(par.get("pass")), "parity_detail": {k: v for k, v in par.items() if k != "mins_used"}}
+        cp = _j("parity_E5.json")  # optional cloud re-run by the shadow job (informational)
+        if cp:
+            g["cloud_parity"] = {k: cp.get(k) for k in ("orders", "mismatches", "pass", "checked_at")}
+        if FORCE_PARITY:
             from futures_client import FuturesDemoClient
-            oc = demo_e5.order_test(FuturesDemoClient(), {})
+            fut = FuturesDemoClient(); info = fut.exchange_info()
+            ex = {}
+            for x in info.get("symbols") or []:
+                mn = demo_e5.exchange_min(info, x["symbol"]); stp = 0.0
+                for f in x.get("filters") or []:
+                    if f.get("filterType") in ("LOT_SIZE", "MARKET_LOT_SIZE") and f.get("stepSize"):
+                        stp = max(stp, float(f["stepSize"]))
+                ex[x["symbol"]] = [mn, stp]
+            g["mins_vs_exchange"] = {"checked": sum(1 for s in used if s in ex), "not_listed": sum(1 for s in used if s not in ex),
+                                     "diff": {s: [used[s], ex[s]] for s in used if s in ex and ex[s] != used[s]}}
+        spec = par.get("spec")
+        if FORCE_PARITY and not (prev.get("cloud_ordering_ok") and prev.get("ordering_spec") == spec):
+            oc = demo_e5.order_test(fut, {})
             log.info("demo_e5 order_test %s", oc)
-            g.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc)
+            g.update(cloud_ordering_ok=bool(oc.get("pass")), ordering_detail=oc, ordering_spec=spec)
+        elif prev.get("ordering_spec") == spec:
+            g.update({k: prev[k] for k in ("cloud_ordering_ok", "ordering_detail", "ordering_spec") if k in prev})
         out[demo_e5.SLOT] = g
     except StopIteration:
         pass
