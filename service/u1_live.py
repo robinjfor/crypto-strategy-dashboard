@@ -152,7 +152,8 @@ def _round_step(q: float, step: float) -> float:
 def plan_orders(sleeve: dict, targets: dict, opens: dict, *, cap_gross: float, cap_pos: float,
                 steps: dict | None = None, min_notional: dict | None = None,
                 max_add_notional: float | None = None, allow_increase: bool = True,
-                blocked_increase: dict | None = None, perp: dict | None = None) -> tuple[list[dict], list[dict]]:
+                blocked_increase: dict | None = None, perp: dict | None = None,
+                size_equity: float | None = None) -> tuple[list[dict], list[dict]]:
     """Band decision per coin exactly as paper_u1.rebalance, then caps/rounding. Returns (orders, skips)."""
     PERP = perp or _pm(sleeve)  # noqa: N806 — the sleeve's perps (USDT or USDC)
     units = sleeve["units"]
@@ -160,6 +161,8 @@ def plan_orders(sleeve: dict, targets: dict, opens: dict, *, cap_gross: float, c
     skips: list[dict] = []
     if not V > 0:
         return [], [{"reason": "sleeve_equity_le_0", "V": V}]
+    if size_equity is not None and size_equity > 0:
+        V = float(size_equity)   # orchestrator sizing capital (weights unchanged, only the equity they apply to)
     want, why, wcs = {}, {}, {}
     for k in SYMS:
         wt = float(targets[k])
@@ -513,7 +516,9 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
         if pd.Timestamp(sleeve["started_at"]) > fb + LIVE_WINDOW or now - fb.to_pydatetime() > LIVE_WINDOW:
             run["decision"] = {"fill_bar": dec["fill_bar"], "skipped": "outside_2h_window"}
         else:
-            cap_gross, cap_pos = caps_for(sleeve["capital_usdt"], (slot or {}).get("params"))
+            import orchestrator
+            size_eq = orchestrator.sizing_capital("u1_live", None, now=now)
+            cap_gross, cap_pos = caps_for(size_eq if size_eq is not None else sleeve["capital_usdt"], (slot or {}).get("params"))
             reserve = margin_reserve(alloc_doc, state, approved_families, quote)
             avail = qm["available"]
             max_add = max(0.0, (avail - reserve) / IM_BUFFER) * EXCHANGE_LEVERAGE
@@ -521,7 +526,8 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             opens = fill_opens_for(dec, PERP, fb, now, fetch_1h)
             orders, skips = plan_orders(sleeve, dec["targets_lev"], opens, cap_gross=cap_gross,
                                         cap_pos=cap_pos, steps=steps, min_notional=mins, max_add_notional=max_add,
-                                        allow_increase=can_add, blocked_increase=conflicts, perp=PERP)
+                                        allow_increase=can_add, blocked_increase=conflicts, perp=PERP,
+                                        size_equity=size_eq)
             for od in orders:
                 if not od["reduce_only"]:
                     _prepare(fc, od["symbol"])
@@ -531,7 +537,7 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             run["decision"] = {"fill_bar": dec["fill_bar"], "indicator_day": dec["indicator_day"], "L": dec["L"],
                                "targets_lev": dec["targets_lev"], "n_orders": len(orders),
                                "margin_reserve_usdt": reserve, "available_usdt": avail, "caps": [cap_gross, cap_pos],
-                               "quote": quote, "ref_opens": opens}
+                               "quote": quote, "ref_opens": opens, "orchestrator_size_equity": size_eq}
         sleeve["last_fill_bar"] = dec["fill_bar"]
     run["orders"] = len(fills)
     run["fills"] = [{k: f[k] for k in ("symbol", "side", "qty", "price", "reason", "fee")} for f in fills]

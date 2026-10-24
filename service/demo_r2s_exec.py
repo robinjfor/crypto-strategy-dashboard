@@ -184,9 +184,11 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
     for s in book:
         if s not in prices:
             prices[s] = float(fut.mark_price(s))
-    eq = equity(ex, prices)
+    eq_ledger = equity(ex, prices)
+    import orchestrator  # sizing capital only (ledger untouched)
+    eq = orchestrator.sizing_capital(D.SLOT, eq_ledger, now=now)
     blk = entry_block(state)
-    out = {"bar": bar, "cfg": ck, "equity": round(eq, 2), "targets": {s: round(w, 4) for s, w in tw.items()},
+    out = {"bar": bar, "cfg": ck, "equity": round(eq, 2), "ledger_equity": round(eq_ledger, 2), "targets": {s: round(w, 4) for s, w in tw.items()},
            "funding": round(fnd, 4), "sent": [], "skipped": [], "kinds": {}}
     tag = bar.replace("-", "")[2:]
     plan = []

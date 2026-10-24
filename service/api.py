@@ -1432,6 +1432,7 @@ def build_status() -> dict:
         "demo_e5_exec": {k: v for k, v in (state.get("demo_e5_exec") or {}).items() if k != "history"},
         "demo_fa_exec": {k: v for k, v in (state.get("demo_fa_exec") or {}).items() if k != "history"},
         "netting": _safe_netting_view(state, positions),
+        "orchestrator": {k: v for k, v in (state.get("orchestrator") or {}).items() if k != "history"} or None,
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.

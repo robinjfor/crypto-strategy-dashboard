@@ -126,7 +126,9 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
                 pass
     if any(s not in prices for s in demo_e5.U1_SYMS):
         return {"skipped": "no BTC/ETH price", "bar": bar}
-    eq = equity(ex, prices)
+    eq_ledger = equity(ex, prices)
+    import orchestrator  # sizing capital only (ledger untouched); fixed CAPITAL when no fresh plan
+    eq = orchestrator.sizing_capital(demo_e5.SLOT, eq_ledger, now=now)
     m = float(targets["m"]); lt = demo_e5.plan_lt(np.array(targets["rw"], dtype=float), m)
     mins = {**(targets.get("min_notional") or {})}; steps = {**(targets.get("step") or {})}
     for s in prices:  # strategy rule = spec mins; the exchange MIN_NOTIONAL is applied to the per-symbol NET (netting)
@@ -135,7 +137,7 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
     plan = demo_e5.plan_live(targets, book, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
     blk = entry_block(state)
     tag = bar.replace("-", "")[2:]
-    out = {"bar": bar, "equity": round(eq, 2), "m": m, "lt": round(lt, 4), "planned": len(plan),
+    out = {"bar": bar, "equity": round(eq, 2), "m": m, "lt": round(lt, 4), "planned": len(plan), "ledger_equity": round(eq_ledger, 2),
            "skipped_lt_min": sum(1 for o in plan if o["kind"] == "skip_min"), "sent": [], "skipped": [], "funding": round(fnd, 4)}
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"e5{tag}")

@@ -843,6 +843,8 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
 
     store = StateStore()
     state = store.load()
+    import orchestrator
+    orchestrator.load(state)
     paused = bool(state.get("paused"))
     allow_entries = not paused
     try:

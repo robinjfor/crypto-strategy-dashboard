@@ -148,7 +148,9 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
         log_event(state, "fa_entries_blocked", demo_fa.SLOT, reason=blk, symbols=new, bar=bar)
         out["skipped"] += [f"{s} {blk}" for s in new]
         new = []
-    notional = demo_fa.CAPITAL / int(targets.get("K", demo_fa.K)) / (1 + demo_fa.MARGIN)
+    import orchestrator  # sizing capital only; existing positions/exits untouched
+    out["sizing_capital"] = cap = orchestrator.sizing_capital(demo_fa.SLOT, demo_fa.CAPITAL)
+    notional = cap / int(targets.get("K", demo_fa.K)) / (1 + demo_fa.MARGIN)
     for sym in new:
         # netted Demo slots / the futures account no longer block (virtual ledgers); a legacy (non-netted) slot holding
         # the same coin still does (its spot/perp balance would mix with FA's)

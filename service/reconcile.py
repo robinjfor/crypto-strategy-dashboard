@@ -647,6 +647,8 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         if not client.api_key:
             client = None
     state0 = store.load()
+    import orchestrator
+    orchestrator.load(state0)
     rep = build_report(state0, client=client, fc=fc)
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
     snap = asset_snapshot(client, fc) if client is not None else None

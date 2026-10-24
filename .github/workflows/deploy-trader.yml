@@ -29,6 +29,10 @@ on:
         description: "After deploy, run the daily derivatives collector once (--wait) and validate its GCS file"
         type: boolean
         default: false
+      run_orchestrator_dry_now:
+        description: "After deploy, run the portfolio orchestrator once in DRY mode (writes the GCS summary only; no state, no orders)"
+        type: boolean
+        default: false
       run_shadow_ab_now:
         description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
         type: boolean
@@ -68,6 +72,8 @@ env:
   SCHEDULER_SHADOW: crypto-shadow-ab-daily
   DERIVS_JOB: crypto-derivs-daily
   SCHEDULER_DERIVS: crypto-derivs-daily-0030
+  ORCH_JOB: crypto-orchestrator-daily
+  SCHEDULER_ORCH: crypto-orchestrator-daily-0005
   REPO_NAME: trader
   IMAGE_NAME: crypto-trader
   CORS_ORIGIN: https://robinjfor.github.io
@@ -396,6 +402,41 @@ jobs:
           print("null fields", miss); print("notes", d['notes']); print("sample", json.dumps(rows[0]))
           assert d['n_symbols']==30 and not d['errors'], "need 30 symbols"
           PY
+
+      - name: Deploy portfolio orchestrator job + scheduler (UTC 00:05 = Taipei 08:05; before the 08:08 reconcile)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs deploy "${ORCH_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" --task-timeout=300 --max-retries=1 \
+            --set-env-vars="GCS_BUCKET=${BUCKET},FAPI_BASE_URL=https://fapi.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com" \
+            --clear-secrets --command=python --args=-u,orchestrator.py --memory=512Mi --cpu=1
+          gcloud run jobs add-iam-policy-binding "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${ORCH_JOB}:run"
+          VERB=create
+          if gcloud scheduler jobs describe "${SCHEDULER_ORCH}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then VERB=update; fi
+          gcloud scheduler jobs ${VERB} http "${SCHEDULER_ORCH}" \
+            --project="${PROJECT}" --location="${REGION}" \
+            --schedule="5 0 * * *" --time-zone="UTC" \
+            --uri="${URI}" --http-method=POST \
+            --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Run orchestrator once (DRY) + validate GCS summary
+        if: ${{ inputs.run_orchestrator_dry_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs execute "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" --wait \
+            --args=-u,orchestrator.py,--dry-run || true
+          OBJ="gs://${B}/research/orchestrator/$(date -u +%F).json"
+          gcloud storage ls -l "${OBJ}"
+          gcloud storage cat "${OBJ}" > /tmp/o.json
+          python3 -c "import json;d=json.load(open('/tmp/o.json'));print(json.dumps({k:d[k] for k in ('decided_bar','dry_run','regime','weights','exposure_mult','targets','equity','portfolio_equity','peak','drawdown','dd_alert','actions')},indent=1));assert d['dry_run'] is True"
 
       - name: Start funding-arb target job once (async)
         if: ${{ inputs.run_fa_now }}
