@@ -141,3 +141,11 @@ def test_reconcile_attributes_netted_positions(monkeypatch):
     assert m["kind"] == "net_ledger_mismatch" and m["pause"] is False and m["slots"] == ["demo_r2s_top10_3k"]
     s2 = reconcile.apply_report(dict(st), rep)
     assert s2["net_reconcile"]["ok"] is False and s2["net_reconcile"]["daily"][-1]["bad"]["NEARUSDT"]["diff"] == 5.0
+
+
+def test_manual_overrides_spx_kept_gold_tokens_excluded():
+    m = tradfi.tradfi_map(static=True)
+    assert "SPXUSDT" not in m and m["PAXGUSDT"] == 0 and m["XAUTUSDT"] == 0
+    assert tradfi.is_tradfi("PAXGUSDT") and tradfi.is_tradfi("XAUTUSDT") and not tradfi.is_tradfi("SPXUSDT")
+    i = _info(["SPXUSDT", "PAXGUSDT"])
+    assert [s["symbol"] for s in i["symbols"] if tradfi.is_crypto_perp(s)] == ["SPXUSDT"]

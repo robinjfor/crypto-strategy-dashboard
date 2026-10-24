@@ -79,6 +79,9 @@ def tradfi_onboard() -> dict[str, int]:
                 out[s["symbol"]] = int(s.get("onboardDate") or out.get(s["symbol"]) or 0)
     except Exception as e:  # noqa: BLE001
         log.warning("e5_live tradfi exchangeInfo fail %s (snapshot only)", e)
+    out = {k: max(v, 1764547200000) for k, v in out.items()}   # tradfi.EPOCH_MS: older onboardDate = re-used crypto ticker
+    out.update({"PAXGUSDT": 0, "XAUTUSDT": 0})       # gold tokens: whole history (keep in sync with tradfi.EXTRA)
+    out.pop("SPXUSDT", None)                         # SPX6900 meme coin is crypto (tradfi.ALLOW)
     return out
 
 

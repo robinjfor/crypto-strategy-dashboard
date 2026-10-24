@@ -9,6 +9,12 @@ import json
 from pathlib import Path
 
 TRADFI_UNDERLYING = {"EQUITY", "HK_EQUITY", "KR_EQUITY", "CN_EQUITY", "COMMODITY", "FX"}
+# manual overrides (Robin 2026-10-24): gold-backed tokens are excluded over their whole history; SPX (SPX6900 meme coin) is crypto
+EXTRA = {"PAXGUSDT": 0, "XAUTUSDT": 0}
+ALLOW = {"SPXUSDT"}
+# no TradFi perp existed before XAUUSDT (2025-12-11): an older onboardDate is a re-used crypto ticker's (e.g. demo OMGUSDT
+# 2019-09-25 = OMG Network, now a pending Pre-IPO contract) -> the TradFi period starts no earlier than this
+EPOCH_MS = 1764547200000   # 2025-12-01 UTC
 STATIC = Path(__file__).with_name("tradfi_symbols.json")   # {sym: onboard_ms}, snapshot of fapi+demo-fapi exchangeInfo
 
 
@@ -19,6 +25,10 @@ def is_tradfi_meta(s: dict) -> bool:
 
 
 def is_crypto_perp(s: dict) -> bool:
+    if s.get("symbol") in ALLOW:
+        return str(s.get("contractType") or "") == "PERPETUAL"
+    if s.get("symbol") in EXTRA:
+        return False
     return str(s.get("contractType") or "") == "PERPETUAL" and not is_tradfi_meta(s) \
         and str(s.get("quoteAsset") or "") in ("USDT", "USDC")
 
@@ -36,6 +46,10 @@ def tradfi_map(*infos: dict | None, static: bool = True) -> dict[str, int]:
             if is_tradfi_meta(s):
                 t = int(s.get("onboardDate") or 0)
                 out[s["symbol"]] = min(out.get(s["symbol"], t), t) if s["symbol"] in out and t else (t or out.get(s["symbol"], 0))
+    out = {k: max(v, EPOCH_MS) for k, v in out.items()}
+    out.update(EXTRA)
+    for a in ALLOW:
+        out.pop(a, None)
     return out
 
 
@@ -52,8 +66,10 @@ def note_error(state: dict | None, sym: str, err: str) -> bool:
 
 
 def is_tradfi(sym: str, info: dict | None = None, state: dict | None = None) -> bool:
-    if sym in blocked(state):
+    if sym in blocked(state) or sym in EXTRA:
         return True
+    if sym in ALLOW:
+        return False
     for s in (info or {}).get("symbols") or []:
         if s.get("symbol") == sym:
             return is_tradfi_meta(s)
