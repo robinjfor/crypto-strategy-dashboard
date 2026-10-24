@@ -175,7 +175,7 @@ jobs:
             --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
             --command=python \
             --args=-u,reconcile.py \
-            --memory=512Mi \
+            --memory=1Gi \
             --cpu=1
 
       - name: Deploy Cloud Run Job (shadow ledgers A–E, paper only, public data, no API keys)

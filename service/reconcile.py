@@ -668,9 +668,17 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             r2s_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_r2s_exec", "demo_fa_positions", "paused",
                                                                      "paused_slots", "guard_blocks", "positions", "u1_live")})
             r2s_scratch["control_log"] = []
-            log.info("r2s_exec %s", json.dumps(demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient()), default=str)[:3000])
+            res = demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient())
+            log.info("r2s_exec %s", json.dumps(res, default=str)[:3000])
+            ex = r2s_scratch.get("demo_r2s_exec")
+            if ex is None:
+                ex = r2s_scratch["demo_r2s_exec"] = dict(state0.get("demo_r2s_exec") or {})
+            ex["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
         except Exception as e:  # noqa: BLE001
-            log.warning("r2s_exec_fail err=%s", e); r2s_scratch = None
+            log.warning("r2s_exec_fail err=%s", e)
+            ex = dict(state0.get("demo_r2s_exec") or {})
+            ex["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:1000]}
+            r2s_scratch = {"demo_r2s_exec": ex, "control_log": []}
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
