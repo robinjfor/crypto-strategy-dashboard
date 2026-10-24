@@ -628,6 +628,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     gres = run_guards(state0, fc)
     dgates = run_demo_gates(state0)
     fa_scratch = None
+    fa_err = None
     if ((state0.get("demo_candidates") or {}).get("demo_funding_arb_1x") or {}).get("enabled"):
         try:  # live controls; only when Robin enabled the slot
             import copy, demo_fa_guard
@@ -637,15 +638,26 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             fa_scratch["control_log"] = []
             fa_spot, fa_fut = client or BinanceClient(), fc or FuturesDemoClient()
             fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec", "demo_fa_slippage")})
+            fa_scratch = {k: v for k, v in fa_scratch.items() if v is not None}  # absent keys copy as None -> setdefault returns None
             demo_fa_guard.run(fa_scratch, fa_spot, fa_fut)
             import demo_fa_exec
             if demo_fa_exec.active(fa_scratch)[0]:
                 from google.cloud import storage
                 bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/fa_targets.json")
                 tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-                log.info("fa_exec %s", demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt))
+                res = demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt)
+                log.info("fa_exec %s", res)
+                fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
+                fa_scratch["demo_fa_exec"]["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
+            else:
+                fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
+                fa_scratch["demo_fa_exec"]["last_run"] = {"at": now_iso_taipei(), "result": {"skipped": demo_fa_exec.active(fa_scratch)[1]}}
         except Exception as e:  # noqa: BLE001
-            log.warning("fa_guard_fail err=%s", e); fa_scratch = None
+            import traceback
+            log.warning("fa_guard_fail err=%s", e)
+            fa_err = dict(state0.get("demo_fa_exec") or {})
+            fa_err["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
+            fa_scratch = None
     e5_scratch = None
     if ((state0.get("demo_candidates") or {}).get("demo_e5_min5_x175") or {}).get("enabled"):
         try:  # demo_e5 daily execution; only when approved+enabled (demo_e5_exec.execute re-checks all gates)
@@ -653,13 +665,21 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             from futures_client import FuturesDemoClient
             e5_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_e5_exec", "demo_fa_positions", "paused",
                                                                     "paused_slots", "guard_blocks", "positions", "u1_live")})
+            e5_scratch = {k: v for k, v in e5_scratch.items() if v is not None}  # absent keys copy as None -> setdefault returns None
             e5_scratch["control_log"] = []
             from google.cloud import storage
             bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/e5_targets.json")
             tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-            log.info("e5_exec %s", json.dumps(demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt), default=str)[:3000])
+            res = demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt)
+            log.info("e5_exec %s", json.dumps(res, default=str)[:3000])
+            e5_scratch["demo_e5_exec"] = dict(e5_scratch.get("demo_e5_exec") or {})
+            e5_scratch["demo_e5_exec"]["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
         except Exception as e:  # noqa: BLE001
-            log.warning("e5_exec_fail err=%s", e); e5_scratch = None
+            import traceback
+            log.warning("e5_exec_fail err=%s", e)
+            ex5 = dict(state0.get("demo_e5_exec") or {})
+            ex5["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
+            e5_scratch = {"demo_e5_exec": ex5, "control_log": []}
     r2s_scratch = None
     if ((state0.get("demo_candidates") or {}).get("demo_r2s_top10_3k") or {}).get("enabled"):
         try:  # demo_r2s daily execution; only when approved+enabled (demo_r2s_exec.execute re-checks all gates)
@@ -691,6 +711,8 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             if fa_scratch.get("demo_fa_slippage") is not None:
                 s["demo_fa_slippage"] = fa_scratch["demo_fa_slippage"]
             s["control_log"] = (list(s.get("control_log") or []) + fa_scratch["control_log"])[-200:]
+        if fa_err is not None:
+            s["demo_fa_exec"] = fa_err
         if e5_scratch is not None:
             if e5_scratch.get("demo_e5_exec") is not None:
                 s["demo_e5_exec"] = e5_scratch["demo_e5_exec"]

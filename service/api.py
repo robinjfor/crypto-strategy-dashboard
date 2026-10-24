@@ -1362,6 +1362,8 @@ def build_status() -> dict:
         "closed_trades": closed_norm,
         "last_job_run_at": meta.get("last_run_at"),
         "demo_r2s_exec": {k: v for k, v in (state.get("demo_r2s_exec") or {}).items() if k != "history"},
+        "demo_e5_exec": {k: v for k, v in (state.get("demo_e5_exec") or {}).items() if k != "history"},
+        "demo_fa_exec": {k: v for k, v in (state.get("demo_fa_exec") or {}).items() if k != "history"},
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.

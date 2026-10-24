@@ -98,13 +98,15 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
         return {"skipped": why}
     if not targets or targets.get("held") is None:
         return {"skipped": "no targets"}
-    ex = state.setdefault("demo_fa_exec", {})
+    ex = state.get("demo_fa_exec") or {}
+    state["demo_fa_exec"] = ex
     bar = targets.get("decided_bar")
     if ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
     from futures_client import round_qty_futures
     from main import same_coin_position_slot, opposite_position_slot
-    book = state.setdefault("demo_fa_positions", {})
+    book = state.get("demo_fa_positions") or {}
+    state["demo_fa_positions"] = book
     want = list(dict.fromkeys(targets["held"]))
     info = fut.exchange_info()
     out = {"bar": bar, "exits": [], "entries": [], "skipped": []}

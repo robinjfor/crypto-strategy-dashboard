@@ -22,7 +22,8 @@ def run(state: dict, spot, fut) -> list[dict]:
     if not g.get("enabled") or (state.get("paused_slots") or {}).get(demo_fa.SLOT):
         return []
     from futures_client import round_qty_futures
-    book = state.setdefault("demo_fa_positions", {})
+    book = state.get("demo_fa_positions") or {}
+    state["demo_fa_positions"] = book
     if not book:
         return []
     info = fut.exchange_info()

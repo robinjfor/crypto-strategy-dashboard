@@ -110,7 +110,8 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None)
     ok, why = fresh(targets, now)
     if not ok:
         return {"skipped": why}
-    ex = state.setdefault("demo_e5_exec", {})
+    ex = state.get("demo_e5_exec") or {}
+    state["demo_e5_exec"] = ex
     bar = str(targets["decided_bar"])
     if ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
