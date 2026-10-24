@@ -38,6 +38,19 @@ def cfg_for(bar: str) -> str | None:
     return LIVE_PICKS.get(str(q0.date()))
 
 
+def pick_for(bar: str) -> tuple[str | None, str | None, bool]:
+    """(cfg, quarter_used, fallback). No pick for the trading quarter -> latest earlier quarter's pick."""
+    d1 = pd.Timestamp(bar) + pd.Timedelta(days=1)
+    q = str(pd.Timestamp(year=d1.year, month=3 * ((d1.month - 1) // 3) + 1, day=1).date())
+    if q in LIVE_PICKS:
+        return LIVE_PICKS[q], q, False
+    prev = [k for k in LIVE_PICKS if k < q]
+    if not prev:
+        return None, None, False
+    k = max(prev)
+    return LIVE_PICKS[k], k, True
+
+
 def in_window(now: datetime) -> tuple[bool, str]:
     bar = str((now - timedelta(days=1)).date())
     return now.hour < WINDOW_H, bar
@@ -149,10 +162,12 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None) -> dic
         return {"skipped": "already executed", "bar": bar}
     if not win:
         return {"skipped": "outside 00:00-02:00 UTC window", "bar": bar}
-    ck = cfg_for(bar)
+    ck, q_used, fb = pick_for(bar)
     if not ck:
         log_event(state, "r2s_no_wf_pick", D.SLOT, bar=bar)
-        return {"skipped": "no WF pick for this quarter (re-run WF on the box)", "bar": bar}
+        return {"skipped": "no WF pick for this or any earlier quarter", "bar": bar}
+    if fb:
+        log_event(state, "r2s_wf_pick_fallback", D.SLOT, bar=bar, cfg=ck, from_quarter=q_used)
     ex.setdefault("cash", D.CAPITAL); book = ex.setdefault("book", {})
     if panel_fn is None:
         panel_fn = lambda: fetch_panel(sorted(set(perp_symbols()) | set(book)))

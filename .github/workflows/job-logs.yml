@@ -32,4 +32,6 @@ jobs:
           B="${{ vars.GCS_BUCKET }}"
           gcloud storage cat "gs://${B}/trader/state.json" > /tmp/s.json
           python3 -c "import json,os;d=json.load(open('/tmp/s.json'));print(json.dumps((d.get('demo_candidates') or {}).get(os.environ['SLOT']),indent=1,default=str)[:20000]);print([e for e in (d.get('control_log') or []) if e.get('slot')==os.environ['SLOT']][-20:])"
+          python3 -c "import json;d=json.load(open('/tmp/s.json'));print('demo_r2s_exec',json.dumps(d.get('demo_r2s_exec'),default=str)[:6000])"
+          gcloud logging read 'resource.type=cloud_run_job AND resource.labels.job_name=crypto-trader-reconcile AND (textPayload:"r2s" OR jsonPayload.message:"r2s") AND timestamp>="'"$(date -u -d '-12 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --order=asc --limit=80 --format='value(timestamp,textPayload,jsonPayload.message)' | cut -c1-1500 || true
           [ -n "${OBJ}" ] && gcloud storage cat "gs://${B}/trader/shadow_ab/${OBJ}" | head -c 300000 | fold -w 3000 || true

@@ -57,7 +57,6 @@ def _patch(monkeypatch, tw, bar="2026-10-23"):
 def test_cfg_for_quarter():
     assert X.cfg_for("2026-09-30") == "th20_h3_hv0.0_L2.0"     # trades 10-01 -> Q4 pick
     assert X.cfg_for("2026-12-30") == "th20_h3_hv0.0_L2.0"
-    assert X.cfg_for("2026-12-31") is None                      # Q1 2027 needs a new WF pick
     assert X.cfg_for("2026-09-29") is None
 
 
@@ -105,10 +104,25 @@ def test_entry_skipped_when_coin_held_by_other_slot(monkeypatch):
     assert not f.orders and any("another slot" in x for x in r["skipped"])
 
 
-def test_no_pick_no_trade(monkeypatch):
+def test_pick_fallback_to_previous_quarter():
+    assert X.pick_for("2026-12-31") == ("th20_h3_hv0.0_L2.0", "2026-10-01", True)   # Q1-2027 missing -> Q4-2026
+    assert X.pick_for("2026-10-23") == ("th20_h3_hv0.0_L2.0", "2026-10-01", False)
+    assert X.pick_for("2026-09-29") == (None, None, False)                          # nothing earlier
+
+
+def test_fallback_trades_and_logs(monkeypatch):
     _patch(monkeypatch, {"AUSDT": 0.1}, bar="2026-12-31")
     f = Fut(["AUSDT"])
-    r = X.execute(_state(), f, datetime(2027, 1, 1, 0, 8, tzinfo=timezone.utc), panel_fn=lambda: None)
+    st = _state()
+    X.execute(st, f, datetime(2027, 1, 1, 0, 8, tzinfo=timezone.utc), panel_fn=lambda: None)
+    ev = [e for e in st["control_log"] if e.get("action") == "r2s_wf_pick_fallback"]
+    assert ev and ev[0]["from_quarter"] == "2026-10-01" and f.orders
+
+
+def test_no_earlier_pick_no_trade(monkeypatch):
+    _patch(monkeypatch, {"AUSDT": 0.1}, bar="2026-09-29")
+    f = Fut(["AUSDT"])
+    r = X.execute(_state(), f, datetime(2026, 9, 30, 0, 8, tzinfo=timezone.utc), panel_fn=lambda: None)
     assert "WF pick" in r["skipped"] and not f.orders
 
 
