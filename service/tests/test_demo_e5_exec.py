@@ -81,19 +81,37 @@ def test_same_plan_as_parity_planner(monkeypatch):
     assert sent.keys() == got.keys() and all(abs(sent[s] - got[s]) < 1e-9 for s in sent)
 
 
-def test_foreign_holder_and_entry_block_skip_opens_but_not_closes(monkeypatch):
+def test_other_holders_no_longer_skip_entry_block_still_does(monkeypatch):
+    """netting: coins held by other slots / the account are traded (virtual ledger, net order); entry block only stops opens."""
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
     monkeypatch.setattr(X, "entry_block", lambda s: None)
-    st = _state(); st["demo_fa_positions"] = {"SOLUSDT": {}}
-    f = Fut(PX, {"ETHUSDT": -1.0})
+    st = _state(); st["demo_fa_positions"] = {"SOLUSDT": {"perp_qty": 1.0, "spot_qty": 1.0}}
+    f = Fut(PX, {"ETHUSDT": -1.0, "SOLUSDT": -1.0})
     X.execute(st, f, _tgt(), NOW)
-    assert {o["symbol"] for o in f.orders} == {"BTCUSDT"}
+    assert {o["symbol"] for o in f.orders} == {"BTCUSDT", "ETHUSDT", "SOLUSDT"}
+    eth = next(o for o in f.orders if o["symbol"] == "ETHUSDT")
+    assert eth["side"] == "BUY" and eth.get("reduceOnly") == "true"          # +0.5 against the account's -1 -> reduce-only
+    assert abs(st["demo_e5_exec"]["book"]["ETHUSDT"] - 0.5) < 1e-12 and abs(st["demo_e5_exec"]["book"]["SOLUSDT"] - 4.3) < 1e-9
     # next day: target 0 -> BTC full close runs even under an entry block
     monkeypatch.setattr(X, "entry_block", lambda s: "帳戶暫停")
     X.execute(st, f, _tgt("2026-10-25", w1=[0.0, 0.0], ws={}), datetime(2026, 10, 26, 0, 30, tzinfo=timezone.utc))
-    last = f.orders[-1]
-    assert last["symbol"] == "BTCUSDT" and last["side"] == "SELL" and last.get("reduceOnly") == "true"
+    btc = [o for o in f.orders if o["symbol"] == "BTCUSDT"][-1]
+    assert btc["side"] == "SELL" and btc.get("reduceOnly") == "true"
     assert "BTCUSDT" not in st["demo_e5_exec"]["book"]
+
+
+def test_tradfi_never_opened(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
+    monkeypatch.setattr(X, "entry_block", lambda s: None)
+    px = {**PX, "PLTRUSDT": 150.0}
+    f = Fut(px); info = _info(px)
+    for s in info["symbols"]:
+        if s["symbol"] == "PLTRUSDT":
+            s.update(contractType="TRADIFI_PERPETUAL", underlyingType="EQUITY")
+    f.exchange_info = lambda: info
+    st = _state()
+    out = X.execute(st, f, _tgt(ws={"PLTRUSDT": 0.5}, dbs={"PLTRUSDT": 0.01}), NOW)
+    assert "PLTRUSDT" not in {o["symbol"] for o in f.orders} and any("TradFi" in x for x in out["skipped"])
 
 
 def test_missed_open_window(monkeypatch):

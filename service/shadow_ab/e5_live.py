@@ -64,6 +64,38 @@ def funding(sym: str, start_ms: int, end_ms: int) -> list:
         return []
 
 
+def tradfi_onboard() -> dict[str, int]:
+    """{symbol: TradFi onboardDate ms}: live fapi exchangeInfo (contractType TRADIFI_PERPETUAL / equity, commodity, FX
+    underlying) + the committed snapshot service/tradfi_symbols.json."""
+    out: dict[str, int] = {}
+    try:
+        out.update({k: int(v) for k, v in json.loads((Path(__file__).resolve().parent.parent / "tradfi_symbols.json").read_text()).items()})
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        for s in _get(f"{FAPI}/fapi/v1/exchangeInfo").get("symbols") or []:
+            if str(s.get("contractType") or "").upper().startswith("TRADIFI") or str(s.get("underlyingType") or "") in (
+                    "EQUITY", "HK_EQUITY", "KR_EQUITY", "CN_EQUITY", "COMMODITY", "FX") or "TradFi" in (s.get("underlyingSubType") or []):
+                out[s["symbol"]] = int(s.get("onboardDate") or out.get(s["symbol"]) or 0)
+    except Exception as e:  # noqa: BLE001
+        log.warning("e5_live tradfi exchangeInfo fail %s (snapshot only)", e)
+    return out
+
+
+def mask_tradfi(p, onboard: dict[str, int]):
+    """crypto perps only (Robin 2026-10-24): a TradFi symbol is NaN from its TradFi onboardDate on (re-used tickers
+    keep their earlier crypto history), so the ledger never selects or prices it after that."""
+    import pandas as pd
+    syms = set(p.columns.get_level_values(0)); hit = []
+    for s, ms in onboard.items():
+        if s in syms:
+            t = pd.Timestamp(int(ms), unit="ms", tz="UTC").normalize() if ms else p.index[0]
+            m = p.index >= t
+            if m.any():
+                p.loc[m, s] = float("nan"); hit.append(s)
+    return p, sorted(hit)
+
+
 def extend(base: Path, dst: Path, now: datetime | None = None, workers: int = 8) -> dict:
     import pandas as pd
     now = now or datetime.now(timezone.utc)
@@ -82,8 +114,10 @@ def extend(base: Path, dst: Path, now: datetime | None = None, workers: int = 8)
             os.symlink(f.resolve(), dst / k / f.name)
     src = {"api": 0, "vision": 0}
     if start_ms >= end_ms:
-        shutil.copy(base / "panel_1d.pkl", dst / "panel_1d.pkl")
-        return {"base_last": str(last.date()), "last_bar": str(last.date()), "added_days": 0, "syms": len(syms), "src": src}
+        full, masked = mask_tradfi(p, tradfi_onboard())
+        full.to_pickle(dst / "panel_1d.pkl")
+        return {"base_last": str(last.date()), "last_bar": str(last.date()), "added_days": 0, "syms": len(syms), "src": src,
+                "tradfi_masked": len(masked)}
 
     def one(s):
         kl, sr = klines("fut", s, start_ms, end_ms)
@@ -110,7 +144,8 @@ def extend(base: Path, dst: Path, now: datetime | None = None, workers: int = 8)
     # a day with no bar for any symbol (data not yet published) must not become the decided bar
     have = add.notna().any(axis=1)
     add = add[have.cumprod().astype(bool)] if len(add) else add
-    pd.concat([p, add]).to_pickle(dst / "panel_1d.pkl")
+    full, masked = mask_tradfi(pd.concat([p, add]), tradfi_onboard())
+    full.to_pickle(dst / "panel_1d.pkl")
     for s in [x for x in ("BTCUSDT", "ETHUSDT") if list((base / "sp").glob(f"{x}_*.csv")) if (base / "sp").exists()]:
         kl, _ = klines("spot", s, start_ms, end_ms)
         if kl:
@@ -119,6 +154,6 @@ def extend(base: Path, dst: Path, now: datetime | None = None, workers: int = 8)
                     fh.write(",".join(str(x) for x in r[:8]) + ",0,0,0,0\n")
     lb = str((p.index[-1] if not len(add) else add.index[-1]).date())
     out = {"base_last": str(last.date()), "last_bar": lb, "added_days": int(len(add)), "syms": len(syms),
-           "with_new_bars": len(new), "src": src}
+           "with_new_bars": len(new), "src": src, "tradfi_masked": len(masked)}
     log.info("e5_live %s", out)
     return out

@@ -58,6 +58,13 @@ def _futures_slots_by_symbol(state: dict, quote: str, alloc_doc: dict | None) ->
                     out.setdefault(pm[k], []).append(u1)
         except Exception:  # noqa: BLE001
             pass
+    try:  # netted Demo slots (virtual ledgers)
+        import netting
+        for sym, sl_ in netting.holders(state).items():
+            if sym.endswith(quote):
+                out.setdefault(sym, []).extend(sl_)
+    except Exception:  # noqa: BLE001
+        pass
     return out
 
 
@@ -253,6 +260,9 @@ def apply_u1_external_closes(st: dict, closes: list[dict]) -> list[str]:
     return done
 
 
+NETTED = ("demo_r2s_top10_3k", "demo_e5_min5_x175", "demo_funding_arb_1x")
+
+
 def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
     """Read-only Binance snapshot + mismatch list. Errors are reported, never raised."""
     rep: dict = {"at": now_iso_taipei(), "at_utc": datetime.now(timezone.utc).isoformat(),
@@ -296,9 +306,16 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
                 rep["mismatches"].append({"venue": "futures", "quote": q, **m, "slots": slots, "kind": "manual_order",
                                           "tag": "人工單", "manual_orders": man, "pause": False})
                 continue
+            netted = bool(slots) and all(x in NETTED for x in slots)
             rep["mismatches"].append({"venue": "futures", "quote": q, **m, "slots": slots,
-                                      "kind": "futures_position_mismatch" if slots else "untracked_exchange_position",
-                                      "pause": bool(slots)})
+                                      "kind": ("net_ledger_mismatch" if netted else "futures_position_mismatch") if slots else "untracked_exchange_position",
+                                      "pause": bool(slots) and not netted})
+    try:  # daily: sum of the Demo slots' virtual ledgers == exchange net per symbol
+        import netting
+        exch = {p["symbol"]: float(p["qty"]) for w in rep["wallets"].values() for p in (w.get("positions") or [])}
+        rep["net_reconcile"] = {q: netting.net_reconcile(state, exch, q) for q in ("USDT", "USDC")}
+    except Exception as e:  # noqa: BLE001
+        rep["errors"].append(f"net_reconcile: {str(e)[:200]}")
     if client is not None:
         try:
             rep["mismatches"].extend(_spot_checks(client, state))
@@ -311,6 +328,14 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
 def apply_report(st: dict, rep: dict) -> dict:
     """Persist the report; pause slots with unexplained mismatches; record alerts. Never unpauses."""
     prev = st.get("reconcile") or {}
+    nr = rep.get("net_reconcile")
+    if nr is not None:
+        day = str(rep.get("at_utc") or "")[:10]
+        ok = all(v.get("ok") for v in nr.values())
+        hist = [h for h in ((st.get("net_reconcile") or {}).get("daily") or []) if h.get("day") != day]
+        bad = {s_: r for v in nr.values() for s_, r in (v.get("symbols") or {}).items() if not r.get("ok")}
+        st["net_reconcile"] = {"at": rep.get("at"), "ok": ok, "symbols": {s_: r for v in nr.values() for s_, r in (v.get("symbols") or {}).items()},
+                               "daily": (hist + [{"day": day, "at": rep.get("at"), "ok": ok, "bad": bad}])[-60:]}
     adopted = apply_u1_external_closes(st, rep.get("u1_external_closes") or [])
     tag_manual_closed_trades(st)
     uf = rep.get("u1_funding") or {}
@@ -637,7 +662,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             fa_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_fa_positions", "paused_slots")})
             fa_scratch["control_log"] = []
             fa_spot, fa_fut = client or BinanceClient(), fc or FuturesDemoClient()
-            fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec", "demo_fa_slippage")})
+            fa_scratch.update({k: copy.deepcopy(state0.get(k)) for k in ("paused", "guard_blocks", "positions", "u1_live", "demo_fa_exec", "demo_fa_slippage", "demo_e5_exec", "demo_r2s_exec", "tradfi_blocked")})
             fa_scratch = {k: v for k, v in fa_scratch.items() if v is not None}  # absent keys copy as None -> setdefault returns None
             demo_fa_guard.run(fa_scratch, fa_spot, fa_fut)
             import demo_fa_exec
@@ -659,24 +684,32 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             fa_err["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
             fa_scratch = None
     e5_scratch = None
+    shared_net = {}   # one Netter for the E5 + R2S intents of this run: per-symbol net order (netting.py)
+
+    def _netter():
+        if "n" not in shared_net:
+            import netting
+            from futures_client import FuturesDemoClient
+            shared_net["n"] = netting.Netter(fc or FuturesDemoClient())
+        return shared_net["n"]
+    e5_res = r2s_res = None
     if ((state0.get("demo_candidates") or {}).get("demo_e5_min5_x175") or {}).get("enabled"):
         try:  # demo_e5 daily execution; only when approved+enabled (demo_e5_exec.execute re-checks all gates)
             import copy, demo_e5_exec
             from futures_client import FuturesDemoClient
             e5_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_e5_exec", "demo_fa_positions", "paused",
-                                                                    "paused_slots", "guard_blocks", "positions", "u1_live")})
+                                                                    "paused_slots", "guard_blocks", "positions", "u1_live", "demo_r2s_exec", "tradfi_blocked")})
             e5_scratch = {k: v for k, v in e5_scratch.items() if v is not None}  # absent keys copy as None -> setdefault returns None
             e5_scratch["control_log"] = []
             from google.cloud import storage
             bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/e5_targets.json")
             tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-            res = demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt)
-            log.info("e5_exec %s", json.dumps(res, default=str)[:3000])
-            e5_scratch["demo_e5_exec"] = dict(e5_scratch.get("demo_e5_exec") or {})
-            e5_scratch["demo_e5_exec"]["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
+            e5_res = demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt, netter=_netter())
         except Exception as e:  # noqa: BLE001
             import traceback
             log.warning("e5_exec_fail err=%s", e)
+            if "n" in shared_net:
+                shared_net["n"].drop("demo_e5_min5_x175")
             ex5 = dict(state0.get("demo_e5_exec") or {})
             ex5["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
             e5_scratch = {"demo_e5_exec": ex5, "control_log": []}
@@ -686,19 +719,37 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             import copy, demo_r2s_exec
             from futures_client import FuturesDemoClient
             r2s_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_r2s_exec", "demo_fa_positions", "paused",
-                                                                     "paused_slots", "guard_blocks", "positions", "u1_live")})
+                                                                     "paused_slots", "guard_blocks", "positions", "u1_live", "demo_e5_exec", "tradfi_blocked")})
+            r2s_scratch = {k: v for k, v in r2s_scratch.items() if v is not None}
             r2s_scratch["control_log"] = []
-            res = demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient())
-            log.info("r2s_exec %s", json.dumps(res, default=str)[:3000])
-            ex = r2s_scratch.get("demo_r2s_exec")
-            if ex is None:
-                ex = r2s_scratch["demo_r2s_exec"] = dict(state0.get("demo_r2s_exec") or {})
-            ex["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
+            r2s_res = demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient(), netter=_netter())
         except Exception as e:  # noqa: BLE001
             log.warning("r2s_exec_fail err=%s", e)
+            if "n" in shared_net:
+                shared_net["n"].drop("demo_r2s_top10_3k")
             ex = dict(state0.get("demo_r2s_exec") or {})
             ex["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:1000]}
             r2s_scratch = {"demo_r2s_exec": ex, "control_log": []}
+    net_err = None
+    if "n" in shared_net:
+        try:
+            shared_net["n"].flush()   # E5 + R2S intents -> one net order per symbol; callbacks fill both virtual ledgers
+        except Exception as e:  # noqa: BLE001
+            log.warning("net_flush_fail err=%s", e); net_err = f"{type(e).__name__}: {e}"[:600]
+
+    def _last_run(sc, key, res):
+        if sc is None or res is None:
+            return
+        log.info("%s %s", key, json.dumps(res, default=str)[:3000])
+        ex = sc.get(key)
+        if ex is None:
+            ex = sc[key] = dict(state0.get(key) or {})
+        j = json.dumps(res, default=str)
+        ex["last_run"] = {"at": now_iso_taipei(), "result": json.loads(j) if len(j) <= 4000 else j[:2000]}
+        if net_err:
+            ex["last_run"]["error"] = net_err
+    _last_run(e5_scratch, "demo_e5_exec", e5_res)
+    _last_run(r2s_scratch, "demo_r2s_exec", r2s_res)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
@@ -721,6 +772,11 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             if r2s_scratch.get("demo_r2s_exec") is not None:
                 s["demo_r2s_exec"] = r2s_scratch["demo_r2s_exec"]
             s["control_log"] = (list(s.get("control_log") or []) + r2s_scratch["control_log"])[-200:]
+        tb = set(s.get("tradfi_blocked") or [])
+        for sc in (fa_scratch, e5_scratch, r2s_scratch):
+            tb |= set((sc or {}).get("tradfi_blocked") or [])
+        if tb:
+            s["tradfi_blocked"] = sorted(tb)
         for slot_id, dg in (dgates or {}).items():
             g = s.setdefault("demo_candidates", {}).setdefault(slot_id, {})
             g.update(dg)

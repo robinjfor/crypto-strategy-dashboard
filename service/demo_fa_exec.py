@@ -1,14 +1,17 @@
 """Order-placing path for demo_funding_arb_1x. Runs from reconcile once per decided bar (fa_targets.json).
 Active ONLY when the slot is enabled AND approved AND accepted AND both gates pass; otherwise a no-op.
 Exits (both legs) always run when active (risk-reducing). Entries are skipped while the account or the slot is
-paused, or a macro/guard entry block is active. One position per coin: no entry if any other slot or the futures
-account already holds that coin. Fills are read back from Binance; demo_fa_positions holds the real filled qty."""
+paused, or a macro/guard entry block is active. The perp leg is a virtual-ledger intent netted per symbol with the
+other Demo slots (netting.py, virtual qty = -perp_qty): no "held by another slot" skip; TradFi symbols are never
+entered. Fills are read back from Binance; demo_fa_positions holds the filled qty allocated to FA."""
 from __future__ import annotations
 
 import logging
 import time
 
 import demo_fa
+import netting
+import tradfi
 from guards import log_event
 
 log = logging.getLogger("demo_fa_exec")
@@ -35,6 +38,15 @@ def entry_block(state: dict) -> str | None:
         return "本倉暫停"
     blocked, why = guards.entry_blocked(state)
     return f"風控封鎖：{why}" if blocked else None
+
+
+def _perp(fut, info, state, sym: str, delta: float, tag: str) -> tuple[float, float]:
+    """one netted perp intent for FA, sent now (the spot leg depends on the fill). -> (signed filled qty, px)"""
+    got = [0.0, 0.0]
+    n = netting.Netter(fut, info, tag=tag)
+    n.add(state, demo_fa.SLOT, sym, delta, 0.0, lambda q, px, fee: got.__setitem__(slice(0, 2), [q, px]))
+    n.flush()
+    return got[0], got[1]
 
 
 def _spot_net_qty(order: dict) -> tuple[float, float]:
@@ -104,7 +116,6 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
     if ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
     from futures_client import round_qty_futures
-    from main import same_coin_position_slot, opposite_position_slot
     book = state.get("demo_fa_positions") or {}
     state["demo_fa_positions"] = book
     want = list(dict.fromkeys(targets["held"]))
@@ -117,9 +128,7 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
         try:
             pq = round_qty_futures(info, sym, float(pos.get("perp_qty") or 0))
             if pq > 0:
-                coid = f"faX-p-{sym[:12]}-{tag}"
-                o = fut.new_order(symbol=sym, side="BUY", type="MARKET", quantity=pq, reduceOnly="true", newClientOrderId=coid)
-                fq, fpx = _perp_fill(fut, sym, o, coid)
+                fq, fpx = _perp(fut, info, state, sym, pq, f"faX{tag}")
             else:
                 fq, fpx = 0.0, 0.0
             sq = float(pos.get("spot_qty") or 0)
@@ -139,11 +148,15 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
         log_event(state, "fa_entries_blocked", demo_fa.SLOT, reason=blk, symbols=new, bar=bar)
         out["skipped"] += [f"{s} {blk}" for s in new]
         new = []
-    held_fut = {r["symbol"] for r in fut.position_risk() if float(r.get("positionAmt") or 0) != 0} if new else set()
     notional = demo_fa.CAPITAL / int(targets.get("K", demo_fa.K)) / (1 + demo_fa.MARGIN)
     for sym in new:
-        other = (same_coin_position_slot(state, demo_fa.SLOT, sym, "LONG") or opposite_position_slot(state, demo_fa.SLOT, sym, "LONG")
-                 or ("futures_account" if sym in held_fut else None))
+        # netted Demo slots / the futures account no longer block (virtual ledgers); a legacy (non-netted) slot holding
+        # the same coin still does (its spot/perp balance would mix with FA's)
+        from execution import base_asset
+        other = next((pid for pid, p in (state.get("positions") or {}).items() if isinstance(p, dict) and p.get("status") == "FILLED"
+                      and base_asset(p.get("symbol") or "") == base_asset(sym)), None)
+        if tradfi.is_tradfi(sym, info, state):
+            log_event(state, "fa_entry_skip_tradfi", demo_fa.SLOT, symbol=sym, bar=bar); out["skipped"].append(f"{sym} TradFi"); continue
         bad = ((((state.get("demo_candidates") or {}).get(demo_fa.SLOT) or {}).get("ordering_detail") or {}).get("universe_check") or {}).get("failed") or {}
         if sym in SKIP and sym not in bad:
             bad = {**bad, sym: ["fixed skip"]}
@@ -154,13 +167,10 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
             log_event(state, "fa_entry_skip_same_coin", demo_fa.SLOT, symbol=sym, held_by=other, bar=bar)
             out["skipped"].append(f"{sym} held by {other}"); continue
         try:
-            fut.set_margin_type(sym, "ISOLATED"); fut.set_leverage(sym, PERP_LEVERAGE)
             mark = float(fut.mark_price(sym)); q = round_qty_futures(info, sym, notional / mark)
             if q <= 0:
                 out["skipped"].append(f"{sym} below min"); continue
-            coid = f"faE-p-{sym[:12]}-{tag}"
-            o = fut.new_order(symbol=sym, side="SELL", type="MARKET", quantity=q, newClientOrderId=coid)
-            pq, ppx = _perp_fill(fut, sym, o, coid)
+            pq, ppx = _perp(fut, info, state, sym, -q, f"faE{tag}"); pq = -pq
             if pq <= 0:
                 log_event(state, "fa_entry_error", demo_fa.SLOT, symbol=sym, error="perp not filled"); continue
             try:
@@ -169,7 +179,7 @@ def execute(state: dict, spot, fut, targets: dict | None) -> dict:
                 if sq <= 0:
                     raise RuntimeError("spot not filled")
             except Exception as e:  # noqa: BLE001  unwind perp so we never hold a naked short
-                fut.new_order(symbol=sym, side="BUY", type="MARKET", quantity=pq, reduceOnly="true", newClientOrderId=f"faU-p-{sym[:12]}-{tag}")
+                _perp(fut, info, state, sym, pq, f"faU{tag}")
                 log_event(state, "fa_entry_unwound", demo_fa.SLOT, symbol=sym, error=str(e)[:120]); out["skipped"].append(f"{sym} spot failed, unwound"); continue
             _slip(state, bar, sym, "perp", "SELL", ppx, _lag(bar)); _slip(state, bar, sym, "spot", "BUY", spx, _lag(bar))
             book[sym] = {"spot_qty": sq, "perp_qty": pq, "spot_px": spx, "perp_px": ppx, "bar": bar}

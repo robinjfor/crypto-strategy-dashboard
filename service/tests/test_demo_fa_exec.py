@@ -92,11 +92,11 @@ def test_guard_block_blocks_entries(monkeypatch):
     assert not f.orders and "FOMC" in r["skipped"][0]
 
 
-def test_one_position_per_coin():
-    st, f = _state(), Fut(held=["BUSDT"])
+def test_legacy_slot_blocks_but_netted_holder_does_not():
+    st, f = _state(), Fut(held=["BUSDT"])        # BUSDT held on the account (e.g. E5 virtual) -> netted, FA still enters
     st["positions"] = {"sat_x": {"status": "FILLED", "symbol": "AUSDC", "side": "LONG"}}
     r = demo_fa_exec.execute(st, Spot(), f, T1)
-    assert r["entries"] == [] and len(r["skipped"]) == 2 and not f.orders
+    assert r["entries"] == ["BUSDT"] and len(r["skipped"]) == 1 and "AUSDT" in r["skipped"][0]
     # and other slots now see the coin as taken
     import main
     st2 = {"demo_fa_positions": {"DOGEUSDT": {}}}

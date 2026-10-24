@@ -469,7 +469,67 @@ def _open_positions(client: BinanceClient, state: dict) -> list:
     except Exception as e:  # noqa: BLE001
         log.warning("futures_positions_merge_fail err=%s", e)
     _label_u1_effective_leverage(out, state)
+    _label_netted(out, state)
     return out
+
+
+def _label_netted(rows: list, state: dict) -> None:
+    """Exchange rows of netted symbols: attribute to the Demo slot(s) whose virtual ledgers sum to the position."""
+    try:
+        import netting
+        books = netting.slot_books(state)
+    except Exception:  # noqa: BLE001
+        return
+    for r in rows:
+        sym = r.get("raw_symbol")
+        if r.get("venue") != "futures" or not str(r.get("slot") or "").startswith("fut_"):
+            continue
+        alloc = {k: b[sym] for k, b in books.items() if sym in b}
+        if alloc:
+            r["slot"] = "+".join(sorted(alloc)); r["virtual_alloc"] = alloc
+
+
+def _safe_netting_view(state: dict, rows: list) -> dict:
+    try:
+        return _netting_view(state, rows)
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)[:200]}
+
+
+def _netting_view(state: dict, exch_rows: list | None = None) -> dict:
+    """/status: per-slot virtual positions + PnL and the net exchange position per symbol."""
+    import netting
+    marks = {}
+    for r in exch_rows or []:
+        if r.get("raw_symbol") and r.get("mark"):
+            marks[r["raw_symbol"]] = float(r["mark"])
+    caps = {"demo_r2s_top10_3k": ("demo_r2s_exec", 3000.0), "demo_e5_min5_x175": ("demo_e5_exec", 5000.0)}
+    slots = {}
+    for slot, b in netting.slot_books(state).items():
+        pos = {s_: {"qty": q, "mark": marks.get(s_), "value": round(q * marks[s_], 4) if s_ in marks else None} for s_, q in sorted(b.items())}
+        row = {"positions": pos}
+        if slot in caps:
+            ex = state.get(caps[slot][0]) or {}
+            cap = caps[slot][1]
+            try:
+                import demo_r2s, demo_e5
+                cap = demo_r2s.CAPITAL if slot == demo_r2s.SLOT else demo_e5.CAPITAL
+            except Exception:  # noqa: BLE001
+                pass
+            cash = float(ex.get("cash", cap))
+            if all(v["mark"] for v in pos.values()):
+                eq = cash + sum(v["value"] for v in pos.values())
+                row.update(cash=round(cash, 4), equity=round(eq, 2), pnl=round(eq - cap, 2), capital=cap)
+            else:
+                row.update(cash=round(cash, 4), capital=cap)
+        slots[slot] = row
+    vn = netting.virtual_net(state)
+    ex_net = {r["raw_symbol"]: (1 if r.get("side") == "LONG" else -1) * float(r.get("qty") or 0)
+              for r in exch_rows or [] if r.get("venue") == "futures" and r.get("raw_symbol")}
+    net = {s_: {"virtual_sum": round(vn.get(s_, 0.0), 10), "exchange": ex_net.get(s_, 0.0),
+                "ok": abs(vn.get(s_, 0.0) - ex_net.get(s_, 0.0)) <= 1e-8 * max(1.0, abs(ex_net.get(s_, 0.0)))}
+           for s_ in sorted(set(vn))}
+    return {"slots": slots, "net": net, "reconcile": state.get("net_reconcile"), "tradfi_blocked": state.get("tradfi_blocked") or []}
 
 
 def _label_u1_effective_leverage(rows: list, state: dict) -> None:
@@ -1102,6 +1162,13 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
                 sgn = -1.0 if str(pos.get("side") or "LONG").upper() == "SHORT" else 1.0
                 sym = str(pos["symbol"]).upper()
                 expect[sym] = expect.get(sym, 0.0) + sgn * abs(float(pos.get("qty") or 0))
+        try:  # Demo strategy slots: virtual ledgers, the exchange holds their per-symbol net (netting.py)
+            import netting
+            for sym, v in netting.virtual_net(state).items():
+                if sym.endswith(q):
+                    expect[sym] = expect.get(sym, 0.0) + v
+        except Exception:  # noqa: BLE001
+            pass
         got = {x["symbol"]: x["qty"] for x in exch}
         mism = [{"symbol": s_, "trader": expect.get(s_, 0.0), "binance": got.get(s_, 0.0)}
                 for s_ in sorted(set(expect) | set(got)) if abs(expect.get(s_, 0.0) - got.get(s_, 0.0)) > 1e-9]
@@ -1364,6 +1431,7 @@ def build_status() -> dict:
         "demo_r2s_exec": {k: v for k, v in (state.get("demo_r2s_exec") or {}).items() if k != "history"},
         "demo_e5_exec": {k: v for k, v in (state.get("demo_e5_exec") or {}).items() if k != "history"},
         "demo_fa_exec": {k: v for k, v in (state.get("demo_fa_exec") or {}).items() if k != "history"},
+        "netting": _safe_netting_view(state, positions),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.

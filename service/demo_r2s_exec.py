@@ -6,8 +6,9 @@ pick for the quarter (LIVE_PICKS, 12m train / 3m test, re-selected on the box ea
 Decision per coin = demo_r2s.decide_minnot (the function that passed trade-by-trade parity) with p = today's daily open,
 E = the slot's own virtual equity (3,000U + fills - fees + funding on its own book), per-symbol MIN_NOTIONAL + stepSize
 from the real Demo exchangeInfo. Decided bar d (UTC) trades only in the window 00:00-02:00 UTC of d+1 (open t+1).
-Closes always run (reduce-only). Opens/increases are skipped while the account/slot is paused, a guard entry block is
-active, the coin is held by another slot (FA book / foreign positionAmt), or the symbol isn't listed on Demo."""
+Orders are virtual-ledger intents netted per symbol with the other Demo slots (netting.py; no "held by another slot"
+skip; exchange min notional/stepSize on the net). Opens/increases are skipped while the account/slot is paused, a guard
+entry block is active, the symbol is TradFi (crypto perps only), or it isn't listed on Demo."""
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,8 @@ import numpy as np
 import pandas as pd
 
 import demo_r2s as D
+import netting
+import tradfi
 from guards import log_event
 
 log = logging.getLogger("demo_r2s_exec")
@@ -70,7 +73,7 @@ def _get(path: str, params: dict):
 def perp_symbols(get=_get) -> list[str]:
     info = get("/fapi/v1/exchangeInfo", {})
     return sorted(s["symbol"] for s in info.get("symbols") or [] if s.get("quoteAsset") == "USDT"
-                  and s.get("contractType") == "PERPETUAL" and s.get("status") == "TRADING")
+                  and tradfi.is_crypto_perp(s) and s.get("status") == "TRADING")
 
 
 def fetch_panel(syms, get=_get, bars: int = BARS, pace: float = 0.15) -> dict:
@@ -132,14 +135,9 @@ def _fill(fut, sym, order, coid) -> tuple[float, float, float | None]:
     return float(o.get("executedQty") or 0), float(o.get("avgPrice") or 0), None
 
 
-def _funding(fut, ex: dict, now_ms: int) -> float:
-    since = int(ex.get("funding_since") or now_ms); tot = 0.0
-    for s, q in (ex.get("book") or {}).items():
-        if q:
-            try:
-                tot += sum(float(r.get("income") or 0) for r in fut.income(s, "FUNDING_FEE", since, now_ms))
-            except Exception:  # noqa: BLE001
-                pass
+def _funding(fut, ex: dict, now_ms: int, state: dict | None = None) -> float:
+    since = int(ex.get("funding_since") or now_ms)
+    tot = netting.funding_share(fut, state if state is not None else {"demo_r2s_exec": ex}, D.SLOT, ex.get("book") or {}, since, now_ms)
     ex["funding_since"] = now_ms
     return tot
 
@@ -151,7 +149,7 @@ def _round(q: float, step: float) -> float:
     return float(f"{n * step:.{dec}f}")
 
 
-def execute(state: dict, fut, now: datetime | None = None, panel_fn=None) -> dict:
+def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter=None) -> dict:
     ok, why = D.active(state)
     if not ok:
         return {"skipped": why}
@@ -181,15 +179,13 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None) -> dic
     syms = sorted(set(tw) | set(book))
     mn, st = D.load_mins(info, syms)
     now_ms = int(now.timestamp() * 1000)
-    fnd = _funding(fut, ex, now_ms); ex["cash"] = float(ex["cash"]) + fnd
+    fnd = _funding(fut, ex, now_ms, state); ex["cash"] = float(ex["cash"]) + fnd
     prices = {s: O1[s] for s in syms if s in O1}
     for s in book:
         if s not in prices:
             prices[s] = float(fut.mark_price(s))
     eq = equity(ex, prices)
     blk = entry_block(state)
-    fa = set(state.get("demo_fa_positions") or {})
-    pos = {r["symbol"]: float(r.get("positionAmt") or 0) for r in fut.position_risk()}
     out = {"bar": bar, "cfg": ck, "equity": round(eq, 2), "targets": {s: round(w, 4) for s, w in tw.items()},
            "funding": round(fnd, 4), "sent": [], "skipped": [], "kinds": {}}
     tag = bar.replace("-", "")[2:]
@@ -205,45 +201,32 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None) -> dic
         if kind in ("hold", "skip_min") or q == u:
             continue
         plan.append((s, u, q, kind))
-    # closes / reductions first (free margin)
-    plan.sort(key=lambda x: not (x[2] == 0 or (abs(x[2]) < abs(x[1]) and np.sign(x[2]) == np.sign(x[1]))))
+    own = netter is None
+    netter = netter or netting.Netter(fut, info, tag=f"r2s{tag}")
     for s, u, q, kind in plan:
         reducing = q == 0 or (abs(q) < abs(u) and np.sign(q) == np.sign(u))
         if not reducing:
-            why = ("not listed on Demo" if s not in lst else blk or
-                   ("held by another slot" if (abs(pos.get(s, 0.0) - u) > 1e-12 or s in fa) else None))
+            why = ("not listed on Demo" if s not in lst else blk or ("TradFi (crypto only)" if tradfi.is_tradfi(s, info, state) else None))
             if why:
                 out["skipped"].append(f"{s} {why}"); log_event(state, "r2s_entry_skip", D.SLOT, symbol=s, why=why, bar=bar); continue
-        legs = [(u, 0.0, True), (0.0, q, False)] if kind == "flip" and q != 0 else [(u, q, reducing)]
-        for a, b, ro in legs:
-            d = b - a; qty = _round(abs(d), st[s])
-            if qty <= 0:
-                continue
-            side = "BUY" if d > 0 else "SELL"
-            coid = f"r2s-{s[:14]}-{tag}-{len(out['sent'])}"[:36]
-            try:
-                if not ro:
-                    fut.set_margin_type(s, "ISOLATED"); fut.set_leverage(s, LEVERAGE)
-                kw = {"reduceOnly": "true"} if ro else {}
-                r = fut.new_order(symbol=s, side=side, type="MARKET", quantity=qty, newClientOrderId=coid, **kw)
-                fq, px, _ = _fill(fut, s, r, coid)
-                if fq <= 0:
-                    out["skipped"].append(f"{s} not filled"); log_event(state, "r2s_order_error", D.SLOT, symbol=s, error="not filled", bar=bar); break
-            except Exception as e:  # noqa: BLE001
-                out["skipped"].append(f"{s} error"); log_event(state, "r2s_order_error", D.SLOT, symbol=s, error=str(e)[:120], bar=bar); break
-            dd = fq if side == "BUY" else -fq
-            nb = float(book.get(s, 0.0)) + dd
-            if b == 0.0 or abs(nb) < 1e-12:
-                nb = 0.0
-            pos[s] = pos.get(s, 0.0) + dd
-            ex["cash"] = float(ex["cash"]) - dd * px - abs(dd) * px * FEE
-            if nb == 0.0:
-                book.pop(s, None)
+        d = q - u
+        if abs(d) <= 0:
+            continue
+
+        def logf(fq, px, fee, s=s, kind=kind):
+            if fq:
+                side = "BUY" if fq > 0 else "SELL"
+                log_event(state, "r2s_order", D.SLOT, symbol=s, side=side, qty=abs(fq), px=px, kind=kind, bar=bar)
+                out["sent"].append({"symbol": s, "side": side, "qty": abs(fq), "px": px, "kind": kind})
             else:
-                book[s] = nb
-            log_event(state, "r2s_order", D.SLOT, symbol=s, side=side, qty=fq, px=px, kind=kind, bar=bar)
-            out["sent"].append({"symbol": s, "side": side, "qty": fq, "px": px, "kind": kind, "reduce_only": ro})
-    out["equity_after"] = round(equity(ex, prices), 2)
-    ex.update(last_bar=bar, last=out)
-    ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
+                out["skipped"].append(f"{s} net not filled")
+        netter.add(state, D.SLOT, s, d, prices.get(s, 0.0), netting.ledger_cb(ex, s, on_fill=logf), kind=kind)
+
+    def finish():
+        out["equity_after"] = round(equity(ex, prices), 2)
+        ex.update(last_bar=bar, last=out)
+        ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
+    netter.after.append(finish)
+    if own:
+        netter.flush()
     return out

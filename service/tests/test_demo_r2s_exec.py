@@ -96,12 +96,13 @@ def test_decisions_follow_decide_minnot(monkeypatch):
     assert any(e["action"] == "r2s_skip_min" for e in st["control_log"])
 
 
-def test_entry_skipped_when_coin_held_by_other_slot(monkeypatch):
+def test_coin_held_by_other_slot_is_netted_not_skipped(monkeypatch):
     _patch(monkeypatch, {"AUSDT": 0.1})
-    f = Fut(["AUSDT"], pos={"AUSDT": 3.0})                     # foreign position, slot book empty
-    st = _state()
-    r = X.execute(st, f, NOW, panel_fn=lambda: None)
-    assert not f.orders and any("another slot" in x for x in r["skipped"])
+    f = Fut(["AUSDT"], pos={"AUSDT": 3.0})                     # E5 holds 3 AUSDT (virtual), R2S book empty
+    st = _state(demo_e5_exec={"book": {"AUSDT": 3.0}, "cash": 0.0})
+    X.execute(st, f, NOW, panel_fn=lambda: None)
+    assert [(o["symbol"], o["side"], float(o["quantity"])) for o in f.orders] == [("AUSDT", "BUY", 30.0)]
+    assert st["demo_r2s_exec"]["book"]["AUSDT"] == 30.0 and f.pos["AUSDT"] == 33.0
 
 
 def test_pick_fallback_to_previous_quarter():
