@@ -25,6 +25,10 @@ on:
         description: "After deploy, start the funding-arb target job once (public data; then one reconcile tick)"
         type: boolean
         default: false
+      run_derivs_now:
+        description: "After deploy, run the daily derivatives collector once (--wait) and validate its GCS file"
+        type: boolean
+        default: false
       run_shadow_ab_now:
         description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
         type: boolean
@@ -62,6 +66,8 @@ env:
   FA_JOB: crypto-fa-daily
   SCHEDULER_FA: crypto-fa-daily-0001
   SCHEDULER_SHADOW: crypto-shadow-ab-daily
+  DERIVS_JOB: crypto-derivs-daily
+  SCHEDULER_DERIVS: crypto-derivs-daily-0030
   REPO_NAME: trader
   IMAGE_NAME: crypto-trader
   CORS_ORIGIN: https://robinjfor.github.io
@@ -347,6 +353,49 @@ jobs:
             --schedule="1 0 * * *" --time-zone="UTC" \
             --uri="${URI}" --http-method=POST \
             --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Deploy derivatives collector job + scheduler (UTC 00:30 = Taipei 08:30; public mainnet fapi, no keys)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs deploy "${DERIVS_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" --task-timeout=600 --max-retries=1 \
+            --set-env-vars="GCS_BUCKET=${BUCKET},FAPI_BASE_URL=https://fapi.binance.com" \
+            --clear-secrets --command=python --args=-u,derivs_collector.py --memory=512Mi --cpu=1
+          gcloud run jobs add-iam-policy-binding "${DERIVS_JOB}" --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${DERIVS_JOB}:run"
+          VERB=create
+          if gcloud scheduler jobs describe "${SCHEDULER_DERIVS}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then VERB=update; fi
+          gcloud scheduler jobs ${VERB} http "${SCHEDULER_DERIVS}" \
+            --project="${PROJECT}" --location="${REGION}" \
+            --schedule="30 0 * * *" --time-zone="UTC" \
+            --uri="${URI}" --http-method=POST \
+            --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
+      - name: Run derivatives collector once + validate GCS file
+        if: ${{ inputs.run_derivs_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs execute "${DERIVS_JOB}" --project="${PROJECT}" --region="${REGION}" --wait || true
+          gcloud logging read "resource.type=cloud_run_job AND resource.labels.job_name=${DERIVS_JOB}" \
+            --project="${PROJECT}" --limit=20 --format='value(textPayload)' || true
+          OBJ="gs://${B}/research/derivs/$(date -u +%F).json.gz"
+          gcloud storage ls -l "${OBJ}"
+          gcloud storage cat "${OBJ}" | gunzip > /tmp/d.json
+          python3 - <<'PY'
+          import json; d=json.load(open('/tmp/d.json')); rows=d['rows']
+          miss={f:[r['symbol'] for r in rows if r.get(f) is None] for f in d['fields']}
+          miss={k:v for k,v in miss.items() if v}
+          print("n_symbols", d['n_symbols'], "errors", d['errors']); print("symbols", [r['symbol'] for r in rows])
+          print("null fields", miss); print("notes", d['notes']); print("sample", json.dumps(rows[0]))
+          assert d['n_symbols']==30 and not d['errors'], "need 30 symbols"
+          PY
 
       - name: Start funding-arb target job once (async)
         if: ${{ inputs.run_fa_now }}
