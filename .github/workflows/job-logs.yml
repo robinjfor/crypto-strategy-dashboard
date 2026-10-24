@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       slot: { description: "demo_candidates slot id", required: true, default: "demo_e5_min5_x175" }
+      logq: { description: "reconcile log substring (r2s / e5_exec / fa_exec)", required: false, default: "r2s" }
       shadow_obj: { description: "object under trader/shadow_ab/ to print (e.g. parity_E5.json)", required: false, default: "parity_E5.json" }
 
 permissions:
@@ -27,11 +28,12 @@ jobs:
         env:
           SLOT: ${{ inputs.slot }}
           OBJ: ${{ inputs.shadow_obj }}
+          LOGQ: ${{ inputs.logq || 'r2s' }}
         run: |
           set -uo pipefail
           B="${{ vars.GCS_BUCKET }}"
           gcloud storage cat "gs://${B}/trader/state.json" > /tmp/s.json
           python3 -c "import json,os;d=json.load(open('/tmp/s.json'));print(json.dumps((d.get('demo_candidates') or {}).get(os.environ['SLOT']),indent=1,default=str)[:20000]);print([e for e in (d.get('control_log') or []) if e.get('slot')==os.environ['SLOT']][-20:])"
-          python3 -c "import json;d=json.load(open('/tmp/s.json'));print('demo_r2s_exec',json.dumps(d.get('demo_r2s_exec'),default=str)[:6000])"
-          gcloud logging read 'resource.type=cloud_run_job AND resource.labels.job_name=crypto-trader-reconcile AND (textPayload:"r2s" OR jsonPayload.message:"r2s") AND timestamp>="'"$(date -u -d '-12 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --order=asc --limit=80 --format='value(timestamp,textPayload,jsonPayload.message)' | cut -c1-1500 || true
+          python3 -c "import json;d=json.load(open('/tmp/s.json'));[print(k,json.dumps(d.get(k),default=str)[:8000]) for k in ('demo_r2s_exec','demo_e5_exec','demo_fa_exec','demo_fa_positions','demo_fa_slippage')]"
+          gcloud logging read 'resource.type=cloud_run_job AND resource.labels.job_name=crypto-trader-reconcile AND (textPayload:"${LOGQ}" OR jsonPayload.message:"${LOGQ}") AND timestamp>="'"$(date -u -d '-12 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --order=asc --limit=120 --format='value(timestamp,textPayload,jsonPayload.message)' | cut -c1-1500 || true
           [ -n "${OBJ}" ] && gcloud storage cat "gs://${B}/trader/shadow_ab/${OBJ}" | head -c 300000 | fold -w 3000 || true
