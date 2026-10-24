@@ -157,7 +157,8 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None) -> dic
         return {"skipped": why}
     now = now or datetime.now(timezone.utc)
     win, bar = in_window(now)
-    ex = state.setdefault("demo_r2s_exec", {})
+    ex = state.get("demo_r2s_exec") or {}
+    state["demo_r2s_exec"] = ex
     if ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
     if not win:

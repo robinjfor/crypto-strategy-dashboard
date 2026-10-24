@@ -136,3 +136,14 @@ def test_build_uses_closed_days_and_today_open():
 def test_view_exposes_approved_by():
     v = demo_candidates.view({"demo_candidates": {D.SLOT: {"approved": True, "approved_by": "自動交易專家"}}})
     assert next(x for x in v if x["id"] == D.SLOT)["approved_by"] == "自動交易專家"
+
+
+def test_reconcile_scratch_with_none_keys(monkeypatch):
+    # reconcile copies keys absent from state as None (e.g. demo_r2s_exec on the first run)
+    _patch(monkeypatch, {"AUSDT": 0.1})
+    f = Fut(["AUSDT"])
+    st = _state()
+    for k in ("demo_r2s_exec", "demo_fa_positions", "paused", "paused_slots", "guard_blocks", "positions", "u1_live"):
+        st[k] = None
+    X.execute(st, f, NOW, panel_fn=lambda: None)
+    assert f.orders and st["demo_r2s_exec"]["last_bar"]
