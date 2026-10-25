@@ -1,0 +1,61 @@
+# Manual only. READ-ONLY: latest orchestrator summary + key /status-equivalent fields from state.json -> run artifact.
+# No secrets/PIN: only whitelisted keys are copied.
+name: orch-summary
+
+on:
+  workflow_dispatch:
+    inputs:
+      date: { description: "YYYY-MM-DD (Taipei); empty = latest", required: false, default: "" }
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Collect (read-only)
+        env:
+          D: ${{ inputs.date }}
+        run: |
+          set -uo pipefail
+          B="${{ vars.GCS_BUCKET }}"
+          mkdir -p out
+          if [ -z "$D" ]; then OBJ=$(gcloud storage ls "gs://${B}/research/orchestrator/*.json" 2>/dev/null | sort | tail -1); else OBJ="gs://${B}/research/orchestrator/${D}.json"; fi
+          echo "obj=$OBJ"
+          gcloud storage ls "gs://${B}/research/orchestrator/" > /tmp/list.txt 2>&1 || true
+          ([ -n "$OBJ" ] && gcloud storage cat "$OBJ" > /tmp/orch.json) || echo '{}' > /tmp/orch.json
+          gcloud storage cat "gs://${B}/trader/state.json" > /tmp/s.json || echo '{}' > /tmp/s.json
+          gcloud logging read 'resource.type=cloud_run_job AND severity>=WARNING AND timestamp>="'"$(date -u -d '-24 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --limit=60 --format='value(timestamp,resource.labels.job_name,textPayload,jsonPayload.message)' 2>/dev/null | cut -c1-600 > /tmp/errs.txt || true
+          OBJ="$OBJ" python3 - <<'PY'
+          import json,os,re
+          def L(p):
+              try: return json.load(open(p))
+              except Exception as e: return {"_err":str(e)}
+          s=L('/tmp/s.json'); o=L('/tmp/orch.json')
+          bad=re.compile(r'pin|secret|key|token|password|cred',re.I)
+          def scrub(x):
+              if isinstance(x,dict): return {k:scrub(v) for k,v in x.items() if not bad.search(str(k))}
+              if isinstance(x,list): return [scrub(v) for v in x]
+              return x
+          orch_state={k:v for k,v in (s.get('orchestrator') or {}).items() if k!='history'}
+          dc=s.get('demo_candidates') or {}
+          slots={k:{f:v.get(f) for f in ('equity','capital','peak_equity','dd','status','last_run','positions','open_positions') if isinstance(v,dict) and f in v} for k,v in dc.items()}
+          out={"orch_object":os.environ.get("OBJ"),"orch_objects":open('/tmp/list.txt').read().split(),
+               "orchestrator_summary":o,"status":{"orchestrator":orch_state,"slots":slots,
+               **{k:s.get(k) for k in ('demo_e5_exec','demo_r2s_exec','demo_fa_exec','demo_fa_positions','demo_netting','u1_live','last_run')}},
+               "recent_warnings":open('/tmp/errs.txt').read().splitlines()}
+          json.dump(scrub(out),open('out/latest.json','w'),indent=1,default=str)
+          PY
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with: { name: orch-summary, path: out/latest.json, retention-days: 7 }
