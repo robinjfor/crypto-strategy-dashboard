@@ -135,3 +135,13 @@ def test_backtest_parity_live_rerun():
     finally:
         shutil.copy(bak, keep)
     assert p["pass"] and p["day_mismatches"] == 0
+
+
+def test_symbol_fix_zeroes_variant_leg_once():
+    st = {"demo_e5v_exec": {"cash": 100.0, "book": {"USUSDT": -1265.0, "ETHUSDT": 1.0}}}
+    inv = {"symbol": "USUSDT", "exchange_position": 0.0, "close_px": 0.01, "fees": 0.0, "cause": "liquidation", "exchange_realized_pnl": -1.0}
+    r = M.apply_symbol_fix(st, inv, V.STATE_KEY, V.SLOT, "us_1026", "t")
+    assert st["demo_e5v_exec"]["book"] == {"ETHUSDT": 1.0} and abs(st["demo_e5v_exec"]["cash"] - 87.35) < 1e-9 and r["adjustment"]["cause"] == "liquidation"
+    assert st["control_log"][-1]["action"] == "ledger_adjustment"
+    M.apply_symbol_fix(st, inv, V.STATE_KEY, V.SLOT, "us_1026", "t2")
+    assert len(st["ledger_adjustments"]) == 1

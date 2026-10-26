@@ -150,3 +150,52 @@ def run(store, fut=None) -> dict | None:
     store.mutate(mut)
     log.info("migration %s %s", MIG, out.get("rec"))
     return out.get("rec")
+
+
+FIXES = {"us_1026": ("USUSDT",)}   # later one-shot fixes: same investigation + audited zeroing, on the variant ledger
+
+
+def apply_symbol_fix(state: dict, inv: dict, key: str, slot: str, mig_id: str, at: str) -> dict:
+    mig = state.setdefault("migrations", {})
+    if (mig.get(mig_id) or {}).get("done"):
+        return mig[mig_id]
+    led = dict(state.get(key) or {}); book = dict(led.get("book") or {}); sym = inv["symbol"]
+    q = float(book.get(sym) or 0.0); rec = {"done": True, "at": at, "symbol": sym}
+    if not q or inv.get("exchange_position"):
+        rec["skipped"] = "ledger flat" if not q else f"exchange still holds {inv.get('exchange_position')}"
+        mig[mig_id] = rec; return rec
+    px = inv.get("close_px"); dcash = (q * px - float(inv.get("fees") or 0)) if px else 0.0
+    adj = {"at": at, "id": f"{mig_id}-{sym}", "slot": slot, "ledger": key, "symbol": sym, "qty_before": q, "qty_after": 0.0,
+           "cash_delta": round(dcash, 6), "close_px": px, "cause": inv.get("cause"), "detail": inv.get("detail"),
+           "exchange_realized_pnl": inv.get("exchange_realized_pnl"), "fees": inv.get("fees"), "actor": "自動交易專家", "evidence": inv}
+    book.pop(sym, None); led["book"] = book; led["cash"] = float(led.get("cash") or 0.0) + dcash; state[key] = led
+    state["ledger_adjustments"] = (list(state.get("ledger_adjustments") or []) + [adj])[-200:]
+    from guards import log_event
+    log_event(state, "ledger_adjustment", slot, symbol=sym, qty_before=q, cash_delta=adj["cash_delta"], cause=adj["cause"], actor="自動交易專家")
+    rec["adjustment"] = {k: v for k, v in adj.items() if k != "evidence"}
+    mig[mig_id] = rec
+    return rec
+
+
+def run_fixes(store, fut=None) -> list:
+    import demo_e5v
+    s0 = store.load(); out = []
+    if not ((s0.get("migrations") or {}).get(MIG) or {}).get("done"):
+        return out
+    for mid, syms in FIXES.items():
+        if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
+            continue
+        if fut is None:
+            from futures_client import FuturesDemoClient
+            fut = FuturesDemoClient()
+        for sym in syms:
+            q = float(((s0.get(demo_e5v.STATE_KEY) or {}).get("book") or {}).get(sym) or 0.0)
+            inv = investigate(fut, sym, q) if q else {"symbol": sym, "exchange_position": None}
+            log.info("fix_investigation %s %s", mid, {k: v for k, v in inv.items() if k not in ("closing_trades", "force_orders")})
+            at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            res = {}
+
+            def mut(s):
+                res["r"] = apply_symbol_fix(s, inv, demo_e5v.STATE_KEY, demo_e5v.SLOT, mid, at); return s
+            store.mutate(mut); out.append(res.get("r"))
+    return out

@@ -1409,7 +1409,7 @@ def build_status() -> dict:
         "ledger_diff": state.get("ledger_diff"),
         "live_vs_backtest": state.get("live_vs_backtest"),
         "parity": _parity_summary(state),
-        "control_log": list(state.get("control_log") or [])[-50:],
+        "control_log": [_decode_actor(e) for e in list(state.get("control_log") or [])[-50:]],
         "asset_monthly": state.get("asset_monthly") or {},
         "asset_daily": state.get("asset_daily") or {},
         "guards": _guards_view(state),
@@ -1562,12 +1562,20 @@ def paper_status():
     return jsonify({"ok": True, "label_zh": "模擬（非實盤）", "paper": _paper_public()})
 
 
+def _decode_actor(e):
+    """Display fix: older entries stored a percent-encoded X-Actor (e.g. %E8%87%AA...)."""
+    from urllib.parse import unquote
+    if isinstance(e, dict) and "%" in str(e.get("actor") or ""):
+        e = {**e, "actor": unquote(str(e["actor"]))}
+    return e
+
+
 def _control_event(st: dict, action: str, slot: str | None = None, **extra) -> None:
     """Append who/where/when for a control action to state["control_log"] (last 200)."""
     body = request.get_json(silent=True) or {}
     h = request.headers
     ev = {"at": now_iso_taipei(), "action": action, "slot": slot,
-          "actor": str(body.get("actor") or h.get("X-Actor") or "unknown")[:64],
+          "actor": str(body.get("actor") or _header_actor() or "unknown")[:64],
           "source": str(body.get("source") or h.get("Origin") or h.get("Referer") or "direct")[:200],
           "ip": str(h.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()[:64],
           "user_agent": str(h.get("User-Agent") or "")[:160]}

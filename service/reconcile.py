@@ -662,6 +662,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     try:  # one-shot e5v_1026: APR adjustment + E5 -> E5V ledger transfer (idempotent)
         import migrate_e5v
         migrate_e5v.run(store, fc)
+        migrate_e5v.run_fixes(store, fc)
     except Exception as e:  # noqa: BLE001
         log.warning("migrate_e5v_fail err=%s", e)
     state0 = store.load()
