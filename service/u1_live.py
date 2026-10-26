@@ -49,6 +49,7 @@ import logging
 import math
 from datetime import datetime, timedelta, timezone
 
+import os
 import pandas as pd
 
 import paper_u1 as P
@@ -162,7 +163,7 @@ def plan_orders(sleeve: dict, targets: dict, opens: dict, *, cap_gross: float, c
     if not V > 0:
         return [], [{"reason": "sleeve_equity_le_0", "V": V}]
     if size_equity is not None and size_equity > 0:
-        V = float(size_equity)   # orchestrator sizing capital (weights unchanged, only the equity they apply to)
+        V = min(float(size_equity), V)   # orchestrator sizing capital (weights unchanged, only the equity they apply to)
     want, why, wcs = {}, {}, {}
     for k in SYMS:
         wt = float(targets[k])
@@ -511,19 +512,28 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
         run["alerts"].append({"account_margin_ratio": mr, "action": "no_increases"})
     # --- the daily decision (identical to paper)
     fills += recovered
-    if dec and dec.get("fill_bar") != sleeve.get("last_fill_bar") and not run["blocked"]:
+    # one-off maintenance (env U1_REBALANCE_NOW=1, targeted ONLY_SLOTS run => allow_increase False => reduce-only):
+    # re-run the latest decision's normal rebalance now, on current marks, outside the 2h window
+    force = os.environ.get("U1_REBALANCE_NOW") == "1" and not can_add
+    if dec and (force or dec.get("fill_bar") != sleeve.get("last_fill_bar")) and not run["blocked"]:
         fb = P._ts(dec["fill_bar"])
-        if pd.Timestamp(sleeve["started_at"]) > fb + LIVE_WINDOW or now - fb.to_pydatetime() > LIVE_WINDOW:
+        if not force and (pd.Timestamp(sleeve["started_at"]) > fb + LIVE_WINDOW or now - fb.to_pydatetime() > LIVE_WINDOW):
             run["decision"] = {"fill_bar": dec["fill_bar"], "skipped": "outside_2h_window"}
         else:
             import orchestrator
             size_eq = orchestrator.sizing_capital("u1_live", None, now=now)
+            opens = fill_opens_for(dec, PERP, fb, now, fetch_1h)
+            if force:
+                opens = {k: float(fc.mark_price(PERP[k])) for k in SYMS}
+                sleeve["events"].append({"at": now.isoformat(), "event": "rebalance_now_reduce_only", "fill_bar": dec["fill_bar"]})
+            if size_eq is not None:  # cap at the sleeve's real ledger equity (target leverage applies to real equity)
+                v_led = sleeve_equity(sleeve, opens)
+                size_eq = min(float(size_eq), v_led) if v_led > 0 else float(size_eq)
             cap_gross, cap_pos = caps_for(size_eq if size_eq is not None else sleeve["capital_usdt"], (slot or {}).get("params"))
             reserve = margin_reserve(alloc_doc, state, approved_families, quote)
             avail = qm["available"]
             max_add = max(0.0, (avail - reserve) / IM_BUFFER) * EXCHANGE_LEVERAGE
             conflicts = coin_conflicts(state)
-            opens = fill_opens_for(dec, PERP, fb, now, fetch_1h)
             orders, skips = plan_orders(sleeve, dec["targets_lev"], opens, cap_gross=cap_gross,
                                         cap_pos=cap_pos, steps=steps, min_notional=mins, max_add_notional=max_add,
                                         allow_increase=can_add, blocked_increase=conflicts, perp=PERP,
@@ -537,7 +547,7 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             run["decision"] = {"fill_bar": dec["fill_bar"], "indicator_day": dec["indicator_day"], "L": dec["L"],
                                "targets_lev": dec["targets_lev"], "n_orders": len(orders),
                                "margin_reserve_usdt": reserve, "available_usdt": avail, "caps": [cap_gross, cap_pos],
-                               "quote": quote, "ref_opens": opens, "orchestrator_size_equity": size_eq}
+                               "quote": quote, "ref_opens": opens, "orchestrator_size_equity": size_eq, "forced": force}
         sleeve["last_fill_bar"] = dec["fill_bar"]
     run["orders"] = len(fills)
     run["fills"] = [{k: f[k] for k in ("symbol", "side", "qty", "price", "reason", "fee")} for f in fills]

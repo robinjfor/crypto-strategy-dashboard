@@ -49,6 +49,10 @@ on:
         description: "Optional: comma list; post-deploy job run acts ONLY on these slots (e.g. sat_fil_1h)"
         type: string
         default: ""
+      u1_rebalance_now:
+        description: "With run_once + only_slots=<U1 slot>: re-run U1's latest rebalance now on current marks, reduce-only (U1_REBALANCE_NOW=1)"
+        type: boolean
+        default: false
       backfill_slot:
         description: "Optional: set BACKFILL_SLOT for the post-deploy job run (e.g. sat_fet_4h)"
         type: string
@@ -520,6 +524,10 @@ jobs:
           if [ -n "${ONLY}" ]; then
             ENVS="ONLY_SLOTS=${ONLY}"
             echo "Targeted run: ONLY_SLOTS=${ONLY}"
+          fi
+          if [ "${{ inputs.u1_rebalance_now }}" = "true" ]; then
+            [ -n "${ONLY}" ] || { echo "u1_rebalance_now requires only_slots"; exit 1; }
+            ENVS="${ENVS:+${ENVS},}U1_REBALANCE_NOW=1"
           fi
           if [ -n "${BF}" ]; then
             ENVS="${ENVS:+${ENVS},}BACKFILL_SLOT=${BF},BACKFILL_MAX_CHASE_PCT=3"

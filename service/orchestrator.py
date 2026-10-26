@@ -107,7 +107,11 @@ def sizing_capital(slot_id: str, default: float, now: datetime | None = None, pl
             log.warning("orchestrator_plan_stale at=%s -> fixed capital for %s", p.get("generated_at"), slot_id)
             return default
         v = (p.get("targets") or {}).get(slot_id)
-        return default if v is None else max(0.0, float(v))
+        if v is None:
+            return default
+        v = max(0.0, float(v))
+        # never size above the slot's real ledger equity (no cross-wallet transfers back the target)
+        return v if default is None else min(v, max(0.0, float(default)))
     except Exception as e:  # noqa: BLE001
         log.warning("orchestrator_sizing_fail %s", e)
         return default

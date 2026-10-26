@@ -56,7 +56,7 @@ def test_plan_targets_peak_dd_alert_no_breaker(monkeypatch):
 def test_sizing_capital_fallbacks(monkeypatch):
     now = datetime(2026, 10, 25, 0, 8, tzinfo=timezone.utc)
     p = {"generated_at": (now - timedelta(minutes=3)).isoformat(), "targets": {"demo_e5_min5_x175": 6000.0}}
-    assert O.sizing_capital("demo_e5_min5_x175", 5000.0, now=now, plan_doc=p) == 6000.0
+    assert O.sizing_capital("demo_e5_min5_x175", 5000.0, now=now, plan_doc=p) == 5000.0  # capped at ledger equity
     assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=now, plan_doc=p) == 3000.0
     stale = {**p, "generated_at": (now - timedelta(hours=31)).isoformat()}
     assert O.sizing_capital("demo_e5_min5_x175", 5000.0, now=now, plan_doc=stale) == 5000.0
@@ -71,9 +71,9 @@ def test_u1_plan_orders_scales_with_size_equity():
     sl = {"cash": 1000.0, "units": {k: 0.0 for k in u1_live.SYMS}, "quote": "USDC"}
     tg = {k: 0.5 for k in u1_live.SYMS}; op = {k: 100.0 for k in u1_live.SYMS}
     a, _ = u1_live.plan_orders(sl, tg, op, cap_gross=1e9, cap_pos=1e9)
-    b, _ = u1_live.plan_orders(sl, tg, op, cap_gross=1e9, cap_pos=1e9, size_equity=2500.0)
+    b, _ = u1_live.plan_orders(sl, tg, op, cap_gross=1e9, cap_pos=1e9, size_equity=500.0)  # down only; never above sleeve equity
     qa = {o["symbol"]: abs(o["qty_delta"]) for o in a}; qb = {o["symbol"]: abs(o["qty_delta"]) for o in b}
-    assert qa and all(qb[s] == pytest.approx(2.5 * qa[s], rel=0.02) for s in qa)
+    assert qa and all(qb[s] == pytest.approx(0.5 * qa[s], rel=0.02) for s in qa)
 
 
 def test_fa_equity_from_positions():
@@ -82,3 +82,23 @@ def test_fa_equity_from_positions():
     st = {"demo_fa_positions": {"XUSDT": {"spot_qty": 2, "spot_px": 100, "perp_qty": 2, "perp_px": 101}}}
     eq = O.slot_equities(st, F())
     assert eq["F"] == pytest.approx(1000 + 2 * 10 - 2 * 9) and eq["E"] == 5000 and eq["U"] == 1000
+
+
+def test_sizing_capped_at_ledger_equity():
+    from datetime import datetime, timezone
+    import orchestrator as O
+    now = datetime(2026, 10, 26, 1, tzinfo=timezone.utc)
+    doc = {"generated_at": now.isoformat(), "targets": {"e5": 5939.0, "r2s": 1485.0, "u1_live": 2488.0}}
+    assert O.sizing_capital("e5", 4939.0, now=now, plan_doc=doc) == 4939.0
+    assert O.sizing_capital("r2s", 2991.0, now=now, plan_doc=doc) == 1485.0
+    assert O.sizing_capital("u1_live", None, now=now, plan_doc=doc) == 2488.0
+
+
+def test_u1_plan_orders_caps_size_equity_at_sleeve_equity():
+    import u1_live as U
+    sleeve = {"cash": 968.0, "units": {k: 0.0 for k in U.SYMS}}
+    opens = {k: 100.0 for k in U.SYMS}
+    tg = {k: 0.88 for k in U.SYMS}
+    orders, _ = U.plan_orders(sleeve, tg, opens, cap_gross=1e9, cap_pos=1e9, size_equity=2488.0)
+    gross = sum(o["qty_delta"] * opens[o["coin"]] for o in orders)
+    assert gross <= 1.76 * 968.0 + 1e-6
