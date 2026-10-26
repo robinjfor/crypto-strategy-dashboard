@@ -27,7 +27,8 @@ import pandas as pd
 
 log = logging.getLogger("orchestrator")
 
-SLOTS = {"E": "demo_e5_min5_x175", "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
+SLOTS = {"E": "demo_e5_min5_x175_t05top20",  # took over E5 (demo_e5_min5_x175) weight on 2026-10-26
+          "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
 BASE_W = {"E": 0.60, "U": 0.25, "R": 0.15, "F": 0.0}
 DEFAULT_CAP = {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}
 QUOTE = {"E": "USDT", "U": "USDC", "R": "USDT", "F": "USDT"}
@@ -146,7 +147,7 @@ def slot_equities(state: dict, fut) -> dict:
         if s not in cache:
             cache[s] = float(fut.mark_price(s))
         return cache[s]
-    eq = {"E": _book_eq(state.get("demo_e5_exec"), DEFAULT_CAP["E"], px),
+    eq = {"E": _book_eq(state.get("demo_e5v_exec") or state.get("demo_e5_exec"), DEFAULT_CAP["E"], px),
           "R": _book_eq(state.get("demo_r2s_exec"), DEFAULT_CAP["R"], px)}
     fa = DEFAULT_CAP["F"]   # FA has no cash ledger: capital + unrealized spot/perp legs (funding not tracked)
     for s, p in (state.get("demo_fa_positions") or {}).items():

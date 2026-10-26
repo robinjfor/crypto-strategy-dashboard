@@ -49,10 +49,10 @@ jobs:
               return x
           orch_state={k:v for k,v in (s.get('orchestrator') or {}).items() if k!='history'}
           dc=s.get('demo_candidates') or {}
-          slots={k:{f:v.get(f) for f in ('equity','capital','peak_equity','dd','status','last_run','positions','open_positions') if isinstance(v,dict) and f in v} for k,v in dc.items()}
+          slots={k:{f:v.get(f) for f in ('equity','capital','peak_equity','dd','status','last_run','positions','open_positions','enabled','approved','approved_by','parity_pass','cloud_ordering_ok','gates_day') if isinstance(v,dict) and f in v} for k,v in dc.items()}
           out={"orch_object":os.environ.get("OBJ"),"orch_objects":open('/tmp/list.txt').read().split(),
                "orchestrator_summary":o,"status":{"orchestrator":orch_state,"slots":slots,
-               **{k:s.get(k) for k in ('demo_e5_exec','demo_r2s_exec','demo_fa_exec','demo_fa_positions','demo_netting','u1_live','last_run')}},
+               **{k:s.get(k) for k in ('demo_e5_exec','demo_e5v_exec','demo_r2s_exec','demo_fa_exec','demo_fa_positions','demo_netting','u1_live','last_run','paused_slots','ledger_adjustments','migrations','net_reconcile')}},
                "recent_warnings":open('/tmp/errs.txt').read().splitlines()}
           json.dump(scrub(out),open('out/latest.json','w'),indent=1,default=str)
           PY

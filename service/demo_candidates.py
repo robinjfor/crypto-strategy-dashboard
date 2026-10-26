@@ -28,6 +28,9 @@ CANDIDATES = [
     {"id": "demo_e5_min5_x175", "name": "E：80%／20% 組合 × 1.75 槓桿（逐幣最小下單額）", "capital_usdt": 5000.0, "venue": "幣安測試網永續",
      "spec": "research_1022/shadow_AB/ledger_e_minnot.py＋MINNOTIONAL.md（逐幣交易所最小下單額＋stepSize，5,000U）",
      "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
+    {"id": "demo_e5_min5_x175_t05top20", "name": "E5：最小下單額修正（門檻 0.5% 權益＋前 20 大）", "capital_usdt": 5000.0, "venue": "幣安測試網永續",
+     "spec": "research_minnot_1026/e5_minnot_variants.py（thr=0.5% S5 權益、top-20 S5 宇集，訊號同 E5）；2026-10-26 承接 E5 帳本與權重",
+     "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
 ]
 
 

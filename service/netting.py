@@ -28,7 +28,8 @@ EPS = 1e-9
 # slot id -> (state key, book getter). FA's perp leg is short: virtual qty = -perp_qty.
 SLOTS = {
     "demo_r2s_top10_3k": "demo_r2s_exec",
-    "demo_e5_min5_x175": "demo_e5_exec",
+    "demo_e5_min5_x175": "demo_e5_exec",            # paused since 2026-10-26, ledger moved to the t05top20 slot
+    "demo_e5_min5_x175_t05top20": "demo_e5v_exec",
     "demo_funding_arb_1x": "demo_fa_positions",
 }
 

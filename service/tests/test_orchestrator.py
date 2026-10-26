@@ -45,11 +45,11 @@ def test_plan_targets_peak_dd_alert_no_breaker(monkeypatch):
     assert d["portfolio_equity"] == 6000 and d["peak"] == 10000 and d["drawdown"] == pytest.approx(0.4)
     assert d["dd_alert"] is True and any("ALERT" in a for a in d["actions"])
     # alert only: targets are still plain weights x P (no halving)
-    assert d["targets"] == {"demo_e5_min5_x175": 3600.0, "u1_live": 1500.0, "demo_r2s_top10_3k": 900.0, "demo_funding_arb_1x": 0.0}
+    assert d["targets"] == {"demo_e5_min5_x175_t05top20": 3600.0, "u1_live": 1500.0, "demo_r2s_top10_3k": 900.0, "demo_funding_arb_1x": 0.0}
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "x", "bear": True, "hivol": True})
     d = O.plan(px, {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}, None, now)
     assert d["peak"] == 10000 and not d["dd_alert"]
-    assert d["targets"]["demo_e5_min5_x175"] == pytest.approx(10000 * .3 * .7)
+    assert d["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(10000 * .3 * .7)
     assert sum(d["targets"].values()) == pytest.approx(7000)
 
 

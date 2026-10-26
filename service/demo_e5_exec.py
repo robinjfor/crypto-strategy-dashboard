@@ -43,12 +43,12 @@ def fresh(targets: dict | None, now: datetime | None = None) -> tuple[bool, str]
     return True, ""
 
 
-def entry_block(state: dict) -> str | None:
+def entry_block(state: dict, slot: str | None = None) -> str | None:
     import guards
     from main import slot_paused
     if state.get("paused"):
         return "帳戶暫停"
-    if slot_paused(state, demo_e5.SLOT):
+    if slot_paused(state, slot or demo_e5.SLOT):
         return "本倉暫停"
     blocked, why = guards.entry_blocked(state)
     return f"風控封鎖：{why}" if blocked else None
@@ -91,31 +91,34 @@ def _fill(fut, sym: str, order: dict, coid: str) -> tuple[float, float]:
     return float(o.get("executedQty") or 0), float(o.get("avgPrice") or 0)
 
 
-def _funding(fut, ex: dict, now_ms: int, state: dict | None = None) -> float:
+def _funding(fut, ex: dict, now_ms: int, state: dict | None = None, slot: str | None = None, key: str = "demo_e5_exec") -> float:
     """Funding on the slot's own book since the last run: the netted symbol's funding, pro rata to E5's virtual qty."""
-    state = state if state is not None else {"demo_e5_exec": ex}
+    state = state if state is not None else {key: ex}
     since = int(ex.get("funding_since") or now_ms)
-    tot = netting.funding_share(fut, state, demo_e5.SLOT, ex.get("book") or {}, since, now_ms)
+    tot = netting.funding_share(fut, state, slot or demo_e5.SLOT, ex.get("book") or {}, since, now_ms)
     ex["funding_since"] = now_ms
     return tot
 
 
-def execute(state: dict, fut, targets: dict | None, now: datetime | None = None, netter=None) -> dict:
-    ok, why = demo_e5.active(state)
+def execute(state: dict, fut, targets: dict | None, now: datetime | None = None, netter=None, mod=None) -> dict:
+    """mod: planner module (demo_e5 = original slot, demo_e5v = t05top20 variant); same order path, own ledger key."""
+    mod = mod or demo_e5
+    SLOT, KEY = mod.SLOT, getattr(mod, "STATE_KEY", "demo_e5_exec")
+    ok, why = mod.active(state)
     if not ok:
         return {"skipped": why}
     ok, why = fresh(targets, now)
     if not ok:
         return {"skipped": why}
-    ex = state.get("demo_e5_exec") or {}
-    state["demo_e5_exec"] = ex
+    ex = state.get(KEY) or {}
+    state[KEY] = ex
     bar = str(targets["decided_bar"])
     if ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
     ex.setdefault("cash", demo_e5.CAPITAL); book = ex.setdefault("book", {})
     info = fut.exchange_info(); lst = listed(info)
     now_ms = int((now or datetime.now(timezone.utc)).timestamp() * 1000)
-    fnd = _funding(fut, ex, now_ms, state); ex["cash"] = float(ex["cash"]) + fnd   # income is signed (+ received / - paid)
+    fnd = _funding(fut, ex, now_ms, state, SLOT, KEY); ex["cash"] = float(ex["cash"]) + fnd   # income is signed (+ received / - paid)
     syms = sorted(set(demo_e5.U1_SYMS) | set(targets.get("ws") or {}) | set(book))
     prices = {}
     for s in syms:
@@ -128,31 +131,32 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         return {"skipped": "no BTC/ETH price", "bar": bar}
     eq_ledger = equity(ex, prices)
     import orchestrator  # sizing capital only (ledger untouched); fixed CAPITAL when no fresh plan
-    eq = orchestrator.sizing_capital(demo_e5.SLOT, eq_ledger, now=now)
+    eq = orchestrator.sizing_capital(SLOT, eq_ledger, now=now)
     m = float(targets["m"]); lt = demo_e5.plan_lt(np.array(targets["rw"], dtype=float), m)
     mins = {**(targets.get("min_notional") or {})}; steps = {**(targets.get("step") or {})}
     for s in prices:  # strategy rule = spec mins; the exchange MIN_NOTIONAL is applied to the per-symbol NET (netting)
         mins.setdefault(s, demo_e5.MIN_ORDER)
         steps[s] = max(float(steps.get(s, 0.0)), lot_step(info, s))
-    plan = demo_e5.plan_live(targets, book, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
-    blk = entry_block(state)
+    plan = mod.plan_live(targets, book, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
+    blk = entry_block(state, SLOT)
     tag = bar.replace("-", "")[2:]
     out = {"bar": bar, "equity": round(eq, 2), "m": m, "lt": round(lt, 4), "planned": len(plan), "ledger_equity": round(eq_ledger, 2),
-           "skipped_lt_min": sum(1 for o in plan if o["kind"] == "skip_min"), "sent": [], "skipped": [], "funding": round(fnd, 4)}
+           "skipped_lt_min": sum(1 for o in plan if o["kind"] == "skip_min"),
+           "skipped_thr": sum(1 for o in plan if o["kind"] == "skip_thr"), "slot": SLOT, "sent": [], "skipped": [], "funding": round(fnd, 4)}
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"e5{tag}")
     for o in plan:
-        if o["kind"] in ("skip_min", "hold"):
+        if o["kind"] in ("skip_min", "skip_thr", "hold"):
             continue
         s = o["symbol"]; mine = float(book.get(s, 0.0))
         full = o["kind"] in ("close", "residual_close")
         d = -mine if full else float(o["delta_qty"])
         closing = full or (mine != 0 and abs(mine + d) < abs(mine) and np.sign(mine + d) in (0, np.sign(mine)))
         if s not in lst:
-            out["skipped"].append(f"{s} not listed"); log_event(state, "e5_skip_unlisted", demo_e5.SLOT, symbol=s, bar=bar); continue
+            out["skipped"].append(f"{s} not listed"); log_event(state, "e5_skip_unlisted", SLOT, symbol=s, bar=bar); continue
         if not closing and (blk or tradfi.is_tradfi(s, info, state)):
             why = blk or "TradFi (crypto only)"
-            out["skipped"].append(f"{s} {why}"); log_event(state, "e5_entry_skip", demo_e5.SLOT, symbol=s, why=why, bar=bar); continue
+            out["skipped"].append(f"{s} {why}"); log_event(state, "e5_entry_skip", SLOT, symbol=s, why=why, bar=bar); continue
         if not full:
             d = float(np.sign(d)) * round_qty(info, s, abs(d))
             if d == 0:
@@ -161,11 +165,11 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         def logf(q, px, fee, s=s, o=o):
             if q:
                 side = "BUY" if q > 0 else "SELL"
-                log_event(state, "e5_order", demo_e5.SLOT, symbol=s, side=side, qty=abs(q), px=px, kind=o["kind"], sleeve=o.get("sleeve"), bar=bar)
+                log_event(state, "e5_order", SLOT, symbol=s, side=side, qty=abs(q), px=px, kind=o["kind"], sleeve=o.get("sleeve"), bar=bar)
                 out["sent"].append({"symbol": s, "side": side, "qty": abs(q), "px": px, "kind": o["kind"]})
             else:
                 out["skipped"].append(f"{s} net not filled")
-        netter.add(state, demo_e5.SLOT, s, d, prices.get(s, 0.0), netting.ledger_cb(ex, s, on_fill=logf), kind=o["kind"])
+        netter.add(state, SLOT, s, d, prices.get(s, 0.0), netting.ledger_cb(ex, s, on_fill=logf), kind=o["kind"])
 
     def finish():
         out["equity_after"] = round(equity(ex, prices), 2)

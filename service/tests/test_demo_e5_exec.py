@@ -60,7 +60,7 @@ def test_stale_targets_never_trade(monkeypatch):
 
 def test_executes_plan_live_once_with_min_skip(monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
-    monkeypatch.setattr(X, "entry_block", lambda s: None)
+    monkeypatch.setattr(X, "entry_block", lambda s, *a: None)
     st, f = _state(), Fut(PX)
     out = X.execute(st, f, _tgt(), NOW)
     syms = {o["symbol"] for o in f.orders}
@@ -72,7 +72,7 @@ def test_executes_plan_live_once_with_min_skip(monkeypatch):
 
 def test_same_plan_as_parity_planner(monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
-    monkeypatch.setattr(X, "entry_block", lambda s: None)
+    monkeypatch.setattr(X, "entry_block", lambda s, *a: None)
     st, f = _state(), Fut(PX)
     t = _tgt(); out = X.execute(st, f, t, NOW)
     plan = D.plan_live(t, {}, PX, 5000.0, m=1.0, lt=1.0, mins={**t["min_notional"]}, steps={"BTCUSDT": 0.001, "ETHUSDT": 0.001, "SOLUSDT": 0.1, "DOGEUSDT": 0.1})
@@ -84,7 +84,7 @@ def test_same_plan_as_parity_planner(monkeypatch):
 def test_other_holders_no_longer_skip_entry_block_still_does(monkeypatch):
     """netting: coins held by other slots / the account are traded (virtual ledger, net order); entry block only stops opens."""
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
-    monkeypatch.setattr(X, "entry_block", lambda s: None)
+    monkeypatch.setattr(X, "entry_block", lambda s, *a: None)
     st = _state(); st["demo_fa_positions"] = {"SOLUSDT": {"perp_qty": 1.0, "spot_qty": 1.0}}
     f = Fut(PX, {"ETHUSDT": -1.0, "SOLUSDT": -1.0})
     X.execute(st, f, _tgt(), NOW)
@@ -93,7 +93,7 @@ def test_other_holders_no_longer_skip_entry_block_still_does(monkeypatch):
     assert eth["side"] == "BUY" and eth.get("reduceOnly") == "true"          # +0.5 against the account's -1 -> reduce-only
     assert abs(st["demo_e5_exec"]["book"]["ETHUSDT"] - 0.5) < 1e-12 and abs(st["demo_e5_exec"]["book"]["SOLUSDT"] - 4.3) < 1e-9
     # next day: target 0 -> BTC full close runs even under an entry block
-    monkeypatch.setattr(X, "entry_block", lambda s: "帳戶暫停")
+    monkeypatch.setattr(X, "entry_block", lambda s, *a: "帳戶暫停")
     X.execute(st, f, _tgt("2026-10-25", w1=[0.0, 0.0], ws={}), datetime(2026, 10, 26, 0, 30, tzinfo=timezone.utc))
     btc = [o for o in f.orders if o["symbol"] == "BTCUSDT"][-1]
     assert btc["side"] == "SELL" and btc.get("reduceOnly") == "true"
@@ -102,7 +102,7 @@ def test_other_holders_no_longer_skip_entry_block_still_does(monkeypatch):
 
 def test_tradfi_never_opened(monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
-    monkeypatch.setattr(X, "entry_block", lambda s: None)
+    monkeypatch.setattr(X, "entry_block", lambda s, *a: None)
     px = {**PX, "PLTRUSDT": 150.0}
     f = Fut(px); info = _info(px)
     for s in info["symbols"]:

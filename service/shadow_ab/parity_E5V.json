@@ -1,0 +1,115 @@
+{
+ "days": 1096,
+ "live_trades": 3091,
+ "ledger_trades": 3091,
+ "day_mismatches": 0,
+ "first_mismatch": null,
+ "orders_sent": 3108,
+ "skipped_lt_min": 2145,
+ "skipped_thr": 3166,
+ "skip_rate": 0.4083,
+ "tail": [
+  {
+   "day": "2026-09-21",
+   "trades": 2,
+   "sent": 2,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-22",
+   "trades": 5,
+   "sent": 5,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-23",
+   "trades": 2,
+   "sent": 2,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-24",
+   "trades": 4,
+   "sent": 4,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-25",
+   "trades": 4,
+   "sent": 4,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-26",
+   "trades": 4,
+   "sent": 4,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-27",
+   "trades": 2,
+   "sent": 2,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-28",
+   "trades": 2,
+   "sent": 2,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-29",
+   "trades": 4,
+   "sent": 4,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  },
+  {
+   "day": "2026-09-30",
+   "trades": 2,
+   "sent": 2,
+   "skip_min": 0,
+   "skip_thr": 0,
+   "match": true
+  }
+ ],
+ "pass": true,
+ "spec": "research_minnot_1026/e5_minnot_variants.py cfg(dbm=1,thr=0.005,rup=0,topn=20)",
+ "slot": "demo_e5_min5_x175_t05top20",
+ "capital": 5000.0,
+ "ledger_orders": 3108,
+ "ledger_skipped_min": 2145,
+ "ledger_thr_suppressed": 3166,
+ "ledger_skip_rate": 0.4083,
+ "research_replay": {
+  "live_trades": 3091,
+  "ledger_trades": 3091,
+  "day_mismatches": 0,
+  "first_mismatch": null,
+  "live_sent": 3108,
+  "live_skipped": 2145
+ },
+ "metrics": {
+  "sharpe": 1.557,
+  "cagr": 0.7597,
+  "maxdd": 0.3083
+ },
+ "checked_at": "2026-10-26T02:46:44+00:00"
+}
