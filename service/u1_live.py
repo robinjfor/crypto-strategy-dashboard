@@ -541,7 +541,7 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             for od in orders:
                 if not od["reduce_only"]:
                     _prepare(fc, od["symbol"])
-            tag = fb.strftime("%Y%m%d%H")
+            tag = fb.strftime("%Y%m%d%H") + (now.strftime("rn%d%H%M") if force else "")  # forced run: fresh client ids
             fills += execute(fc, sleeve, orders, tag=tag, steps=steps, now=now)
             run["skips"] = skips
             run["decision"] = {"fill_bar": dec["fill_bar"], "indicator_day": dec["indicator_day"], "L": dec["L"],
