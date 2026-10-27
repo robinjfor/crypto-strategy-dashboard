@@ -36,6 +36,10 @@ jobs:
           ([ -n "$OBJ" ] && gcloud storage cat "$OBJ" > /tmp/orch.json) || echo '{}' > /tmp/orch.json
           gcloud storage cat "gs://${B}/trader/state.json" > /tmp/s.json || echo '{}' > /tmp/s.json
           gcloud logging read 'resource.type=cloud_run_job AND severity>=WARNING AND timestamp>="'"$(date -u -d '-24 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --limit=60 --format='value(timestamp,resource.labels.job_name,textPayload,jsonPayload.message)' 2>/dev/null | cut -c1-600 > /tmp/errs.txt || true
+          gcloud storage ls -l "gs://${B}/trader/shadow_ab/e5_targets.json" "gs://${B}/trader/shadow_ab/parity_E5.json" > /tmp/tgt_ls.txt 2>&1 || true
+          gcloud storage cat "gs://${B}/trader/shadow_ab/e5_targets.json" 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print(json.dumps({k:d.get(k) for k in ('decided_bar','generated_at','live_data')},default=str))" > /tmp/tgt.json 2>/dev/null || echo '{}' > /tmp/tgt.json
+          gcloud run jobs executions list --job=crypto-shadow-ab --region=asia-east1 --project="${{ vars.GCP_PROJECT_ID }}" --limit=6 --format='value(name,status.startTime,status.completionTime,status.succeededCount,status.failedCount)' > /tmp/shadow_exec.txt 2>&1 || true
+          gcloud logging read 'resource.type=cloud_run_job AND resource.labels.job_name=crypto-shadow-ab AND (textPayload:"demo_e5" OR textPayload:"e5_data" OR textPayload:"shadow_ab" OR severity>=ERROR) AND timestamp>="'"$(date -u -d '-30 hours' +%FT%TZ)"'"' --project="${{ vars.GCP_PROJECT_ID }}" --limit=40 --format='value(timestamp,severity,textPayload)' 2>/dev/null | cut -c1-500 > /tmp/shadow_log.txt || true
           OBJ="$OBJ" python3 - <<'PY'
           import json,os,re
           def L(p):
@@ -53,7 +57,8 @@ jobs:
           out={"orch_object":os.environ.get("OBJ"),"orch_objects":open('/tmp/list.txt').read().split(),
                "orchestrator_summary":o,"status":{"orchestrator":orch_state,"slots":slots,
                **{k:s.get(k) for k in ('demo_e5_exec','demo_e5v_exec','demo_r2s_exec','demo_fa_exec','demo_fa_positions','demo_netting','u1_live','last_run','paused_slots','ledger_adjustments','migrations','net_reconcile')}},
-               "recent_warnings":open('/tmp/errs.txt').read().splitlines()}
+               "recent_warnings":open('/tmp/errs.txt').read().splitlines(),
+               "e5_targets":{"ls":open('/tmp/tgt_ls.txt').read().splitlines(),"head":L('/tmp/tgt.json')},"shadow_exec":open('/tmp/shadow_exec.txt').read().splitlines(),"shadow_log":open('/tmp/shadow_log.txt').read().splitlines()}
           json.dump(scrub(out),open('out/latest.json','w'),indent=1,default=str)
           PY
           ls -la out
