@@ -130,10 +130,72 @@ def fa_only() -> int:
     return 0
 
 
+def e5_targets(d: Path, bucket, source: str = "shadow_ab") -> bool:
+    """demo_e5 / demo_e5v (E-min5): extend live daily bars to the last completed UTC day, recompute
+    parity + next-open targets, upload trader/shadow_ab/e5_targets.json (+ parity_E5.json)."""
+    try:  # demo_e5 (E-min5, 5,000U): trade-by-trade parity over the full OOS history + next-open targets
+        sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+        import e5_capture, demo_e5
+        import e5_data
+        dv = e5_data.ensure(WORK / "e5data", bucket)
+        log.info("e5_data %s", dv)
+        import e5_live
+        lv = e5_live.extend(WORK / "e5data", WORK / "e5live")   # + completed days up to yesterday (UTC) for live targets
+        prev = os.environ.get("SPEC_DATA_DIR")
+        try:
+            cap = e5_capture.run(demo_e5.CAPITAL, d, WORK / "e5live")
+        finally:
+            if prev is None:
+                os.environ.pop("SPEC_DATA_DIR", None)
+            else:
+                os.environ["SPEC_DATA_DIR"] = prev
+        mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
+        try:
+            import urllib.request as _u
+            info = json.loads(_u.urlopen("https://demo-fapi.binance.com/fapi/v1/exchangeInfo", timeout=20).read())
+            mins.update({s["symbol"]: demo_e5.exchange_min(info, s["symbol"]) for s in info.get("symbols") or []})
+        except Exception as e:  # noqa: BLE001
+            log.warning("demo_e5 exchangeInfo fail %s (fallback mins)", e)
+        res = demo_e5.parity(cap, mins)
+        bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
+        res["live_data"] = lv
+        bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
+        tg = {**cap["targets"], "live_data": lv, "computed_at": datetime.now(TZ).isoformat(timespec="seconds"), "source": source}
+        bucket.blob(PREFIX + "e5_targets.json").upload_from_string(json.dumps(tg, default=str), content_type="application/json")
+        log.info("demo_e5 targets bar=%s source=%s", tg.get("decided_bar"), source)
+        ok = True
+        log.info("demo_e5 parity=%s", {k: res[k] for k in ("orders", "mismatches", "pass")})
+    except Exception as e:  # noqa: BLE001
+        log.exception("demo_e5 parity failed")
+        ok = False
+        bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
+    return ok
+
+
+def e5_only() -> int:
+    """E5_ONLY=1 (job crypto-e5-targets, 00:02 UTC = 08:02 Taipei): only the E5 targets (no run_all/tv040/FA),
+    so the 08:00-open bar's targets exist before the E5 exec window opens; then start the reconcile job at once
+    (E5 exec is idempotent per bar via last_bar). The 08:20 full shadow job still recomputes them later."""
+    import time
+    t0 = time.time()
+    d = setup(); bucket = _bucket(); pull_cache(d, bucket)
+    ok = e5_targets(d, bucket, source="e5_only")
+    log.info("e5_only ok=%s timing_s=%d", ok, round(time.time() - t0))
+    job = os.environ.get("RECONCILE_JOB_URI")
+    if ok and job:
+        import google.auth, google.auth.transport.requests
+        cred, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        r = google.auth.transport.requests.AuthorizedSession(cred).post(job, json={}, timeout=30)
+        log.info("e5_only reconcile trigger status=%s", r.status_code)
+    return 0 if ok else 1
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if os.environ.get("FA_ONLY"):
         return fa_only()
+    if os.environ.get("E5_ONLY"):
+        return e5_only()
     d = setup()
     bucket = _bucket()
     try:  # Demo futures + spot exchangeInfo min notional (public endpoints) for spec_2026-11/min_notional.json
@@ -190,38 +252,7 @@ def main() -> int:
             log.exception("demo_e parity failed")
             bucket.blob(PREFIX + "parity_E.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
     if not os.environ.get("LEDGER_TEST_START"):
-        try:  # demo_e5 (E-min5, 5,000U): trade-by-trade parity over the full OOS history + next-open targets
-            sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
-            import e5_capture, demo_e5
-            import e5_data
-            dv = e5_data.ensure(WORK / "e5data", bucket)
-            log.info("e5_data %s", dv)
-            import e5_live
-            lv = e5_live.extend(WORK / "e5data", WORK / "e5live")   # + completed days up to yesterday (UTC) for live targets
-            prev = os.environ.get("SPEC_DATA_DIR")
-            try:
-                cap = e5_capture.run(demo_e5.CAPITAL, d, WORK / "e5live")
-            finally:
-                if prev is None:
-                    os.environ.pop("SPEC_DATA_DIR", None)
-                else:
-                    os.environ["SPEC_DATA_DIR"] = prev
-            mins = dict(demo_e5.EXCHANGE_MIN_DEFAULT)
-            try:
-                import urllib.request as _u
-                info = json.loads(_u.urlopen("https://demo-fapi.binance.com/fapi/v1/exchangeInfo", timeout=20).read())
-                mins.update({s["symbol"]: demo_e5.exchange_min(info, s["symbol"]) for s in info.get("symbols") or []})
-            except Exception as e:  # noqa: BLE001
-                log.warning("demo_e5 exchangeInfo fail %s (fallback mins)", e)
-            res = demo_e5.parity(cap, mins)
-            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
-            res["live_data"] = lv
-            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps(res, default=str), content_type="application/json")
-            bucket.blob(PREFIX + "e5_targets.json").upload_from_string(json.dumps({**cap["targets"], "live_data": lv}), content_type="application/json")
-            log.info("demo_e5 parity=%s", {k: res[k] for k in ("orders", "mismatches", "pass")})
-        except Exception as e:  # noqa: BLE001
-            log.exception("demo_e5 parity failed")
-            bucket.blob(PREFIX + "parity_E5.json").upload_from_string(json.dumps({"pass": False, "error": str(e)[:300]}))
+        e5_targets(d, bucket)
     if not os.environ.get("LEDGER_TEST_START"):
         try:
             sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))

@@ -145,3 +145,74 @@ def test_symbol_fix_zeroes_variant_leg_once():
     assert st["control_log"][-1]["action"] == "ledger_adjustment"
     M.apply_symbol_fix(st, inv, V.STATE_KEY, V.SLOT, "us_1026", "t2")
     assert len(st["ledger_adjustments"]) == 1
+
+
+def test_huma_fix_registered_long_leg():
+    assert M.FIXES["hu_1027"] == ("HUMAUSDT",) and "us_1026" in M.FIXES
+    st = {"demo_e5v_exec": {"cash": 10.0, "book": {"HUMAUSDT": 347.0}}}
+    inv = {"symbol": "HUMAUSDT", "exchange_position": 0.0, "close_px": 0.02, "fees": 0.01, "cause": "adl", "exchange_realized_pnl": 0.5}
+    M.apply_symbol_fix(st, inv, V.STATE_KEY, V.SLOT, "hu_1027", "t")
+    assert st["demo_e5v_exec"]["book"] == {} and abs(st["demo_e5v_exec"]["cash"] - (10.0 + 347 * 0.02 - 0.01)) < 1e-9
+    assert st["ledger_adjustments"][-1]["id"].startswith("hu_1027")
+
+
+def test_run_cloud_e5_only_dispatch(monkeypatch):
+    import importlib, sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shadow_ab"))
+    rc = importlib.import_module("run_cloud")
+    called = {}
+    monkeypatch.setattr(rc, "e5_only", lambda: called.setdefault("e5", 0))
+    monkeypatch.setenv("E5_ONLY", "1"); monkeypatch.delenv("FA_ONLY", raising=False)
+    assert rc.main() == 0 and "e5" in called
+
+
+def test_exec_skips_close_of_leg_missing_on_exchange(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT + ";" + V.SLOT)
+    st = _st(); st[V.STATE_KEY] = {"cash": 5000.0, "book": {"SOLUSDT": 3.0}}
+    f = Fut(PX)                                   # exchange flat: the ledger's SOL leg is gone
+    r = X.execute(st, f, _tgt(ws={}, dbs={}), NOW, mod=V)
+    assert not any(o["symbol"] == "SOLUSDT" for o in f.orders) and "SOLUSDT leg missing on exchange" in r["skipped"]
+    assert st[V.STATE_KEY]["book"]["SOLUSDT"] == 3.0
+    assert any(e["action"] == "e5_skip_missing_leg" for e in st["control_log"])
+
+
+class _Store:
+    def __init__(self, s): self.s = s
+    def load(self): return json.loads(json.dumps(self.s))
+    def mutate(self, f): self.s = f(self.load()); return self.s
+
+
+class _PhFut(_InvFut):
+    def __init__(self):
+        super().__init__(force=[{"orderId": 7, "autoCloseType": "ADL"}]); self.pos = -347.0; self.sent = []
+    def exchange_info(self): return {"symbols": [{"symbol": "HUMAUSDT", "status": "TRADING"}]}
+    def position_risk(self, s=None): return [{"symbol": "HUMAUSDT", "positionAmt": str(self.pos)}]
+    def get_order(self, s, c):
+        return {"orderId": 90 if c.startswith("net-") else 91, "status": "FILLED", "executedQty": "347", "avgPrice": "0.022", "updateTime": 2 * 10**12}
+    def new_order(self, **p):
+        self.sent.append(p); self.pos += float(p["quantity"]); return {"status": "FILLED"}
+    def _signed(self, m, path, p=None):
+        if path.endswith("userTrades") and p.get("orderId") == 90: return [{"qty": "347", "price": "0.022", "commission": "0.004"}]
+        if path.endswith("userTrades") and p.get("orderId") == 91: return [{"qty": "347", "price": "0.023", "commission": "0.004"}]
+        if path.endswith("userTrades"): return [{"side": "SELL", "qty": "347", "price": "0.02", "realizedPnl": "-1", "commission": "0", "orderId": 7, "time": 1}] if p["startTime"] < 10**13 and not getattr(self, "_t", 0) and not setattr(self, "_t", 1) else []
+        return super()._signed(m, path, p)
+
+
+def test_phantom_repair_flattens_orphan_and_rebooks_once():
+    store = _Store({"migrations": {M.MIG: {"done": True}}, V.STATE_KEY: {"cash": 100.0, "book": {}}})
+    f = _PhFut()
+    r = M.run_fixes(store, f)
+    assert f.sent and f.sent[0]["reduceOnly"] == "true" and f.sent[0]["side"] == "BUY" and f.pos == 0.0
+    adj = r[-1]; assert adj["cause"] == "ADL" and adj["close_px"] == 0.02
+    exp = (347 * 0.02 - 0) + 347 * (0.022 - 0.023) - 0.008 - (347 * 0.022 * 0.9995)
+    assert abs(store.s[V.STATE_KEY]["cash"] - (100.0 + exp)) < 1e-6
+    assert store.s["migrations"]["hu_1027"]["done"] and store.s["ledger_adjustments"][-1]["id"] == "hu_1027-HUMAUSDT"
+    M.run_fixes(store, f); assert len(f.sent) == 1
+
+
+def test_phantom_repair_skips_when_exchange_not_orphan():
+    store = _Store({"migrations": {M.MIG: {"done": True}}, V.STATE_KEY: {"cash": 100.0, "book": {}}})
+    f = _PhFut(); f.pos = 0.0
+    M.run_fixes(store, f)
+    assert not f.sent and "exchange position" in store.s["migrations"]["hu_1027"]["skipped"] and store.s[V.STATE_KEY]["cash"] == 100.0

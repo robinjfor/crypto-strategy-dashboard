@@ -152,7 +152,11 @@ def run(store, fut=None) -> dict | None:
     return out.get("rec")
 
 
-FIXES = {"us_1026": ("USUSDT",)}   # later one-shot fixes: same investigation + audited zeroing, on the variant ledger
+FIXES = {"us_1026": ("USUSDT",), "hu_1027": ("HUMAUSDT",)}
+# hu_1027: the 10-26 bar exec "closed" the ledger leg (347) at 08:38:59 Taipei after the exchange had already closed it,
+# which opened an orphan short -347 (non-reduceOnly net order). Repair = investigate the original close (before that order),
+# flatten the orphan with a reduceOnly BUY, and re-book the leg at the real close price (cash audit entry).
+PHANTOM = {"hu_1027": {"symbol": "HUMAUSDT", "qty": 347.0, "coid": "net-HUMAUSDT-2610270038-13"}}   # later one-shot fixes: same investigation + audited zeroing, on the variant ledger
 
 
 def apply_symbol_fix(state: dict, inv: dict, key: str, slot: str, mig_id: str, at: str) -> dict:
@@ -177,6 +181,72 @@ def apply_symbol_fix(state: dict, inv: dict, key: str, slot: str, mig_id: str, a
     return rec
 
 
+def _order_fill(fut, sym, coid):
+    o = _safe(lambda: fut.get_order(sym, coid), {}) or {}
+    tr = _safe(lambda: fut._signed("GET", "/fapi/v1/userTrades", {"symbol": sym, "orderId": o.get("orderId")}), []) if o.get("orderId") else []
+    tr = tr if isinstance(tr, list) else []
+    q = sum(float(t.get("qty") or 0) for t in tr)
+    px = (sum(float(t.get("qty") or 0) * float(t.get("price") or 0) for t in tr) / q) if q else float(o.get("avgPrice") or 0)
+    return {"orderId": o.get("orderId"), "time": o.get("updateTime") or o.get("time"), "qty": q or float(o.get("executedQty") or 0), "px": px,
+            "fee": sum(float(t.get("commission") or 0) for t in tr), "realizedPnl": sum(float(t.get("realizedPnl") or 0) for t in tr), "status": o.get("status")}
+
+
+def repair_phantom(store, fut, mid: str, cfg: dict) -> dict:
+    """ledger already flat; exchange holds the orphan opened by our own close order. Audited, idempotent."""
+    import demo_e5v
+    from guards import log_event
+    sym, q = cfg["symbol"], float(cfg["qty"])
+    ph = _order_fill(fut, sym, cfg["coid"])
+    t_ph = int(ph.get("time") or 0)
+    inv = investigate(fut, sym, q, now_ms=(t_ph - 1000) if t_ph else None)
+    pos = _safe(lambda: fut.position_risk(sym), [])
+    x = sum(float(p.get("positionAmt") or 0) for p in pos) if isinstance(pos, list) else None
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    s0 = store.load(); led = s0.get(demo_e5v.STATE_KEY) or {}
+    rec = {"done": True, "at": at, "symbol": sym, "phantom": ph, "exchange_before": x}
+    if float((led.get("book") or {}).get(sym) or 0.0) or not ph.get("qty"):
+        rec["skipped"] = "ledger not flat / phantom order not found"
+    elif x is None or abs(x + q) > 1e-9:
+        rec["skipped"] = f"exchange position {x} != orphan {-q}"
+    elif not inv.get("close_px"):
+        rec["skipped"] = "original close price not found"
+    if rec.get("skipped"):
+        store.mutate(lambda s: (s.setdefault("migrations", {}).__setitem__(mid, rec), s)[1]); return rec
+    coid = f"fix-{mid}-{sym}"[:36]
+    o = fut.new_order(symbol=sym, side="BUY" if q > 0 else "SELL", type="MARKET", quantity=q, newClientOrderId=coid, reduceOnly="true")
+    for _ in range(6):
+        if (o or {}).get("status") == "FILLED":
+            break
+        time.sleep(0.5); o = fut.get_order(sym, coid) or o
+    fl = _order_fill(fut, sym, coid)
+    pos2 = _safe(lambda: fut.position_risk(sym), [])
+    x2 = sum(float(p.get("positionAmt") or 0) for p in pos2) if isinstance(pos2, list) else None
+    # ledger booked +q*ph_px - FEE*q*ph_px at the phantom; truth: +q*close_px - fees(original close), and the orphan
+    # round trip (q*(ph_px - buy_px) - ph_fee - buy_fee) is a cost of this slot  ->  net correction:
+    booked = q * ph["px"] - 0.0005 * q * ph["px"]
+    truth = q * inv["close_px"] - float(inv.get("fees") or 0) + q * (ph["px"] - fl["px"]) - ph["fee"] - fl["fee"]
+    dcash = truth - booked
+    adj = {"at": at, "id": f"{mid}-{sym}", "slot": demo_e5v.SLOT, "ledger": demo_e5v.STATE_KEY, "symbol": sym, "qty_before": q, "qty_after": 0.0,
+           "cash_delta": round(dcash, 6), "close_px": inv["close_px"], "cause": inv.get("cause"), "detail": inv.get("detail"),
+           "exchange_realized_pnl": inv.get("exchange_realized_pnl"), "fees": inv.get("fees"),
+           "phantom_close": ph, "orphan_flatten": {**fl, "coid": coid}, "orphan_cost": round(q * (ph["px"] - fl["px"]) - ph["fee"] - fl["fee"], 6),
+           "exchange_after": x2, "actor": "自動交易專家", "evidence": {k: v for k, v in inv.items() if k != "force_orders"}}
+
+    def mut(s):
+        mig = s.setdefault("migrations", {})
+        if (mig.get(mid) or {}).get("done"):
+            return s
+        l = dict(s.get(demo_e5v.STATE_KEY) or {}); l["cash"] = float(l.get("cash") or 0.0) + dcash; s[demo_e5v.STATE_KEY] = l
+        s["ledger_adjustments"] = (list(s.get("ledger_adjustments") or []) + [adj])[-200:]
+        log_event(s, "fix_order", demo_e5v.SLOT, symbol=sym, side="BUY" if q > 0 else "SELL", qty=fl["qty"], px=fl["px"], reduce_only=True, coid=coid)
+        log_event(s, "ledger_adjustment", demo_e5v.SLOT, symbol=sym, qty_before=q, cash_delta=adj["cash_delta"], cause=adj["cause"], actor="自動交易專家")
+        mig[mid] = {**rec, "adjustment": {k: v for k, v in adj.items() if k != "evidence"}}
+        return s
+    store.mutate(mut)
+    log.info("phantom_repair %s %s", mid, {k: v for k, v in adj.items() if k != "evidence"})
+    return adj
+
+
 def run_fixes(store, fut=None) -> list:
     import demo_e5v
     s0 = store.load(); out = []
@@ -188,6 +258,8 @@ def run_fixes(store, fut=None) -> list:
         if fut is None:
             from futures_client import FuturesDemoClient
             fut = FuturesDemoClient()
+        if mid in PHANTOM:
+            out.append(repair_phantom(store, fut, mid, PHANTOM[mid])); continue
         for sym in syms:
             q = float(((s0.get(demo_e5v.STATE_KEY) or {}).get("book") or {}).get(sym) or 0.0)
             inv = investigate(fut, sym, q) if q else {"symbol": sym, "exchange_position": None}

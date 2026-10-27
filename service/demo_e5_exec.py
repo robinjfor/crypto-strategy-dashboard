@@ -145,6 +145,10 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
            "skipped_thr": sum(1 for o in plan if o["kind"] == "skip_thr"), "slot": SLOT, "sent": [], "skipped": [], "funding": round(fnd, 4)}
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"e5{tag}")
+    try:  # exchange legs: a close of a leg the exchange no longer holds (liquidated/ADL'd outside) would OPEN a position
+        xpos = {r["symbol"]: float(r.get("positionAmt") or 0) for r in fut.position_risk()}
+    except Exception:  # noqa: BLE001
+        xpos = None
     for o in plan:
         if o["kind"] in ("skip_min", "skip_thr", "hold"):
             continue
@@ -154,6 +158,11 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         closing = full or (mine != 0 and abs(mine + d) < abs(mine) and np.sign(mine + d) in (0, np.sign(mine)))
         if s not in lst:
             out["skipped"].append(f"{s} not listed"); log_event(state, "e5_skip_unlisted", SLOT, symbol=s, bar=bar); continue
+        if closing and mine and xpos is not None:
+            x = xpos.get(s, 0.0)
+            if x * mine <= 0 or abs(x) < abs(mine) - 1e-9:
+                out["skipped"].append(f"{s} leg missing on exchange")
+                log_event(state, "e5_skip_missing_leg", SLOT, symbol=s, ledger=mine, exchange=x, bar=bar); continue
         if not closing and (blk or tradfi.is_tradfi(s, info, state)):
             why = blk or "TradFi (crypto only)"
             out["skipped"].append(f"{s} {why}"); log_event(state, "e5_entry_skip", SLOT, symbol=s, why=why, bar=bar); continue

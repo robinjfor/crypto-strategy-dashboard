@@ -25,6 +25,10 @@ on:
         description: "After deploy, start the funding-arb target job once (public data; then one reconcile tick)"
         type: boolean
         default: false
+      run_e5_targets_now:
+        description: "After deploy, start the E5 target job once (public data; writes e5_targets.json, then one reconcile tick)"
+        type: boolean
+        default: false
       run_derivs_now:
         description: "After deploy, run the daily derivatives collector once (--wait) and validate its GCS file"
         type: boolean
@@ -73,6 +77,8 @@ env:
   SHADOW_JOB: crypto-shadow-ab
   FA_JOB: crypto-fa-daily
   SCHEDULER_FA: crypto-fa-daily-0001
+  E5T_JOB: crypto-e5-targets
+  SCHEDULER_E5T: crypto-e5-targets-0002
   SCHEDULER_SHADOW: crypto-shadow-ab-daily
   DERIVS_JOB: crypto-derivs-daily
   SCHEDULER_DERIVS: crypto-derivs-daily-0030
@@ -364,6 +370,29 @@ jobs:
             --uri="${URI}" --http-method=POST \
             --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
 
+      - name: Deploy E5 target job + scheduler (UTC 00:02 = Taipei 08:02; E5 targets only, public data, no keys; then starts reconcile)
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          RUNTIME_SA="trader-runtime@${PROJECT}.iam.gserviceaccount.com"
+          BUCKET="${{ vars.GCS_BUCKET }}"
+          REC_URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${RECONCILE_JOB}:run"
+          gcloud run jobs deploy "${E5T_JOB}" \
+            --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
+            --service-account="${RUNTIME_SA}" --task-timeout=2400 --max-retries=1 \
+            --set-env-vars="GCS_BUCKET=${BUCKET},E5_ONLY=1,RECONCILE_JOB_URI=${REC_URI}" \
+            --clear-secrets --command=python --args=-u,shadow_ab/run_cloud.py --memory=8Gi --cpu=4
+          gcloud run jobs add-iam-policy-binding "${E5T_JOB}" --project="${PROJECT}" --region="${REGION}" \
+            --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
+          URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${E5T_JOB}:run"
+          VERB=create
+          if gcloud scheduler jobs describe "${SCHEDULER_E5T}" --location="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then VERB=update; fi
+          gcloud scheduler jobs ${VERB} http "${SCHEDULER_E5T}" \
+            --project="${PROJECT}" --location="${REGION}" \
+            --schedule="2 0 * * *" --time-zone="UTC" \
+            --uri="${URI}" --http-method=POST \
+            --oauth-service-account-email="${RUNTIME_SA}" --message-body="{}"
+
       - name: Deploy derivatives collector job + scheduler (UTC 00:30 = Taipei 08:30; public mainnet fapi, no keys)
         run: |
           set -euo pipefail
@@ -445,6 +474,10 @@ jobs:
       - name: Start funding-arb target job once (async)
         if: ${{ inputs.run_fa_now }}
         run: gcloud run jobs execute "${FA_JOB}" --project="${{ vars.GCP_PROJECT_ID }}" --region="${REGION}" --async
+
+      - name: Start E5 target job once (async; reconcile tick follows, E5 exec idempotent per bar)
+        if: ${{ inputs.run_e5_targets_now }}
+        run: gcloud run jobs execute "${E5T_JOB}" --project="${{ vars.GCP_PROJECT_ID }}" --region="${REGION}" --async
 
       - name: Start shadow A–E job once (async)
         if: ${{ inputs.run_shadow_ab_now }}
