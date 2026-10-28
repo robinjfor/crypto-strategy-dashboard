@@ -167,7 +167,7 @@ def run(store, fut=None) -> dict | None:
     return out.get("rec")
 
 
-FIXES = {"us_1026": ("USUSDT",), "hu_1027": ("HUMAUSDT",), "ab_1028": ("APRUSDT", "BANKUSDT")}
+FIXES = {"us_1026": ("USUSDT",), "hu_1027": ("HUMAUSDT",), "ab_1028": ("APRUSDT", "BANKUSDT"), "bk_1028": ("BANKUSDT",)}  # ab_1028 marks done after its first symbol
 # hu_1027: the 10-26 bar exec "closed" the ledger leg (347) at 08:38:59 Taipei after the exchange had already closed it,
 # which opened an orphan short -347 (non-reduceOnly net order). Repair = investigate the original close (before that order),
 # flatten the orphan with a reduceOnly BUY, and re-book the leg at the real close price (cash audit entry).
