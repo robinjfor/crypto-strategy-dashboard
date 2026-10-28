@@ -651,6 +651,38 @@ def run_demo_gates(state0: dict) -> dict:
     return out
 
 
+import uuid as _uuid
+E5_CLAIM_TTL_S = 1800
+
+
+def e5_traded(res) -> bool:
+    return isinstance(res, dict) and not isinstance(res.get("skipped"), str) and bool(res.get("bar"))
+
+
+def e5_claim(store, key: str, state0: dict, tgt: dict | None, run: str):
+    """Atomic per-bar claim (GCS generation precondition in store.mutate). None = this run may execute, else the reason.
+    Prevents concurrent reconcile runs (scheduler + FA/E5 target-job triggers) from both trading one bar (10-28 incident)."""
+    bar = str((tgt or {}).get("decided_bar") or "")
+    if not bar or (state0.get(key) or {}).get("last_bar") == bar:
+        return None   # execute() itself skips (stale / already executed) without trading
+    base = (state0.get(key) or {}).get("last_bar")
+    res = {}
+
+    def mut(s):
+        ex = dict(s.get(key) or {}); c = ex.get("claim") or {}
+        now = datetime.now(timezone.utc).timestamp()
+        if ex.get("last_bar") == bar:
+            res["r"] = "already executed (other run)"; return s
+        if ex.get("last_bar") != base:
+            res["r"] = "ledger changed since load"; return s
+        if c.get("bar") == bar and c.get("run") != run and now - float(c.get("ts") or 0) < E5_CLAIM_TTL_S:
+            res["r"] = f"bar claimed by run {c.get('run')}"; return s
+        ex["claim"] = {"bar": bar, "run": run, "ts": now}; s[key] = ex; res["r"] = None
+        return s
+    store.mutate(mut)
+    return res.get("r")
+
+
 def run_once(store=None, *, client=None, fc=None) -> dict:
     from state_store import StateStore
     store = store or StateStore()
@@ -704,7 +736,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             fa_err = dict(state0.get("demo_fa_exec") or {})
             fa_err["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
             fa_scratch = None
-    e5_scratch = None
+    e5_scratch = None; e5_run = None
     shared_net = {}   # one Netter for the E5 + R2S intents of this run: per-symbol net order (netting.py)
 
     def _netter():
@@ -730,7 +762,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             from google.cloud import storage
             bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/e5_targets.json")
             tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-            e5_res = demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt, netter=_netter(), mod=None if e5_mod is _e5 else e5_mod)
+            e5_run = _uuid.uuid4().hex[:12]; claim = e5_claim(store, e5_key, state0, tgt, e5_run)
+            if claim is not None:   # another reconcile run owns / already ran this bar: never trade it twice
+                e5_res = {"skipped": claim, "bar": (tgt or {}).get("decided_bar")}
+                e5_scratch = {"control_log": [], "_last_run_only": True}
+            else:
+                e5_res = demo_e5_exec.execute(e5_scratch, fc or FuturesDemoClient(), tgt, netter=_netter(), mod=None if e5_mod is _e5 else e5_mod)
         except Exception as e:  # noqa: BLE001
             import traceback
             log.warning("e5_exec_fail err=%s", e)
@@ -791,7 +828,15 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         if fa_err is not None:
             s["demo_fa_exec"] = fa_err
         if e5_scratch is not None:
-            if e5_scratch.get(e5_key) is not None:
+            if e5_scratch.get("_last_run_only") or not e5_traded(e5_res):
+                cur = dict(s.get(e5_key) or {})   # run did not trade: never overwrite the ledger with this run's stale copy
+                if (e5_scratch.get(e5_key) or {}).get("last_run") is not None:
+                    cur["last_run"] = e5_scratch[e5_key]["last_run"]
+                if e5_run and (cur.get("claim") or {}).get("run") == e5_run:
+                    cur.pop("claim", None)
+                if cur:
+                    s[e5_key] = cur
+            elif e5_scratch.get(e5_key) is not None:
                 s[e5_key] = e5_scratch[e5_key]
             s["control_log"] = (list(s.get("control_log") or []) + e5_scratch["control_log"])[-200:]
         if r2s_scratch is not None:

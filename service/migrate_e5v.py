@@ -8,6 +8,7 @@
 Everything lands in one store.mutate (atomic, generation-checked); state["migrations"]["e5v_1026"] makes it run once."""
 from __future__ import annotations
 
+import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -58,6 +59,20 @@ def investigate(fut, sym: str, q_ledger: float, known_coids: set[str] | None = N
         coid = o.get("clientOrderId") or ""
         tagged.append({"time": t.get("time"), "qty": float(t.get("qty") or 0), "price": float(t.get("price") or 0), "realizedPnl": float(t.get("realizedPnl") or 0),
                        "commission": float(t.get("commission") or 0), "orderId": t.get("orderId"), "clientOrderId": coid, "autoCloseType": o.get("autoCloseType")})
+    if q_ledger and sum(t["qty"] for t in tagged) > abs(q_ledger) + 1e-9:   # window also holds closes of earlier legs:
+        tagged.sort(key=lambda t: t.get("time") or 0); pick, acc = [], 0.0   # keep the latest closes that make up this leg
+        for t in reversed(tagged):
+            if acc >= abs(q_ledger) - 1e-9:
+                break
+            pick.append(t); acc += t["qty"]
+        tagged = sorted(pick, key=lambda t: t.get("time") or 0)
+        f_ids = {t["orderId"] for t in tagged}
+        force, orders = [o for o in force if o.get("orderId") in f_ids], [o for o in orders if o.get("orderId") in f_ids]
+        t0 = min(int(t.get("time") or 0) for t in tagged) - 60000
+        types = {}
+        for x in inc:
+            if int(x.get("time") or 0) >= t0:
+                types[x.get("incomeType")] = types.get(x.get("incomeType"), 0.0) + float(x.get("income") or 0)
     status = (meta or {}).get("status")
     cause, detail = "unknown", ""
     if any((o.get("autoCloseType") == "ADL") or str(o.get("clientOrderId", "")).startswith("adl_autoclose") for o in force + orders) or any(str(t["clientOrderId"]).startswith("adl_autoclose") for t in tagged):
@@ -152,7 +167,7 @@ def run(store, fut=None) -> dict | None:
     return out.get("rec")
 
 
-FIXES = {"us_1026": ("USUSDT",), "hu_1027": ("HUMAUSDT",)}
+FIXES = {"us_1026": ("USUSDT",), "hu_1027": ("HUMAUSDT",), "ab_1028": ("APRUSDT", "BANKUSDT")}
 # hu_1027: the 10-26 bar exec "closed" the ledger leg (347) at 08:38:59 Taipei after the exchange had already closed it,
 # which opened an orphan short -347 (non-reduceOnly net order). Repair = investigate the original close (before that order),
 # flatten the orphan with a reduceOnly BUY, and re-book the leg at the real close price (cash audit entry).
@@ -247,11 +262,76 @@ def repair_phantom(store, fut, mid: str, cfg: dict) -> dict:
     return adj
 
 
+# dup_1028: two concurrent reconcile runs both executed bar 2026-10-27 (10-28 08:07:55 and 08:08:05 Taipei); the later write
+# kept run B's ledger, so run A's ETH BUY 0.879 and run B's non-reduceOnly BAT/BTC "closes" are orphans on the exchange.
+# signed orphan qty (exchange - ledger) and the coid that opened it.
+DUP = {"dup_1028": {"ETHUSDT": ("net-ETHUSDT-2610280007-2", 0.879), "BATUSDT": ("net-BATUSDT-2610280004-1", -40.8),
+                    "BTCUSDT": ("net-BTCUSDT-2610280004-2", -0.0253)}}
+
+
+def repair_dups(store, fut, mid: str, cfg: dict) -> dict:
+    """unwind each orphan reduceOnly only when exchange - sum(slot ledgers) == orphan; the orphan round trip's PnL and
+    fees are booked to the variant slot's cash (its double run caused them). Audited, idempotent."""
+    import demo_e5v, netting
+    from guards import log_event
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    s0 = store.load(); vn = netting.virtual_net(s0)
+    rows, dcash = [], 0.0
+    for sym, (coid, q) in cfg.items():
+        pos = _safe(lambda: fut.position_risk(sym), [])
+        x = sum(float(p.get("positionAmt") or 0) for p in pos if p.get("symbol") in (None, sym)) if isinstance(pos, list) else None
+        op = _order_fill(fut, sym, coid)
+        r = {"symbol": sym, "orphan": q, "exchange_before": x, "ledger_sum": vn.get(sym, 0.0), "orphan_open": {**op, "coid": coid}}
+        if x is None or abs((x - vn.get(sym, 0.0)) - q) > 1e-9 or not op.get("qty"):
+            r["skipped"] = "exchange - ledger != orphan or opening order not found"; rows.append(r); continue
+        fc = f"fix-{mid}-{sym}"[:36]
+        try:
+            o = fut.new_order(symbol=sym, side="SELL" if q > 0 else "BUY", type="MARKET", quantity=abs(q), newClientOrderId=fc, reduceOnly="true")
+        except Exception as e:  # noqa: BLE001
+            r["skipped"] = f"order failed: {e}"[:300]; rows.append(r); continue
+        for _ in range(6):
+            if (o or {}).get("status") == "FILLED":
+                break
+            time.sleep(0.5); o = fut.get_order(sym, fc) or o
+        fl = _order_fill(fut, sym, fc)
+        pos2 = _safe(lambda: fut.position_risk(sym), [])
+        r["exchange_after"] = sum(float(p.get("positionAmt") or 0) for p in pos2 if p.get("symbol") in (None, sym)) if isinstance(pos2, list) else None
+        pnl = q * (fl["px"] - op["px"]) - op["fee"] - fl["fee"]   # long orphan: sell - buy; short orphan: (open - buyback)
+        r.update(unwind={**fl, "coid": fc}, pnl=round(pnl, 6)); dcash += pnl; rows.append(r)
+    adj = {"at": at, "id": f"{mid}-orphans", "slot": demo_e5v.SLOT, "ledger": demo_e5v.STATE_KEY, "cash_delta": round(dcash, 6),
+           "cause": "double_execution", "detail": "bar 2026-10-27 executed by two concurrent reconcile runs; orphans unwound reduceOnly",
+           "rows": rows, "actor": "自動交易專家"}
+
+    def mut(s):
+        mig = s.setdefault("migrations", {})
+        if (mig.get(mid) or {}).get("done"):
+            return s
+        l = dict(s.get(demo_e5v.STATE_KEY) or {}); l["cash"] = float(l.get("cash") or 0.0) + dcash; s[demo_e5v.STATE_KEY] = l
+        s["ledger_adjustments"] = (list(s.get("ledger_adjustments") or []) + [adj])[-200:]
+        for r in rows:
+            if "unwind" in r:
+                log_event(s, "fix_order", demo_e5v.SLOT, symbol=r["symbol"], side="SELL" if r["orphan"] > 0 else "BUY", qty=r["unwind"]["qty"],
+                          px=r["unwind"]["px"], reduce_only=True, coid=r["unwind"]["coid"])
+        log_event(s, "ledger_adjustment", demo_e5v.SLOT, symbol=",".join(cfg), cash_delta=adj["cash_delta"], cause="double_execution", actor="自動交易專家")
+        mig[mid] = {"done": True, "at": at, "adjustment": adj}
+        return s
+    store.mutate(mut)
+    log.info("dup_repair %s %s", mid, json.dumps(adj, default=str)[:3000])
+    return adj
+
+
 def run_fixes(store, fut=None) -> list:
     import demo_e5v
     s0 = store.load(); out = []
     if not ((s0.get("migrations") or {}).get(MIG) or {}).get("done"):
         return out
+    for mid, cfg in DUP.items():
+        if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
+            continue
+        if fut is None:
+            from futures_client import FuturesDemoClient
+            fut = FuturesDemoClient()
+        out.append(repair_dups(store, fut, mid, cfg))
     for mid, syms in FIXES.items():
         if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
             continue

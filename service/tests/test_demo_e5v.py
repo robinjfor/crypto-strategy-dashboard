@@ -204,7 +204,7 @@ def test_phantom_repair_flattens_orphan_and_rebooks_once():
     f = _PhFut()
     r = M.run_fixes(store, f)
     assert f.sent and f.sent[0]["reduceOnly"] == "true" and f.sent[0]["side"] == "BUY" and f.pos == 0.0
-    adj = r[-1]; assert adj["cause"] == "ADL" and adj["close_px"] == 0.02
+    adj = next(x for x in r if isinstance(x, dict) and str(x.get("id", "")).startswith("hu_1027")); assert adj["cause"] == "ADL" and adj["close_px"] == 0.02
     exp = (347 * 0.02 - 0) + 347 * (0.022 - 0.023) - 0.008 - (347 * 0.022 * 0.9995)
     assert abs(store.s[V.STATE_KEY]["cash"] - (100.0 + exp)) < 1e-6
     assert store.s["migrations"]["hu_1027"]["done"] and store.s["ledger_adjustments"][-1]["id"] == "hu_1027-HUMAUSDT"
