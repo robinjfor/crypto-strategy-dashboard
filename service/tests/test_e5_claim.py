@@ -81,3 +81,26 @@ def test_net_reconcile_flags_unowned_alert_only():
     import inspect
     nr = rep["net_reconcile"]; day = "2026-10-28"
     assert nr["USDT"]["unowned"] == {"BATUSDT": -40.8}
+
+
+def test_netter_uses_2x_for_e5v_symbols():
+    import netting
+    n = netting.Netter.__new__(netting.Netter); n.intents = {"A": [{"slot": V.SLOT}, {"slot": "demo_r2s_top10_3k"}], "B": [{"slot": "demo_r2s_top10_3k"}]}
+    assert n.lev_for("A") == 2 and n.lev_for("B") == 3 and n.lev_for("C") == 3
+
+
+class _LF:
+    def __init__(self, avail): self.avail = avail; self.calls = []; self.lev = 3
+    def account(self): return {"availableBalance": self.avail}
+    def position_risk(self, s=None):
+        return [{"symbol": "X", "positionAmt": "-100", "markPrice": "1", "isolatedMargin": "30", "unRealizedProfit": "-3", "marginType": "isolated", "leverage": str(self.lev)}]
+    def add_isolated_margin(self, s, a): self.calls.append(("add", s, round(a, 2)))
+    def set_leverage(self, s, l): self.calls.append(("lev", s, l)); self.lev = l
+
+
+def test_lev_down_tops_up_then_sets_and_aborts_when_short():
+    import migrate_e5v as M
+    f = _LF(1000); r = M.lev_down(f, ["X"], 2)
+    assert f.calls == [("add", "X", 22.01), ("lev", "X", 2)] and r["lev_after"] == {"X": "2"}
+    f = _LF(10); r = M.lev_down(f, ["X"], 2)
+    assert r["aborted"] and f.calls == []

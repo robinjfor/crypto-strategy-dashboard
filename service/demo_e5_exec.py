@@ -23,7 +23,7 @@ import tradfi
 from guards import log_event
 
 log = logging.getLogger("demo_e5_exec")
-LEVERAGE = 3          # isolated, per symbol (futures_client hard cap 3)
+LEVERAGE = 2          # isolated, per symbol; applied by netting.LEV_BY_SLOT (2026-10-28)
 MAX_LAG_H = 4         # execute only within 4h after the 00:00 UTC (08:00 Taipei) open
 FEE = 0.0005          # taker estimate for the virtual equity when the fill has no commission field
 

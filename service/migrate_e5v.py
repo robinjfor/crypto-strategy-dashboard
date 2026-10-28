@@ -320,6 +320,40 @@ def repair_dups(store, fut, mid: str, cfg: dict) -> dict:
     return adj
 
 
+LEV2 = {"lev2_1028": 2}
+
+
+def lev_down(fut, syms: list[str], lev: int, buffer: float = 1.10) -> dict:
+    """Lower isolated leverage on existing E5v positions. Margin check first: each position's isolated margin must be
+    >= buffer * |notional| / lev; any shortfall is topped up from the wallet (no exposure change) only if the total
+    shortfall fits in 50% of availableBalance, else nothing is changed. Leverage only; positions/orders untouched."""
+    acct = fut.account(); avail = float(acct.get("availableBalance") or 0)
+    pr = {p["symbol"]: p for p in (fut.position_risk() or []) if p.get("symbol") in syms}
+    plan = {}
+    for sym in syms:
+        p = pr.get(sym) or {}; amt = float(p.get("positionAmt") or 0)
+        notional = abs(amt) * float(p.get("markPrice") or 0); im = float(p.get("isolatedMargin") or 0) - float(p.get("unRealizedProfit") or 0)
+        need = buffer * notional / lev
+        plan[sym] = {"amt": amt, "notional": round(notional, 4), "iso_margin": round(im, 4), "need": round(need, 4),
+                     "top_up": round(max(0.0, need - im), 2) if amt else 0.0, "margin_type": p.get("marginType"), "lev_before": p.get("leverage")}
+    short = sum(v["top_up"] for v in plan.values())
+    out = {"available": round(avail, 2), "shortfall": round(short, 2), "plan": plan, "results": {}}
+    if short > 0.5 * avail:
+        out["aborted"] = "insufficient available balance for margin top-up"; return out
+    for sym, v in plan.items():
+        r = {}
+        try:
+            if v["top_up"] > 0:
+                r["top_up"] = fut.add_isolated_margin(sym, v["top_up"] + 0.01)
+            r["set"] = fut.set_leverage(sym, lev)
+        except Exception as e:  # noqa: BLE001
+            r["error"] = str(e)[:200]
+        out["results"][sym] = r
+    after = {p["symbol"]: p for p in (fut.position_risk() or []) if p.get("symbol") in syms}
+    out["lev_after"] = {s_: (after.get(s_) or {}).get("leverage") for s_ in syms}
+    return out
+
+
 def run_fixes(store, fut=None) -> list:
     import demo_e5v
     s0 = store.load(); out = []
@@ -332,6 +366,19 @@ def run_fixes(store, fut=None) -> list:
             from futures_client import FuturesDemoClient
             fut = FuturesDemoClient()
         out.append(repair_dups(store, fut, mid, cfg))
+    for mid, lev in LEV2.items():
+        if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
+            continue
+        if fut is None:
+            from futures_client import FuturesDemoClient
+            fut = FuturesDemoClient()
+        syms = sorted(k for k, q in ((s0.get(demo_e5v.STATE_KEY) or {}).get("book") or {}).items() if abs(float(q or 0)) > 0)
+        r = _safe(lambda: lev_down(fut, syms, lev))
+        at = datetime.now(timezone.utc).isoformat(timespec="seconds"); log.info("lev_down %s %s", mid, r)
+
+        def mut(s, r=r, mid=mid):
+            s.setdefault("migrations", {})[mid] = {"done": not (isinstance(r, dict) and (r.get("aborted") or r.get("error"))), "at": at, "result": r}; return s
+        store.mutate(mut); out.append(r)
     for mid, syms in FIXES.items():
         if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
             continue
