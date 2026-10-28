@@ -129,7 +129,11 @@ class Netter:
         coid = f"net-{sym[:14]}-{self.tag}-{self.n}"[:36]; self.n += 1
         try:
             if not ro:
-                self.fut.set_margin_type(sym, "ISOLATED"); self.fut.set_leverage(sym, self.lev_for(sym))
+                self.fut.set_margin_type(sym, "ISOLATED")
+                try:
+                    self.fut.set_leverage(sym, self.lev_for(sym))
+                except Exception as le:  # noqa: BLE001  -4161: can't lower isolated leverage with an open position -> keep current, still trade
+                    log_event(st, "set_leverage_skipped", None, symbol=sym, error=str(le)[:120])
             kw = {"reduceOnly": "true"} if ro else {}
             o = self.fut.new_order(symbol=sym, side=side, type="MARKET", quantity=qty, newClientOrderId=coid, **kw)
             for _ in range(6):

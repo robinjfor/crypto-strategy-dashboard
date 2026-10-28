@@ -104,3 +104,13 @@ def test_lev_down_tops_up_then_sets_and_aborts_when_short():
     assert f.calls == [("add", "X", 22.01), ("lev", "X", 2)] and r["lev_after"] == {"X": "2"}
     f = _LF(10); r = M.lev_down(f, ["X"], 2)
     assert r["aborted"] and f.calls == []
+
+
+def test_netter_trades_when_leverage_change_refused():
+    import netting
+    class F:
+        def set_margin_type(self, *a): pass
+        def set_leverage(self, *a): raise RuntimeError("-4161 Leverage reduction is not supported")
+        def new_order(self, **k): return {"status": "FILLED", "executedQty": k["quantity"], "avgPrice": "1"}
+    n = netting.Netter.__new__(netting.Netter); n.fut = F(); n.intents = {}; n.orders = []; n.n = 0; n.tag = "t"
+    assert n._send({}, "X", "BUY", 5, False) == (5.0, 1.0)
