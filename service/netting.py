@@ -230,4 +230,7 @@ def net_reconcile(state: dict, exch: dict[str, float], quote: str = "USDT") -> d
         v = vn.get(s, 0.0); x = float(exch.get(s, 0.0))
         rows[s] = {"slots": {k: b[s] for k, b in books.items() if s in b}, "virtual_sum": v, "exchange": x,
                    "diff": x - v, "ok": abs(x - v) <= 1e-8 * max(1.0, abs(x))}
-    return {"ok": all(r["ok"] for r in rows.values()), "symbols": rows}
+    u1 = {"BTCUSDC", "ETHUSDC"}   # U1 sleeve (own ledger, reconciled separately)
+    unowned = {s: float(x) for s, x in exch.items() if s.endswith(quote) and s not in vn and s not in u1 and abs(float(x or 0)) > 0}
+    return {"ok": all(r["ok"] for r in rows.values()), "symbols": rows,
+            "unowned": unowned, "unowned_alert": bool(unowned)}   # alert only: exchange legs no slot ledger owns

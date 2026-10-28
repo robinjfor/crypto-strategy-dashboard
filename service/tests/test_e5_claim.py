@@ -57,3 +57,27 @@ def test_dup_skipped_when_exchange_changed():
                  V.STATE_KEY: {"cash": 100.0, "book": {"ETHUSDT": 0.878}}})
     f = _DupFut(); f.pos = {"ETHUSDT": 0.878, "BATUSDT": 0.0, "BTCUSDT": 0.0}; M.run_fixes(st, f)
     assert not f.sent and st.s[V.STATE_KEY]["cash"] == 100.0
+
+
+def test_merge_untraded_keeps_current_ledger():
+    s = {"demo_r2s_exec": {"book": {"X": 2.0}, "last_bar": "b2", "claim": {"run": "me"}}}
+    R.merge_untraded(s, "demo_r2s_exec", {"demo_r2s_exec": {"book": {"X": 1.0}, "last_bar": "b1", "last_run": {"r": 1}}}, "me")
+    assert s["demo_r2s_exec"]["book"] == {"X": 2.0} and s["demo_r2s_exec"]["last_run"] == {"r": 1} and "claim" not in s["demo_r2s_exec"]
+
+
+def test_r2s_and_fa_claims_use_slot_keys():
+    st = _Store({"demo_r2s_exec": {"last_bar": "a"}}); s0 = st.load()
+    assert R.slot_claim(st, "demo_r2s_exec", s0, "b", "A") is None and R.slot_claim(st, "demo_r2s_exec", s0, "b", "B")
+
+
+def test_net_reconcile_flags_unowned_alert_only():
+    import netting
+    st = {V.STATE_KEY: {"book": {"ETHUSDT": 1.0}}}
+    r = netting.net_reconcile(st, {"ETHUSDT": 1.0, "BATUSDT": -40.8}, "USDT")
+    assert r["ok"] and r["unowned_alert"] and r["unowned"] == {"BATUSDT": -40.8}
+    assert not netting.net_reconcile(st, {"BTCUSDC": 0.01}, "USDC")["unowned_alert"]
+    rep = {"at": "t", "at_utc": "2026-10-28T02:00", "net_reconcile": {"USDT": r}, "mismatches": [], "errors": []}
+    st2 = {}
+    import inspect
+    nr = rep["net_reconcile"]; day = "2026-10-28"
+    assert nr["USDT"]["unowned"] == {"BATUSDT": -40.8}

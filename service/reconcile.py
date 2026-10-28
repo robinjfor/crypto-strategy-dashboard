@@ -314,6 +314,11 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
         import netting
         exch = {p["symbol"]: float(p["qty"]) for w in rep["wallets"].values() for p in (w.get("positions") or [])}
         rep["net_reconcile"] = {q: netting.net_reconcile(state, exch, q) for q in ("USDT", "USDC")}
+        legacy = {p.get("symbol") for p in (state.get("positions") or {}).values() if isinstance(p, dict) and p.get("venue") == "futures"} \
+            if isinstance(state.get("positions"), dict) else set()
+        legacy |= {m.get("symbol") for m in rep.get("mismatches") or []}   # runner-tracked or already alerted above
+        for v in rep["net_reconcile"].values():
+            v["unowned"] = {k: x for k, x in (v.get("unowned") or {}).items() if k not in legacy}; v["unowned_alert"] = bool(v["unowned"])
     except Exception as e:  # noqa: BLE001
         rep["errors"].append(f"net_reconcile: {str(e)[:200]}")
     if client is not None:
@@ -336,6 +341,13 @@ def apply_report(st: dict, rep: dict) -> dict:
         bad = {s_: r for v in nr.values() for s_, r in (v.get("symbols") or {}).items() if not r.get("ok")}
         st["net_reconcile"] = {"at": rep.get("at"), "ok": ok, "symbols": {s_: r for v in nr.values() for s_, r in (v.get("symbols") or {}).items()},
                                "daily": (hist + [{"day": day, "at": rep.get("at"), "ok": ok, "bad": bad}])[-60:]}
+        unowned = {s_: x for v in nr.values() for s_, x in (v.get("unowned") or {}).items()}
+        st["net_reconcile"]["unowned"] = unowned; st["net_reconcile"]["unowned_alert"] = bool(unowned)   # alert only, no pause
+        for sym_, x in unowned.items():
+            k_ = f"unowned_exchange_position|{sym_}|{day}"
+            if k_ not in {a.get("key") for a in st.get("reconcile_alerts") or []}:
+                st.setdefault("reconcile_alerts", []).append({"at": rep.get("at"), "key": k_, "venue": "futures", "symbol": sym_,
+                                                              "kind": "unowned_exchange_position", "slots": [], "binance": x, "pause": False})
     adopted = apply_u1_external_closes(st, rep.get("u1_external_closes") or [])
     tag_manual_closed_trades(st)
     uf = rep.get("u1_funding") or {}
@@ -660,9 +672,12 @@ def e5_traded(res) -> bool:
 
 
 def e5_claim(store, key: str, state0: dict, tgt: dict | None, run: str):
+    return slot_claim(store, key, state0, str((tgt or {}).get("decided_bar") or ""), run)
+
+
+def slot_claim(store, key: str, state0: dict, bar: str, run: str):
     """Atomic per-bar claim (GCS generation precondition in store.mutate). None = this run may execute, else the reason.
     Prevents concurrent reconcile runs (scheduler + FA/E5 target-job triggers) from both trading one bar (10-28 incident)."""
-    bar = str((tgt or {}).get("decided_bar") or "")
     if not bar or (state0.get(key) or {}).get("last_bar") == bar:
         return None   # execute() itself skips (stale / already executed) without trading
     base = (state0.get(key) or {}).get("last_bar")
@@ -681,6 +696,17 @@ def e5_claim(store, key: str, state0: dict, tgt: dict | None, run: str):
         return s
     store.mutate(mut)
     return res.get("r")
+
+
+def merge_untraded(s: dict, key: str, sc: dict | None, run: str | None):
+    """a run that did not trade keeps the CURRENT ledger: only its last_run is merged and its own claim released."""
+    cur = dict(s.get(key) or {})
+    if ((sc or {}).get(key) or {}).get("last_run") is not None:
+        cur["last_run"] = sc[key]["last_run"]
+    if run and (cur.get("claim") or {}).get("run") == run:
+        cur.pop("claim", None)
+    if cur:
+        s[key] = cur
 
 
 def run_once(store=None, *, client=None, fc=None) -> dict:
@@ -706,7 +732,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     gres = run_guards(state0, fc)
     dgates = run_demo_gates(state0)
     fa_scratch = None
-    fa_err = None
+    fa_err = None; fa_run = None; fa_traded = False
     if ((state0.get("demo_candidates") or {}).get("demo_funding_arb_1x") or {}).get("enabled"):
         try:  # live controls; only when Robin enabled the slot
             import copy, demo_fa_guard
@@ -723,7 +749,10 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
                 from google.cloud import storage
                 bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/fa_targets.json")
                 tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-                res = demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt)
+                fa_run = _uuid.uuid4().hex[:12]
+                fa_claim = slot_claim(store, "demo_fa_exec", state0, str((tgt or {}).get("decided_bar") or ""), fa_run)
+                res = {"skipped": fa_claim, "bar": (tgt or {}).get("decided_bar")} if fa_claim is not None else demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt)
+                fa_traded = e5_traded(res)
                 log.info("fa_exec %s", res)
                 fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
                 fa_scratch["demo_fa_exec"]["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
@@ -776,7 +805,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             ex5 = dict(state0.get(e5_key) or {})
             ex5["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:600], "tb": traceback.format_exc()[-1200:]}
             e5_scratch = {e5_key: ex5, "control_log": []}
-    r2s_scratch = None
+    r2s_scratch = None; r2s_run = None
     if ((state0.get("demo_candidates") or {}).get("demo_r2s_top10_3k") or {}).get("enabled"):
         try:  # demo_r2s daily execution; only when approved+enabled (demo_r2s_exec.execute re-checks all gates)
             import copy, demo_r2s_exec
@@ -785,7 +814,13 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
                                                                      "paused_slots", "guard_blocks", "positions", "u1_live", "demo_e5_exec", "demo_e5v_exec", "tradfi_blocked")})
             r2s_scratch = {k: v for k, v in r2s_scratch.items() if v is not None}
             r2s_scratch["control_log"] = []
-            r2s_res = demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient(), netter=_netter())
+            r2s_run = _uuid.uuid4().hex[:12]
+            r2s_bar = demo_r2s_exec.in_window(datetime.now(timezone.utc))[1]
+            r2s_claim = slot_claim(store, "demo_r2s_exec", state0, str(r2s_bar or ""), r2s_run)
+            if r2s_claim is not None:   # another reconcile run owns / already ran this bar
+                r2s_res = {"skipped": r2s_claim, "bar": r2s_bar}; r2s_scratch = {"control_log": [], "_last_run_only": True}
+            else:
+                r2s_res = demo_r2s_exec.execute(r2s_scratch, fc or FuturesDemoClient(), netter=_netter())
         except Exception as e:  # noqa: BLE001
             log.warning("r2s_exec_fail err=%s", e)
             if "n" in shared_net:
@@ -819,9 +854,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         record_asset_month(s, snap, now_iso_taipei())
         merge_guards(s, gres)
         if fa_scratch is not None:
-            s["demo_fa_positions"] = fa_scratch.get("demo_fa_positions") or {}
-            if fa_scratch.get("demo_fa_exec") is not None:
+            if fa_traded or (fa_scratch.get("demo_fa_positions") or {}) != (state0.get("demo_fa_positions") or {}):
+                s["demo_fa_positions"] = fa_scratch.get("demo_fa_positions") or {}   # traded, or the guard changed the book
+            if fa_traded and fa_scratch.get("demo_fa_exec") is not None:
                 s["demo_fa_exec"] = fa_scratch["demo_fa_exec"]
+            elif fa_scratch.get("demo_fa_exec") is not None:
+                merge_untraded(s, "demo_fa_exec", fa_scratch, fa_run)
             if fa_scratch.get("demo_fa_slippage") is not None:
                 s["demo_fa_slippage"] = fa_scratch["demo_fa_slippage"]
             s["control_log"] = (list(s.get("control_log") or []) + fa_scratch["control_log"])[-200:]
@@ -840,7 +878,9 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
                 s[e5_key] = e5_scratch[e5_key]
             s["control_log"] = (list(s.get("control_log") or []) + e5_scratch["control_log"])[-200:]
         if r2s_scratch is not None:
-            if r2s_scratch.get("demo_r2s_exec") is not None:
+            if r2s_scratch.get("_last_run_only") or not e5_traded(r2s_res):
+                merge_untraded(s, "demo_r2s_exec", r2s_scratch, r2s_run)
+            elif r2s_scratch.get("demo_r2s_exec") is not None:
                 s["demo_r2s_exec"] = r2s_scratch["demo_r2s_exec"]
             s["control_log"] = (list(s.get("control_log") or []) + r2s_scratch["control_log"])[-200:]
         tb = set(s.get("tradfi_blocked") or [])
