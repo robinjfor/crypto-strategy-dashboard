@@ -31,6 +31,10 @@ CANDIDATES = [
     {"id": "demo_e5_min5_x175_t05top20", "name": "E5：最小下單額修正（門檻 0.5% 權益＋前 20 大）", "capital_usdt": 5000.0, "venue": "幣安測試網永續",
      "spec": "research_minnot_1026/e5_minnot_variants.py（thr=0.5% S5 權益、top-20 S5 宇集，訊號同 E5）；2026-10-26 承接 E5 帳本與權重",
      "decision": "每日 08:00（台北）收盤決策，08:00 開盤成交"},
+    {"id": "demo_vbo1h_top50_1k", "name": "VBO-1h：55 日突破、1 小時進場（前 50 大成交額，多空，持有 7 天）", "capital_usdt": 1000.0, "venue": "幣安測試網永續",
+     "spec": "research_lowcorr_r2_1104/r2.py vbo_h(55,5,7,0.01)＋REPORT.md：收盤穿越前 55 日高/低 ±1%、最多 10 檔、0.5 倍總曝險、逐倉 2 倍、逐幣最小下單額；資金 1,000U 取自資金費率套利閒置額度（套利維持核准、權重 0）；不納入組合權重；2026-12-02 檢討",
+     "decision": "每小時整點收盤決策，下一根開盤（約 :08）成交",
+     "warning": "研究報告：視為觀察／影子候選，報酬集中於少數幣（LAB/SIREN/MYX）"},
 ]
 
 

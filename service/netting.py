@@ -23,7 +23,7 @@ from guards import log_event
 log = logging.getLogger("netting")
 FEE = 0.0005
 LEVERAGE = 3
-LEV_BY_SLOT = {"demo_e5_min5_x175_t05top20": 2}   # E5v: isolated 2x (2026-10-28); symbol leverage = min over slots trading it
+LEV_BY_SLOT = {"demo_e5_min5_x175_t05top20": 2, "demo_vbo1h_top50_1k": 2}   # E5v: isolated 2x (2026-10-28); symbol leverage = min over slots trading it
 EPS = 1e-9
 
 # slot id -> (state key, book getter). FA's perp leg is short: virtual qty = -perp_qty.
@@ -32,6 +32,7 @@ SLOTS = {
     "demo_e5_min5_x175": "demo_e5_exec",            # paused since 2026-10-26, ledger moved to the t05top20 slot
     "demo_e5_min5_x175_t05top20": "demo_e5v_exec",
     "demo_funding_arb_1x": "demo_fa_positions",
+    "demo_vbo1h_top50_1k": "demo_vbo1h_exec",      # VBO-1h, 1,000U, isolated 2x (2026-11-04)
 }
 
 

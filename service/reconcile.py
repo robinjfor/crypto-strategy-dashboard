@@ -260,7 +260,7 @@ def apply_u1_external_closes(st: dict, closes: list[dict]) -> list[str]:
     return done
 
 
-NETTED = ("demo_r2s_top10_3k", "demo_e5_min5_x175", "demo_e5_min5_x175_t05top20", "demo_funding_arb_1x")
+NETTED = ("demo_r2s_top10_3k", "demo_e5_min5_x175", "demo_e5_min5_x175_t05top20", "demo_funding_arb_1x", "demo_vbo1h_top50_1k")
 
 
 def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
@@ -660,6 +660,19 @@ def run_demo_gates(state0: dict) -> dict:
         pass
     except Exception as e:  # noqa: BLE001
         log.warning("demo_gates_fail slot=demo_r2s err=%s", e)
+    try:  # demo_vbo1h (VBO-1h, 1,000U): box-side trade-by-trade parity (committed parity_VBO1H.json). Order path is
+        # demo_r2s_exec's (netting.Netter + ledger_cb, same Demo client), so cloud_ordering_ok is inherited from R2S.
+        import demo_vbo1h, demo_r2s
+        _h = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shadow_ab")
+        par = json.load(open(os.path.join(_h, "parity_VBO1H.json")))
+        old_g = out.get(demo_r2s.SLOT) or cands.get(demo_r2s.SLOT) or {}
+        out[demo_vbo1h.SLOT] = {"gates_day": day, "parity_pass": bool(par.get("pass")) and par.get("spec") == demo_vbo1h.SPEC,
+                                "parity_detail": {k: v for k, v in par.items() if k != "min_notional_divergence"},
+                                "cloud_ordering_ok": bool(old_g.get("cloud_ordering_ok")),
+                                "ordering_detail": {"inherited_from": demo_r2s.SLOT, "reason": "same order path netting.Netter+ledger_cb"},
+                                "review_date": demo_vbo1h.REVIEW_DATE}
+    except Exception as e:  # noqa: BLE001
+        log.warning("demo_gates_fail slot=demo_vbo1h err=%s", e)
     return out
 
 
@@ -785,7 +798,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             import copy, demo_e5_exec
             from futures_client import FuturesDemoClient
             e5_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_e5_exec", "demo_e5v_exec", "demo_fa_positions", "paused",
-                                                                    "paused_slots", "guard_blocks", "positions", "u1_live", "demo_r2s_exec", "tradfi_blocked")})
+                                                                    "paused_slots", "guard_blocks", "positions", "u1_live", "demo_r2s_exec", "demo_vbo1h_exec", "tradfi_blocked")})
             e5_scratch = {k: v for k, v in e5_scratch.items() if v is not None}  # absent keys copy as None -> setdefault returns None
             e5_scratch["control_log"] = []
             from google.cloud import storage
@@ -811,7 +824,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             import copy, demo_r2s_exec
             from futures_client import FuturesDemoClient
             r2s_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_r2s_exec", "demo_fa_positions", "paused",
-                                                                     "paused_slots", "guard_blocks", "positions", "u1_live", "demo_e5_exec", "demo_e5v_exec", "tradfi_blocked")})
+                                                                     "paused_slots", "guard_blocks", "positions", "u1_live", "demo_e5_exec", "demo_e5v_exec", "demo_vbo1h_exec", "tradfi_blocked")})
             r2s_scratch = {k: v for k, v in r2s_scratch.items() if v is not None}
             r2s_scratch["control_log"] = []
             r2s_run = _uuid.uuid4().hex[:12]
@@ -828,6 +841,29 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             ex = dict(state0.get("demo_r2s_exec") or {})
             ex["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:1000]}
             r2s_scratch = {"demo_r2s_exec": ex, "control_log": []}
+    vbo_scratch = None; vbo_run = None; vbo_res = None
+    if ((state0.get("demo_candidates") or {}).get("demo_vbo1h_top50_1k") or {}).get("enabled"):
+        try:  # demo_vbo1h hourly execution; only when approved+enabled (demo_vbo1h_exec.execute re-checks all gates)
+            import copy, demo_vbo1h_exec
+            from futures_client import FuturesDemoClient
+            vbo_scratch = copy.deepcopy({k: state0.get(k) for k in ("demo_candidates", "demo_vbo1h_exec", "demo_r2s_exec", "demo_fa_positions", "paused",
+                                                                     "paused_slots", "guard_blocks", "positions", "u1_live", "demo_e5_exec", "demo_e5v_exec", "tradfi_blocked")})
+            vbo_scratch = {k: v for k, v in vbo_scratch.items() if v is not None}
+            vbo_scratch["control_log"] = []
+            vbo_run = _uuid.uuid4().hex[:12]
+            vbo_win, vbo_bar = demo_vbo1h_exec.in_window(datetime.now(timezone.utc))
+            vbo_claim = slot_claim(store, "demo_vbo1h_exec", state0, str(vbo_bar or "") if vbo_win else "", vbo_run)
+            if vbo_claim is not None:   # another reconcile run owns / already ran this bar
+                vbo_res = {"skipped": vbo_claim, "bar": vbo_bar}; vbo_scratch = {"control_log": [], "_last_run_only": True}
+            else:
+                vbo_res = demo_vbo1h_exec.execute(vbo_scratch, fc or FuturesDemoClient(), netter=_netter())
+        except Exception as e:  # noqa: BLE001
+            log.warning("vbo1h_exec_fail err=%s", e)
+            if "n" in shared_net:
+                shared_net["n"].drop("demo_vbo1h_top50_1k")
+            ex = dict(state0.get("demo_vbo1h_exec") or {})
+            ex["last_run"] = {"at": now_iso_taipei(), "error": f"{type(e).__name__}: {e}"[:1000]}
+            vbo_scratch = {"demo_vbo1h_exec": ex, "control_log": []}
     net_err = None
     if "n" in shared_net:
         try:
@@ -848,6 +884,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             ex["last_run"]["error"] = net_err
     _last_run(e5_scratch, e5_key, e5_res)
     _last_run(r2s_scratch, "demo_r2s_exec", r2s_res)
+    _last_run(vbo_scratch, "demo_vbo1h_exec", vbo_res)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     def mut(s):
         s = apply_report(s, rep)
@@ -883,8 +920,20 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             elif r2s_scratch.get("demo_r2s_exec") is not None:
                 s["demo_r2s_exec"] = r2s_scratch["demo_r2s_exec"]
             s["control_log"] = (list(s.get("control_log") or []) + r2s_scratch["control_log"])[-200:]
+        if vbo_scratch is not None:
+            if vbo_scratch.get("_last_run_only") or not e5_traded(vbo_res):
+                merge_untraded(s, "demo_vbo1h_exec", vbo_scratch, vbo_run)
+            elif vbo_scratch.get("demo_vbo1h_exec") is not None:
+                s["demo_vbo1h_exec"] = vbo_scratch["demo_vbo1h_exec"]
+            s["control_log"] = (list(s.get("control_log") or []) + vbo_scratch["control_log"])[-200:]
+            mg = dict(s.get("migrations") or {})
+            if not (mg.get("vbo1h_carve_1104") or {}).get("done"):   # audit only: FA (weight 0) keeps its approval + positions
+                s["ledger_adjustments"] = (list(s.get("ledger_adjustments") or []) + [{"at": now_iso_taipei(), "kind": "capital_carve",
+                    "from": "demo_funding_arb_1x idle USDT (orchestrator weight 0)", "to": "demo_vbo1h_top50_1k", "usdt": 1000.0,
+                    "note": "VBO-1h Demo ledger; FA stays approved, weight 0, not paused"}])[-200:]
+                mg["vbo1h_carve_1104"] = {"done": True, "at": now_iso_taipei()}; s["migrations"] = mg
         tb = set(s.get("tradfi_blocked") or [])
-        for sc in (fa_scratch, e5_scratch, r2s_scratch):
+        for sc in (fa_scratch, e5_scratch, r2s_scratch, vbo_scratch):
             tb |= set((sc or {}).get("tradfi_blocked") or [])
         if tb:
             s["tradfi_blocked"] = sorted(tb)

@@ -1,0 +1,79 @@
+{
+ "slot": "demo_vbo1h_top50_1k",
+ "spec": "research_lowcorr_r2_1104/r2.py vbo_h(55,5,7,0.01) scale0.25",
+ "pass": true,
+ "generated_at": "2026-11-04T02:09:29+00:00",
+ "data": "h1.pkl 2023-07-01..2026-09-30 (1h)",
+ "bars_compared": 26952,
+ "first_bar": "2023-09-04 00:00:00+00:00",
+ "last_bar": "2026-09-30 23:00:00+00:00",
+ "full_panel_max_abs_weight_diff": 0.0,
+ "window_max_abs_weight_diff": 0.0,
+ "window_mismatch_bars": 0,
+ "per_hour_truncated_checks": 693,
+ "per_hour_mismatches": 0,
+ "backtest_trades": 21979,
+ "live_trades_specmask": 21979,
+ "trade_by_trade_identical_spec_mask": true,
+ "live_trades_1000U_mask": 21367,
+ "min_notional_divergence": {
+  "only_backtest": 612,
+  "only_live": 0,
+  "examples": [
+   [
+    "2023-10-23 23:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-24 02:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-24 13:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-26 02:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-26 10:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-26 20:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-28 18:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-30 11:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-30 15:00:00+00:00",
+    "BTCUSDT"
+   ],
+   [
+    "2023-10-30 18:00:00+00:00",
+    "BTCUSDT"
+   ]
+  ],
+  "note": "backtest masks at 3000U x full 2x gross (select.py); live at the real 50U/leg vs Binance MIN_NOTIONAL; only BTC/ETH (50/20U) can differ"
+ },
+ "trade_value_mismatches": 25,
+ "min_notional_divergence_only_btc_eth": true,
+ "exec_decisions": 21367,
+ "exec_kinds": {
+  "open": 1291,
+  "close": 1276,
+  "resize": 10024,
+  "skip_min": 8776
+ },
+ "exec_note": "skip_min = cap_norm re-weight increase below MIN_NOTIONAL; live keeps the old qty (backtest rebalances continuously)",
+ "exec_orders_without_target_change": 0,
+ "target_changes_without_order": 0,
+ "runtime_s": 98.1
+}

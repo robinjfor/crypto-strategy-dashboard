@@ -504,7 +504,7 @@ def _netting_view(state: dict, exch_rows: list | None = None) -> dict:
         if r.get("raw_symbol") and r.get("mark"):
             marks[r["raw_symbol"]] = float(r["mark"])
     caps = {"demo_r2s_top10_3k": ("demo_r2s_exec", 3000.0), "demo_e5_min5_x175": ("demo_e5_exec", 5000.0),
-            "demo_e5_min5_x175_t05top20": ("demo_e5v_exec", 5000.0)}
+            "demo_e5_min5_x175_t05top20": ("demo_e5v_exec", 5000.0), "demo_vbo1h_top50_1k": ("demo_vbo1h_exec", 1000.0)}
     slots = {}
     for slot, b in netting.slot_books(state).items():
         pos = {s_: {"qty": q, "mark": marks.get(s_), "value": round(q * marks[s_], 4) if s_ in marks else None} for s_, q in sorted(b.items())}
@@ -514,7 +514,8 @@ def _netting_view(state: dict, exch_rows: list | None = None) -> dict:
             cap = caps[slot][1]
             try:
                 import demo_r2s, demo_e5
-                cap = demo_r2s.CAPITAL if slot == demo_r2s.SLOT else demo_e5.CAPITAL  # E5 and its t05top20 successor: 5,000U
+                if slot != "demo_vbo1h_top50_1k":
+                    cap = demo_r2s.CAPITAL if slot == demo_r2s.SLOT else demo_e5.CAPITAL  # E5 and its t05top20 successor: 5,000U
             except Exception:  # noqa: BLE001
                 pass
             cash = float(ex.get("cash", cap))
@@ -1432,6 +1433,7 @@ def build_status() -> dict:
         "demo_r2s_exec": {k: v for k, v in (state.get("demo_r2s_exec") or {}).items() if k != "history"},
         "demo_e5_exec": {k: v for k, v in (state.get("demo_e5_exec") or {}).items() if k != "history"},
         "demo_e5v_exec": {k: v for k, v in (state.get("demo_e5v_exec") or {}).items() if k != "history"},
+        "demo_vbo1h_exec": {k: v for k, v in (state.get("demo_vbo1h_exec") or {}).items() if k not in ("history", "claim")},
         "ledger_adjustments": (state.get("ledger_adjustments") or [])[-20:],
         "migrations": state.get("migrations") or {},
         "demo_fa_exec": {k: v for k, v in (state.get("demo_fa_exec") or {}).items() if k != "history"},
