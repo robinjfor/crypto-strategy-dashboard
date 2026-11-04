@@ -1,0 +1,17 @@
+{
+ "source": "demo-fapi.binance.com/fapi/v1/exchangeInfo fetched 2026-11-04",
+ "rule": "in universe, data alive to 2026-09-30, demo status != TRADING",
+ "symbols": [
+  "BLZUSDT",
+  "BTWUSDT",
+  "DRAMUSDT",
+  "EDENUSDT",
+  "FFUSDT",
+  "HIFIUSDT",
+  "MARSCOINUSDT",
+  "NEIROETHUSDT",
+  "REUSDT",
+  "SNXXUSDT",
+  "UXLINKUSDT"
+ ]
+}

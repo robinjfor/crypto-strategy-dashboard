@@ -2,7 +2,7 @@
  "slot": "demo_vbo1h_top50_1k",
  "spec": "research_lowcorr_r2_1104/r2.py vbo_h(55,5,7,0.01) scale0.25",
  "pass": true,
- "generated_at": "2026-11-04T02:09:29+00:00",
+ "generated_at": "2026-11-04T03:00:11+00:00",
  "data": "h1.pkl 2023-07-01..2026-09-30 (1h)",
  "bars_compared": 26952,
  "first_bar": "2023-09-04 00:00:00+00:00",
@@ -10,12 +10,27 @@
  "full_panel_max_abs_weight_diff": 0.0,
  "window_max_abs_weight_diff": 0.0,
  "window_mismatch_bars": 0,
- "per_hour_truncated_checks": 693,
+ "per_hour_truncated_checks": 696,
  "per_hour_mismatches": 0,
- "backtest_trades": 21979,
- "live_trades_specmask": 21979,
+ "backtest_trades": 21396,
+ "live_trades_specmask": 21396,
  "trade_by_trade_identical_spec_mask": true,
- "live_trades_1000U_mask": 21367,
+ "demo_untradable_skipped": [
+  "BLZUSDT",
+  "BTWUSDT",
+  "DRAMUSDT",
+  "EDENUSDT",
+  "FFUSDT",
+  "HIFIUSDT",
+  "MARSCOINUSDT",
+  "NEIROETHUSDT",
+  "REUSDT",
+  "SNXXUSDT",
+  "UXLINKUSDT"
+ ],
+ "backtest_trades_real_1000U": 20784,
+ "trade_by_trade_identical_real_1000U": true,
+ "live_trades_1000U_mask": 20784,
  "min_notional_divergence": {
   "only_backtest": 612,
   "only_live": 0,
@@ -65,15 +80,15 @@
  },
  "trade_value_mismatches": 25,
  "min_notional_divergence_only_btc_eth": true,
- "exec_decisions": 21367,
+ "exec_decisions": 20784,
  "exec_kinds": {
-  "open": 1291,
-  "close": 1276,
-  "resize": 10024,
-  "skip_min": 8776
+  "open": 1251,
+  "close": 1237,
+  "resize": 9735,
+  "skip_min": 8561
  },
  "exec_note": "skip_min = cap_norm re-weight increase below MIN_NOTIONAL; live keeps the old qty (backtest rebalances continuously)",
  "exec_orders_without_target_change": 0,
  "target_changes_without_order": 0,
- "runtime_s": 98.1
+ "runtime_s": 95.3
 }

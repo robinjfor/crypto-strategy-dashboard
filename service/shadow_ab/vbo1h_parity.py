@@ -20,6 +20,9 @@ hh = f(Dh.rolling(55).max().shift(1)) * 1.01; ll = f(Dl.rolling(55).min().shift(
 s = (((Cl > hh) & (Cl.shift(1) <= hh)) & uni).astype(float) - (((Cl < ll) & (Cl.shift(1) >= ll)) & uni).astype(float)
 Wbt = r2.cap_norm(r2.hold(s, 7 * 24), 5 * 2).fillna(0)
 MN = pd.Series(mnload(list(Cl.columns))[0], index=Cl.columns)
+UNTR = sorted(json.load(open(os.path.join(HERE, "vbo1h_demo_untradable.json")))["symbols"])   # not TRADING on Binance Demo: live never sends
+def z(X):
+    X = X.copy(); X[[c for c in UNTR if c in X.columns]] = 0.0; return X
 Wbt_m = Wbt.where((Wbt.abs() * r2.CAP * r2.LEV >= MN) | (Wbt == 0), 0.0)     # Sim.run mask (3000U at full 2x gross)
 # --- live code, full panel
 Wlive_full = V.signal_panel(H, L, Cl, QV)["W"].fillna(0)
@@ -39,10 +42,12 @@ def trades(W):
     D = W.diff(); D.iloc[0] = W.iloc[0]
     st = D.stack(); st = st[st.abs() > 1e-12]
     return {(str(t), c): round(float(W.at[t, c]), 12) for (t, c) in st.index}
-tb = trades(Wbt_m.loc[cmp_idx]); E = V.CAPITAL
-Wl_m = Wwin.where((Wwin.abs() * V.GROSS * E >= MN) | (Wwin == 0), 0.0)            # live mask (1000U, 0.5x actual notional)
+tb = trades(z(Wbt_m.loc[cmp_idx])); E = V.CAPITAL
+Wl_m = z(Wwin.where((Wwin.abs() * V.GROSS * E >= MN) | (Wwin == 0), 0.0))            # live mask (1000U, 0.5x actual notional)
 tl = trades(Wl_m)
-tl_specmask = trades(Wwin.where((Wwin.abs() * r2.CAP * r2.LEV >= MN) | (Wwin == 0), 0.0))
+Wbt_real = z(Wbt.loc[cmp_idx].where((Wbt.loc[cmp_idx].abs() * V.GROSS * E >= MN) | (Wbt.loc[cmp_idx] == 0), 0.0))   # vbo1h_realmn.py backtest
+tb_real = trades(Wbt_real); same_real = tb_real == tl
+tl_specmask = trades(z(Wwin.where((Wwin.abs() * r2.CAP * r2.LEV >= MN) | (Wwin == 0), 0.0)))
 same_spec = tl_specmask == tb
 only_bt = sorted(set(tb) - set(tl)); only_live = sorted(set(tl) - set(tb))
 val_mis = [k for k in set(tb) & set(tl) if abs(tb[k] - tl[k]) > 1e-12]
@@ -72,13 +77,13 @@ for t in cmp_idx[:]:
 exec_extra = sorted(orders - set(tl)); exec_missing = sorted(set(tl) - orders)
 mn_syms = {c for c in MN.index if MN[c] > 5.0}
 mn_only = all(k[1] in mn_syms for k in only_bt + val_mis) and not only_live
-ok = mn_only and full_maxdiff < 1e-12 and win_maxdiff < 1e-12 and hour_bad == 0 and same_spec and not exec_extra and not exec_missing
+ok = mn_only and full_maxdiff < 1e-12 and win_maxdiff < 1e-12 and hour_bad == 0 and same_spec and same_real and not exec_extra and not exec_missing
 out = {"slot": V.SLOT, "spec": V.SPEC, "pass": bool(ok), "generated_at": V.checked_at(), "data": "h1.pkl 2023-07-01..2026-09-30 (1h)",
        "bars_compared": len(cmp_idx), "first_bar": str(cmp_idx[0]), "last_bar": str(cmp_idx[-1]),
        "full_panel_max_abs_weight_diff": full_maxdiff, "window_max_abs_weight_diff": win_maxdiff, "window_mismatch_bars": mism_bars,
        "per_hour_truncated_checks": len(smp), "per_hour_mismatches": hour_bad,
        "backtest_trades": len(tb), "live_trades_specmask": len(tl_specmask), "trade_by_trade_identical_spec_mask": bool(same_spec),
-       "live_trades_1000U_mask": len(tl), "min_notional_divergence": {"only_backtest": len(only_bt), "only_live": len(only_live),
+       "demo_untradable_skipped": UNTR, "backtest_trades_real_1000U": len(tb_real), "trade_by_trade_identical_real_1000U": bool(same_real), "live_trades_1000U_mask": len(tl), "min_notional_divergence": {"only_backtest": len(only_bt), "only_live": len(only_live),
            "examples": [list(x) for x in (only_bt + only_live)[:10]],
            "note": "backtest masks at 3000U x full 2x gross (select.py); live at the real 50U/leg vs Binance MIN_NOTIONAL; only BTC/ETH (50/20U) can differ"},
        "trade_value_mismatches": len(val_mis), "min_notional_divergence_only_btc_eth": bool(mn_only), "exec_decisions": len(orders), "exec_kinds": kinds,
