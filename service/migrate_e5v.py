@@ -322,6 +322,84 @@ def repair_dups(store, fut, mid: str, cfg: dict) -> dict:
 
 LEV2 = {"lev2_1028": 2}
 
+# eth_1105: bar 2026-11-04 (run 11-05 08:04 Taipei) skipped E5V's ETH reduce as "leg missing on exchange": the guard compared the
+# slot's leg (+0.867) with the exchange NET (+0.721 = E5V 0.867 + R2S -0.131 + VBO1H -0.015). Exchange == sum of ledgers (no orphan),
+# so no cash adjustment is needed; parity requires the skipped order -> re-send just that symbol through the normal E5 path
+# (same plan, gates, 4h window, netter: reduceOnly first), booked to the E5V ledger, audited.
+LATE = {"eth_1105": {"symbol": "ETHUSDT", "bar": "2026-11-04", "ledger": 0.867}}
+E5_KEYS = ("demo_candidates", "demo_e5_exec", "demo_e5v_exec", "demo_fa_positions", "paused", "paused_slots", "guard_blocks", "positions",
+           "u1_live", "demo_r2s_exec", "demo_vbo1h_exec", "tradfi_blocked")
+
+
+def _load_e5_targets():
+    import os
+    from google.cloud import storage
+    bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/e5_targets.json")
+    return json.loads(bl.download_as_bytes()) if bl.exists() else None
+
+
+def late_leg(store, fut, mid: str, cfg: dict, targets=None, now=None) -> dict:
+    import copy, demo_e5v, demo_e5_exec, netting
+    from guards import log_event
+    sym, bar = cfg["symbol"], cfg["bar"]
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    claim = {}
+
+    def take(s):   # claim first: two concurrent reconcile runs must never both send it
+        mig = s.setdefault("migrations", {})
+        claim["ok"] = mid not in mig
+        if claim["ok"]:
+            mig[mid] = {"claimed": at}
+        return s
+    store.mutate(take)
+    if not claim["ok"]:
+        return {"id": mid, "skipped": "claimed"}
+    s0 = store.load(); led = s0.get(demo_e5v.STATE_KEY) or {}; last = led.get("last") or {}
+    rec = {"done": True, "at": at, "symbol": sym, "bar": bar}
+    pos = _safe(lambda: fut.position_risk(), [])
+    x = sum(float(p.get("positionAmt") or 0) for p in pos if p.get("symbol") == sym) if isinstance(pos, list) else None
+    vn = netting.virtual_net(s0).get(sym, 0.0); mine = float((led.get("book") or {}).get(sym) or 0.0)
+    rec.update(exchange_before=x, ledger_sum=vn, ledger_before=mine)
+    if led.get("last_bar") != bar or f"{sym} leg missing on exchange" not in (last.get("skipped") or []):
+        rec["skipped"] = "bar/skip not as expected"
+    elif abs(mine - float(cfg["ledger"])) > 1e-9:
+        rec["skipped"] = "ledger leg changed"
+    elif x is None or abs(x - vn) > 1e-9:
+        rec["skipped"] = f"exchange {x} != ledger sum {vn}"
+    if rec.get("skipped"):
+        store.mutate(lambda s: (s.setdefault("migrations", {}).__setitem__(mid, rec), s)[1]); return rec
+    tgt = targets if targets is not None else _load_e5_targets()
+    sc = copy.deepcopy({k: s0.get(k) for k in E5_KEYS}); sc = {k: v for k, v in sc.items() if v is not None}; sc["control_log"] = []
+    b0 = copy.deepcopy(sc.get(demo_e5v.STATE_KEY) or {})
+    r = demo_e5_exec.execute(sc, fut, tgt, now=now, mod=demo_e5v, only={sym})
+    e1 = sc.get(demo_e5v.STATE_KEY) or {}
+    dq = float((e1.get("book") or {}).get(sym) or 0.0) - mine; dcash = float(e1.get("cash") or 0.0) - float(b0.get("cash") or 0.0)
+    pos2 = _safe(lambda: fut.position_risk(), [])
+    x2 = sum(float(p.get("positionAmt") or 0) for p in pos2 if p.get("symbol") == sym) if isinstance(pos2, list) else None
+    adj = {"at": at, "id": f"{mid}-{sym}", "slot": demo_e5v.SLOT, "ledger": demo_e5v.STATE_KEY, "symbol": sym, "qty_before": mine,
+           "qty_after": mine + dq, "cash_delta": round(dcash, 6), "cause": "close_guard_net_vs_leg",
+           "detail": f"bar {bar} {sym} reduce skipped (guard compared leg {mine} with exchange net); re-sent via normal E5 path, booked at fill",
+           "result": r, "exchange_before": x, "exchange_after": x2, "actor": "自動交易專家"}
+    rec.update(result=r, adjustment=adj)
+
+    def mut(s):
+        l = dict(s.get(demo_e5v.STATE_KEY) or {}); bk = dict(l.get("book") or {})
+        nb = float(bk.get(sym) or 0.0) + dq
+        if abs(nb) < 1e-10:
+            bk.pop(sym, None)
+        else:
+            bk[sym] = nb
+        l.update(book=bk, cash=float(l.get("cash") or 0.0) + dcash, late_runs=e1.get("late_runs")); s[demo_e5v.STATE_KEY] = l
+        s["control_log"] = (list(s.get("control_log") or []) + sc["control_log"])[-200:]
+        s["ledger_adjustments"] = (list(s.get("ledger_adjustments") or []) + [adj])[-200:]
+        log_event(s, "ledger_adjustment", demo_e5v.SLOT, symbol=sym, qty_before=mine, qty_after=mine + dq, cash_delta=adj["cash_delta"],
+                  cause="close_guard_net_vs_leg", actor="自動交易專家")
+        s.setdefault("migrations", {})[mid] = rec
+        return s
+    store.mutate(mut)
+    log.info("late_leg %s %s", mid, json.dumps(adj, default=str)[:3000])
+    return adj
+
 
 def lev_down(fut, syms: list[str], lev: int, buffer: float = 1.10) -> dict:
     """Lower isolated leverage on existing E5v positions. Margin check first: each position's isolated margin must be
@@ -379,6 +457,13 @@ def run_fixes(store, fut=None) -> list:
         def mut(s, r=r, mid=mid):
             s.setdefault("migrations", {})[mid] = {"done": not (isinstance(r, dict) and (r.get("aborted") or r.get("error"))), "at": at, "result": r}; return s
         store.mutate(mut); out.append(r)
+    for mid, cfg in LATE.items():
+        if mid in (s0.get("migrations") or {}):
+            continue
+        if fut is None:
+            from futures_client import FuturesDemoClient
+            fut = FuturesDemoClient()
+        out.append(_safe(lambda: late_leg(store, fut, mid, cfg), {"id": mid, "error": True}))
     for mid, syms in FIXES.items():
         if ((s0.get("migrations") or {}).get(mid) or {}).get("done"):
             continue

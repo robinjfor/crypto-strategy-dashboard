@@ -100,8 +100,10 @@ def _funding(fut, ex: dict, now_ms: int, state: dict | None = None, slot: str | 
     return tot
 
 
-def execute(state: dict, fut, targets: dict | None, now: datetime | None = None, netter=None, mod=None) -> dict:
-    """mod: planner module (demo_e5 = original slot, demo_e5v = t05top20 variant); same order path, own ledger key."""
+def execute(state: dict, fut, targets: dict | None, now: datetime | None = None, netter=None, mod=None, only: set | None = None) -> dict:
+    """mod: planner module (demo_e5 = original slot, demo_e5v = t05top20 variant); same order path, own ledger key.
+    only: late re-send of the given symbols of the ALREADY executed bar (legs wrongly skipped); same gates/window/plan/netter,
+    no funding re-booking, last_bar/history untouched."""
     mod = mod or demo_e5
     SLOT, KEY = mod.SLOT, getattr(mod, "STATE_KEY", "demo_e5_exec")
     ok, why = mod.active(state)
@@ -113,12 +115,15 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
     ex = state.get(KEY) or {}
     state[KEY] = ex
     bar = str(targets["decided_bar"])
-    if ex.get("last_bar") == bar:
+    if only is not None:
+        if ex.get("last_bar") != bar:
+            return {"skipped": "late re-send needs the executed bar", "bar": bar}
+    elif ex.get("last_bar") == bar:
         return {"skipped": "already executed", "bar": bar}
     ex.setdefault("cash", demo_e5.CAPITAL); book = ex.setdefault("book", {})
     info = fut.exchange_info(); lst = listed(info)
     now_ms = int((now or datetime.now(timezone.utc)).timestamp() * 1000)
-    fnd = _funding(fut, ex, now_ms, state, SLOT, KEY); ex["cash"] = float(ex["cash"]) + fnd   # income is signed (+ received / - paid)
+    fnd = 0.0 if only is not None else _funding(fut, ex, now_ms, state, SLOT, KEY); ex["cash"] = float(ex["cash"]) + fnd   # income is signed (+ received / - paid)
     syms = sorted(set(demo_e5.U1_SYMS) | set(targets.get("ws") or {}) | set(book))
     prices = {}
     for s in syms:
@@ -138,6 +143,8 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         mins.setdefault(s, demo_e5.MIN_ORDER)
         steps[s] = max(float(steps.get(s, 0.0)), lot_step(info, s))
     plan = mod.plan_live(targets, book, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
+    if only is not None:
+        plan = [o for o in plan if o["symbol"] in only]
     blk = entry_block(state, SLOT)
     tag = bar.replace("-", "")[2:]
     out = {"bar": bar, "equity": round(eq, 2), "m": m, "lt": round(lt, 4), "planned": len(plan), "ledger_equity": round(eq_ledger, 2),
@@ -160,7 +167,7 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
             out["skipped"].append(f"{s} not listed"); log_event(state, "e5_skip_unlisted", SLOT, symbol=s, bar=bar); continue
         if closing and mine and xpos is not None:
             x = xpos.get(s, 0.0)
-            if x * mine <= 0 or abs(x) < abs(mine) - 1e-9:
+            if netting.leg_missing(state, SLOT, s, x, mine):   # vs exchange net minus other slots' legs (netting)
                 out["skipped"].append(f"{s} leg missing on exchange")
                 log_event(state, "e5_skip_missing_leg", SLOT, symbol=s, ledger=mine, exchange=x, bar=bar); continue
         if not closing and (blk or tradfi.is_tradfi(s, info, state)):
@@ -182,6 +189,8 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
 
     def finish():
         out["equity_after"] = round(equity(ex, prices), 2)
+        if only is not None:
+            out["late"] = sorted(only); ex["late_runs"] = (list(ex.get("late_runs") or []) + [out])[-50:]; return
         ex.update(last_bar=bar, last=out)
         ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
     netter.after.append(finish)

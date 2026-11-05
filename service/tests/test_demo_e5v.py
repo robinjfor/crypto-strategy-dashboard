@@ -216,3 +216,50 @@ def test_phantom_repair_skips_when_exchange_not_orphan():
     f = _PhFut(); f.pos = 0.0
     M.run_fixes(store, f)
     assert not f.sent and "exchange position" in store.s["migrations"]["hu_1027"]["skipped"] and store.s[V.STATE_KEY]["cash"] == 100.0
+
+
+def test_close_guard_uses_own_leg_not_exchange_net(monkeypatch):
+    """2026-11-05: E5V ETH +0.867, R2S -0.131, VBO1H -0.015 -> exchange net 0.721; the close must NOT be skipped."""
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT + ";" + V.SLOT)
+    st = _st(); st[V.STATE_KEY] = {"cash": 5000.0, "book": {"SOLUSDT": 3.0}}
+    st["demo_r2s_exec"] = {"cash": 0.0, "book": {"SOLUSDT": -0.5}}
+    f = Fut(PX, {"SOLUSDT": 2.5})
+    r = X.execute(st, f, _tgt(ws={}, dbs={}), NOW, mod=V)
+    assert not any("leg missing" in x for x in r["skipped"])
+    sol = [o for o in f.orders if o["symbol"] == "SOLUSDT"]
+    assert [(o["side"], float(o["quantity"]), o.get("reduceOnly")) for o in sol] == [("SELL", 2.5, "true"), ("SELL", 0.5, None)]
+    assert "SOLUSDT" not in st[V.STATE_KEY]["book"] and abs(f.pos["SOLUSDT"] + 0.5) < 1e-9   # exchange == R2S leg
+    assert netting.leg_missing(st, V.SLOT, "SOLUSDT", 2.5, 3.0) is False
+
+
+def test_close_guard_still_skips_truly_missing_leg(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT + ";" + V.SLOT)
+    st = _st(); st[V.STATE_KEY] = {"cash": 5000.0, "book": {"SOLUSDT": 3.0}}
+    st["demo_r2s_exec"] = {"cash": 0.0, "book": {"SOLUSDT": -0.5}}
+    f = Fut(PX, {"SOLUSDT": 2.0})                 # own leg on exchange = 2.0 + 0.5 = 2.5 < 3.0
+    r = X.execute(st, f, _tgt(ws={}, dbs={}), NOW, mod=V)
+    assert "SOLUSDT leg missing on exchange" in r["skipped"] and not any(o["symbol"] == "SOLUSDT" for o in f.orders)
+
+
+class _MemStore:
+    def __init__(self, s): self.s = s
+    def load(self): return json.loads(json.dumps(self.s))
+    def mutate(self, fn): self.s = fn(self.load()); return self.s
+
+
+def test_late_leg_resends_skipped_close_once(monkeypatch):
+    monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT + ";" + V.SLOT)
+    t = _tgt(ws={}, dbs={})
+    st = _st(); st[V.STATE_KEY] = {"cash": 5000.0, "book": {"SOLUSDT": 3.0}, "last_bar": t["decided_bar"],
+                                   "last": {"skipped": ["SOLUSDT leg missing on exchange"]}}
+    st["demo_r2s_exec"] = {"cash": 0.0, "book": {"SOLUSDT": -0.5}}
+    store, f = _MemStore(st), Fut(PX, {"SOLUSDT": 2.5})
+    cfg = {"symbol": "SOLUSDT", "bar": t["decided_bar"], "ledger": 3.0}
+    adj = M.late_leg(store, f, "t_late", cfg, targets=t, now=NOW)
+    s = store.s
+    assert "SOLUSDT" not in s[V.STATE_KEY]["book"] and abs(f.pos["SOLUSDT"] + 0.5) < 1e-9
+    assert f.orders[0]["reduceOnly"] == "true" and adj["cause"] == "close_guard_net_vs_leg" and s["migrations"]["t_late"]["done"]
+    assert abs(s[V.STATE_KEY]["cash"] - (5000.0 + 3.0 * PX["SOLUSDT"] * (1 - netting.FEE))) < 1e-6
+    assert s[V.STATE_KEY]["last_bar"] == t["decided_bar"] and s["ledger_adjustments"][-1]["id"] == "t_late-SOLUSDT"
+    n = len(f.orders)
+    assert M.late_leg(store, f, "t_late", cfg, targets=t, now=NOW)["skipped"] == "claimed" and len(f.orders) == n

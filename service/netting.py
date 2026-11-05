@@ -57,6 +57,20 @@ def virtual_net(state: dict) -> dict[str, float]:
     return {s: q for s, q in net.items() if abs(q) > EPS}
 
 
+def own_leg_on_exchange(state: dict, slot: str, sym: str, exch_net: float) -> float:
+    """Exchange net qty attributable to `slot` under netting: exchange net minus every OTHER slot's virtual leg.
+    The exchange holds one net position per symbol, so a slot's leg must be compared with this, never with the raw net
+    (bug 2026-11-05: E5 ETH +0.867 vs net +0.721 = E5 0.867 + R2S -0.131 + VBO1H -0.015 was flagged 'leg missing')."""
+    others = sum(float(b.get(sym, 0.0)) for sl, b in slot_books(state).items() if sl != slot)
+    return float(exch_net) - others
+
+
+def leg_missing(state: dict, slot: str, sym: str, exch_net: float, mine: float) -> bool:
+    """True when the exchange (after other slots' legs) cannot cover this slot's leg: closing it would open a position."""
+    own = own_leg_on_exchange(state, slot, sym, exch_net)
+    return own * mine <= 0 or abs(own) < abs(mine) - 1e-9
+
+
 def holders(state: dict) -> dict[str, list[str]]:
     out: dict[str, list[str]] = defaultdict(list)
     for slot, b in slot_books(state).items():

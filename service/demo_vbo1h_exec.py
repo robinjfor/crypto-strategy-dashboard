@@ -190,7 +190,7 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
         reducing = q == 0 or (abs(q) < abs(u) and np.sign(q) == np.sign(u))
         if u and xpos is not None and (reducing or kind == "flip"):
             x = xpos.get(s, 0.0)
-            if x * u <= 0 or abs(x) < abs(u) - 1e-9:   # closing a leg the exchange doesn't hold would OPEN one
+            if netting.leg_missing(state, V.SLOT, s, x, u):   # vs exchange net minus other slots' legs (netting)   # closing a leg the exchange doesn't hold would OPEN one
                 out["skipped"].append(f"{s} leg missing on exchange")
                 log_event(state, "vbo1h_skip_missing_leg", V.SLOT, symbol=s, ledger=u, exchange=x, bar=bar_s); continue
         if not reducing:
