@@ -821,9 +821,13 @@ def _pending_repair_symbols(state: dict) -> set[str]:
 
 
 def run_repairs(store, fut=None, snapshots: dict | None = None, *, at: str | None = None) -> list:
-    """Generation-checked repair. ``snapshots`` injects fetch results (tests). No order methods are called."""
+    """Generation-checked repair. ``snapshots`` injects fetch results (tests). No order methods are called.
+
+    A missing client is a failed result, not an empty success. ``run_once`` resolves one demo
+    futures client and passes it here; this guard is for any other caller.
+    """
     if snapshots is None and fut is None:
-        return []
+        return [{"ok": False, "applied": False, "skipped": "futures_client_unavailable"}]
     want = [mid for mid in REPAIRS if not ((store.load().get("migrations") or {}).get(mid) or {}).get("done")]
     if not want:
         return []
@@ -851,7 +855,7 @@ def run_sync(store, fut=None, snapshots: dict | None = None, *, at: str | None =
     """Book unequivocal forced closes. Defers symbols that still have a pending one-off repair."""
     if snapshots is None:
         if fut is None:
-            return []
+            return [{"ok": False, "applied": False, "status": "futures_client_unavailable", "pause": False}]
         snapshots = snapshots_for_gaps(store.load(), fut, int(time.time() * 1000))
     out: dict = {}
 

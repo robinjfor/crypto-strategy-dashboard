@@ -168,6 +168,44 @@ class FuturesDemoClient:
         return self._signed("DELETE", "/fapi/v1/allOpenOrders", {"symbol": symbol})
 
 
+class DemoFuturesUnavailable:
+    """Resolved once: this reconcile has no usable demo futures client.
+
+    Truthy so ``fc or FuturesDemoClient()`` does not construct a second client
+    and does not open another account session.
+    """
+
+    unavailable = True
+    api_key = ""
+    api_secret = ""
+
+
+def demo_futures_ready(client) -> bool:
+    """True when a client can sign demo requests. Does not touch the network."""
+    if client is None or getattr(client, "unavailable", False):
+        return False
+    return bool(getattr(client, "api_key", None))
+
+
+def open_demo_futures(existing=None):
+    """Return ``(client, error)`` for one reconcile.
+
+    Reuses ``existing`` when it can sign. Otherwise constructs at most one
+    ``FuturesDemoClient``. A missing key is an error, not an empty success.
+    No network I/O.
+    """
+    if existing is not None:
+        if getattr(existing, "unavailable", False):
+            return None, "demo futures client unavailable"
+        if demo_futures_ready(existing):
+            return existing, None
+        return None, "futures client has no demo API key"
+    client = FuturesDemoClient()
+    if not demo_futures_ready(client):
+        return None, "BINANCE_DEMO_API_KEY missing; exchange-close repair did not run"
+    return client, None
+
+
 def probe_futures() -> dict:
     """Connectivity + auth probe. Never returns secrets."""
     out: dict[str, Any] = {

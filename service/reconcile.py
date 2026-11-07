@@ -27,6 +27,17 @@ def now_iso_taipei() -> str:
     return f()
 
 
+def _use_futures(fc):
+    """Client for this call. An already-failed resolve does not construct another one."""
+    if getattr(fc, "unavailable", False):
+        return None
+    if fc is not None:
+        return fc
+    from futures_client import open_demo_futures
+    client, _err = open_demo_futures()
+    return client
+
+
 def futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc=None) -> dict:
     from api import _futures_quote_reconcile
     return _futures_quote_reconcile(state, quote, alloc_doc, fc=fc)
@@ -274,12 +285,13 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
         except Exception:  # noqa: BLE001
             alloc_doc = {}
     rep["u1_external_closes"] = []
-    if fc is None:
-        try:
-            from futures_client import FuturesDemoClient
-            fc = FuturesDemoClient() if FuturesDemoClient().api_key else None
-        except Exception:  # noqa: BLE001
-            fc = None
+    if getattr(fc, "unavailable", False):
+        rep["errors"].append("futures_client: unavailable")
+        fc = None
+    elif fc is None:
+        fc = _use_futures(None)
+        if fc is None:
+            rep["errors"].append("futures_client: BINANCE_DEMO_API_KEY missing")
     if fc is not None:
         try:
             rep["u1_external_closes"] = find_u1_external_closes(state, fc)
@@ -291,7 +303,10 @@ def build_report(state: dict, *, client=None, fc=None, alloc_doc=None) -> dict:
             rep["errors"].append(f"u1_funding: {str(e)[:200]}")
     adopted = {c["symbol"] for c in rep["u1_external_closes"]}
     for q in ("USDT", "USDC"):
-        f = futures_quote_reconcile(state, q, alloc_doc, fc=fc)
+        if fc is None:
+            f = {"error": "futures_client_unavailable", "positions": []}
+        else:
+            f = futures_quote_reconcile(state, q, alloc_doc, fc=fc)
         if f.get("error"):
             rep["errors"].append(f"futures_{q}: {f['error']}")
         rep["wallets"][q] = {k: f.get(k) for k in ("wallet", "margin_balance", "unrealized_pnl", "available")}
@@ -398,9 +413,7 @@ def _ledger_and_lvb(store, state: dict, client, fc):
     try:
         import ledger
         from slots import all_known_slots, slot_by_id
-        if fc is None:
-            from futures_client import FuturesDemoClient
-            fc = FuturesDemoClient() if FuturesDemoClient().api_key else None
+        fc = _use_futures(fc)
         known = all_known_slots()
         bals = client.nonzero_balances() if client is not None else []
         doc = store.load_feed(object_name=ledger.LEDGER_OBJECT)
@@ -441,9 +454,9 @@ def asset_snapshot(client, fc=None) -> dict | None:
     """Whole-account total in USDT from Binance (same math as /status total_assets). Read-only."""
     try:
         import api
+        fc = _use_futures(fc)
         if fc is None:
-            from futures_client import FuturesDemoClient
-            fc = FuturesDemoClient()
+            return None
         acct = fc.account() or {}
         books = {}
         for q in ("USDT", "USDC"):
@@ -466,9 +479,9 @@ def build_asset_daily(store, client, fc=None, force: bool = False, prev: dict | 
     try:
         import api
         import ledger
+        fc = _use_futures(fc)
         if fc is None:
-            from futures_client import FuturesDemoClient
-            fc = FuturesDemoClient()
+            return {"error": "futures_client_unavailable", "built_day": None, "points": (prev or {}).get("points") or []}
         doc = store.load_feed(object_name=ledger.LEDGER_OBJECT) or {}
         spot = {}
         for b in api._balances(client) or []:
@@ -514,12 +527,7 @@ def run_guards(state0: dict, fc=None) -> dict | None:
         scratch = copy.deepcopy({k: state0.get(k) for k in ("guard_blocks", "guard_seen_articles", "guard_depeg",
                                                             "market_indicators", "paused_slots")})
         scratch["control_log"], scratch["reconcile_alerts"] = [], []
-        if fc is None:
-            try:
-                from futures_client import FuturesDemoClient
-                fc = FuturesDemoClient()
-            except Exception:  # noqa: BLE001
-                fc = None
+        fc = _use_futures(fc)
         guards.run_all(scratch, slots=all_known_slots(), fc=fc)
         return scratch
     except Exception as e:  # noqa: BLE001
@@ -730,22 +738,40 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         client = BinanceClient()
         if not client.api_key:
             client = None
+    from futures_client import DemoFuturesUnavailable, open_demo_futures
+    fc, fc_err = open_demo_futures(fc)
+    if fc_err:
+        # Keep a truthy sentinel so later `fc or FuturesDemoClient()` does not open a second session.
+        log.warning("exchange_close_sync_no_client err=%s", fc_err)
+        fc = DemoFuturesUnavailable()
     try:  # one-shot e5v_1026: APR adjustment + E5 -> E5V ledger transfer (idempotent)
         import migrate_e5v
         migrate_e5v.run(store, fc)
         migrate_e5v.run_fixes(store, fc)
     except Exception as e:  # noqa: BLE001
         log.warning("migrate_e5v_fail err=%s", e)
-    try:  # read-only on the exchange. The Robin AKE/APR repair runs before the general sync so those fills keep that audit.
-        import exchange_close_sync
-        exchange_close_sync.run_repairs(store, fc)
-        exchange_close_sync.run_sync(store, fc)
-    except Exception as e:  # noqa: BLE001
-        log.warning("exchange_close_sync_fail err=%s", e)
+    xclose = {"ok": False, "error": fc_err, "repairs": [], "sync": []}
+    if not fc_err:
+        try:  # same client as the rest of this run. Read-only. Repair before sync so AKE/APR keep Robin's audit.
+            import exchange_close_sync
+            repairs = exchange_close_sync.run_repairs(store, fc)
+            sync = exchange_close_sync.run_sync(store, fc)
+            repair_ok = all(r.get("applied") or r.get("skipped") in ("done", "already_applied") for r in repairs)
+            xclose = {"ok": repair_ok, "repairs": repairs, "sync": sync}
+            if not repair_ok:
+                xclose["error"] = "exchange-close repair did not apply"
+                log.warning("exchange_close_sync_not_applied repairs=%s", repairs)
+        except Exception as e:  # noqa: BLE001
+            log.warning("exchange_close_sync_fail err=%s", e)
+            xclose = {"ok": False, "error": f"{type(e).__name__}: {e}"[:300], "repairs": [], "sync": []}
     state0 = store.load()
     import orchestrator
     orchestrator.load(state0)
     rep = build_report(state0, client=client, fc=fc)
+    rep["exchange_close_sync"] = xclose
+    if not xclose.get("ok"):
+        rep.setdefault("errors", []).append(f"exchange_close_sync: {xclose.get('error') or 'not applied'}")
+        rep["ok"] = False
     led_sum, led_diff, lvb = _ledger_and_lvb(store, state0, client, fc)
     snap = asset_snapshot(client, fc) if client is not None else None
     gres = run_guards(state0, fc)
