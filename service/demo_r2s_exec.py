@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 import demo_r2s as D
+import exchange_close_sync
 import netting
 import tradfi
 from guards import log_event
@@ -205,8 +206,14 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
         plan.append((s, u, q, kind))
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"r2s{tag}")
+    for s in list((ex.get("forced_flat") or {})):
+        if exchange_close_sync.observe_target(ex, s, float(tw.get(s, 0.0))) == "released":
+            log_event(state, "forced_flat_released", D.SLOT, symbol=s, bar=bar, target=float(tw.get(s, 0.0)))
     for s, u, q, kind in plan:
         reducing = q == 0 or (abs(q) < abs(u) and np.sign(q) == np.sign(u))
+        if not reducing and exchange_close_sync.reentry_blocked(ex, s):
+            out["skipped"].append(f"{s} forced flat (target unchanged)")
+            log_event(state, "r2s_skip_forced_flat", D.SLOT, symbol=s, bar=bar); continue
         if not reducing:
             why = ("not listed on Demo" if s not in lst else blk or ("TradFi (crypto only)" if tradfi.is_tradfi(s, info, state) else None))
             if why:

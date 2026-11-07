@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 import demo_e5
+import exchange_close_sync
 import netting
 import tradfi
 from guards import log_event
@@ -71,6 +72,18 @@ def round_qty(info: dict, sym: str, qty: float) -> float:
         return qty
     n = math.floor(qty / st + 1e-9); dec = max(0, -int(math.floor(math.log10(st)))) if st < 1 else 0
     return float(f"{n * st:.{dec}f}")
+
+
+def _target_weight(targets: dict, symbol: str) -> float:
+    ws = targets.get("ws") or {}
+    if symbol in ws:
+        return float(ws[symbol] or 0.0)
+    if symbol in demo_e5.U1_SYMS:
+        w1 = list(targets.get("w1") or [])
+        i = demo_e5.U1_SYMS.index(symbol)
+        if i < len(w1) and w1[i] is not None:
+            return float(w1[i])
+    return 0.0
 
 
 def listed(info: dict) -> set:
@@ -152,6 +165,9 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
            "skipped_thr": sum(1 for o in plan if o["kind"] == "skip_thr"), "slot": SLOT, "sent": [], "skipped": [], "funding": round(fnd, 4)}
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"e5{tag}")
+    for s in list((ex.get("forced_flat") or {})):
+        if exchange_close_sync.observe_target(ex, s, _target_weight(targets, s)) == "released":
+            log_event(state, "forced_flat_released", SLOT, symbol=s, bar=bar, target=_target_weight(targets, s))
     try:  # exchange legs: a close of a leg the exchange no longer holds (liquidated/ADL'd outside) would OPEN a position
         xpos = {r["symbol"]: float(r.get("positionAmt") or 0) for r in fut.position_risk()}
     except Exception:  # noqa: BLE001
@@ -168,8 +184,12 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         if closing and mine and xpos is not None:
             x = xpos.get(s, 0.0)
             if netting.leg_missing(state, SLOT, s, x, mine):   # vs exchange net minus other slots' legs (netting)
+                # Refuse the order only. A missing leg is booked by exchange_close_sync from the Binance fill.
                 out["skipped"].append(f"{s} leg missing on exchange")
                 log_event(state, "e5_skip_missing_leg", SLOT, symbol=s, ledger=mine, exchange=x, bar=bar); continue
+        if not closing and exchange_close_sync.reentry_blocked(ex, s):
+            out["skipped"].append(f"{s} forced flat (target unchanged)")
+            log_event(state, "e5_skip_forced_flat", SLOT, symbol=s, bar=bar); continue
         if not closing and (blk or tradfi.is_tradfi(s, info, state)):
             why = blk or "TradFi (crypto only)"
             out["skipped"].append(f"{s} {why}"); log_event(state, "e5_entry_skip", SLOT, symbol=s, why=why, bar=bar); continue
