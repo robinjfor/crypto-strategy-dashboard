@@ -1,0 +1,60 @@
+{
+  "note": "Normalized read-only Binance Demo snapshots for the 2026-11-07 AKE liquidation and APR ADL repair. No API keys. AKE entry trade ids and their signed sum (-15002) are the verified ownership evidence; the per-id entry qty split below is only so tests can check that sum. APR entry 71809638 is the verified sell 214 @ 0.05157. Oct 27 APR insurance is present and out of scope.",
+  "ake_liq_1106": {
+    "symbol": "AKEUSDT",
+    "exchange_qty": "0",
+    "dual_side": false,
+    "hedge": false,
+    "quote": "USDT",
+    "truncated": false,
+    "open_orders": [],
+    "open_algo_orders": [],
+    "orders": [
+      {
+        "orderId": 342616794,
+        "clientOrderId": "autoclose-1793940440853088647",
+        "side": "BUY",
+        "status": "FILLED",
+        "type": "MARKET"
+      }
+    ],
+    "trades": [
+      {"id": 87156866, "orderId": 1, "side": "SELL", "qty": "3000", "price": "0.005", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793000000000},
+      {"id": 87162870, "orderId": 2, "side": "SELL", "qty": "3000", "price": "0.005", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793100000000},
+      {"id": 87773350, "orderId": 3, "side": "SELL", "qty": "3000", "price": "0.005", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793200000000},
+      {"id": 87810479, "orderId": 4, "side": "SELL", "qty": "3001", "price": "0.005", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793300000000},
+      {"id": 87839128, "orderId": 5, "side": "SELL", "qty": "3001", "price": "0.005", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793400000000},
+      {"id": 87896577, "orderId": 342616794, "side": "BUY", "qty": "15002", "price": "0.0044374", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "-21.59496168", "time": 1793940440000}
+    ],
+    "income": [
+      {"symbol": "AKEUSDT", "incomeType": "FUNDING_FEE", "income": "-1.25", "asset": "USDT", "time": 1793940440000, "tranId": 8001}
+    ]
+  },
+  "apr_adl_1106": {
+    "symbol": "APRUSDT",
+    "exchange_qty": "0",
+    "dual_side": false,
+    "hedge": false,
+    "quote": "USDT",
+    "truncated": false,
+    "open_orders": [],
+    "open_algo_orders": [],
+    "orders": [
+      {
+        "orderId": 282105266,
+        "clientOrderId": "adl_autoclose",
+        "autoCloseType": "ADL",
+        "side": "BUY",
+        "status": "FILLED"
+      }
+    ],
+    "trades": [
+      {"id": 71809638, "orderId": 10, "side": "SELL", "qty": "214", "price": "0.05157", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0", "time": 1793232000000},
+      {"id": 73620325, "orderId": 282105266, "side": "BUY", "qty": "214", "price": "0.0431", "commission": "0", "commissionAsset": "USDT", "realizedPnl": "1.81258", "time": 1793955589000}
+    ],
+    "income": [
+      {"symbol": "APRUSDT", "incomeType": "INSURANCE_CLEAR", "income": "-0.3589926", "asset": "USDT", "time": 1793030400000, "tranId": 9001},
+      {"symbol": "APRUSDT", "incomeType": "FUNDING_FEE", "income": "0.42", "asset": "USDT", "time": 1793955589000, "tranId": 9002}
+    ]
+  }
+}

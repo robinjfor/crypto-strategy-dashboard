@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 import demo_vbo1h as V
+import exchange_close_sync
 import netting
 import tradfi
 from guards import log_event
@@ -177,6 +178,9 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
     tag = bar.strftime("%y%m%d%H")
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"vb{tag}")
+    for s in list((ex.get("forced_flat") or {})):
+        if exchange_close_sync.observe_target(ex, s, float(tw.get(s, 0.0))) == "released":
+            log_event(state, "forced_flat_released", V.SLOT, symbol=s, bar=bar_s, target=float(tw.get(s, 0.0)))
     for s in syms:
         if s not in prices:
             out["skipped"].append(f"{s} no price"); continue
@@ -190,9 +194,13 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
         reducing = q == 0 or (abs(q) < abs(u) and np.sign(q) == np.sign(u))
         if u and xpos is not None and (reducing or kind == "flip"):
             x = xpos.get(s, 0.0)
-            if netting.leg_missing(state, V.SLOT, s, x, u):   # vs exchange net minus other slots' legs (netting)   # closing a leg the exchange doesn't hold would OPEN one
+            if netting.leg_missing(state, V.SLOT, s, x, u):   # vs exchange net minus other slots' legs (netting)
+                # Refuse the order only. Booking the close is exchange_close_sync, from the Binance fill, not a guessed price.
                 out["skipped"].append(f"{s} leg missing on exchange")
                 log_event(state, "vbo1h_skip_missing_leg", V.SLOT, symbol=s, ledger=u, exchange=x, bar=bar_s); continue
+        if not reducing and exchange_close_sync.reentry_blocked(ex, s):
+            out["skipped"].append(f"{s} forced flat (target unchanged)")
+            log_event(state, "vbo1h_skip_forced_flat", V.SLOT, symbol=s, bar=bar_s); continue
         if not reducing:
             why = ("not listed on Demo" if s not in lst else blk or ("TradFi (crypto only)" if tradfi.is_tradfi(s, info, state) else None))
             if why:

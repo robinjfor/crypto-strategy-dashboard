@@ -736,6 +736,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         migrate_e5v.run_fixes(store, fc)
     except Exception as e:  # noqa: BLE001
         log.warning("migrate_e5v_fail err=%s", e)
+    try:  # read-only on the exchange. The Robin AKE/APR repair runs before the general sync so those fills keep that audit.
+        import exchange_close_sync
+        exchange_close_sync.run_repairs(store, fc)
+        exchange_close_sync.run_sync(store, fc)
+    except Exception as e:  # noqa: BLE001
+        log.warning("exchange_close_sync_fail err=%s", e)
     state0 = store.load()
     import orchestrator
     orchestrator.load(state0)
