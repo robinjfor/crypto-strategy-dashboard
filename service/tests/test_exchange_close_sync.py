@@ -353,6 +353,121 @@ def test_repair_preconditions_fail_closed_then_a_later_good_snapshot_applies():
     assert "AKEUSDT" not in store.s["demo_vbo1h_exec"]["book"]
 
 
+OCT25 = 1792886400000  # 2026-10-25 08:00 Asia/Taipei, before entry 71809638
+OCT27 = 1793059200000  # 2026-10-27 08:00 Asia/Taipei
+APR_CASH_LIVE = 5126.701670928106
+AKE_CASH_DONE = 1312.18391819
+
+
+def _old_liq(tid, when, coid):
+    trade = {"id": tid, "orderId": int(tid), "side": "BUY", "qty": "100", "price": "0.05",
+             "commission": "0", "commissionAsset": "USDT", "realizedPnl": "1", "time": when, "clientOrderId": coid}
+    order = {"orderId": int(tid), "clientOrderId": coid, "side": "BUY",
+             "autoCloseType": "ADL" if str(coid).startswith("adl") else "LIQUIDATION"}
+    return trade, order
+
+
+def _apr_history(extra=(), mig=None, cash=APR_CASH_LIVE):
+    t1, o1 = _old_liq(70294043, OCT25, "autoclose-70294043")
+    t2, o2 = _old_liq(71391559, OCT27, "autoclose-71391559")
+    snap = copy.deepcopy(FIX["apr_adl_1106"])
+    snap["trades"] = [t1, t2, *snap["trades"], *extra]
+    snap["orders"] = [o1, o2, *snap["orders"]]
+    st = {
+        "migrations": {"e5v_1026": {"done": True}, "ab_1028": {"done": True}, **(mig or {})},
+        "demo_e5v_exec": {"cash": cash, "funding_since": 222, "book": {"APRUSDT": -214.0}},
+        "demo_vbo1h_exec": {"cash": AKE_CASH_DONE, "funding_since": 111, "book": {},
+                            "forced_flat": {"AKEUSDT": {"target": -0.03125, "cause": "liquidation"}}},
+        "booked_external_trades": {"87896577": {"booking": "ake_liq_1106", "symbol": "AKEUSDT"}},
+    }
+    return st, snap
+
+
+def test_apr_sets_aside_only_proven_prior_liquidations():
+    st, snap = _apr_history()
+    r = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t")
+    assert r["applied"] is True and r["cash_delta"] == pytest.approx(-APR_DELTA)
+    e5 = st["demo_e5v_exec"]
+    assert "APRUSDT" not in e5["book"] and e5["cash"] == pytest.approx(APR_CASH_LIVE - APR_DELTA)
+    assert e5["cash"] != pytest.approx(APR_CASH_LIVE - APR_DELTA + 1.81258)
+    assert e5["cash"] != pytest.approx(APR_CASH_LIVE - APR_DELTA - 0.3589926)
+    assert e5["funding_since"] == 222
+    assert set(st["booked_external_trades"]) == {"87896577", "73620325"}
+    assert {p["id"] for p in st["migrations"]["apr_adl_1106"]["prior_lifecycle"]} == {"70294043", "71391559"}
+    assert st["demo_vbo1h_exec"]["cash"] == AKE_CASH_DONE
+    assert st["demo_vbo1h_exec"]["forced_flat"]["AKEUSDT"]["target"] == -0.03125
+    again = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t2")
+    assert again["skipped"] == "done" and e5["cash"] == pytest.approx(APR_CASH_LIVE - APR_DELTA)
+
+
+def test_apr_still_rejects_unproven_stale_or_new_forced_fills():
+    unknown, uo = _old_liq(111, OCT25 - 1000, "autoclose-111")
+    st, snap = _apr_history([unknown])
+    snap["orders"].append(uo)
+    r = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t")
+    assert r["skipped"] == "extra_forced_fill" and "111" in r["trade_ids"]
+    assert st["demo_e5v_exec"]["cash"] == APR_CASH_LIVE and st["demo_e5v_exec"]["book"]["APRUSDT"] == -214.0
+
+    late, lo = _old_liq(888, 1793955700000, "adl_autoclose")
+    st, snap = _apr_history([late])
+    snap["orders"].append(lo)
+    r = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t")
+    assert r["skipped"] == "extra_forced_fill" and st["demo_e5v_exec"]["cash"] == APR_CASH_LIVE
+
+    moved, mo = _old_liq(70294043, 1793955700000, "autoclose-70294043")
+    st, snap = _apr_history()
+    snap["trades"] = [t for t in snap["trades"] if str(t["id"]) != "70294043"] + [moved]
+    snap["orders"] = [o for o in snap["orders"] if str(o["orderId"]) != "70294043"] + [mo]
+    r = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t")
+    assert r["skipped"] == "extra_forced_fill" and st["demo_e5v_exec"]["cash"] == APR_CASH_LIVE
+
+    st, snap = _apr_history(mig={"ab_1028": {"done": False}})
+    r = x.commit_repair(st, snap, x.REPAIRS["apr_adl_1106"], "apr_adl_1106", at="t")
+    assert r["skipped"] == "extra_forced_fill" and st["demo_e5v_exec"]["book"]["APRUSDT"] == -214.0
+    assert st["demo_vbo1h_exec"]["cash"] == AKE_CASH_DONE
+
+
+def test_sync_does_not_call_u1_usdc_unowned_or_write_those_ledgers():
+    st = {"u1_live": {"quote": "USDC", "cash": 50.0, "units": {"BTC": 0.01, "ETH": -0.02}},
+          "demo_fa_positions": {"ZZUSDT": {"perp_qty": 3.0, "spot_qty": 3.0}},
+          "demo_vbo1h_exec": {"cash": 1.0, "book": {}}}
+    class F:
+        fetched = []
+        def position_risk(self, symbol=None):
+            if symbol:
+                return [{"symbol": symbol, "positionAmt": "0.01" if symbol == "BTCUSDC" else "-0.02", "positionSide": "BOTH"}]
+            return [{"symbol": "BTCUSDC", "positionAmt": "0.01", "positionSide": "BOTH"},
+                    {"symbol": "ETHUSDC", "positionAmt": "-0.02", "positionSide": "BOTH"},
+                    {"symbol": "ZZUSDT", "positionAmt": "-3", "positionSide": "BOTH"}]
+        def position_mode_dual(self):
+            return False
+        def open_orders(self, symbol=None):
+            return []
+        def open_algo_orders(self, symbol=None):
+            return []
+        def _signed(self, *a, **k):
+            F.fetched.append(a)
+            raise AssertionError("U1 symbols must not be fetched")
+        def income(self, *a, **k):
+            raise AssertionError("income")
+        def all_orders(self, *a, **k):
+            raise AssertionError("orders")
+        def new_order(self, **k):
+            raise AssertionError("order")
+    snaps = x.snapshots_for_gaps(st, F(), 1794000000000)
+    assert snaps == {} and F.fetched == []
+    for sym, qty in (("BTCUSDC", "0.01"), ("ETHUSDC", "-0.02")):
+        plan = x.plan_sync(st, _snap(sym, 1, [], [], exch=qty), at="t")
+        assert plan["status"] == "u1_sleeve"
+        x.apply_plan(st, plan)
+    assert st["u1_live"]["cash"] == 50.0 and st["demo_fa_positions"]["ZZUSDT"]["perp_qty"] == 3.0
+    assert "reconcile_alerts" not in st
+    nr = netting.net_reconcile(st, {"BTCUSDC": 0.01, "ETHUSDC": -0.02}, "USDC")
+    assert nr["unowned"] == {} and nr["unowned_alert"] is False
+    usdt = netting.net_reconcile(st, {"BATUSDT": -1.0}, "USDT")
+    assert usdt["unowned"] == {"BATUSDT": -1.0}
+
+
 def test_entry_window_and_sum_and_extra_forced_fill():
     st = _books()
     missing = copy.deepcopy(FIX["ake_liq_1106"])
