@@ -125,6 +125,13 @@ REPAIRS = {
             "time_tolerance_ms": 5000,
         },
         "entry": {"id": "71809638", "side": "SELL", "qty": "214", "price": "0.05157"},
+        # Earlier APR liquidations already booked by named migrations. They are set aside only when
+        # that migration is done and the fill is strictly before entry 71809638, which rebuilt this -214 leg.
+        # Any other forced fill, including these ids if they fall after the entry, still rejects the repair.
+        "prior_booked": [
+            {"id": "70294043", "migration": "e5v_1026"},
+            {"id": "71391559", "migration": "ab_1028"},
+        ],
         "ignored_income": {"incomeType": "INSURANCE_CLEAR", "income": "-0.3589926", "note": "2026-10-27, outside this close"},
     },
 }
@@ -479,6 +486,9 @@ def plan_sync(state: dict, snapshot: dict, *, at: str | None = None) -> dict:
     base = {"symbol": symbol, "at": at, "slots": slots, "pause": False}
     if snapshot.get("error") or snapshot.get("exchange_qty") is None:
         return {"status": "no_evidence", **base}
+    if symbol in netting.U1_SYMBOLS:
+        # Same exclusion as net_reconcile. U1 is not a shared-slot book; do not alert or write it.
+        return {"status": "u1_sleeve", **base}
     if not books:
         # Flat and unowned is already consistent. A leftover exchange position is net_reconcile's alert.
         if abs(dec(snapshot.get("exchange_qty"))) <= TOL:
@@ -546,7 +556,7 @@ def apply_plan(state: dict, plan: dict) -> dict:
     status = plan.get("status")
     symbol = plan.get("symbol")
     at = plan.get("at")
-    if status in ("in_sync", "deferred_repair", "unowned"):
+    if status in ("in_sync", "deferred_repair", "unowned", "u1_sleeve"):
         return plan
     if status != "book":
         kind = _ALERT_KIND.get(status, "external_close_no_evidence")
@@ -663,6 +673,46 @@ def _entry_check(snapshot: dict, spec: dict, books: dict[str, Decimal]) -> dict:
     return {"ok": True, "entry_check": "entry_ok"}
 
 
+def _set_aside_prior_lifecycle(state: dict, snapshot: dict, spec: dict, target: dict, events: dict, have: Decimal):
+    """Drop forced fills that closed an earlier leg, or return a skip reason.
+
+    A fill is set aside only when its id is named on the spec, the migration that booked that
+    earlier close is done, and the fill is strictly before the entry that rebuilt the current qty.
+    Every other forced fill still rejects the repair. No cash is computed here.
+    """
+    fill_id = str(spec["fill"]["id"])
+    forced = [f for e in events.get("events") or [] if e["klass"] in FORCED for f in e["fills"]]
+    others = [f for f in forced if f["id"] != fill_id]
+    if not others:
+        return []
+    prior = spec.get("prior_booked") or []
+    proven = {str(row["id"]): row.get("migration") for row in prior}
+    if not prior or not spec.get("entry"):
+        return None
+    entry, _ = _find_trade(snapshot, spec["entry"]["id"])
+    if entry is None:
+        return None
+    ent = spec["entry"]
+    if str(entry.get("side") or "").upper() != ent["side"]:
+        return None
+    if abs(dec(entry.get("qty")) - dec(ent["qty"])) > TOL or abs(dec(entry.get("price")) - dec(ent["price"])) > TOL:
+        return None
+    if abs(signed_qty(entry) - have) > TOL:
+        return None
+    entry_time = int(entry.get("time") or 0)
+    if int(target.get("time") or 0) <= entry_time:
+        return None
+    migs = state.get("migrations") or {}
+    kept = []
+    for f in others:
+        mid_name = proven.get(f["id"])
+        booked = bool(mid_name) and bool((migs.get(mid_name) or {}).get("done")) and int(f.get("time") or 0) < entry_time
+        if not booked:
+            return None
+        kept.append({"id": f["id"], "migration": mid_name})
+    return kept
+
+
 def commit_repair(state: dict, snapshot: dict | None, spec: dict, mid: str, *, at: str | None = None) -> dict:
     """Precondition-checked one-off. Applies the fill's cash delta or changes nothing."""
     at = at or datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -702,15 +752,16 @@ def commit_repair(state: dict, snapshot: dict | None, spec: dict, mid: str, *, a
     bad = _fill_matches(trade, order, spec)
     if bad:
         return {"id": mid, "skipped": "fill_mismatch", "field": bad}
-    # Do not mix this verified fill with any other unbooked forced close on the same side.
+    # Do not mix this verified fill with any other forced close of the same leg.
     gap = -have
     ev = _closing_events(snapshot, gap, set(booked))
     if ev["status"] != "ok":
         return {"id": mid, "skipped": ev["status"]}
-    forced_ids = {f["id"] for e in ev["events"] if e["klass"] in FORCED for f in e["fills"]}
-    if forced_ids != {fill_id}:
-        _alert(state, "external_close_mixed", symbol, slots=[spec["slot"]], at=at, detail="extra forced fill", trade_ids=sorted(forced_ids))
-        return {"id": mid, "skipped": "extra_forced_fill", "trade_ids": sorted(forced_ids)}
+    prior = _set_aside_prior_lifecycle(state, snapshot, spec, trade, ev, have)
+    if prior is None:
+        forced_ids = sorted(f["id"] for e in ev["events"] if e["klass"] in FORCED for f in e["fills"])
+        _alert(state, "external_close_mixed", symbol, slots=[spec["slot"]], at=at, detail="extra forced fill", trade_ids=forced_ids)
+        return {"id": mid, "skipped": "extra_forced_fill", "trade_ids": forced_ids}
     verified_time = int(trade.get("time") or 0)
     newer = [e for e in ev["events"] if not e["booked"] and e["klass"] not in FORCED and e["time"] >= verified_time - int(spec["fill"]["time_tolerance_ms"])]
     if newer:
@@ -752,6 +803,7 @@ def commit_repair(state: dict, snapshot: dict | None, spec: dict, mid: str, *, a
            "actor": ACTOR_ROBIN, "authorization": AUTHORIZATION, "orders": 0, "entry_check": entry["entry_check"],
            "trade_ids": [fill_id], "income_ids": [], "legs": [leg], "realized_pnl_not_booked": spec["fill"]["realizedPnl"],
            "funding_booked": False, "reentry": REENTRY_POLICY,
+           "prior_lifecycle": prior,
            "fill": {"id": fill_id, "orderId": spec["fill"]["orderId"], "clientOrderId": spec["fill"]["clientOrderId"],
                     "qty": spec["fill"]["qty"], "price": spec["fill"]["price"], "commission": spec["fill"]["commission"]}}
     state.setdefault("migrations", {})[mid] = rec
@@ -887,7 +939,7 @@ def snapshots_for_gaps(state: dict, fut, now_ms: int) -> dict[str, dict]:
     for sym in sorted(set(vn) | set(exch)):
         if abs(exch.get(sym, Decimal("0")) - vn.get(sym, Decimal("0"))) <= TOL:
             continue
-        if sym in _pending_repair_symbols(state):
+        if sym in _pending_repair_symbols(state) or sym in netting.U1_SYMBOLS:
             continue
         out[sym] = fetch_symbol(fut, sym, start_ms=now_ms - SYNC_LOOKBACK_MS, end_ms=now_ms)
     return out

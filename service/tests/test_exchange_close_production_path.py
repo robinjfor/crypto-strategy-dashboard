@@ -294,6 +294,106 @@ def test_explicit_futures_client_is_reused(monkeypatch):
     assert out["exchange_close_sync"]["ok"] is True
 
 
+class AprHistory(Transport):
+    """APR window contains the two already-booked liquidations plus the Nov 6 ADL."""
+
+    def __init__(self):
+        super().__init__()
+        self.fetched = []
+
+    def position_risk(self, symbol=None):
+        rows = super().position_risk(symbol)
+        extra = [{"symbol": "BTCUSDC", "positionAmt": "0.01", "positionSide": "BOTH"},
+                 {"symbol": "ETHUSDC", "positionAmt": "-0.02", "positionSide": "BOTH"}]
+        if symbol is None:
+            return rows + extra
+        if symbol in ("BTCUSDC", "ETHUSDC"):
+            self.fetched.append(symbol)
+            return [r for r in extra if r["symbol"] == symbol]
+        return rows
+
+    def _signed(self, method, path, params=None):
+        sym = (params or {}).get("symbol")
+        if sym in ("BTCUSDC", "ETHUSDC"):
+            self.fetched.append(sym)
+        rows = super()._signed(method, path, params)
+        if path.endswith("userTrades") and sym == "APRUSDT":
+            from tests.test_exchange_close_sync import OCT25, OCT27, _old_liq
+            older = [_old_liq(70294043, OCT25, "autoclose-70294043")[0],
+                     _old_liq(71391559, OCT27, "autoclose-71391559")[0]]
+            return older + rows
+        return rows
+
+    def all_orders(self, symbol, start_ms=None, limit=1000):
+        rows = super().all_orders(symbol, start_ms=start_ms, limit=limit)
+        if symbol != "APRUSDT":
+            return rows
+        from tests.test_exchange_close_sync import _old_liq, OCT25, OCT27
+        return [_old_liq(70294043, OCT25, "autoclose-70294043")[1],
+                _old_liq(71391559, OCT27, "autoclose-71391559")[1], *rows]
+
+
+def _booked_ake_state():
+    st = _state()
+    st["migrations"]["ake_liq_1106"] = {"done": True, "actor": "Robin", "trade_ids": ["87896577"]}
+    st["demo_vbo1h_exec"] = {"cash": 1312.18391819, "funding_since": 111, "book": {},
+                             "forced_flat": {"AKEUSDT": {"target": -0.03125, "cause": "liquidation"}}}
+    st["demo_e5v_exec"]["cash"] = 5126.701670928106
+    st["booked_external_trades"] = {"87896577": {"booking": "ake_liq_1106", "symbol": "AKEUSDT"}}
+    st["u1_live"] = {"quote": "USDC", "cash": 80.0, "units": {"BTC": 0.01, "ETH": -0.02}, "fills": []}
+    st["demo_fa_positions"] = {"SOLUSDT": {"perp_qty": 1.0, "spot_qty": 1.0}}
+    return st
+
+
+def test_production_path_books_only_the_apr_adl_and_leaves_ake(monkeypatch):
+    _block_network(monkeypatch)
+    Transport.n = 0
+    Transport.sent = []
+    monkeypatch.setattr(futures_client, "FuturesDemoClient", AprHistory)
+    store = MemStore(_booked_ake_state())
+    out = reconcile.run_once(store, client=Spot())
+    e5, vbo = store.s["demo_e5v_exec"], store.s["demo_vbo1h_exec"]
+    assert "APRUSDT" not in e5["book"] and e5["cash"] == pytest.approx(5126.701670928106 - 9.2234)
+    assert e5["funding_since"] == 222
+    assert vbo["cash"] == 1312.18391819 and vbo["book"] == {}
+    assert vbo["forced_flat"]["AKEUSDT"]["target"] == -0.03125
+    assert store.s["migrations"]["apr_adl_1106"]["trade_ids"] == ["73620325"]
+    assert {p["id"] for p in store.s["migrations"]["apr_adl_1106"]["prior_lifecycle"]} == {"70294043", "71391559"}
+    assert "70294043" not in store.s["booked_external_trades"] and "71391559" not in store.s["booked_external_trades"]
+    assert store.s["u1_live"]["cash"] == 80.0 and store.s["demo_fa_positions"]["SOLUSDT"]["perp_qty"] == 1.0
+    sync_syms = {r.get("symbol") for r in out["exchange_close_sync"]["sync"]}
+    assert "BTCUSDC" not in sync_syms and "ETHUSDC" not in sync_syms
+    assert out["exchange_close_sync"]["ok"] is True and Transport.sent == []
+    again = reconcile.run_once(store, client=Spot())
+    assert again["exchange_close_sync"]["repairs"] == []
+    assert e5["cash"] == pytest.approx(5126.701670928106 - 9.2234)
+    assert vbo["cash"] == 1312.18391819
+
+
+def test_production_path_rejects_a_new_forced_fill_beside_the_history(monkeypatch):
+    _block_network(monkeypatch)
+    Transport.sent = []
+
+    class Dirty(AprHistory):
+        def _signed(self, method, path, params=None):
+            rows = super()._signed(method, path, params)
+            if path.endswith("userTrades") and (params or {}).get("symbol") == "APRUSDT":
+                rows = rows + [{"id": 999001, "orderId": 999001, "side": "BUY", "qty": "1", "price": "0.04",
+                                "commission": "0", "commissionAsset": "USDT", "realizedPnl": "0",
+                                "time": 1793955800000, "clientOrderId": "adl_autoclose"}]
+            return rows
+
+    monkeypatch.setattr(futures_client, "FuturesDemoClient", Dirty)
+    store = MemStore(_booked_ake_state())
+    out = reconcile.run_once(store, client=Spot())
+    assert store.s["demo_e5v_exec"]["book"]["APRUSDT"] == -214.0
+    assert store.s["demo_e5v_exec"]["cash"] == 5126.701670928106
+    assert store.s["demo_vbo1h_exec"]["cash"] == 1312.18391819
+    assert "apr_adl_1106" not in store.s["migrations"]
+    assert out["exchange_close_sync"]["ok"] is False
+    assert Transport.sent == []
+
+
 def test_direct_repair_without_client_does_not_pretend_success():
     store = MemStore(_state())
     got = x.run_repairs(store)
