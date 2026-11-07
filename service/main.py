@@ -1108,6 +1108,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     if live and client.api_key and os.environ.get("GCS_BUCKET"):
         try:
             import reconcile
+            # No futures client here. run_once resolves one demo futures client for the repair and the sync.
             reconcile.run_once(store, client=client)
         except Exception as e:  # noqa: BLE001
             log.warning("reconcile_after_run_skip err=%s", e)
