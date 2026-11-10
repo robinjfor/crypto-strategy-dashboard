@@ -1,16 +1,20 @@
 """DEMO-only portfolio orchestrator (research_orchestrator 'regime' variant, spec_2026-11/research_orchestrator).
 
 Scales slot *sizing capital* only; never touches entry/exit signals, stops, approvals or ledgers.
-Rules (identical to orchestrator.py run(mode='regime')):
-  base weights on total portfolio equity P, 1x:  E(demo_e5) 60% / U1 25% / R2S 15% / FA 0%
-  bear   = BTC daily close < 200d SMA (last CLOSED bar)  -> E, U1 halved; freed capital 50/50 to R2S and FA
+Rules (regime formula unchanged; base weights changed 2026-11-11 by Robin):
+  base weights, 1x:  E(demo_e5) 70% / U1 0% / R2S 30% / FA 0%
+  bear   = BTC daily close < 200d SMA (last CLOSED bar)  -> E and U1 halved; freed weight 50/50 to R2S and FA
   hi-vol = BTC 30d realized vol (log, ann. sqrt365) > expanding 66.7th pct of its own history (min 365 obs,
            history from 2022-06-01 = the backtest panel start)  -> every target x0.7 (rest stays cash)
   NO drawdown breaker. DD from peak > 35% only raises an alert flag (log + /status), no trading action.
-Quotes: the 10kU book is USDT (E5 5000 + R2S 3000 + FA 1000) + USDC (U1 1000). P = sum of the four virtual
-slot ledger equities with USDC counted 1:1 as USDT; U1's target is in USDC and sized on its USDC ledger,
-the other three in USDT. Every executor keeps its own wallet/margin checks, so a target the wallet cannot fund
-is simply capped by those existing checks (no extra transfers).
+Quotes: E5 / R2S / FA are USDT virtual ledgers on one Demo futures wallet. U1 is a separate USDC wallet.
+VBO (demo_vbo1h_top50_1k, 1000U) is not an orchestrator weight; that 1000U was carved from FA idle capital.
+Eligible USDT for E/R2S/FA targets is E equity + R2S equity only. FA equity is excluded (VBO carve plus any
+open FA book — those positions are not closed to fund E/R2S). USDC is not counted into USDT targets.
+A quote-pool plan may size a USDT slot above its own virtual ledger, because the sibling USDT ledger is the
+same wallet. The old min(target, own ledger) left R2S cash idle whenever E's weight exceeded E's ledger.
+U1 weight 0 does not flatten the sleeve (see u1_live.orchestrator_size_equity). U1 new entries stop via
+paused_slots; approval is kept.
 Runs as Cloud Run job crypto-orchestrator-daily at 00:05 UTC (08:05 Taipei): after the 08:00 bar closes,
 before the 08:08 reconcile (E5/R2S/FA executors) and the U1 hourly run that consume state['orchestrator'].
 """
@@ -29,9 +33,18 @@ log = logging.getLogger("orchestrator")
 
 SLOTS = {"E": "demo_e5_min5_x175_t05top20",  # took over E5 (demo_e5_min5_x175) weight on 2026-10-26
           "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
-BASE_W = {"E": 0.60, "U": 0.25, "R": 0.15, "F": 0.0}
+# Robin 2026-11-11 02:14 Asia/Taipei: E 70% / R2S 30%, U1 paused, FA base stays 0.
+BASE_W = {"E": 0.70, "U": 0.0, "R": 0.30, "F": 0.0}
 DEFAULT_CAP = {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}
 QUOTE = {"E": "USDT", "U": "USDC", "R": "USDT", "F": "USDT"}
+# Same-quote pool used as the weight base. U is USDC; F is the VBO carve / FA book and is not added.
+USDT_KEYS = ("E", "R")
+VBO_SLOT = "demo_vbo1h_top50_1k"
+VBO_RESERVE_USDT = 1000.0   # carved from FA idle on 2026-11-04; VBO is not resized here
+U1_PAUSE_SLOT = "u1_btc_eth_usdc"
+U1_PAUSE_MIGRATION = "u1_pause_20261111"
+U1_PAUSE_REASON = ("Robin 2026-11-11 02:14 Asia/Taipei: pause U1 new entries and increasing rebalances. "
+                   "Approval kept. Existing positions are not closed by this pause.")
 HIVOL_X = 0.7
 DD_ALERT = 0.35
 MA_N, VOL_N, VOL_MIN_HIST, VOL_Q = 200, 30, 365, 2 / 3
@@ -55,19 +68,50 @@ def regime(close: pd.Series) -> dict:
 
 
 def weights(bear: bool, hivol: bool) -> tuple[dict, float]:
+    """Backtest regime formula. Base weights changed; the bear/hi-vol arithmetic did not.
+    Bear halves E and U, then splits that freed weight 50/50 onto R and F. With U already 0,
+    halving U frees nothing. With F already 0, bear still assigns F a positive weight
+    (half of the halved E). Hi-vol does not change weights; it returns the 0.7 multiplier."""
     w = dict(BASE_W)
     if bear:
         fr = (w["E"] + w["U"]) / 2; w["E"] /= 2; w["U"] /= 2; w["R"] += fr / 2; w["F"] += fr / 2
     return w, (HIVOL_X if hivol else 1.0)
 
 
+def _eq(equities: dict, k: str) -> float:
+    try:
+        return max(0.0, float(equities.get(k) or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def eligible_pools(equities: dict) -> dict:
+    """Capital each quote can actually fund.
+
+    USDT pool = E ledger + R2S ledger. Those two books are virtual splits of one USDT-M wallet,
+    so a target may sit above one book and below the other. FA equity is not added: the funded
+    1000U is the VBO carve, and any equity above that is the open FA book (not closed here).
+    USDC pool = U1 sleeve equity. It is not spendable by E/R2S/FA and is not moved.
+    """
+    e = {k: _eq(equities, k) for k in BASE_W}
+    reserve = min(VBO_RESERVE_USDT, e["F"])
+    return {"usdt": e["E"] + e["R"], "usdc": e["U"], "vbo_reserve_usdt": reserve,
+            "fa_equity_excluded": e["F"], "by_slot": e}
+
+
+def _pool_for(k: str, pools: dict) -> float:
+    return float(pools["usdc"] if k == "U" else pools["usdt"])
+
+
 def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> dict:
     rg = regime(close)
     w, x = weights(rg["bear"], rg["hivol"])
-    P = float(sum(equities.values()))
+    pools = eligible_pools(equities)
+    # P is mark-to-market of the four orchestrator books (DD alert only). It is not the sizing base.
+    P = float(sum(_eq(equities, k) for k in BASE_W))
     peak = max(P, float((prev or {}).get("peak") or 0.0))
     dd = 1 - P / peak if peak > 0 else 0.0
-    tgt = {k: round(P * w[k] * x, 2) for k in w}
+    tgt = {k: round(_pool_for(k, pools) * w[k] * x, 2) for k in w}
     prev_t = (prev or {}).get("targets") or {}
     actions = []
     for k in w:
@@ -79,13 +123,88 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> 
     alert = dd > DD_ALERT
     if alert:
         actions.append(f"ALERT: portfolio drawdown {dd:.1%} > {DD_ALERT:.0%} (alert only, no trading action)")
-    return {"schema": "orchestrator_daily_v1", "generated_at": now.isoformat(), "decided_bar": rg["bar"],
-            "regime": rg, "weights": {SLOTS[k]: round(w[k], 4) for k in w}, "exposure_mult": x,
+    if rg["bear"] and w["F"] > 0:
+        actions.append("bear: FA weight is non-zero under the existing halve-E rule; base FA weight is still 0. "
+                       "VBO's 1000U is not part of this target.")
+    if rg["hivol"]:
+        actions.append("hi-vol: every target x0.7; the other 30% stays cash (backtest rule)")
+    quote_pool = {SLOTS[k]: round(_pool_for(k, pools), 2) for k in w}
+    return {"schema": "orchestrator_daily_v2", "generated_at": now.isoformat(), "decided_bar": rg["bar"],
+            "sizing": "quote_pool",
+            "regime": rg, "weights": {SLOTS[k]: round(w[k], 4) for k in w},
+            "base_weights": {SLOTS[k]: BASE_W[k] for k in BASE_W}, "exposure_mult": x,
             "targets": {SLOTS[k]: tgt[k] for k in w}, "target_quote": {SLOTS[k]: QUOTE[k] for k in w},
+            "quote_pool": quote_pool,
+            "eligible": {"usdt": round(pools["usdt"], 2), "usdc": round(pools["usdc"], 2),
+                         "vbo_reserve_usdt": round(pools["vbo_reserve_usdt"], 2),
+                         "fa_equity_excluded": round(pools["fa_equity_excluded"], 2),
+                         "vbo_slot": VBO_SLOT},
             "equity": {SLOTS[k]: round(float(equities[k]), 2) for k in equities}, "portfolio_equity": round(P, 2),
             "peak": round(peak, 2), "drawdown": round(dd, 4), "dd_alert": alert, "dd_alert_threshold": DD_ALERT,
             "actions": actions,
-            "notes": "USDC counted 1:1 as USDT in P; U1 target in USDC on its USDC ledger. No DD breaker."}
+            "notes": ("Targets = regime weight × that quote's eligible pool × hi-vol multiplier. "
+                      "USDT pool is E+R2S ledger equity (same wallet). FA equity and the VBO 1000U carve "
+                      "are excluded. USDC is not added to USDT targets and is not moved. "
+                      "U1 weight 0 does not close U1. No DD breaker.")}
+
+
+def policy_public() -> dict:
+    """Configured policy for /status. Percents come from this code, not from the last stored plan."""
+    flat, x0 = weights(False, False)
+    bear, _ = weights(True, False)
+    hv, xh = weights(False, True)
+    both, xb = weights(True, True)
+
+    def pack(w: dict, x: float) -> dict:
+        return {"weights": {SLOTS[k]: round(w[k], 4) for k in w},
+                "weights_keys": {k: round(w[k], 4) for k in w}, "exposure_mult": x}
+
+    return {"approved_by": "Robin", "approved_at": "2026-11-11T02:14:00+08:00",
+            "base_weights": {SLOTS[k]: BASE_W[k] for k in BASE_W},
+            "base_weights_keys": {k: BASE_W[k] for k in BASE_W},
+            "u1_pause": {"slot": U1_PAUSE_SLOT, "mechanism": "paused_slots", "migration": U1_PAUSE_MIGRATION,
+                         "revokes_approval": False, "closes_positions": False,
+                         "blocks": "new entries and increasing rebalances",
+                         "still_runs": "signal exits, reducing rebalances, sleeve liquidation, account-margin derisk"},
+            "vbo": {"slot": VBO_SLOT, "reserve_usdt": VBO_RESERVE_USDT, "in_orchestrator_weights": False},
+            "regimes": {"flat": pack(flat, x0), "bear": pack(bear, 1.0), "hivol": pack(hv, xh),
+                        "bear_hivol": pack(both, xb)},
+            "regime_notes": [
+                "空頭仍把 E 與 U1 權重減半，釋出的權重各半給 R2S 與資金費套利。U1 基礎權重是 0，減半不會釋出 USDC。資金費套利基礎權重是 0，但空頭仍會分到 E 釋出的一半（E 70% 時為 17.5%）。這是原本的空頭公式，不是新的基礎權重。",
+                "高波動把每個目標乘上 0.7，剩下 30% 依回測規則留成現金。",
+                "USDT 目標＝權重 ×（E 帳本＋R2S 帳本）。資金費套利帳本與 VBO 的 1,000 USDT 不計入，也不平倉。USDC 不計入 USDT 目標，也不移動。",
+                "U1 暫停只擋新開倉與加碼再平衡。減碼、訊號出場、強平與保證金去風險仍會下減少倉單。權重 0 不會把 U1 砍平。是否平掉 U1、USDC 要不要轉走，需要另外決定。",
+                "策略自己的 25% 再平衡帶仍有效。預設帳本下 E 從帳本上限 5,000 調到 5,600（約 +12%）可能落在帶內，當根不會為了這段差額下單；R2S 從舊的 15% 目標跳到 30% 會超過帶寬。",
+            ]}
+
+
+def apply_u1_pause(state: dict, *, now_iso: str | None = None) -> dict:
+    """One-shot paused_slots write. Does not revoke approval, disable the slot, or touch positions.
+
+    A later /control/resume_slot lifts it; this does not re-pause after the migration is recorded.
+    Resume then stays lifted until someone pauses again. The policy constant remains the record of
+    Robin's decision; clearing the pause in production is an operations choice, not done here.
+    """
+    mg = state.setdefault("migrations", {})
+    if (mg.get(U1_PAUSE_MIGRATION) or {}).get("done"):
+        return {"applied": False, "already": True, "slot": U1_PAUSE_SLOT}
+    now_iso = now_iso or datetime.now(timezone.utc).isoformat()
+    slots = [U1_PAUSE_SLOT]
+    sleeve_slot = str(((state.get("u1_live") or {}).get("slot")) or "")
+    if sleeve_slot and sleeve_slot not in slots:
+        slots.append(sleeve_slot)
+    ps = dict(state.get("paused_slots") or {})
+    for sid in slots:
+        ps.setdefault(sid, {"paused_at": now_iso, "paused_by": "policy", "reason": U1_PAUSE_REASON,
+                            "approval": "kept", "closes_positions": False})
+    state["paused_slots"] = ps
+    mg[U1_PAUSE_MIGRATION] = {"done": True, "at": now_iso, "slot": U1_PAUSE_SLOT, "closes_positions": False,
+                              "revokes_approval": False}
+    state["ledger_adjustments"] = (list(state.get("ledger_adjustments") or []) + [{
+        "at": now_iso, "kind": "u1_pause", "slot": U1_PAUSE_SLOT, "closes_positions": False,
+        "approval": "kept", "orders": 0,
+        "note": U1_PAUSE_REASON}])[-200:]
+    return {"applied": True, "slot": U1_PAUSE_SLOT, "paused_slots": slots, "orders": 0}
 
 
 # ---------------- consumer side (executors). Never raises; None/stale plan => unchanged fixed sizing.
@@ -111,7 +230,15 @@ def sizing_capital(slot_id: str, default: float, now: datetime | None = None, pl
         if v is None:
             return default
         v = max(0.0, float(v))
-        # never size above the slot's real ledger equity (no cross-wallet transfers back the target)
+        if p.get("sizing") == "quote_pool":
+            # Target is already weight × the quote pool. Do not also cap at this slot's own
+            # virtual ledger: E and R2S share the USDT-M wallet, and that cap left the sibling
+            # book's idle USDT undeployed. Still never exceed the pool recorded on the plan.
+            pool = (p.get("quote_pool") or {}).get(slot_id)
+            if pool is not None:
+                v = min(v, max(0.0, float(pool)))
+            return v
+        # Plans written before quote_pool sizing stay capped at the slot ledger.
         return v if default is None else min(v, max(0.0, float(default)))
     except Exception as e:  # noqa: BLE001
         log.warning("orchestrator_sizing_fail %s", e)
@@ -189,6 +316,7 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
             s["orchestrator"] = {**doc, "history": ((s.get("orchestrator") or {}).get("history") or [])[-399:]
                                  + [{"bar": doc["decided_bar"], "P": doc["portfolio_equity"], "dd": doc["drawdown"],
                                      "bear": doc["regime"]["bear"], "hivol": doc["regime"]["hivol"]}]}
+            apply_u1_pause(s, now_iso=now.isoformat())
             return s
         store.mutate(mut)
     print(body)

@@ -163,7 +163,7 @@ def plan_orders(sleeve: dict, targets: dict, opens: dict, *, cap_gross: float, c
     if not V > 0:
         return [], [{"reason": "sleeve_equity_le_0", "V": V}]
     if size_equity is not None and size_equity > 0:
-        V = min(float(size_equity), V)   # orchestrator sizing capital (weights unchanged, only the equity they apply to)
+        V = min(float(size_equity), V)   # positive orchestrator sizing capital only (0 is ignored by the caller)
     want, why, wcs = {}, {}, {}
     for k in SYMS:
         wt = float(targets[k])
@@ -400,6 +400,25 @@ def quote_margin(acct: dict, quote: str = "USDT") -> dict:
             "maint_margin": float(row.get("maintMargin") or 0)}
 
 
+def orchestrator_size_equity(size_eq, sleeve: dict, opens: dict) -> float | None:
+    """Apply a positive orchestrator target, capped at this sleeve's own equity.
+
+    A zero target (U1 weight 0) returns None. Callers then keep the sleeve's existing
+    capital caps. Passing 0 into caps_for would set the gross cap to 0 and cap_trim the
+    sleeve flat, including while pause blocks only increases. This function does not close.
+    """
+    if size_eq is None:
+        return None
+    try:
+        v = float(size_eq)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    v_led = sleeve_equity(sleeve, opens)
+    return min(v, v_led) if v_led > 0 else v
+
+
 def fill_opens_for(dec: dict, perp: dict, fill_bar, now: datetime, fetch_1h=None) -> dict:
     """Band reference prices. Paper decides on the USDT perps (= the backtest); a USDC sleeve sizes against its
     own perps' 00:00 UTC open when available (same bar, same rule), else falls back to paper's opens."""
@@ -526,9 +545,7 @@ def run_u1_live(state: dict, paper_state: dict | None, now: datetime, *, alloc_d
             if force:
                 opens = {k: float(fc.mark_price(PERP[k])) for k in SYMS}
                 sleeve["events"].append({"at": now.isoformat(), "event": "rebalance_now_reduce_only", "fill_bar": dec["fill_bar"]})
-            if size_eq is not None:  # cap at the sleeve's real ledger equity (target leverage applies to real equity)
-                v_led = sleeve_equity(sleeve, opens)
-                size_eq = min(float(size_eq), v_led) if v_led > 0 else float(size_eq)
+            size_eq = orchestrator_size_equity(size_eq, sleeve, opens)
             cap_gross, cap_pos = caps_for(size_eq if size_eq is not None else sleeve["capital_usdt"], (slot or {}).get("params"))
             reserve = margin_reserve(alloc_doc, state, approved_families, quote)
             avail = qm["available"]
