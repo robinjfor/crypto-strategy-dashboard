@@ -75,6 +75,26 @@
       "</div></div></div></section>";
   }
 
+  function blockPolicy(st) {
+    var p = st.orchestrator_policy;
+    if (!p || !p.base_weights_keys) return "";
+    var k = p.base_weights_keys;
+    var pct = function (x) { var v = Number(x); return isFinite(v) ? n(v * 100, 1) + "%" : "—"; };
+    var last = st.orchestrator || {};
+    var tgt = last.targets || {};
+    var when = last.generated_at ? ("上次編排 " + tpe(last.generated_at) + " · 曝險倍數 " + n(last.exposure_mult, 2)) : "尚未有編排結果。部署後由每日 08:05（台北）工作寫入後，這裡才會出現目標金額。";
+    var money = last.generated_at ? ("上次目標 E " + n(tgt.demo_e5_min5_x175_t05top20) + " · R2S " + n(tgt.demo_r2s_top10_3k) + " · U1 " + n(tgt.u1_live) + " · FA " + n(tgt.demo_funding_arb_1x)) : "";
+    var notes = (p.regime_notes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+    var u1 = p.u1_pause || {};
+    return '<section class="h-sec"><h2>組合權重</h2><div class="h-kpis">' +
+      kpi("E", pct(k.E), "USDT 池") +
+      kpi("R2S", pct(k.R), "USDT 池") +
+      kpi("U1", pct(k.U), u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") +
+      kpi("資金費套利", pct(k.F), "基礎權重") +
+      '</div><div class="h-note">' + esc(when) + (money ? " " + esc(money) : "") + "</div>" +
+      '<ul class="h-note" style="margin:6px 0 0 18px">' + notes + "</ul></section>";
+  }
+
   function blockMarket(st) {
     var m = st.market_indicators || {}, g = st.guards || {};
     var c = m.crowding || {}, fg = m.fear_greed || {}, oi = m.open_interest || {}, etf = m.etf_flows || {};
@@ -248,7 +268,7 @@
       sd.synced_at = sab.updated_at; sd.analyst = sab.tv040 || []; sd.ab = [];
       Object.keys(sab.ledgers || {}).forEach(function (k) { var L = sab.ledgers[k] || {}; if (L.last) { var o = Object.assign({}, L.last); o.book = k; sd.ab.push(o); } });
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRunning(st) + blockPolicy(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);
