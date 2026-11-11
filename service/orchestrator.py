@@ -344,6 +344,39 @@ def apply_r2s_pause(state: dict, *, now_iso: str | None = None) -> dict:
     return {"applied": True, "slot": R2S_PAUSE_SLOT, "orders": 0}
 
 
+R2S_UNFUNDED_MIGRATION = "r2s_unfunded_principal_20261111"
+
+
+def apply_r2s_unfunded_principal(state: dict, *, now_iso: str | None = None) -> dict:
+    """Remove R2S's 3,000 starting credit. It was never a second deposit beside E's 5,000.
+
+    The USDT-M wallet matches about 5,000 plus E and R2S pnl. Positions, approval, and
+    the weight-0 closes are unchanged. Orders: 0.
+    """
+    mg = state.setdefault("migrations", {})
+    if (mg.get(R2S_UNFUNDED_MIGRATION) or {}).get("done"):
+        return {"applied": False, "already": True, "orders": 0}
+    if "demo_r2s_exec" not in state:
+        return {"applied": False, "reason": "no r2s ledger", "orders": 0}
+    import demo_r2s
+    amount = float(demo_r2s.CAPITAL)
+    now_iso = now_iso or datetime.now(timezone.utc).isoformat()
+    ex = dict(state.get("demo_r2s_exec") or {})
+    book = dict(ex.get("book") or {})
+    cash = float(ex.get("cash") or 0.0)
+    ex["cash"] = cash - amount
+    ex["book"] = book
+    state["demo_r2s_exec"] = ex
+    mg[R2S_UNFUNDED_MIGRATION] = {"done": True, "at": now_iso, "amount": amount, "orders": 0,
+                                  "revokes_approval": False, "touches_positions": False}
+    state["ledger_adjustments"] = (list(state.get("ledger_adjustments") or []) + [{
+        "at": now_iso, "kind": "unfunded_principal", "slot": R2S_PAUSE_SLOT, "usdt": -amount,
+        "orders": 0, "approval": "kept",
+        "note": "R2S starting 3000 was a ledger credit, not an extra USDT-M deposit. "
+                "Wallet matches E's 5000 plus booked pnl."}])[-200:]
+    return {"applied": True, "amount": amount, "cash": ex["cash"], "orders": 0}
+
+
 # ---------------- consumer side (executors). Never raises; None/stale plan => unchanged fixed sizing.
 _ACTIVE: dict | None = None
 _SLOT_CAPS: dict | None = None
@@ -495,6 +528,7 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
                                      "bear": doc["regime"]["bear"], "hivol": doc["regime"]["hivol"]}]}
             apply_u1_pause(s, now_iso=now.isoformat())
             apply_r2s_pause(s, now_iso=now.isoformat())
+            apply_r2s_unfunded_principal(s, now_iso=now.isoformat())
             ensure_slot_caps(s)
             return s
         store.mutate(mut)
