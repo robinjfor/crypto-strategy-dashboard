@@ -84,9 +84,10 @@ def plan_live(targets: dict, book: dict, prices: dict, equity: float, m: float =
     _, od1 = plan_u1(uu, targets["w1"], lt, m, o2, eu, _mn(U1_SYMS), _st(U1_SYMS))
     out = [{"symbol": U1_SYMS[j], "delta_qty": d, "notional": n, "kind": k, "sleeve": "u1"} for j, d, n, k in od1]
     tws = targets.get("ws") or {}
-    # top-N is ranked over the WHOLE target vector (as the backtest), not only the priced symbols
-    allw = {s: float(v) for s, v in tws.items()}
-    syms = sorted(set(allw) | {s for s in book if s not in U1_SYMS})
+    # top-N is ranked inside plan_s5 over this vector. BTC/ETH stay out: they are the U1 sleeve.
+    # Zero rows in ws must not put the U1 qty into S5 (that second close is what flipped ETH).
+    allw = {s: float(v) for s, v in tws.items() if s not in U1_SYMS}
+    syms = demo_e5.s5_symbols(allw, book)
     w_all = np.array([allw.get(s, 0.0) for s in syms])
     u5 = np.array([float(book.get(s, 0.0)) for s in syms]); ov = np.array([float(prices.get(s) or np.nan) for s in syms])
     dbs = np.array([float((targets.get("dbs") or {}).get(s, 0.0)) for s in syms])
