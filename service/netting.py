@@ -23,7 +23,9 @@ from guards import log_event
 log = logging.getLogger("netting")
 FEE = 0.0005
 LEVERAGE = 3
-LEV_BY_SLOT = {"demo_e5_min5_x175_t05top20": 2, "demo_vbo1h_top50_1k": 2}   # E5v: isolated 2x (2026-10-28); symbol leverage = min over slots trading it
+LEV_BY_SLOT = {"demo_e5_min5_x175_t05top20": 2, "demo_vbo1h_top50_1k": 2,
+               "demo_r2s_top10_3k": 2}   # isolated 2x; symbol leverage = min over slots in the same flush
+# A slot missing from this map still uses LEVERAGE (3). R2S joined the 2x map on 2026-11-11.
 EPS = 1e-9
 # U1 sleeve (own ledger, reconciled by find_u1_external_closes). Not a shared-slot virtual book.
 U1_SYMBOLS = frozenset({"BTCUSDC", "ETHUSDC"})
@@ -135,6 +137,24 @@ class Netter:
     def lev_for(self, sym: str) -> int:
         return min([LEV_BY_SLOT.get(i["slot"], LEVERAGE) for i in self.intents.get(sym, [])] or [LEVERAGE])
 
+    def _open_leverage(self, sym: str) -> tuple[float, float | None]:
+        """(positionAmt, leverage) for an existing position. (0, None) when flat or unreadable."""
+        try:
+            rows = self.fut.position_risk() or []
+        except Exception:  # noqa: BLE001
+            return 0.0, None
+        for r in rows:
+            if r.get("symbol") != sym:
+                continue
+            amt = float(r.get("positionAmt") or 0)
+            raw = r.get("leverage")
+            try:
+                lev = float(raw) if raw not in (None, "") else None
+            except (TypeError, ValueError):
+                lev = None
+            return amt, lev
+        return 0.0, None
+
     def drop(self, slot: str) -> None:
         """forget a slot's intents (its execute failed; its scratch state is discarded)."""
         for sym in list(self.intents):
@@ -146,11 +166,19 @@ class Netter:
         coid = f"net-{sym[:14]}-{self.tag}-{self.n}"[:36]; self.n += 1
         try:
             if not ro:
-                self.fut.set_margin_type(sym, "ISOLATED")
-                try:
-                    self.fut.set_leverage(sym, self.lev_for(sym))
-                except Exception as le:  # noqa: BLE001  -4161: can't lower isolated leverage with an open position -> keep current, still trade
-                    log_event(st, "set_leverage_skipped", None, symbol=sym, error=str(le)[:120])
+                self.fut.set_margin_type(sym, "ISOLATED")  # margin mode is unchanged; this is the existing open path
+                want = self.lev_for(sym)
+                amt, cur = self._open_leverage(sym)
+                # New opens and increases may set leverage. Never call set_leverage when that would
+                # lower an existing position (Binance -4161). A refusal is still tolerated below.
+                if abs(amt) <= EPS or cur is None or want >= cur:
+                    try:
+                        self.fut.set_leverage(sym, want)
+                    except Exception as le:  # noqa: BLE001
+                        log_event(st, "set_leverage_skipped", None, symbol=sym, error=str(le)[:120])
+                else:
+                    log_event(st, "set_leverage_skipped", None, symbol=sym, have=cur, want=want,
+                              reason="existing position, not lowering")
             kw = {"reduceOnly": "true"} if ro else {}
             o = self.fut.new_order(symbol=sym, side=side, type="MARKET", quantity=qty, newClientOrderId=coid, **kw)
             for _ in range(6):

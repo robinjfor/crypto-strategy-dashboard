@@ -1139,11 +1139,18 @@ def _futures_quote_reconcile(state: dict, quote: str, alloc_doc: dict | None, fc
             sym = str(pr.get("symbol") or "")
             amt = float(pr.get("positionAmt") or 0)
             if sym.endswith(q) and amt != 0:
+                mark = float(pr.get("markPrice") or 0)
+                liq = float(pr.get("liquidationPrice") or 0)
                 exch.append({"symbol": sym, "qty": amt, "entry": float(pr.get("entryPrice") or 0),
-                             "mark": float(pr.get("markPrice") or 0),
-                             "notional": amt * float(pr.get("markPrice") or 0),
+                             "mark": mark,
+                             "notional": float(pr.get("notional") or 0) or amt * mark,
                              "unrealized_pnl": float(pr.get("unRealizedProfit") or 0),
-                             "margin_type": pr.get("marginType"), "leverage": pr.get("leverage")})
+                             "margin_type": pr.get("marginType"), "leverage": pr.get("leverage"),
+                             "liq": liq,
+                             "isolated_margin": float(pr.get("isolatedMargin") or 0),
+                             "isolated_wallet": float(pr.get("isolatedWallet") or 0),
+                             "maint_margin": float(pr.get("maintMargin") or 0),
+                             "liq_distance": (abs(mark - liq) / mark if mark > 0 and liq > 0 else None)})
         out["positions"] = exch
         # what the trader thinks it holds on this margin asset
         expect: dict[str, float] = {}
@@ -1406,6 +1413,7 @@ def build_status() -> dict:
         "open_orders": open_orders,
         "reconcile": {k: v for k, v in (state.get("reconcile") or {}).items() if k != "wallets"},
         "reconcile_alerts": (state.get("reconcile_alerts") or [])[-20:],
+        "liq_distance": state.get("liq_distance"),
         "ledger_summary": state.get("ledger_summary"),
         "ledger_diff": state.get("ledger_diff"),
         "live_vs_backtest": state.get("live_vs_backtest"),

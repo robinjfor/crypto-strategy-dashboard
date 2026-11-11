@@ -86,7 +86,7 @@ def test_net_reconcile_flags_unowned_alert_only():
 def test_netter_uses_2x_for_e5v_symbols():
     import netting
     n = netting.Netter.__new__(netting.Netter); n.intents = {"A": [{"slot": V.SLOT}, {"slot": "demo_r2s_top10_3k"}], "B": [{"slot": "demo_r2s_top10_3k"}]}
-    assert n.lev_for("A") == 2 and n.lev_for("B") == 3 and n.lev_for("C") == 3
+    assert n.lev_for("A") == 2 and n.lev_for("B") == 2 and n.lev_for("C") == 3
 
 
 class _LF:

@@ -932,6 +932,12 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     _last_run(r2s_scratch, "demo_r2s_exec", r2s_res)
     _last_run(vbo_scratch, "demo_vbo1h_exec", vbo_res)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
+    liq_rows: list = []
+    if not fc_err:
+        try:
+            liq_rows = list(fc.position_risk() or [])
+        except Exception as e:  # noqa: BLE001
+            log.warning("liq_distance_read_fail err=%s", e)
     def mut(s):
         s = apply_report(s, rep)
         record_asset_month(s, snap, now_iso_taipei())
@@ -1000,6 +1006,11 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             ps.update(last_attempt_at=_PARITY_STATUS.get("at"), last_ok=bool(_PARITY_STATUS.get("ok")),
                       last_error=_PARITY_STATUS.get("error"))
         s["parity_status"] = ps
+        try:  # alert only: distance to the exchange liquidation price. No orders, no pause.
+            import liq_distance
+            liq_distance.apply(s, liq_rows, now_iso_taipei())
+        except Exception as e:  # noqa: BLE001
+            log.warning("liq_distance_fail err=%s", e)
         return s
     st = store.mutate(mut)
     out = (st or {}).get("reconcile") or rep

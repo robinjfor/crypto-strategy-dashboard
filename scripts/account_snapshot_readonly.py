@@ -29,8 +29,11 @@ def get(base, path, params=None):
 def main():
     out = {}
     pr = get(FUT, "/fapi/v2/positionRisk")
+    _pos_keys = ("symbol", "positionAmt", "entryPrice", "markPrice", "unRealizedProfit", "leverage",
+                 "marginType", "positionSide", "liquidationPrice", "isolatedMargin", "isolatedWallet",
+                 "notional", "maintMargin")
     out["fut_positions_nonzero"] = [
-        {k: x.get(k) for k in ("symbol", "positionAmt", "entryPrice", "markPrice", "unRealizedProfit", "leverage", "marginType", "positionSide")}
+        {k: x.get(k) for k in _pos_keys}
         for x in (pr if isinstance(pr, list) else []) if float(x.get("positionAmt") or 0) != 0
     ] if isinstance(pr, list) else pr
     near = [x for x in pr if x.get("symbol") == "NEARUSDT"] if isinstance(pr, list) else []
