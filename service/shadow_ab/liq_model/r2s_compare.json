@@ -1,0 +1,101 @@
+{
+ "config": "th20_h3_hv0.0_L2.0",
+ "capital": 3000.0,
+ "cost_per_side": 0.002,
+ "liq_fee": 0.0005,
+ "window": [
+  "2020-09-03",
+  "2026-11-11"
+ ],
+ "n_symbols": 688,
+ "brackets_source": "https://www.binance.com/bapi/futures/v1/friendly/future/common/brackets",
+ "brackets_fetched_at": "2026-11-11T05:29:14Z",
+ "note": "baseline is this same signal path with full mark-to-market and no isolated liquidation, which is how the stored R2S ledger is built. isolated_2x is the live LEV_BY_SLOT. isolated_3x is the previous default for a slot that was not in LEV_BY_SLOT. Strategy L stays 2.0 in all three. parity_R2S.json (sharpe 0.915, cagr 0.229, maxdd 0.218) is a different walk-forward stitch of many configs, not this single live config. E5 and VBO were not re-run: their historical panels are not on this machine, and VBO is hourly.",
+ "full": {
+  "baseline": {
+   "sharpe": 0.31051980655198524,
+   "cagr": 0.03945279122578582,
+   "maxdd": 0.49193721462318407,
+   "n_days": 2260,
+   "end_equity": 3812.1739206737716,
+   "n_liq": 0,
+   "liq_loss": 0.0
+  },
+  "isolated_2x": {
+   "sharpe": 0.319219085624158,
+   "cagr": 0.04404214076983659,
+   "maxdd": 0.47902821445515187,
+   "n_days": 2260,
+   "end_equity": 3917.591823087424,
+   "n_liq": 10,
+   "liq_loss": 1660.77
+  },
+  "isolated_3x": {
+   "sharpe": 0.20100540003686304,
+   "cagr": -0.012985723450921971,
+   "maxdd": 0.5599907891745499,
+   "n_days": 2260,
+   "end_equity": 2766.770939211662,
+   "n_liq": 45,
+   "liq_loss": 4651.5
+  }
+ },
+ "H1": {
+  "baseline": {
+   "sharpe": 0.2148641837562197,
+   "cagr": -0.012571372459074914,
+   "maxdd": 0.41813183315352775,
+   "n_days": 1129,
+   "end_equity": 2884.87234606273,
+   "n_liq": null,
+   "liq_loss": null
+  },
+  "isolated_2x": {
+   "sharpe": 0.19154914153560162,
+   "cagr": -0.02272462066860048,
+   "maxdd": 0.4104591853469368,
+   "n_days": 1129,
+   "end_equity": 2794.1016413341076,
+   "n_liq": null,
+   "liq_loss": null
+  },
+  "isolated_3x": {
+   "sharpe": -0.0065759077964334944,
+   "cagr": -0.12379374165980028,
+   "maxdd": 0.5414962180419343,
+   "n_days": 1129,
+   "end_equity": 1993.3981434605942,
+   "n_liq": null,
+   "liq_loss": null
+  }
+ },
+ "H2": {
+  "baseline": {
+   "sharpe": 0.4264525973470206,
+   "cagr": 0.09420567590053319,
+   "maxdd": 0.49193721462318407,
+   "n_days": 1130,
+   "end_equity": 3812.1739206737716,
+   "n_liq": null,
+   "liq_loss": null
+  },
+  "isolated_2x": {
+   "sharpe": 0.4752168201573723,
+   "cagr": 0.11534767106705246,
+   "maxdd": 0.47902821445515187,
+   "n_days": 1130,
+   "end_equity": 3917.591823087424,
+   "n_liq": null,
+   "liq_loss": null
+  },
+  "isolated_3x": {
+   "sharpe": 0.46671805714687686,
+   "cagr": 0.11170543113145404,
+   "maxdd": 0.45768670583183224,
+   "n_days": 1130,
+   "end_equity": 2766.770939211662,
+   "n_liq": null,
+   "liq_loss": null
+  }
+ }
+}
