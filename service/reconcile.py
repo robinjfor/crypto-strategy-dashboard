@@ -696,6 +696,20 @@ def e5_claim(store, key: str, state0: dict, tgt: dict | None, run: str):
     return slot_claim(store, key, state0, str((tgt or {}).get("decided_bar") or ""), run)
 
 
+def claim_daily_bar(store, key: str, state0: dict, bar: str, run: str, now: datetime | None = None):
+    """Claim a daily E5/R2S/FA bar only after today's 00:05 UTC orchestrator plan is loaded.
+
+    Returns None when this run may trade. Any other string is a skip reason and the bar is not claimed,
+    so a later tick (the 00:08 scheduler, once the plan is in state) can still trade it.
+    VBO is hourly and not orchestrator-sized; it keeps slot_claim."""
+    import orchestrator
+    ok, why = orchestrator.plan_covers_open(now)
+    if not ok:
+        log.info("daily_bar_wait slot=%s bar=%s %s", key, bar, why)
+        return why
+    return slot_claim(store, key, state0, bar, run)
+
+
 def slot_claim(store, key: str, state0: dict, bar: str, run: str):
     """Atomic per-bar claim (GCS generation precondition in store.mutate). None = this run may execute, else the reason.
     Prevents concurrent reconcile runs (scheduler + FA/E5 target-job triggers) from both trading one bar (10-28 incident)."""
@@ -795,8 +809,8 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
                 bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/fa_targets.json")
                 tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
                 fa_run = _uuid.uuid4().hex[:12]
-                fa_claim = slot_claim(store, "demo_fa_exec", state0, str((tgt or {}).get("decided_bar") or ""), fa_run)
-                res = {"skipped": fa_claim, "bar": (tgt or {}).get("decided_bar")} if fa_claim is not None else demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt)
+                fa_claim = claim_daily_bar(store, "demo_fa_exec", state0, str((tgt or {}).get("decided_bar") or ""), fa_run)
+                res = {"skipped": fa_claim, "bar": (tgt or {}).get("decided_bar"), "orders": 0} if fa_claim is not None else demo_fa_exec.execute(fa_scratch, fa_spot, fa_fut, tgt)
                 fa_traded = e5_traded(res)
                 log.info("fa_exec %s", res)
                 fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
@@ -836,7 +850,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             from google.cloud import storage
             bl = storage.Client().bucket(os.environ["GCS_BUCKET"]).blob("trader/shadow_ab/e5_targets.json")
             tgt = json.loads(bl.download_as_bytes()) if bl.exists() else None
-            e5_run = _uuid.uuid4().hex[:12]; claim = e5_claim(store, e5_key, state0, tgt, e5_run)
+            e5_run = _uuid.uuid4().hex[:12]; claim = claim_daily_bar(store, e5_key, state0, str((tgt or {}).get("decided_bar") or ""), e5_run)
             if claim is not None:   # another reconcile run owns / already ran this bar: never trade it twice
                 e5_res = {"skipped": claim, "bar": (tgt or {}).get("decided_bar")}
                 e5_scratch = {"control_log": [], "_last_run_only": True}
@@ -861,7 +875,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             r2s_scratch["control_log"] = []
             r2s_run = _uuid.uuid4().hex[:12]
             r2s_bar = demo_r2s_exec.in_window(datetime.now(timezone.utc))[1]
-            r2s_claim = slot_claim(store, "demo_r2s_exec", state0, str(r2s_bar or ""), r2s_run)
+            r2s_claim = claim_daily_bar(store, "demo_r2s_exec", state0, str(r2s_bar or ""), r2s_run)
             if r2s_claim is not None:   # another reconcile run owns / already ran this bar
                 r2s_res = {"skipped": r2s_claim, "bar": r2s_bar}; r2s_scratch = {"control_log": [], "_last_run_only": True}
             else:
