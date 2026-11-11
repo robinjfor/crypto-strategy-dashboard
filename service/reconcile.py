@@ -1014,6 +1014,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
         try:
             import orchestrator
             orchestrator.apply_r2s_pause(s)
+            orchestrator.apply_r2s_unfunded_principal(s)
             orchestrator.ensure_slot_caps(s)
         except Exception as e:  # noqa: BLE001
             log.warning("slot_caps_fail err=%s", e)

@@ -95,6 +95,23 @@ def test_reduce_only_close_does_not_open_when_the_book_exceeds_the_exchange():
     assert fut.pos["XRPUSDT"] == pytest.approx(0.0)
 
 
+def test_unfunded_3000_is_the_wallet_gap_and_does_not_touch_the_book():
+    """20:36 Taipei: E 4776.67 + R 3088.01 = 7864.69; USDT margin 4875.17. Gap 2989.52.
+    After removing the unfunded 3000 principal, the residual is +10.48, not another 3000.
+    """
+    e_eq, r_eq, margin = 4776.6745, 3088.0135, 4875.1687
+    assert round((e_eq + r_eq) - margin, 2) == 2989.52
+    st = {"approved_families": ["keep"], "demo_r2s_exec": {"cash": 4216.9420, "book": dict(BOOK)}}
+    out = O.apply_r2s_unfunded_principal(st, now_iso="2026-11-11T12:59:00+00:00")
+    assert out["applied"] is True and out["orders"] == 0 and out["amount"] == 3000.0
+    assert st["demo_r2s_exec"]["book"] == BOOK
+    assert st["demo_r2s_exec"]["cash"] == pytest.approx(4216.9420 - 3000.0)
+    assert st["approved_families"] == ["keep"]
+    assert O.apply_r2s_unfunded_principal(st)["already"] is True
+    r_after = r_eq - 3000.0
+    assert (e_eq + r_after) == pytest.approx(margin - 10.48, abs=0.02)
+
+
 def test_r2s_pause_keeps_approval():
     st = {"approved_families": ["keep"], "approved": ["keep-me"],
           "demo_r2s_exec": {"book": dict(BOOK), "cash": 4216.94}}
