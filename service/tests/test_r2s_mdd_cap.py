@@ -1,4 +1,4 @@
-"""R2S sizing stays at 1464.08. E stays at 70% of the USDT pool. The cap does not flatten."""
+"""R2S ceiling stays 1464.08. On the 11/11 pool the 15% weight is under that ceiling."""
 from datetime import datetime, timezone
 
 import pytest
@@ -11,23 +11,25 @@ NOW = datetime(2026, 11, 12, 0, 5, tzinfo=timezone.utc)
 EQ = {"E": 5504.74, "R": 2359.17, "U": 0.0, "F": 1000.0}
 
 
-def test_cap_freezes_r2s_and_does_not_raise_e(monkeypatch):
+def test_nov12_targets_on_the_nov11_pool_leave_the_cap_idle(monkeypatch):
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "2026-11-11", "bear": False, "hivol": False})
     d = O.plan([1.0], EQ, None, NOW)
     assert d["eligible"]["usdt"] == pytest.approx(7863.91)
-    assert d["weights"]["demo_e5_min5_x175_t05top20"] == pytest.approx(0.70)
-    assert d["weights"]["demo_r2s_top10_3k"] == pytest.approx(0.30)
+    assert d["weights"]["demo_e5_min5_x175_t05top20"] == pytest.approx(0.85)
+    assert d["weights"]["demo_r2s_top10_3k"] == pytest.approx(0.15)
+    assert d["weights"]["u1_live"] == 0.0 and d["weights"]["demo_funding_arb_1x"] == 0.0
     e = d["targets"]["demo_e5_min5_x175_t05top20"]
     r = d["targets"]["demo_r2s_top10_3k"]
-    assert e == pytest.approx(5504.74, abs=0.01)
-    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(2359.17, abs=0.01)
-    assert r == 1464.08
-    assert e == pytest.approx(0.70 * 7863.91, abs=0.01)
-    assert d["cash_held_by_cap"]["demo_r2s_top10_3k"] == pytest.approx(2359.17 - 1464.08, abs=0.02)
+    assert e == 6684.32
+    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == 1179.59
+    assert r == 1179.59
+    assert r < d["slot_caps"]["demo_r2s_top10_3k"]["equity"] == 1464.08
+    assert "demo_r2s_top10_3k" not in d["cash_held_by_cap"]
+    assert e + r == pytest.approx(7863.91)
     assert d["slot_caps"]["demo_r2s_top10_3k"]["reason"] == "r2s_mdd_review_20261111"
     assert d["slot_caps"]["demo_r2s_top10_3k"]["closes_positions"] is False
-    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 1464.08
-    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5504.74, now=NOW, plan_doc=d) == pytest.approx(5504.74, abs=0.01)
+    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 1179.59
+    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5504.74, now=NOW, plan_doc=d) == 6684.32
 
 
 def test_cap_does_not_resize_or_flatten_and_signal_exits_still_trade():

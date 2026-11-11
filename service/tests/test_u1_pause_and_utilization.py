@@ -49,14 +49,13 @@ def test_new_weights_deploy_the_usdt_pool(monkeypatch):
     assert d["eligible"]["usdc"] == 1000.0
     assert d["eligible"]["vbo_reserve_usdt"] == 1000.0
     assert d["eligible"]["fa_equity_excluded"] == 1000.0
-    assert d["targets"]["demo_e5_min5_x175_t05top20"] == 5600.0
-    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == 2400.0
-    assert d["targets"]["demo_r2s_top10_3k"] == 1464.08
+    assert d["targets"]["demo_e5_min5_x175_t05top20"] == 6800.0
+    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == 1200.0
+    assert d["targets"]["demo_r2s_top10_3k"] == 1200.0  # 15% of 8000 is under the 1464.08 ceiling
+    assert "demo_r2s_top10_3k" not in d["cash_held_by_cap"]
     assert d["targets"]["u1_live"] == 0.0 and d["targets"]["demo_funding_arb_1x"] == 0.0
-    assert d["cash_held_by_cap"]["demo_r2s_top10_3k"] == round(2400.0 - 1464.08, 2)
-    # E is allowed above its own 5000 ledger. The R2S cap does not add that leftover to E.
-    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5000.0, now=NOW, plan_doc=d) == 5600.0
-    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 1464.08
+    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5000.0, now=NOW, plan_doc=d) == 6800.0
+    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 1200.0
     assert O.sizing_capital("u1_live", None, now=NOW, plan_doc=d) == 0.0
     assert O.sizing_capital("demo_funding_arb_1x", 1000.0, now=NOW, plan_doc=d) == 0.0
 
@@ -70,7 +69,7 @@ def test_quote_pool_never_exceeds_the_recorded_pool(monkeypatch):
 def test_fa_position_pnl_is_not_given_to_e(monkeypatch):
     d = _flat(monkeypatch, {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 2500.0})
     assert d["eligible"]["usdt"] == 8000.0
-    assert d["targets"]["demo_e5_min5_x175_t05top20"] == 5600.0
+    assert d["targets"]["demo_e5_min5_x175_t05top20"] == 6800.0
     assert d["eligible"]["fa_equity_excluded"] == 2500.0
 
 
@@ -78,38 +77,38 @@ def test_regime_interplay_keeps_the_old_formula(monkeypatch):
     px = [1.0]
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "d", "bear": True, "hivol": False})
     b = O.plan(px, BOOKS, None, NOW)
-    assert b["weights"]["demo_e5_min5_x175_t05top20"] == pytest.approx(0.35)
+    assert b["weights"]["demo_e5_min5_x175_t05top20"] == pytest.approx(0.425)
     assert b["weights"]["u1_live"] == pytest.approx(0.0)
-    assert b["weights"]["demo_r2s_top10_3k"] == pytest.approx(0.475)
-    assert b["weights"]["demo_funding_arb_1x"] == pytest.approx(0.175)
-    assert b["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(2800.0)
-    assert b["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(3800.0)
+    assert b["weights"]["demo_r2s_top10_3k"] == pytest.approx(0.3625)
+    assert b["weights"]["demo_funding_arb_1x"] == pytest.approx(0.2125)
+    assert b["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(3400.0)
+    assert b["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(2900.0)
     assert b["targets"]["demo_r2s_top10_3k"] == 1464.08
-    assert b["targets"]["demo_funding_arb_1x"] == pytest.approx(1400.0)
+    assert b["targets"]["demo_funding_arb_1x"] == pytest.approx(1700.0)
     assert b["targets"]["u1_live"] == 0.0
     assert any("FA weight" in a for a in b["actions"])
 
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "d", "bear": False, "hivol": True})
     h = O.plan(px, BOOKS, None, NOW)
     assert h["exposure_mult"] == 0.7
-    assert h["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(3920.0)
-    assert h["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(1680.0)
-    assert h["targets"]["demo_r2s_top10_3k"] == 1464.08
+    assert h["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(4760.0)
+    assert h["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(840.0)
+    assert h["targets"]["demo_r2s_top10_3k"] == 840.0
     assert h["targets"]["u1_live"] == 0.0 and h["targets"]["demo_funding_arb_1x"] == 0.0
 
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "d", "bear": True, "hivol": True})
     both = O.plan(px, BOOKS, None, NOW)
-    assert both["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(1960.0)
-    assert both["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(2660.0)
+    assert both["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(2380.0)
+    assert both["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(2030.0)
     assert both["targets"]["demo_r2s_top10_3k"] == 1464.08
-    assert both["targets"]["demo_funding_arb_1x"] == pytest.approx(980.0)
+    assert both["targets"]["demo_funding_arb_1x"] == pytest.approx(1190.0)
 
 
 def test_vbo_stays_out_of_the_weights():
     import demo_vbo1h as V
     assert V.SLOT not in O.SLOTS.values()
     assert V.CAPITAL == O.VBO_RESERVE_USDT == 1000.0
-    assert O.BASE_W["F"] == 0.0 and O.BASE_W["E"] == 0.70 and O.BASE_W["R"] == 0.30 and O.BASE_W["U"] == 0.0
+    assert O.BASE_W["F"] == 0.0 and O.BASE_W["E"] == 0.85 and O.BASE_W["R"] == 0.15 and O.BASE_W["U"] == 0.0
 
 
 def test_policy_matches_allocation_slot_and_does_not_close():
@@ -117,12 +116,15 @@ def test_policy_matches_allocation_slot_and_does_not_close():
     live = [s for s in alloc["slots"] if s.get("family") == "btc_eth_trend_voltarget_perp" and s.get("enabled")]
     assert [s["slot"] for s in live] == [O.U1_PAUSE_SLOT]
     pol = O.policy_public()
-    assert pol["base_weights_keys"] == {"E": 0.70, "U": 0.0, "R": 0.30, "F": 0.0}
+    assert pol["base_weights_keys"] == {"E": 0.85, "U": 0.0, "R": 0.15, "F": 0.0}
+    assert pol["base_weights_effective"] == "2026-11-12T08:05:00+08:00"
     assert pol["slot_caps"]["demo_r2s_top10_3k"]["equity"] == 1464.08
     assert pol["slot_caps"]["demo_r2s_top10_3k"]["reason"] == "r2s_mdd_review_20261111"
     assert pol["u1_pause"]["closes_positions"] is False and pol["u1_pause"]["revokes_approval"] is False
     assert pol["vbo"]["in_orchestrator_weights"] is False
-    assert pol["regimes"]["bear"]["weights_keys"]["F"] == pytest.approx(0.175)
+    assert pol["regimes"]["bear"]["weights_keys"]["F"] == pytest.approx(0.2125)
+    assert pol["regimes"]["bear"]["weights_keys"]["E"] == pytest.approx(0.425)
+    assert pol["regimes"]["bear"]["weights_keys"]["R"] == pytest.approx(0.3625)
     assert pol["regimes"]["hivol"]["exposure_mult"] == 0.7
 
 

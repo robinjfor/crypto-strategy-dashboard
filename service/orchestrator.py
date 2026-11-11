@@ -1,8 +1,8 @@
 """DEMO-only portfolio orchestrator (research_orchestrator 'regime' variant, spec_2026-11/research_orchestrator).
 
 Scales slot *sizing capital* only; never touches entry/exit signals, stops, approvals or ledgers.
-Rules (regime formula unchanged; base weights changed 2026-11-11 by Robin):
-  base weights, 1x:  E(demo_e5) 70% / U1 0% / R2S 30% / FA 0%
+Rules (regime formula unchanged; base weights E 85% / R2S 15% from the 2026-11-12 08:05 Taipei plan):
+  base weights, 1x:  E(demo_e5) 85% / U1 0% / R2S 15% / FA 0%
   bear   = BTC daily close < 200d SMA (last CLOSED bar)  -> E and U1 halved; freed weight 50/50 to R2S and FA
   hi-vol = BTC 30d realized vol (log, ann. sqrt365) > expanding 66.7th pct of its own history (min 365 obs,
            history from 2022-06-01 = the backtest panel start)  -> every target x0.7 (rest stays cash)
@@ -35,8 +35,9 @@ log = logging.getLogger("orchestrator")
 
 SLOTS = {"E": "demo_e5_min5_x175_t05top20",  # took over E5 (demo_e5_min5_x175) weight on 2026-10-26
           "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
-# Robin 2026-11-11 02:14 Asia/Taipei: E 70% / R2S 30%, U1 paused, FA base stays 0.
-BASE_W = {"E": 0.70, "U": 0.0, "R": 0.30, "F": 0.0}
+# Base weights from the 2026-11-12 08:05 Taipei plan, replacing E 70% / R2S 30%.
+# U1 stays paused (approval kept, 2026-11-11 02:14). FA base stays 0.
+BASE_W = {"E": 0.85, "U": 0.0, "R": 0.15, "F": 0.0}
 # Ceiling on sizing equity. Does not change BASE_W and does not give the unused share to E.
 # R2S single-config replay MaxDD is 49%, above the 45% limit, so sizing stays at the equity
 # the live book was built on (2026-11-11). State["slot_caps"] overrides this; equity null clears it.
@@ -238,13 +239,15 @@ def policy_public() -> dict:
             "vbo": {"slot": VBO_SLOT, "reserve_usdt": VBO_RESERVE_USDT, "in_orchestrator_weights": False},
             "regimes": {"flat": pack(flat, x0), "bear": pack(bear, 1.0), "hivol": pack(hv, xh),
                         "bear_hivol": pack(both, xb)},
+            "base_weights_effective": "2026-11-12T08:05:00+08:00",
             "regime_notes": [
-                "空頭仍把 E 與 U1 權重減半，釋出的權重各半給 R2S 與資金費套利。U1 基礎權重是 0，減半不會釋出 USDC。資金費套利基礎權重是 0，但空頭仍會分到 E 釋出的一半（E 70% 時為 17.5%）。這是原本的空頭公式，不是新的基礎權重。",
+                "基礎權重自 2026-11-12 08:05（台北）改為 E 85% / R2S 15% / U1 0 / 資金費套利 0，取代 E 70% / R2S 30%。U1 仍暫停，核准保留。",
+                "空頭仍把 E 與 U1 權重減半，釋出的權重各半給 R2S 與資金費套利。U1 基礎權重是 0，減半不會釋出 USDC。資金費套利基礎權重是 0，但空頭仍會分到 E 釋出的一半（E 85% 時為 21.25%）。這是原本的空頭公式，不是新的基礎權重。",
                 "高波動把每個目標乘上 0.7，剩下 30% 依回測規則留成現金。",
                 "USDT 目標＝權重 ×（E 帳本＋R2S 帳本）。資金費套利帳本與 VBO 的 1,000 USDT 不計入，也不平倉。USDC 不計入 USDT 目標，也不移動。",
                 "U1 暫停只擋新開倉與加碼再平衡。減碼、訊號出場、強平與保證金去風險仍會下減少倉單。權重 0 不會把 U1 砍平。是否平掉 U1、USDC 要不要轉走，需要另外決定。",
-                "策略自己的 25% 再平衡帶仍有效。E 從帳本上限附近調到 70% 池子（約一成）可能落在帶內。",
-                "R2S 單一參數回測最大回撤約 49%，超過 45% 上限。sizing 凍結在 1,464.08 USDT（目前部位所用的權益，原因 r2s_mdd_review_20261111）。權重仍是 30%。差額留成現金，不加給 E，也不因為這個上限而減倉或撤銷核准。",
+                "策略自己的 25% 再平衡帶仍有效。",
+                "R2S 單一參數回測最大回撤約 49%，超過 45% 上限。sizing 上限仍是 1,464.08 USDT（原因 r2s_mdd_review_20261111）。15% 的目標低於這個上限時用 15% 的金額，上限不生效。超過上限的差額留成現金，不加給 E，也不因為這個上限而減倉或撤銷核准。",
             ],
             "slot_caps": effective_slot_caps(None)}
 

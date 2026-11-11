@@ -1596,7 +1596,7 @@
     var caps = (cloud && cloud.slot_caps) || p.slot_caps || {};
     var rcap = caps.demo_r2s_top10_3k || {};
     var rsub = rcap.equity != null
-      ? ("權重 " + pct(k.R) + "，實際上限 " + num(rcap.equity) + " USDT，差額留現金")
+      ? ("權重 " + pct(k.R) + "，上限 " + num(rcap.equity) + " USDT；超過才留現金")
       : "USDT 池";
     return '<section class="section" id="sec-weights"><div class="section-head"><h2>組合權重</h2>' +
       '<span class="hint">百分比來自雲端狀態，不是這頁寫死的數字</span></div>' +
