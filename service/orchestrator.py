@@ -7,10 +7,11 @@ Rules (regime formula unchanged; base weights E 85% / R2S 15% from the 2026-11-1
   hi-vol = BTC 30d realized vol (log, ann. sqrt365) > expanding 66.7th pct of its own history (min 365 obs,
            history from 2022-06-01 = the backtest panel start)  -> every target x0.7 (rest stays cash)
   NO drawdown breaker. DD from peak > 35% only raises an alert flag (log + /status), no trading action.
-Quotes: E5 / R2S / FA are USDT virtual ledgers on one Demo futures wallet. U1 is a separate USDC wallet.
-VBO (demo_vbo1h_top50_1k, 1000U) is not an orchestrator weight; that 1000U was carved from FA idle capital.
-Eligible USDT for E/R2S/FA targets is E equity + R2S equity only. FA equity is excluded (VBO carve plus any
-open FA book — those positions are not closed to fund E/R2S). USDC is not counted into USDT targets.
+Quotes: E5 / R2S / FA are USDT virtual ledgers. U1 is a USDC sleeve. E and R2S trade USDT-M.
+The allocation pool is one USD number: E + R2S + USDC sleeve + FA, with USDC counted 1:1 as USD.
+Nothing is converted or transferred. E and R2S take their weight of that USD pool as USDT sizing.
+VBO (demo_vbo1h_top50_1k) is not an orchestrator weight and its book is not added again: the FA
+ledger already holds the 1000U that was carved for it. VBO's capital and positions stay as they are.
 A quote-pool plan may size a USDT slot above its own virtual ledger, because the sibling USDT ledger is the
 same wallet. The old min(target, own ledger) left R2S cash idle whenever E's weight exceeded E's ledger.
 U1 weight 0 does not flatten the sleeve (see u1_live.orchestrator_size_equity). U1 new entries stop via
@@ -47,8 +48,9 @@ DEFAULT_SLOT_CAPS = {
 }
 DEFAULT_CAP = {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}
 QUOTE = {"E": "USDT", "U": "USDC", "R": "USDT", "F": "USDT"}
-# Same-quote pool used as the weight base. U is USDC; F is the VBO carve / FA book and is not added.
+# One USD pool. USDC is counted 1:1 into USDT-M sizing; no coin moves. VBO's book is not a fifth addend.
 USDT_KEYS = ("E", "R")
+POOL_ACCOUNTING = "usd_1to1"
 VBO_SLOT = "demo_vbo1h_top50_1k"
 VBO_RESERVE_USDT = 1000.0   # carved from FA idle on 2026-11-04; VBO is not resized here
 U1_PAUSE_SLOT = "u1_btc_eth_usdc"
@@ -96,21 +98,25 @@ def _eq(equities: dict, k: str) -> float:
 
 
 def eligible_pools(equities: dict) -> dict:
-    """Capital each quote can actually fund.
+    """One USD allocation pool for every sleeve weight.
 
-    USDT pool = E ledger + R2S ledger. Those two books are virtual splits of one USDT-M wallet,
-    so a target may sit above one book and below the other. FA equity is not added: the funded
-    1000U is the VBO carve, and any equity above that is the open FA book (not closed here).
-    USDC pool = U1 sleeve equity. It is not spendable by E/R2S/FA and is not moved.
+    pool = E ledger + R2S ledger + USDC sleeve + FA ledger.
+    USDC and USDT are both counted as 1 USD. No coin is converted or moved; E and R2S, which
+    trade USDT-M, receive their weight of this USD pool as USDT sizing equity. A target may
+    sit above one virtual book because the books are an accounting split.
+    VBO's own book is not added. The FA ledger already includes the 1000U carved for VBO on
+    2026-11-04, and adding VBO again would count that 1000 twice. VBO is not resized here.
     """
     e = {k: _eq(equities, k) for k in BASE_W}
     reserve = min(VBO_RESERVE_USDT, e["F"])
-    return {"usdt": e["E"] + e["R"], "usdc": e["U"], "vbo_reserve_usdt": reserve,
-            "fa_equity_excluded": e["F"], "by_slot": e}
+    usd = e["E"] + e["R"] + e["U"] + e["F"]
+    return {"usd": usd, "usdt": e["E"] + e["R"], "usdc": e["U"], "fa": e["F"],
+            "vbo_reserve_usdt": reserve, "vbo_in_pool": False, "accounting": POOL_ACCOUNTING,
+            "by_slot": e}
 
 
 def _pool_for(k: str, pools: dict) -> float:
-    return float(pools["usdc"] if k == "U" else pools["usdt"])
+    return float(pools["usd"])
 
 
 def effective_slot_caps(state: dict | None = None) -> dict:
@@ -204,16 +210,18 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, cap
             "slot_caps": caps, "cash_held_by_cap": held_cash,
             "target_quote": {SLOTS[k]: QUOTE[k] for k in w},
             "quote_pool": quote_pool,
-            "eligible": {"usdt": round(pools["usdt"], 2), "usdc": round(pools["usdc"], 2),
+            "eligible": {"usd": round(pools["usd"], 2), "usdt": round(pools["usdt"], 2),
+                         "usdc": round(pools["usdc"], 2), "fa": round(pools["fa"], 2),
                          "vbo_reserve_usdt": round(pools["vbo_reserve_usdt"], 2),
-                         "fa_equity_excluded": round(pools["fa_equity_excluded"], 2),
+                         "vbo_in_pool": False, "accounting": pools["accounting"],
                          "vbo_slot": VBO_SLOT},
             "equity": {SLOTS[k]: round(float(equities[k]), 2) for k in equities}, "portfolio_equity": round(P, 2),
             "peak": round(peak, 2), "drawdown": round(dd, 4), "dd_alert": alert, "dd_alert_threshold": DD_ALERT,
             "actions": actions,
-            "notes": ("Targets = regime weight × that quote's eligible pool × hi-vol multiplier. "
-                      "USDT pool is E+R2S ledger equity (same wallet). FA equity and the VBO 1000U carve "
-                      "are excluded. USDC is not added to USDT targets and is not moved. "
+            "notes": ("Targets = regime weight × the USD pool × hi-vol multiplier. "
+                      "The pool is E + R2S + the USDC sleeve + the FA ledger, valued 1:1 in USD. "
+                      "No coin is converted or transferred. E and R2S trade USDT-M at that USDT sizing. "
+                      "VBO's book is not added (the FA ledger already contains its 1000U) and VBO is not resized. "
                       "U1 weight 0 does not close U1. A slot_caps ceiling keeps the unused share as cash "
                       "and does not raise E. No DD breaker.")}
 
@@ -244,7 +252,7 @@ def policy_public() -> dict:
                 "基礎權重自 2026-11-12 08:05（台北）改為 E 85% / R2S 15% / U1 0 / 資金費套利 0，取代 E 70% / R2S 30%。U1 仍暫停，核准保留。",
                 "空頭仍把 E 與 U1 權重減半，釋出的權重各半給 R2S 與資金費套利。U1 基礎權重是 0，減半不會釋出 USDC。資金費套利基礎權重是 0，但空頭仍會分到 E 釋出的一半（E 85% 時為 21.25%）。這是原本的空頭公式，不是新的基礎權重。",
                 "高波動把每個目標乘上 0.7，剩下 30% 依回測規則留成現金。",
-                "USDT 目標＝權重 ×（E 帳本＋R2S 帳本）。資金費套利帳本與 VBO 的 1,000 USDT 不計入，也不平倉。USDC 不計入 USDT 目標，也不移動。",
+                "配置池＝E 帳本＋R2S 帳本＋USDC 袖套＋資金費套利帳本，USDC 與 USDT 都以 1 美元計，不轉換、不搬幣。E 與 R2S 拿這個池的權重當 USDT-M 的 sizing。VBO 自己的帳本不另加（資金費套利裡的 1,000 就是那筆劃出），VBO 的資金與部位不改。",
                 "U1 暫停只擋新開倉與加碼再平衡。減碼、訊號出場、強平與保證金去風險仍會下減少倉單。權重 0 不會把 U1 砍平。是否平掉 U1、USDC 要不要轉走，需要另外決定。",
                 "策略自己的 25% 再平衡帶仍有效。",
                 "R2S 單一參數回測最大回撤約 49%，超過 45% 上限。sizing 上限仍是 1,464.08 USDT（原因 r2s_mdd_review_20261111）。15% 的目標低於這個上限時用 15% 的金額，上限不生效。超過上限的差額留成現金，不加給 E，也不因為這個上限而減倉或撤銷核准。",

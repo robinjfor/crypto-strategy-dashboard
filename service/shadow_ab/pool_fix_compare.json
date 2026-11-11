@@ -1,0 +1,390 @@
+{
+ "accounting": "usd_1to1",
+ "accounting_note": "USDC and USDT ledgers are summed as USD. No coin is converted or transferred. E and R2S receive their weight of that USD pool as USDT-M sizing. VBO's book is not added, because the FA ledger already includes the 1000 carved for it. U1 stays paused at weight 0 and is not flattened.",
+ "regime": {
+  "bear": false,
+  "hivol": false
+ },
+ "weights": {
+  "E": 0.85,
+  "R": 0.15,
+  "U": 0.0,
+  "F": 0.0
+ },
+ "equities": {
+  "E": 4776.0098,
+  "R": 3085.5987,
+  "U": 808.478,
+  "F": 1000.0
+ },
+ "pool_before": 7861.61,
+ "pool_after": 9670.09,
+ "added": {
+  "usdc": 808.48,
+  "fa": 1000.0,
+  "vbo_added": 0.0
+ },
+ "targets_before": {
+  "E": 6682.37,
+  "R": 1179.24,
+  "U": 0.0,
+  "F": 0.0
+ },
+ "targets_after": {
+  "E": 8219.57,
+  "R": 1450.51,
+  "U": 0.0,
+  "F": 0.0
+ },
+ "symbol_scale_note": "target_qty_before and target_qty_after scale the current book by orchestrator sizing / mark-to-market ledger, which is the book when signal weights stay put and the 25% band rebalances. U1 and FA stay at their current qty because weight 0 does not flatten them. ETHUSDT's next E5 flush, when the U1 sleeve target is flat, is the separate ethusdt block: one reduce-only buy, not a larger short.",
+ "r2s_cap": 1464.08,
+ "r2s_band_vs_build": {
+  "built_at": 1464.08,
+  "after": 1450.51,
+  "rel": 0.0094,
+  "band": 0.25,
+  "hold": true
+ },
+ "symbols": [
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "ACEUSDT",
+   "book_qty": -82.0,
+   "exchange_qty": -82.0,
+   "mark": 0.11770119,
+   "book_notional": -9.6515,
+   "target_qty_before": -114.73057171,
+   "target_qty_after": -141.12297962,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "APEUSDT",
+   "book_qty": -48.0,
+   "exchange_qty": -48.0,
+   "mark": 0.0975,
+   "book_notional": -4.68,
+   "target_qty_before": -67.15935905,
+   "target_qty_after": -82.60857344,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "APRUSDT",
+   "book_qty": -325.0,
+   "exchange_qty": -325.0,
+   "mark": 0.03723634,
+   "book_notional": -12.1018,
+   "target_qty_before": -454.72482692,
+   "target_qty_after": -559.32888266,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "ARIAUSDT",
+   "book_qty": 52.0,
+   "exchange_qty": 52.0,
+   "mark": 0.29721,
+   "book_notional": 15.4549,
+   "target_qty_before": 72.75597231,
+   "target_qty_after": 89.49262122,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "BANKUSDT",
+   "book_qty": -591.0,
+   "exchange_qty": -1456.0,
+   "mark": 0.0221924,
+   "book_notional": -13.1157,
+   "target_qty_before": -826.89960833,
+   "target_qty_after": -1017.11806046,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "BERAUSDT",
+   "book_qty": -364.4,
+   "exchange_qty": -364.4,
+   "mark": 0.10656506,
+   "book_notional": -38.8323,
+   "target_qty_before": -509.85146747,
+   "target_qty_after": -627.13675335,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "BRUSDT",
+   "book_qty": 22.0,
+   "exchange_qty": 22.0,
+   "mark": 0.4641,
+   "book_notional": 10.2102,
+   "target_qty_before": 30.7813729,
+   "target_qty_after": 37.86226283,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "CFXUSDT",
+   "book_qty": -180.0,
+   "exchange_qty": -180.0,
+   "mark": 0.04112,
+   "book_notional": -7.4016,
+   "target_qty_before": -251.84759645,
+   "target_qty_after": -309.78215039,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "COTIUSDT",
+   "book_qty": -4887.0,
+   "exchange_qty": -4887.0,
+   "mark": 0.009313,
+   "book_notional": -45.5126,
+   "target_qty_before": -6837.66224354,
+   "target_qty_after": -8410.5853832,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "ETHUSDT",
+   "book_qty": -0.841,
+   "exchange_qty": -0.912,
+   "mark": 2053.82,
+   "book_notional": -1727.2626,
+   "target_qty_before": -1.17668794,
+   "target_qty_after": -1.44737105,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "GTCUSDT",
+   "book_qty": 32.2,
+   "exchange_qty": 32.2,
+   "mark": 0.1629,
+   "book_notional": 5.2454,
+   "target_qty_before": 45.0527367,
+   "target_qty_after": 55.41658468,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "GWEIUSDT",
+   "book_qty": -993.0,
+   "exchange_qty": -993.0,
+   "mark": 0.017273,
+   "book_notional": -17.1521,
+   "target_qty_before": -1389.3592404,
+   "target_qty_after": -1708.96486301,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "HUMAUSDT",
+   "book_qty": -664.0,
+   "exchange_qty": -664.0,
+   "mark": 0.00858895,
+   "book_notional": -5.7031,
+   "target_qty_before": -929.03780023,
+   "target_qty_after": -1142.75193257,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "ICNTUSDT",
+   "book_qty": 91.0,
+   "exchange_qty": 91.0,
+   "mark": 0.28531098,
+   "book_notional": 25.9633,
+   "target_qty_before": 127.32295154,
+   "target_qty_after": 156.61208714,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "MOVRUSDT",
+   "book_qty": -6.99,
+   "exchange_qty": -6.99,
+   "mark": 1.03,
+   "book_notional": -7.1997,
+   "target_qty_before": -9.78008166,
+   "target_qty_after": -12.02987351,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "NIGHTUSDT",
+   "book_qty": 228.0,
+   "exchange_qty": 228.0,
+   "mark": 0.04426039,
+   "book_notional": 10.0914,
+   "target_qty_before": 319.0069555,
+   "target_qty_after": 392.39072383,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "PARTIUSDT",
+   "book_qty": 283.0,
+   "exchange_qty": 283.0,
+   "mark": 0.03467,
+   "book_notional": 9.8116,
+   "target_qty_before": 395.96038775,
+   "target_qty_after": 487.0463809,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "PLUMEUSDT",
+   "book_qty": -1092.0,
+   "exchange_qty": -1092.0,
+   "mark": 0.01308,
+   "book_notional": -14.2834,
+   "target_qty_before": -1527.87541845,
+   "target_qty_after": -1879.34504572,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "PROMUSDT",
+   "book_qty": 2.9,
+   "exchange_qty": 2.9,
+   "mark": 4.86726196,
+   "book_notional": 14.1151,
+   "target_qty_before": 4.05754461,
+   "target_qty_after": 4.99093465,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "E",
+   "slot": "demo_e5_min5_x175_t05top20",
+   "symbol": "USUSDT",
+   "book_qty": -13420.0,
+   "exchange_qty": -13420.0,
+   "mark": 0.00392,
+   "book_notional": -52.6064,
+   "target_qty_before": -18776.63746845,
+   "target_qty_after": -23095.98032383,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "R",
+   "slot": "demo_r2s_top10_3k",
+   "symbol": "DOGEUSDT",
+   "book_qty": -4198.0,
+   "exchange_qty": -4487.0,
+   "mark": 0.06815,
+   "book_notional": -286.0937,
+   "target_qty_before": -1604.37243403,
+   "target_qty_after": -1973.43904488,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "R",
+   "slot": "demo_r2s_top10_3k",
+   "symbol": "ETHUSDT",
+   "book_qty": -0.07100000000000001,
+   "exchange_qty": -0.912,
+   "mark": 2053.82,
+   "book_notional": -145.8212,
+   "target_qty_before": -0.02713446,
+   "target_qty_after": -0.03337641,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "R",
+   "slot": "demo_r2s_top10_3k",
+   "symbol": "HYPEUSDT",
+   "book_qty": -4.05,
+   "exchange_qty": -4.32,
+   "mark": 72.23857182,
+   "book_notional": -292.5662,
+   "target_qty_before": -1.54781047,
+   "target_qty_after": -1.90386568,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "R",
+   "slot": "demo_r2s_top10_3k",
+   "symbol": "SOLUSDT",
+   "book_qty": -3.18,
+   "exchange_qty": -3.41,
+   "mark": 83.71,
+   "book_notional": -266.1978,
+   "target_qty_before": -1.21531785,
+   "target_qty_after": -1.49488713,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "R",
+   "slot": "demo_r2s_top10_3k",
+   "symbol": "XRPUSDT",
+   "book_qty": -133.4,
+   "exchange_qty": -151.8,
+   "mark": 1.05445529,
+   "book_notional": -140.6643,
+   "target_qty_before": -50.98220169,
+   "target_qty_after": -62.71004492,
+   "weight0_not_flattened": false
+  },
+  {
+   "sleeve": "U",
+   "slot": "u1_live",
+   "symbol": "BTCUSDC",
+   "book_qty": 0.009999999999999998,
+   "exchange_qty": 0.01,
+   "mark": 73854.69247576,
+   "book_notional": 738.5469,
+   "target_qty_before": 0.009999999999999998,
+   "target_qty_after": 0.009999999999999998,
+   "weight0_not_flattened": true
+  }
+ ],
+ "ethusdt": {
+  "e5_book": -0.841,
+  "r2s_book": -0.071,
+  "exchange_before": -0.912,
+  "sleeves": [
+   "u1"
+  ],
+  "deltas": [
+   {
+    "sleeve": "u1",
+    "kind": "close",
+    "d": 0.841
+   }
+  ],
+  "orders": [
+   {
+    "symbol": "ETHUSDT",
+    "side": "BUY",
+    "qty": 0.841,
+    "reduce_only": true
+   }
+  ],
+  "n_orders": 1,
+  "exchange_after": -0.071,
+  "e5_book_after": 0.0,
+  "flipped": false
+ },
+ "as_of": "2026-11-11T20:08:24+08:00"
+}
