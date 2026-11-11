@@ -159,6 +159,13 @@ class FuturesDemoClient:
             params["endTime"] = int(end_ms)
         return self._signed("GET", "/fapi/v1/income", params) or []
 
+    def income_type(self, income_type: str, start_ms: int, end_ms: int | None = None) -> list:
+        """Account-wide income (no symbol). Read-only. Used for TRANSFER deposits."""
+        params = {"incomeType": income_type, "startTime": int(start_ms), "limit": 1000}
+        if end_ms:
+            params["endTime"] = int(end_ms)
+        return self._signed("GET", "/fapi/v1/income", params) or []
+
     def position_mode_dual(self) -> bool:
         """True when the account is in hedge (dual-side) mode."""
         r = self._signed("GET", "/fapi/v1/positionSide/dual") or {}
