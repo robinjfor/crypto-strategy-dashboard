@@ -15,8 +15,10 @@ A quote-pool plan may size a USDT slot above its own virtual ledger, because the
 same wallet. The old min(target, own ledger) left R2S cash idle whenever E's weight exceeded E's ledger.
 U1 weight 0 does not flatten the sleeve (see u1_live.orchestrator_size_equity). U1 new entries stop via
 paused_slots; approval is kept.
-Runs as Cloud Run job crypto-orchestrator-daily at 00:05 UTC (08:05 Taipei): after the 08:00 bar closes,
-before the 08:08 reconcile (E5/R2S/FA executors) and the U1 hourly run that consume state['orchestrator'].
+Runs as Cloud Run job crypto-orchestrator-daily at 00:05 UTC (08:05 Taipei), after the UTC daily bar
+closes. The 00:08 UTC reconcile is the one that should fill that open. Earlier reconcile ticks (the
+hourly trader at 00:01, the FA job at 00:01, the E5 target job at 00:02) still see yesterday's plan;
+they must not claim the bar (plan_covers_open). A claim sets last_bar and the 00:08 tick cannot resize.
 """
 from __future__ import annotations
 
@@ -243,6 +245,33 @@ def sizing_capital(slot_id: str, default: float, now: datetime | None = None, pl
     except Exception as e:  # noqa: BLE001
         log.warning("orchestrator_sizing_fail %s", e)
         return default
+
+
+def plan_covers_open(now: datetime | None = None, plan_doc: dict | None = None) -> tuple[bool, str]:
+    """True when the loaded plan was generated on this UTC date.
+
+    Sizing for the 08:00 Taipei open is written at 00:05 UTC. Reconcile also runs at
+    00:01 (hourly trader, and the FA job once its targets are up) and at 00:02 (E5
+    targets job). Those ticks load yesterday's targets. If they claim the bar, last_bar
+    blocks the 00:08 tick that can see today's plan, and the new weights miss the open.
+    ORCHESTRATOR_ENABLED=0 keeps the fixed-capital path and does not wait.
+    """
+    if os.environ.get("ORCHESTRATOR_ENABLED", "1") != "1":
+        return True, ""
+    p = plan_doc if plan_doc is not None else _ACTIVE
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    if not p or not p.get("generated_at"):
+        return False, "waiting for today's orchestrator plan (none loaded)"
+    try:
+        at = datetime.fromisoformat(str(p["generated_at"]))
+    except Exception:
+        return False, "waiting for today's orchestrator plan (bad timestamp)"
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    at = at.astimezone(timezone.utc)
+    if at.date() != now.date():
+        return False, f"waiting for today's orchestrator plan (loaded plan is {at.isoformat()})"
+    return True, ""
 
 
 # ---------------- job side (Cloud Run only: Binance calls)
