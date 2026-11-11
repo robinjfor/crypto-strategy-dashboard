@@ -167,6 +167,18 @@ def _acc(od, syms, pre, exp, orders, skips, closes, mins, div, day):
     return orders, skips, closes
 
 
+def s5_symbols(weights: dict, book: dict) -> list[str]:
+    """Symbols the S5 sleeve may trade.
+
+    The backtest keeps two books: uu for the U1 sleeve (BTC, ETH only) and u5 for S5.
+    The live slot has one book per symbol, and that BTC/ETH qty is the U1 sleeve.
+    e5_targets.ws still lists BTCUSDT and ETHUSDT, usually at weight 0. Including them
+    here makes plan_s5 treat the U1 qty as an S5 residual and emit a second full close.
+    The netter adds the two closes, so the book flips instead of going flat.
+    """
+    return sorted(s for s in (set(weights) | set(book)) if s not in U1_SYMS)
+
+
 # ---------------- live order plan from targets + real book (used once enabled)
 def plan_live(targets: dict, book: dict, prices: dict, equity: float, m: float = 1.0, lt: float = 1.0,
               mins: dict | None = None, steps: dict | None = None) -> list[dict]:
@@ -177,7 +189,7 @@ def plan_live(targets: dict, book: dict, prices: dict, equity: float, m: float =
     uu = np.array([float(book.get(s, 0.0)) for s in U1_SYMS]); o2 = np.array([float(prices.get(s) or np.nan) for s in U1_SYMS])
     _, od1 = plan_u1(uu, targets["w1"], lt, m, o2, eu, _mn(U1_SYMS), _st(U1_SYMS))
     out = [{"symbol": U1_SYMS[j], "delta_qty": d, "notional": n, "kind": k, "sleeve": "u1"} for j, d, n, k in od1]
-    syms = sorted(set(targets.get("ws") or {}) | {s for s in book if s not in U1_SYMS})
+    syms = s5_symbols(targets.get("ws") or {}, book)
     u5 = np.array([float(book.get(s, 0.0)) for s in syms]); ov = np.array([float(prices.get(s) or np.nan) for s in syms])
     ws = np.array([float((targets.get("ws") or {}).get(s, 0.0)) for s in syms]); dbs = np.array([float((targets.get("dbs") or {}).get(s, 0.0)) for s in syms])
     _, od5 = plan_s5(u5, ov, ws, dbs, es, LV, m, _mn(syms), _st(syms))
