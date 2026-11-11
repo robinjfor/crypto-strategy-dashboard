@@ -1,13 +1,14 @@
 {
- "accounting": "usd_1to1",
- "accounting_note": "USDC and USDT ledgers are summed as USD. No coin is converted or transferred. E and R2S receive their weight of that USD pool as USDT-M sizing. VBO's book is not added, because the FA ledger already includes the 1000 carved for it. U1 stays paused at weight 0 and is not flattened.",
+ "accounting": "usdt_m_margin_minus_vbo",
+ "accounting_note": "Multi-assets margin is off, so USDC is not USDT-M margin. FA's 1000 is the VBO carve and is subtracted once. The pool is the USDT margin balance minus that 1000. E takes all of it. R2S weight is 0.",
+ "usdt_margin": 4875.17,
  "regime": {
   "bear": false,
   "hivol": false
  },
  "weights": {
-  "E": 0.85,
-  "R": 0.15,
+  "E": 1.0,
+  "R": 0.0,
   "U": 0.0,
   "F": 0.0
  },
@@ -17,22 +18,22 @@
   "U": 808.478,
   "F": 1000.0
  },
- "pool_before": 7861.61,
- "pool_after": 9670.09,
+ "pool_before": 9670.09,
+ "pool_after": 3875.17,
  "added": {
   "usdc": 808.48,
   "fa": 1000.0,
   "vbo_added": 0.0
  },
  "targets_before": {
-  "E": 6682.37,
-  "R": 1179.24,
+  "E": 9670.09,
+  "R": 0.0,
   "U": 0.0,
   "F": 0.0
  },
  "targets_after": {
-  "E": 8219.57,
-  "R": 1450.51,
+  "E": 3875.17,
+  "R": 0.0,
   "U": 0.0,
   "F": 0.0
  },
@@ -40,10 +41,10 @@
  "r2s_cap": 1464.08,
  "r2s_band_vs_build": {
   "built_at": 1464.08,
-  "after": 1450.51,
-  "rel": 0.0094,
+  "after": 0.0,
+  "rel": null,
   "band": 0.25,
-  "hold": true
+  "hold": false
  },
  "symbols": [
   {
@@ -54,8 +55,8 @@
    "exchange_qty": -82.0,
    "mark": 0.11770119,
    "book_notional": -9.6515,
-   "target_qty_before": -114.73057171,
-   "target_qty_after": -141.12297962,
+   "target_qty_before": -166.02716615,
+   "target_qty_after": -66.53335113,
    "weight0_not_flattened": false
   },
   {
@@ -66,8 +67,8 @@
    "exchange_qty": -48.0,
    "mark": 0.0975,
    "book_notional": -4.68,
-   "target_qty_before": -67.15935905,
-   "target_qty_after": -82.60857344,
+   "target_qty_before": -97.18663384,
+   "target_qty_after": -38.94635188,
    "weight0_not_flattened": false
   },
   {
@@ -78,8 +79,8 @@
    "exchange_qty": -325.0,
    "mark": 0.03723634,
    "book_notional": -12.1018,
-   "target_qty_before": -454.72482692,
-   "target_qty_after": -559.32888266,
+   "target_qty_before": -658.03449997,
+   "target_qty_after": -263.69925753,
    "weight0_not_flattened": false
   },
   {
@@ -90,8 +91,8 @@
    "exchange_qty": 52.0,
    "mark": 0.29721,
    "book_notional": 15.4549,
-   "target_qty_before": 72.75597231,
-   "target_qty_after": 89.49262122,
+   "target_qty_before": 105.28551999,
+   "target_qty_after": 42.1918812,
    "weight0_not_flattened": false
   },
   {
@@ -102,8 +103,8 @@
    "exchange_qty": -1456.0,
    "mark": 0.0221924,
    "book_notional": -13.1157,
-   "target_qty_before": -826.89960833,
-   "target_qty_after": -1017.11806046,
+   "target_qty_before": -1196.61042917,
+   "target_qty_after": -479.52695754,
    "weight0_not_flattened": false
   },
   {
@@ -114,8 +115,8 @@
    "exchange_qty": -364.4,
    "mark": 0.10656506,
    "book_notional": -38.8323,
-   "target_qty_before": -509.85146747,
-   "target_qty_after": -627.13675335,
+   "target_qty_before": -737.80852858,
+   "target_qty_after": -295.66772136,
    "weight0_not_flattened": false
   },
   {
@@ -126,8 +127,8 @@
    "exchange_qty": 22.0,
    "mark": 0.4641,
    "book_notional": 10.2102,
-   "target_qty_before": 30.7813729,
-   "target_qty_after": 37.86226283,
+   "target_qty_before": 44.54387384,
+   "target_qty_after": 17.85041128,
    "weight0_not_flattened": false
   },
   {
@@ -138,8 +139,8 @@
    "exchange_qty": -180.0,
    "mark": 0.04112,
    "book_notional": -7.4016,
-   "target_qty_before": -251.84759645,
-   "target_qty_after": -309.78215039,
+   "target_qty_before": -364.4498769,
+   "target_qty_after": -146.04881955,
    "weight0_not_flattened": false
   },
   {
@@ -150,8 +151,8 @@
    "exchange_qty": -4887.0,
    "mark": 0.009313,
    "book_notional": -45.5126,
-   "target_qty_before": -6837.66224354,
-   "target_qty_after": -8410.5853832,
+   "target_qty_before": -9894.81415795,
+   "target_qty_after": -3965.2254509,
    "weight0_not_flattened": false
   },
   {
@@ -162,8 +163,8 @@
    "exchange_qty": -0.912,
    "mark": 2053.82,
    "book_notional": -1727.2626,
-   "target_qty_before": -1.17668794,
-   "target_qty_after": -1.44737105,
+   "target_qty_before": -1.70279081,
+   "target_qty_after": -0.68237254,
    "weight0_not_flattened": false
   },
   {
@@ -174,8 +175,8 @@
    "exchange_qty": 32.2,
    "mark": 0.1629,
    "book_notional": 5.2454,
-   "target_qty_before": 45.0527367,
-   "target_qty_after": 55.41658468,
+   "target_qty_before": 65.19603354,
+   "target_qty_after": 26.12651105,
    "weight0_not_flattened": false
   },
   {
@@ -186,8 +187,8 @@
    "exchange_qty": -993.0,
    "mark": 0.017273,
    "book_notional": -17.1521,
-   "target_qty_before": -1389.3592404,
-   "target_qty_after": -1708.96486301,
+   "target_qty_before": -2010.54848759,
+   "target_qty_after": -805.70265454,
    "weight0_not_flattened": false
   },
   {
@@ -198,8 +199,8 @@
    "exchange_qty": -664.0,
    "mark": 0.00858895,
    "book_notional": -5.7031,
-   "target_qty_before": -929.03780023,
-   "target_qty_after": -1142.75193257,
+   "target_qty_before": -1344.41510147,
+   "target_qty_after": -538.75786769,
    "weight0_not_flattened": false
   },
   {
@@ -210,8 +211,8 @@
    "exchange_qty": 91.0,
    "mark": 0.28531098,
    "book_notional": 25.9633,
-   "target_qty_before": 127.32295154,
-   "target_qty_after": 156.61208714,
+   "target_qty_before": 184.24965999,
+   "target_qty_after": 73.83579211,
    "weight0_not_flattened": false
   },
   {
@@ -222,8 +223,8 @@
    "exchange_qty": -6.99,
    "mark": 1.03,
    "book_notional": -7.1997,
-   "target_qty_before": -9.78008166,
-   "target_qty_after": -12.02987351,
+   "target_qty_before": -14.15280355,
+   "target_qty_after": -5.67156249,
    "weight0_not_flattened": false
   },
   {
@@ -234,8 +235,8 @@
    "exchange_qty": 228.0,
    "mark": 0.04426039,
    "book_notional": 10.0914,
-   "target_qty_before": 319.0069555,
-   "target_qty_after": 392.39072383,
+   "target_qty_before": 461.63651075,
+   "target_qty_after": 184.99517144,
    "weight0_not_flattened": false
   },
   {
@@ -246,8 +247,8 @@
    "exchange_qty": 283.0,
    "mark": 0.03467,
    "book_notional": 9.8116,
-   "target_qty_before": 395.96038775,
-   "target_qty_after": 487.0463809,
+   "target_qty_before": 572.99619535,
+   "target_qty_after": 229.62119963,
    "weight0_not_flattened": false
   },
   {
@@ -258,8 +259,8 @@
    "exchange_qty": -1092.0,
    "mark": 0.01308,
    "book_notional": -14.2834,
-   "target_qty_before": -1527.87541845,
-   "target_qty_after": -1879.34504572,
+   "target_qty_before": -2210.99591989,
+   "target_qty_after": -886.0295053,
    "weight0_not_flattened": false
   },
   {
@@ -270,8 +271,8 @@
    "exchange_qty": 2.9,
    "mark": 4.86726196,
    "book_notional": 14.1151,
-   "target_qty_before": 4.05754461,
-   "target_qty_after": 4.99093465,
+   "target_qty_before": 5.87169246,
+   "target_qty_after": 2.35300876,
    "weight0_not_flattened": false
   },
   {
@@ -282,8 +283,8 @@
    "exchange_qty": -13420.0,
    "mark": 0.00392,
    "book_notional": -52.6064,
-   "target_qty_before": -18776.63746845,
-   "target_qty_after": -23095.98032383,
+   "target_qty_before": -27171.76304474,
+   "target_qty_after": -10888.75088009,
    "weight0_not_flattened": false
   },
   {
@@ -294,8 +295,8 @@
    "exchange_qty": -4487.0,
    "mark": 0.06815,
    "book_notional": -286.0937,
-   "target_qty_before": -1604.37243403,
-   "target_qty_after": -1973.43904488,
+   "target_qty_before": -0.0,
+   "target_qty_after": -0.0,
    "weight0_not_flattened": false
   },
   {
@@ -306,8 +307,8 @@
    "exchange_qty": -0.912,
    "mark": 2053.82,
    "book_notional": -145.8212,
-   "target_qty_before": -0.02713446,
-   "target_qty_after": -0.03337641,
+   "target_qty_before": -0.0,
+   "target_qty_after": -0.0,
    "weight0_not_flattened": false
   },
   {
@@ -318,8 +319,8 @@
    "exchange_qty": -4.32,
    "mark": 72.23857182,
    "book_notional": -292.5662,
-   "target_qty_before": -1.54781047,
-   "target_qty_after": -1.90386568,
+   "target_qty_before": -0.0,
+   "target_qty_after": -0.0,
    "weight0_not_flattened": false
   },
   {
@@ -330,8 +331,8 @@
    "exchange_qty": -3.41,
    "mark": 83.71,
    "book_notional": -266.1978,
-   "target_qty_before": -1.21531785,
-   "target_qty_after": -1.49488713,
+   "target_qty_before": -0.0,
+   "target_qty_after": -0.0,
    "weight0_not_flattened": false
   },
   {
@@ -342,8 +343,8 @@
    "exchange_qty": -151.8,
    "mark": 1.05445529,
    "book_notional": -140.6643,
-   "target_qty_before": -50.98220169,
-   "target_qty_after": -62.71004492,
+   "target_qty_before": -0.0,
+   "target_qty_after": -0.0,
    "weight0_not_flattened": false
   },
   {

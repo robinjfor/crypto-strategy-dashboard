@@ -40,6 +40,15 @@ def _state(**kw):
 @pytest.fixture(autouse=True)
 def _acc(monkeypatch):
     monkeypatch.setenv("DEMO_ACCEPTED", D.SLOT)
+    # These cases check decide_minnot at the 3,000 ledger. The live MDD ceiling is a
+    # different rule and is cleared here so it does not change the quantities.
+    import orchestrator as O
+    O.load({"slot_caps": {"demo_r2s_top10_3k": {"equity": None}},
+            "orchestrator": {"generated_at": NOW.isoformat(), "sizing": "quote_pool",
+                             "targets": {"demo_r2s_top10_3k": 3000.0},
+                             "quote_pool": {"demo_r2s_top10_3k": 3000.0}}})
+    yield
+    O.load({})
 
 
 def _panel(tw):

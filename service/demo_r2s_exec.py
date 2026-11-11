@@ -116,6 +116,16 @@ def equity(ex: dict, prices: dict) -> float:
     return float(ex.get("cash", D.CAPITAL)) + sum(q * float(prices.get(s) or 0) for s, q in (ex.get("book") or {}).items())
 
 
+# 3x isolated names close before the shared 2x ETH leg when a flush cannot send every order.
+CLOSE_FIRST = ("XRPUSDT", "SOLUSDT", "DOGEUSDT", "HYPEUSDT")
+
+
+def _close_rank(symbol: str) -> int:
+    if symbol in CLOSE_FIRST:
+        return CLOSE_FIRST.index(symbol)
+    return len(CLOSE_FIRST)
+
+
 def entry_block(state: dict) -> str | None:
     import guards
     from main import slot_paused
@@ -188,22 +198,32 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
     eq_ledger = equity(ex, prices)
     import orchestrator  # sizing capital only (ledger untouched)
     eq = orchestrator.sizing_capital(D.SLOT, eq_ledger, now=now)
+    # Weight 0 is a zero sizing target. The signal weights are then ignored: every held
+    # coin is a target-0 close. Equity 0 would make decide_minnot treat the book as flat.
+    sleeve_flat = eq <= 0
+    if sleeve_flat:
+        tw = {}
+        decision_eq = eq_ledger if eq_ledger > 0 else 1.0
+        syms = sorted(book)
+    else:
+        decision_eq = eq
     blk = entry_block(state)
     out = {"bar": bar, "cfg": ck, "equity": round(eq, 2), "ledger_equity": round(eq_ledger, 2), "targets": {s: round(w, 4) for s, w in tw.items()},
-           "funding": round(fnd, 4), "sent": [], "skipped": [], "kinds": {}}
+           "funding": round(fnd, 4), "sent": [], "skipped": [], "kinds": {}, "sleeve_flat": sleeve_flat}
     tag = bar.replace("-", "")[2:]
     plan = []
     for s in syms:
         if s not in prices:
             out["skipped"].append(f"{s} no price"); continue
         u = float(book.get(s, 0.0))
-        q, kind = D.decide_minnot(tw.get(s, 0.0), u, prices[s], eq, mn[s], st[s])
+        q, kind = D.decide_minnot(0.0 if sleeve_flat else tw.get(s, 0.0), u, prices[s], decision_eq, mn[s], st[s])
         out["kinds"][kind] = out["kinds"].get(kind, 0) + 1
         if kind == "skip_min":
             log_event(state, "r2s_skip_min", D.SLOT, symbol=s, delta_notional=round(abs(tw.get(s, 0) * eq - u * prices[s]), 2), min=mn[s], bar=bar)
         if kind in ("hold", "skip_min") or q == u:
             continue
         plan.append((s, u, q, kind))
+    plan.sort(key=lambda row: _close_rank(row[0]))
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"r2s{tag}")
     for s in list((ex.get("forced_flat") or {})):
@@ -229,7 +249,9 @@ def execute(state: dict, fut, now: datetime | None = None, panel_fn=None, netter
                 out["sent"].append({"symbol": s, "side": side, "qty": abs(fq), "px": px, "kind": kind})
             else:
                 out["skipped"].append(f"{s} net not filled")
-        netter.add(state, D.SLOT, s, d, prices.get(s, 0.0), netting.ledger_cb(ex, s, on_fill=logf), kind=kind)
+        closing = kind in ("close", "residual_close") or (u and q == 0)
+        netter.add(state, D.SLOT, s, d, prices.get(s, 0.0), netting.ledger_cb(ex, s, on_fill=logf), kind=kind,
+                   reduce_only=closing, priority=_close_rank(s))
 
     def finish():
         out["equity_after"] = round(equity(ex, prices), 2)

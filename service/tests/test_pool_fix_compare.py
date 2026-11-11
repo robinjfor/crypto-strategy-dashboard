@@ -1,4 +1,4 @@
-"""USD pool includes USDC and FA. ETH still nets to one order. No flatten, no VBO add."""
+"""Pool is USDT margin minus the VBO reserve. USDC and FA stay out. U1 is not flattened."""
 import importlib.util
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,22 +32,21 @@ def _status():
     }
 
 
-def test_usd_pool_adds_usdc_and_fa_and_leaves_vbo_out(monkeypatch):
+def test_pool_excludes_usdc_and_fa(monkeypatch):
     O.load({})
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "2026-11-11", "bear": False, "hivol": False})
-    st = _status()
-    doc = C.compare(st)
-    eq = doc["equities"]
-    assert doc["pool_before"] == pytest.approx(eq["E"] + eq["R"], abs=0.02)
-    assert doc["pool_after"] == pytest.approx(eq["E"] + eq["R"] + eq["U"] + eq["F"], abs=0.02)
-    assert doc["added"]["vbo_added"] == 0.0
-    assert doc["targets_after"]["E"] == pytest.approx(round(doc["pool_after"] * 0.85, 2), abs=0.02)
+    margin = 4875.16873695
+    doc = C.compare(_status(), usdt_margin=margin)
+    assert doc["pool_after"] == pytest.approx(margin - 1000, abs=0.02)
+    assert doc["targets_after"]["E"] == pytest.approx(round(doc["pool_after"], 2), abs=0.02)
+    assert doc["targets_after"]["R"] == 0.0
     assert doc["targets_after"]["U"] == 0.0 and doc["targets_after"]["F"] == 0.0
-    assert doc["targets_after"]["R"] <= 1464.08
-    plan = O.plan([1.0], {k: eq[k] for k in "ERUF"}, None, datetime(2026, 11, 12, 0, 5, tzinfo=timezone.utc))
+    plan = O.plan([1.0], {k: doc["equities"][k] for k in "ERUF"}, None,
+                  datetime(2026, 11, 12, 0, 5, tzinfo=timezone.utc), usdt_margin=margin)
     assert plan["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(doc["targets_after"]["E"], abs=0.02)
     assert plan["eligible"]["vbo_in_pool"] is False
-    assert plan["eligible"]["accounting"] == "usd_1to1"
+    assert plan["eligible"]["accounting"] == "usdt_m_margin_minus_vbo"
+    assert plan["eligible"]["usdc_excluded"] > 0
 
 
 def test_weight0_books_are_not_flattened_and_eth_is_one_order():
