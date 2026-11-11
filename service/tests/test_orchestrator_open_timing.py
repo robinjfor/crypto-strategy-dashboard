@@ -35,12 +35,14 @@ class _Store:
 
 def test_observed_1464_is_the_previous_plan_not_the_new_target_or_the_ledger():
     """11/11 R2S orders were sized at 1464.08. The 08:05 quote_pool target cannot produce that number."""
-    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOV11_0008, plan_doc=NEW_PLAN) == 2359.17
+    assert NEW_PLAN["targets"]["demo_r2s_top10_3k"] == 2359.17
+    # the MDD cap freezes sizing at the equity the live book was built on, even if the plan says 2359
+    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOV11_0008, plan_doc=NEW_PLAN) == 1464.08
     assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5200.0, now=NOV11_0008, plan_doc=NEW_PLAN) == 5504.74
     # previous plan, no quote_pool flag: min(target, ledger) == the old target
     assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOV11_0002, plan_doc=OLD_PLAN) == 1464.08
-    # a ledger of 1464.08 under the NEW plan still sizes at 2359.17 (quote_pool is not capped at the book)
-    assert O.sizing_capital("demo_r2s_top10_3k", 1464.08, now=NOV11_0008, plan_doc=NEW_PLAN) == 2359.17
+    # quote_pool does not cap at the book; the MDD ceiling is what keeps this at 1464.08
+    assert O.sizing_capital("demo_r2s_top10_3k", 1464.08, now=NOV11_0008, plan_doc=NEW_PLAN) == 1464.08
 
 
 def test_unchanged_r2s_weight_holds_at_1464_and_scales_at_2359():

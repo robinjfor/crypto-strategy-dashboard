@@ -1593,11 +1593,16 @@
       : "尚未有編排結果。金額要等每日 08:05（台北）編排工作用新程式寫入後才會更新。";
     var notes = (p.regime_notes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
     var u1 = p.u1_pause || {};
+    var caps = (cloud && cloud.slot_caps) || p.slot_caps || {};
+    var rcap = caps.demo_r2s_top10_3k || {};
+    var rsub = rcap.equity != null
+      ? ("權重 " + pct(k.R) + "，實際上限 " + num(rcap.equity) + " USDT，差額留現金")
+      : "USDT 池";
     return '<section class="section" id="sec-weights"><div class="section-head"><h2>組合權重</h2>' +
       '<span class="hint">百分比來自雲端狀態，不是這頁寫死的數字</span></div>' +
       '<div class="card"><div class="kpi-grid">' +
-      '<div class="kpi"><div class="label">E</div><div class="value">' + pct(k.E) + '</div><div class="sublabel">USDT 池</div></div>' +
-      '<div class="kpi"><div class="label">R2S</div><div class="value">' + pct(k.R) + '</div><div class="sublabel">USDT 池</div></div>' +
+      '<div class="kpi"><div class="label">E</div><div class="value">' + pct(k.E) + '</div><div class="sublabel">權重 ' + pct(k.E) + '，不接收 R2S 差額</div></div>' +
+      '<div class="kpi"><div class="label">R2S</div><div class="value">' + pct(k.R) + '</div><div class="sublabel">' + rsub + '</div></div>' +
       '<div class="kpi"><div class="label">U1</div><div class="value">' + pct(k.U) + '</div><div class="sublabel">' +
       (u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") + "</div></div>" +
       '<div class="kpi"><div class="label">資金費套利</div><div class="value">' + pct(k.F) + '</div><div class="sublabel">基礎權重</div></div>' +

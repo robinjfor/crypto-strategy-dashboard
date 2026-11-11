@@ -86,9 +86,14 @@
     var money = last.generated_at ? ("上次目標 E " + n(tgt.demo_e5_min5_x175_t05top20) + " · R2S " + n(tgt.demo_r2s_top10_3k) + " · U1 " + n(tgt.u1_live) + " · FA " + n(tgt.demo_funding_arb_1x)) : "";
     var notes = (p.regime_notes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
     var u1 = p.u1_pause || {};
+    var caps = st.slot_caps || p.slot_caps || {};
+    var rcap = caps.demo_r2s_top10_3k || {};
+    var rsub = rcap.equity != null
+      ? ("權重 " + pct(k.R) + "，實際上限 " + n(rcap.equity) + " USDT，差額留現金")
+      : "USDT 池";
     return '<section class="h-sec"><h2>組合權重</h2><div class="h-kpis">' +
-      kpi("E", pct(k.E), "USDT 池") +
-      kpi("R2S", pct(k.R), "USDT 池") +
+      kpi("E", pct(k.E), "權重 " + pct(k.E) + "，不接收 R2S 差額") +
+      kpi("R2S", pct(k.R), rsub) +
       kpi("U1", pct(k.U), u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") +
       kpi("資金費套利", pct(k.F), "基礎權重") +
       '</div><div class="h-note">' + esc(when) + (money ? " " + esc(money) : "") + "</div>" +

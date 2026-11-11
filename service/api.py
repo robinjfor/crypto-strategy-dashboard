@@ -1448,6 +1448,7 @@ def build_status() -> dict:
         "netting": _safe_netting_view(state, positions),
         "orchestrator": {k: v for k, v in (state.get("orchestrator") or {}).items() if k != "history"} or None,
         "orchestrator_policy": __import__("orchestrator").policy_public(),
+        "slot_caps": __import__("orchestrator").effective_slot_caps(state),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.
