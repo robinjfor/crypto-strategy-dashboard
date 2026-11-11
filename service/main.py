@@ -847,6 +847,7 @@ def cmd_run(client: BinanceClient, dry_run: bool) -> int:
     orchestrator.ensure_slot_caps(state)
     orchestrator.load(state)
     orchestrator.apply_u1_pause(state)
+    orchestrator.apply_r2s_pause(state)
     paused = bool(state.get("paused"))
     allow_entries = not paused
     try:

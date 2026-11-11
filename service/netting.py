@@ -129,10 +129,12 @@ class Netter:
         self.orders: list[dict] = []
         self.n = 0
 
-    def add(self, state: dict, slot: str, sym: str, delta: float, ref_px: float, cb, kind: str = "") -> None:
+    def add(self, state: dict, slot: str, sym: str, delta: float, ref_px: float, cb, kind: str = "",
+            *, reduce_only: bool = False, priority: int = 100) -> None:
         """cb(filled_signed_qty, px, fee) updates the slot's virtual ledger (called once, possibly with 0)."""
         if abs(delta) > EPS:
-            self.intents[sym].append({"state": state, "slot": slot, "d": float(delta), "px": float(ref_px or 0), "cb": cb, "kind": kind})
+            self.intents[sym].append({"state": state, "slot": slot, "d": float(delta), "px": float(ref_px or 0),
+                                      "cb": cb, "kind": kind, "reduce_only": bool(reduce_only), "priority": int(priority)})
 
     def lev_for(self, sym: str) -> int:
         return min([LEV_BY_SLOT.get(i["slot"], LEVERAGE) for i in self.intents.get(sym, [])] or [LEVERAGE])
@@ -203,8 +205,14 @@ class Netter:
             return self.orders
         pos = {r["symbol"]: float(r.get("positionAmt") or 0) for r in self.fut.position_risk()}
         nets = {sym: sum(i["d"] for i in its) for sym, its in self.intents.items()}
-        # reducing the exchange position first (frees margin), then opens
-        for sym in sorted(self.intents, key=lambda x: not (pos.get(x, 0.0) * nets[x] < 0)):
+        # reducing the exchange position first (frees margin), then opens.
+        # Among reducers, a lower priority number goes first (R2S 3x closes before the rest).
+        def _order(sym: str):
+            its = self.intents[sym]
+            reducing = pos.get(sym, 0.0) * nets[sym] < 0
+            pri = min(int(i.get("priority", 100)) for i in its)
+            return (0 if reducing else 1, pri, sym)
+        for sym in sorted(self.intents, key=_order):
             its = self.intents[sym]
             st = its[0]["state"]
             step, mn = _filters(self.info, sym)
@@ -222,6 +230,9 @@ class Netter:
                     ref = 0.0
             if opn > 0 and tradfi.is_tradfi(sym, self.info, st):
                 log_event(st, "net_skip_tradfi", None, symbol=sym, qty=opn); opn = 0.0
+            if opn > 0 and all(i.get("reduce_only") for i in its):
+                log_event(st, "net_skip_flip", None, symbol=sym, qty=opn, reason="reduce-only close does not open")
+                opn = 0.0
             if opn > 0 and mn and opn * ref < mn:
                 log_event(st, "net_skip_min", None, symbol=sym, net_qty=sgn * opn, notional=round(opn * ref, 4), min=mn,
                           slots={i["slot"]: i["d"] for i in its})

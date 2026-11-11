@@ -12,17 +12,15 @@ def _px(n=900, seed=1, drift=0.0):
     return pd.Series(30000 * np.exp(np.cumsum(r)), index=pd.date_range("2022-06-01", periods=n, freq="D", tz="UTC"))
 
 
-def test_weights_match_backtest_rules():
-    # Base E 85 / U 0 / R 15 / F 0 from the 2026-11-12 plan. Bear and hi-vol arithmetic is the old formula.
+def test_weights_are_e_only_and_bear_does_not_reopen_r2s():
     w, x = O.weights(False, False)
-    assert w == {"E": .85, "U": 0.0, "R": .15, "F": 0.0} and x == 1.0
+    assert w == {"E": 1.0, "U": 0.0, "R": 0.0, "F": 0.0} and x == 1.0
     w, x = O.weights(True, False)
-    assert w["E"] == pytest.approx(.425) and w["U"] == pytest.approx(0.0)
-    assert w["R"] == pytest.approx(.15 + .2125) and w["F"] == pytest.approx(.2125) and x == 1.0
-    assert sum(w.values()) == pytest.approx(1.0)
+    assert w == {"E": 0.5, "U": 0.0, "R": 0.0, "F": 0.0} and x == 1.0
+    w, x = O.weights(False, True)
+    assert w["E"] == 1.0 and w["R"] == 0.0 and x == .7
     w, x = O.weights(True, True)
-    assert w["F"] == pytest.approx(.2125) and x == .7
-    assert sum(w.values()) == pytest.approx(1.0)
+    assert w["E"] == 0.5 and w["R"] == 0.0 and w["F"] == 0.0 and x == .7
 
 
 def test_regime_equals_backtest_formula():
@@ -44,21 +42,20 @@ def test_plan_targets_peak_dd_alert_no_breaker(monkeypatch):
     px = _px(900, drift=0.002)  # strong uptrend: not bear
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "2026-10-24", "bear": False, "hivol": False})
     now = datetime(2026, 10, 25, 0, 5, tzinfo=timezone.utc)
-    eq = {"E": 3000.0, "U": 600.0, "R": 1800.0, "F": 600.0}  # P = 6000; USD pool = E+R+U+F = 6000
-    d = O.plan(px, eq, {"peak": 10000.0, "targets": {}}, now)
+    eq = {"E": 3000.0, "U": 600.0, "R": 1800.0, "F": 600.0}  # P = 6000; USDT margin 5000 leaves 4000 after the VBO reserve
+    d = O.plan(px, eq, {"peak": 10000.0, "targets": {}}, now, usdt_margin=5000.0)
     assert d["portfolio_equity"] == 6000 and d["peak"] == 10000 and d["drawdown"] == pytest.approx(0.4)
     assert d["dd_alert"] is True and any("ALERT" in a for a in d["actions"])
-    # alert only: targets are still the regime weights on the USD pool (no DD halving)
-    assert d["targets"] == {"demo_e5_min5_x175_t05top20": 5100.0, "u1_live": 0.0, "demo_r2s_top10_3k": 900.0, "demo_funding_arb_1x": 0.0}
-    assert d["eligible"]["usd"] == 6000.0 and d["eligible"]["usdt"] == 4800.0 and d["eligible"]["fa"] == 600.0
+    # alert only: E is the whole spendable pool. USDC and FA are not in it. No DD halving.
+    assert d["targets"] == {"demo_e5_min5_x175_t05top20": 4000.0, "u1_live": 0.0, "demo_r2s_top10_3k": 0.0, "demo_funding_arb_1x": 0.0}
+    assert d["eligible"]["usd"] == 4000.0 and d["eligible"]["usdc_excluded"] == 600.0 and d["eligible"]["fa_excluded"] == 600.0
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "x", "bear": True, "hivol": True})
-    d = O.plan(px, {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}, None, now)
+    d = O.plan(px, {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}, None, now, usdt_margin=6000.0)
     assert d["peak"] == 10000 and not d["dd_alert"]
-    # USD pool 10000; bear weights E .425 / R .3625 / F .2125; hi-vol x0.7.
-    assert d["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(10000 * .425 * .7)
-    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(10000 * .3625 * .7)
-    assert d["targets"]["demo_r2s_top10_3k"] == 1464.08
-    assert d["targets"]["u1_live"] == 0.0
+    # spendable 5000; bear halves E; hi-vol x0.7; R2S stays 0
+    assert d["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(5000 * .5 * .7)
+    assert d["targets"]["demo_r2s_top10_3k"] == 0.0
+    assert d["targets"]["u1_live"] == 0.0 and d["targets"]["demo_funding_arb_1x"] == 0.0
 
 
 def test_sizing_capital_fallbacks(monkeypatch):

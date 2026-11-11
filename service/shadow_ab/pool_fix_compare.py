@@ -77,9 +77,10 @@ def sized_targets(pool: float, *, bear: bool = False, hivol: bool = False) -> di
     return out
 
 
-def pools(eq: dict) -> dict:
-    before = eq["E"] + eq["R"]
-    after = eq["E"] + eq["R"] + eq["U"] + eq["F"]
+def pools(eq: dict, usdt_margin: float | None) -> dict:
+    """Before is the withdrawn USD sum. After is USDT margin minus the VBO reserve."""
+    before = eq["E"] + eq["R"] + eq["U"] + eq["F"]
+    after = 0.0 if usdt_margin is None else max(0.0, float(usdt_margin) - O.VBO_RESERVE_USDT)
     return {"before": before, "after": after}
 
 
@@ -184,10 +185,10 @@ def eth_order_check(e_qty: float, r_qty: float, price: float = 4000.0) -> dict:
     }
 
 
-def compare(status: dict, *, bear: bool = False, hivol: bool = False) -> dict:
+def compare(status: dict, *, bear: bool = False, hivol: bool = False, usdt_margin: float | None = None) -> dict:
     O.load({})
     eq = {k: equities_from_status(status)[k] for k in KEYS}
-    p = pools(eq)
+    p = pools(eq, usdt_margin)
     before = sized_targets(p["before"], bear=bear, hivol=hivol)
     after = sized_targets(p["after"], bear=bear, hivol=hivol)
     e_book = (status.get("demo_e5v_exec") or {}).get("book") or {}
@@ -195,13 +196,13 @@ def compare(status: dict, *, bear: bool = False, hivol: bool = False) -> dict:
     built = 1464.08
     r_after = after["R"]
     return {
-        "accounting": "usd_1to1",
+        "accounting": "usdt_m_margin_minus_vbo",
         "accounting_note": (
-            "USDC and USDT ledgers are summed as USD. No coin is converted or transferred. "
-            "E and R2S receive their weight of that USD pool as USDT-M sizing. "
-            "VBO's book is not added, because the FA ledger already includes the 1000 carved for it. "
-            "U1 stays paused at weight 0 and is not flattened."
+            "Multi-assets margin is off, so USDC is not USDT-M margin. "
+            "FA's 1000 is the VBO carve and is subtracted once. "
+            "The pool is the USDT margin balance minus that 1000. E takes all of it. R2S weight is 0."
         ),
+        "usdt_margin": None if usdt_margin is None else _r(usdt_margin, 2),
         "regime": {"bear": bear, "hivol": hivol},
         "weights": {k: O.BASE_W[k] for k in KEYS},
         "equities": {k: _r(eq[k], 4) for k in KEYS},
@@ -233,11 +234,14 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Compare quote-pool sizing before and after the USD pool")
     ap.add_argument("summary", help="orch-summary latest.json (read-only)")
     ap.add_argument("-o", "--out", required=True)
+    ap.add_argument("--usdt-margin", type=float, default=None,
+                    help="USDT margin balance (wallet + unrealized). Pool is this minus the VBO 1000.")
     args = ap.parse_args(argv)
     doc = json.loads(Path(args.summary).read_text())
     status = doc.get("status") or doc
     out = compare(status, bear=bool(((status.get("orchestrator") or {}).get("regime") or {}).get("bear")),
-                  hivol=bool(((status.get("orchestrator") or {}).get("regime") or {}).get("hivol")))
+                  hivol=bool(((status.get("orchestrator") or {}).get("regime") or {}).get("hivol")),
+                  usdt_margin=args.usdt_margin)
     out["as_of"] = (status.get("net_reconcile") or {}).get("at")
     Path(args.out).write_text(json.dumps(out, indent=1) + "\n")
     e, r = out["targets_after"]["E"], out["targets_after"]["R"]

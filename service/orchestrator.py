@@ -1,17 +1,16 @@
 """DEMO-only portfolio orchestrator (research_orchestrator 'regime' variant, spec_2026-11/research_orchestrator).
 
 Scales slot *sizing capital* only; never touches entry/exit signals, stops, approvals or ledgers.
-Rules (regime formula unchanged; base weights E 85% / R2S 15% from the 2026-11-12 08:05 Taipei plan):
-  base weights, 1x:  E(demo_e5) 85% / U1 0% / R2S 15% / FA 0%
-  bear   = BTC daily close < 200d SMA (last CLOSED bar)  -> E and U1 halved; freed weight 50/50 to R2S and FA
+Rules from the 2026-11-12 08:05 Taipei plan:
+  base weights, 1x:  E(demo_e5) 100% / U1 0% / R2S 0% / FA 0%
+  bear   = BTC daily close < 200d SMA (last CLOSED bar)  -> E halved; freed weight stays cash.
+           R2S stays 0 so a bear bar cannot reopen it.
   hi-vol = BTC 30d realized vol (log, ann. sqrt365) > expanding 66.7th pct of its own history (min 365 obs,
            history from 2022-06-01 = the backtest panel start)  -> every target x0.7 (rest stays cash)
   NO drawdown breaker. DD from peak > 35% only raises an alert flag (log + /status), no trading action.
-Quotes: E5 / R2S / FA are USDT virtual ledgers. U1 is a USDC sleeve. E and R2S trade USDT-M.
-The allocation pool is one USD number: E + R2S + USDC sleeve + FA, with USDC counted 1:1 as USD.
-Nothing is converted or transferred. E and R2S take their weight of that USD pool as USDT sizing.
-VBO (demo_vbo1h_top50_1k) is not an orchestrator weight and its book is not added again: the FA
-ledger already holds the 1000U that was carved for it. VBO's capital and positions stay as they are.
+The pool is the USDT-M margin balance minus the VBO 1000 reserve. USDC is excluded (multi-assets
+margin is off). FA's 1000 is that VBO reserve, not extra cash. E5 strategy leverage stays 1.75x.
+R2S is paused (approval kept). Weight 0 closes its book reduce-only. U1 weight 0 does not flatten U1.
 A quote-pool plan may size a USDT slot above its own virtual ledger, because the sibling USDT ledger is the
 same wallet. The old min(target, own ledger) left R2S cash idle whenever E's weight exceeded E's ledger.
 U1 weight 0 does not flatten the sleeve (see u1_live.orchestrator_size_equity). U1 new entries stop via
@@ -36,9 +35,9 @@ log = logging.getLogger("orchestrator")
 
 SLOTS = {"E": "demo_e5_min5_x175_t05top20",  # took over E5 (demo_e5_min5_x175) weight on 2026-10-26
           "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
-# Base weights from the 2026-11-12 08:05 Taipei plan, replacing E 70% / R2S 30%.
-# U1 stays paused (approval kept, 2026-11-11 02:14). FA base stays 0.
-BASE_W = {"E": 0.85, "U": 0.0, "R": 0.15, "F": 0.0}
+# 2026-11-12 08:05 Taipei: E 100% / R2S 0 / U1 0 / FA 0.
+# R2S weight stays 0 in every regime so the book closes. U1 stays paused. Approval is kept.
+BASE_W = {"E": 1.0, "U": 0.0, "R": 0.0, "F": 0.0}
 # Ceiling on sizing equity. Does not change BASE_W and does not give the unused share to E.
 # R2S single-config replay MaxDD is 49%, above the 45% limit, so sizing stays at the equity
 # the live book was built on (2026-11-11). State["slot_caps"] overrides this; equity null clears it.
@@ -48,15 +47,20 @@ DEFAULT_SLOT_CAPS = {
 }
 DEFAULT_CAP = {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}
 QUOTE = {"E": "USDT", "U": "USDC", "R": "USDT", "F": "USDT"}
-# One USD pool. USDC is counted 1:1 into USDT-M sizing; no coin moves. VBO's book is not a fifth addend.
+# Spendable USDT-M margin only. USDC cannot margin USDT-M while multi-assets mode is off.
+# FA's 1000 is the VBO carve and is not a second cash pile, so it is reserved out of the pool.
 USDT_KEYS = ("E", "R")
-POOL_ACCOUNTING = "usd_1to1"
+POOL_ACCOUNTING = "usdt_m_margin_minus_vbo"
 VBO_SLOT = "demo_vbo1h_top50_1k"
 VBO_RESERVE_USDT = 1000.0   # carved from FA idle on 2026-11-04; VBO is not resized here
 U1_PAUSE_SLOT = "u1_btc_eth_usdc"
 U1_PAUSE_MIGRATION = "u1_pause_20261111"
 U1_PAUSE_REASON = ("Robin 2026-11-11 02:14 Asia/Taipei: pause U1 new entries and increasing rebalances. "
                    "Approval kept. Existing positions are not closed by this pause.")
+R2S_PAUSE_SLOT = "demo_r2s_top10_3k"
+R2S_PAUSE_MIGRATION = "r2s_pause_20261112"
+R2S_PAUSE_REASON = ("2026-11-12 08:05 Asia/Taipei: pause R2S new entries and increases. "
+                    "Approval kept. Weight 0 closes the book by its own target-0 rule, reduce-only.")
 HIVOL_X = 0.7
 DD_ALERT = 0.35
 MA_N, VOL_N, VOL_MIN_HIST, VOL_Q = 200, 30, 365, 2 / 3
@@ -80,13 +84,17 @@ def regime(close: pd.Series) -> dict:
 
 
 def weights(bear: bool, hivol: bool) -> tuple[dict, float]:
-    """Backtest regime formula. Base weights changed; the bear/hi-vol arithmetic did not.
-    Bear halves E and U, then splits that freed weight 50/50 onto R and F. With U already 0,
-    halving U frees nothing. With F already 0, bear still assigns F a positive weight
-    (half of the halved E). Hi-vol does not change weights; it returns the 0.7 multiplier."""
+    """E is the only funded sleeve. Bear still halves E; the freed weight stays cash.
+
+    R2S, U1 and FA stay at 0 in every regime, including bear. A bear bar must not reopen
+    R2S while its book is being closed. Hi-vol does not change weights; it returns 0.7.
+    """
     w = dict(BASE_W)
     if bear:
-        fr = (w["E"] + w["U"]) / 2; w["E"] /= 2; w["U"] /= 2; w["R"] += fr / 2; w["F"] += fr / 2
+        w["E"] /= 2
+    w["U"] = 0.0
+    w["R"] = 0.0
+    w["F"] = 0.0
     return w, (HIVOL_X if hivol else 1.0)
 
 
@@ -97,22 +105,43 @@ def _eq(equities: dict, k: str) -> float:
         return 0.0
 
 
-def eligible_pools(equities: dict) -> dict:
-    """One USD allocation pool for every sleeve weight.
+def usdt_margin_balance(account: dict | None) -> float | None:
+    """USDT margin balance from GET /fapi/v2/account. None when the asset is missing."""
+    if not isinstance(account, dict):
+        return None
+    for asset in account.get("assets") or []:
+        if str(asset.get("asset") or "").upper() != "USDT":
+            continue
+        raw = asset.get("marginBalance")
+        if raw not in (None, ""):
+            try:
+                return max(0.0, float(raw))
+            except (TypeError, ValueError):
+                return None
+        try:
+            return max(0.0, float(asset.get("walletBalance") or 0) + float(asset.get("unrealizedProfit") or 0))
+        except (TypeError, ValueError):
+            return None
+    return None
 
-    pool = E ledger + R2S ledger + USDC sleeve + FA ledger.
-    USDC and USDT are both counted as 1 USD. No coin is converted or moved; E and R2S, which
-    trade USDT-M, receive their weight of this USD pool as USDT sizing equity. A target may
-    sit above one virtual book because the books are an accounting split.
-    VBO's own book is not added. The FA ledger already includes the 1000U carved for VBO on
-    2026-11-04, and adding VBO again would count that 1000 twice. VBO is not resized here.
+
+def eligible_pools(equities: dict, usdt_margin: float | None = None) -> dict:
+    """Spendable USDT-M margin, after the VBO reserve.
+
+    The 2026-11-11 20:36 Taipei snapshot has multi-assets margin off, so the USDC sleeve
+    cannot margin a USDT-M position and is not in the pool. FA's 1000 is the carve VBO
+    trades with; it is not a separate cash pile, so the reserve is subtracted once and
+    FA equity is not added. Virtual E+R is reported and not used: those two ledgers
+    together exceed the USDT wallet.
+    Without a wallet reading the pool is 0. The job refuses to store that plan.
     """
     e = {k: _eq(equities, k) for k in BASE_W}
-    reserve = min(VBO_RESERVE_USDT, e["F"])
-    usd = e["E"] + e["R"] + e["U"] + e["F"]
-    return {"usd": usd, "usdt": e["E"] + e["R"], "usdc": e["U"], "fa": e["F"],
-            "vbo_reserve_usdt": reserve, "vbo_in_pool": False, "accounting": POOL_ACCOUNTING,
-            "by_slot": e}
+    margin = None if usdt_margin is None else max(0.0, float(usdt_margin))
+    pool = 0.0 if margin is None else max(0.0, margin - VBO_RESERVE_USDT)
+    return {"usd": pool, "usdt_margin": margin, "usdt_books": e["E"] + e["R"],
+            "usdc_excluded": e["U"], "fa_excluded": e["F"],
+            "vbo_reserve_usdt": VBO_RESERVE_USDT, "vbo_in_pool": False,
+            "accounting": POOL_ACCOUNTING, "by_slot": e}
 
 
 def _pool_for(k: str, pools: dict) -> float:
@@ -160,10 +189,11 @@ def ensure_slot_caps(state: dict) -> dict:
     return effective_slot_caps(state)
 
 
-def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, caps: dict | None = None) -> dict:
+def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, caps: dict | None = None,
+         usdt_margin: float | None = None) -> dict:
     rg = regime(close)
     w, x = weights(rg["bear"], rg["hivol"])
-    pools = eligible_pools(equities)
+    pools = eligible_pools(equities, usdt_margin)
     # P is mark-to-market of the four orchestrator books (DD alert only). It is not the sizing base.
     P = float(sum(_eq(equities, k) for k in BASE_W))
     peak = max(P, float((prev or {}).get("peak") or 0.0))
@@ -210,20 +240,22 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, cap
             "slot_caps": caps, "cash_held_by_cap": held_cash,
             "target_quote": {SLOTS[k]: QUOTE[k] for k in w},
             "quote_pool": quote_pool,
-            "eligible": {"usd": round(pools["usd"], 2), "usdt": round(pools["usdt"], 2),
-                         "usdc": round(pools["usdc"], 2), "fa": round(pools["fa"], 2),
-                         "vbo_reserve_usdt": round(pools["vbo_reserve_usdt"], 2),
-                         "vbo_in_pool": False, "accounting": pools["accounting"],
-                         "vbo_slot": VBO_SLOT},
+            "eligible": {"usd": round(pools["usd"], 2),
+                         "usdt_margin": None if pools["usdt_margin"] is None else round(pools["usdt_margin"], 2),
+                         "usdt_books": round(pools["usdt_books"], 2),
+                         "usdc_excluded": round(pools["usdc_excluded"], 2),
+                         "fa_excluded": round(pools["fa_excluded"], 2),
+                         "vbo_reserve_usdt": VBO_RESERVE_USDT, "vbo_in_pool": False,
+                         "accounting": pools["accounting"], "vbo_slot": VBO_SLOT},
             "equity": {SLOTS[k]: round(float(equities[k]), 2) for k in equities}, "portfolio_equity": round(P, 2),
             "peak": round(peak, 2), "drawdown": round(dd, 4), "dd_alert": alert, "dd_alert_threshold": DD_ALERT,
             "actions": actions,
-            "notes": ("Targets = regime weight × the USD pool × hi-vol multiplier. "
-                      "The pool is E + R2S + the USDC sleeve + the FA ledger, valued 1:1 in USD. "
-                      "No coin is converted or transferred. E and R2S trade USDT-M at that USDT sizing. "
-                      "VBO's book is not added (the FA ledger already contains its 1000U) and VBO is not resized. "
-                      "U1 weight 0 does not close U1. A slot_caps ceiling keeps the unused share as cash "
-                      "and does not raise E. No DD breaker.")}
+            "notes": ("Targets = regime weight × spendable USDT-M margin × hi-vol multiplier. "
+                      "Spendable = USDT margin balance minus the VBO 1000 reserve. "
+                      "USDC is excluded because multi-assets margin is off. "
+                      "FA equity is excluded because that 1000 is VBO's carve, not a second pile of cash. "
+                      "R2S weight 0 closes its book by the target-0 rule. U1 weight 0 does not close U1. "
+                      "No DD breaker.")}
 
 
 def policy_public() -> dict:
@@ -248,14 +280,16 @@ def policy_public() -> dict:
             "regimes": {"flat": pack(flat, x0), "bear": pack(bear, 1.0), "hivol": pack(hv, xh),
                         "bear_hivol": pack(both, xb)},
             "base_weights_effective": "2026-11-12T08:05:00+08:00",
+            "r2s_pause": {"slot": R2S_PAUSE_SLOT, "mechanism": "paused_slots", "migration": R2S_PAUSE_MIGRATION,
+                          "revokes_approval": False, "closes_positions": False,
+                          "blocks": "new entries and increasing rebalances",
+                          "closes_by": "orchestrator weight 0, target-0 rule, reduce-only"},
             "regime_notes": [
-                "基礎權重自 2026-11-12 08:05（台北）改為 E 85% / R2S 15% / U1 0 / 資金費套利 0，取代 E 70% / R2S 30%。U1 仍暫停，核准保留。",
-                "空頭仍把 E 與 U1 權重減半，釋出的權重各半給 R2S 與資金費套利。U1 基礎權重是 0，減半不會釋出 USDC。資金費套利基礎權重是 0，但空頭仍會分到 E 釋出的一半（E 85% 時為 21.25%）。這是原本的空頭公式，不是新的基礎權重。",
-                "高波動把每個目標乘上 0.7，剩下 30% 依回測規則留成現金。",
-                "配置池＝E 帳本＋R2S 帳本＋USDC 袖套＋資金費套利帳本，USDC 與 USDT 都以 1 美元計，不轉換、不搬幣。E 與 R2S 拿這個池的權重當 USDT-M 的 sizing。VBO 自己的帳本不另加（資金費套利裡的 1,000 就是那筆劃出），VBO 的資金與部位不改。",
-                "U1 暫停只擋新開倉與加碼再平衡。減碼、訊號出場、強平與保證金去風險仍會下減少倉單。權重 0 不會把 U1 砍平。是否平掉 U1、USDC 要不要轉走，需要另外決定。",
-                "策略自己的 25% 再平衡帶仍有效。",
-                "R2S 單一參數回測最大回撤約 49%，超過 45% 上限。sizing 上限仍是 1,464.08 USDT（原因 r2s_mdd_review_20261111）。15% 的目標低於這個上限時用 15% 的金額，上限不生效。超過上限的差額留成現金，不加給 E，也不因為這個上限而減倉或撤銷核准。",
+                "基礎權重自 2026-11-12 08:05（台北）改為 E 100% / R2S 0 / U1 0 / 資金費套利 0。U1 與 R2S 都暫停，核准都保留，沒有撤銷。",
+                "空頭只把 E 減半，釋出的權重留成現金。R2S 在任何狀態都是 0，空頭不會把它重新打開。高波動仍把目標乘上 0.7。",
+                "配置池＝USDT 保證金餘額減去 VBO 的 1,000。多資產保證金是關的，USDC 不能拿來保證 USDT-M，所以 USDC 袖套不計入。資金費套利的 1,000 就是 VBO 那筆錢，不能再加一次。",
+                "R2S 權重 0，既有部位依目標為 0 的規則出場，每一筆都是 reduce-only，淨額不會翻倉。U1 權重 0 仍不平掉 U1。",
+                "E 的策略槓桿維持 1.75 倍。",
             ],
             "slot_caps": effective_slot_caps(None)}
 
@@ -287,6 +321,27 @@ def apply_u1_pause(state: dict, *, now_iso: str | None = None) -> dict:
         "approval": "kept", "orders": 0,
         "note": U1_PAUSE_REASON}])[-200:]
     return {"applied": True, "slot": U1_PAUSE_SLOT, "paused_slots": slots, "orders": 0}
+
+
+def apply_r2s_pause(state: dict, *, now_iso: str | None = None) -> dict:
+    """Pause R2S entries. Does not revoke approval and does not flatten by itself.
+
+    Weight 0 is what closes the book, through the strategy's target-0 rule.
+    """
+    mg = state.setdefault("migrations", {})
+    if (mg.get(R2S_PAUSE_MIGRATION) or {}).get("done"):
+        return {"applied": False, "already": True, "slot": R2S_PAUSE_SLOT}
+    now_iso = now_iso or datetime.now(timezone.utc).isoformat()
+    ps = dict(state.get("paused_slots") or {})
+    ps.setdefault(R2S_PAUSE_SLOT, {"paused_at": now_iso, "paused_by": "policy", "reason": R2S_PAUSE_REASON,
+                                   "approval": "kept", "closes_positions": False})
+    state["paused_slots"] = ps
+    mg[R2S_PAUSE_MIGRATION] = {"done": True, "at": now_iso, "slot": R2S_PAUSE_SLOT,
+                               "closes_positions": False, "revokes_approval": False}
+    state["ledger_adjustments"] = (list(state.get("ledger_adjustments") or []) + [{
+        "at": now_iso, "kind": "r2s_pause", "slot": R2S_PAUSE_SLOT, "closes_positions": False,
+        "approval": "kept", "orders": 0, "note": R2S_PAUSE_REASON}])[-200:]
+    return {"applied": True, "slot": R2S_PAUSE_SLOT, "orders": 0}
 
 
 # ---------------- consumer side (executors). Never raises; None/stale plan => unchanged fixed sizing.
@@ -411,9 +466,18 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
     from state_store import StateStore
     now = now or datetime.now(timezone.utc)
     store = StateStore(); state = store.load()
+    fut = FuturesDemoClient()
     prev = state.get("orchestrator")
-    doc = plan(btc_closes(now), slot_equities(state, FuturesDemoClient()), prev, now,
-               caps=effective_slot_caps(state))
+    try:
+        margin = usdt_margin_balance(fut.account())
+    except Exception as e:  # noqa: BLE001
+        log.error("usdt_margin_unread %s", e)
+        margin = None
+    if margin is None:
+        log.error("orchestrator_skip reason=usdt_margin_unread")
+        return {"skipped": "usdt margin unread", "dry_run": bool(dry_run)}
+    doc = plan(btc_closes(now), slot_equities(state, fut), prev, now,
+               caps=effective_slot_caps(state), usdt_margin=margin)
     doc["dry_run"] = bool(dry_run)
     if doc["dd_alert"]:
         log.error("ORCHESTRATOR_DD_ALERT dd=%.4f peak=%.2f equity=%.2f", doc["drawdown"], doc["peak"], doc["portfolio_equity"])
@@ -430,6 +494,7 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
                                  + [{"bar": doc["decided_bar"], "P": doc["portfolio_equity"], "dd": doc["drawdown"],
                                      "bear": doc["regime"]["bear"], "hivol": doc["regime"]["hivol"]}]}
             apply_u1_pause(s, now_iso=now.isoformat())
+            apply_r2s_pause(s, now_iso=now.isoformat())
             ensure_slot_caps(s)
             return s
         store.mutate(mut)

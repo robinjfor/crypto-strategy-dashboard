@@ -11,27 +11,22 @@ NOW = datetime(2026, 11, 12, 0, 5, tzinfo=timezone.utc)
 EQ = {"E": 5504.74, "R": 2359.17, "U": 0.0, "F": 1000.0}
 
 
-def test_nov12_targets_on_the_nov11_pool_leave_the_cap_idle(monkeypatch):
+def test_nov12_targets_use_usdt_margin_minus_vbo(monkeypatch):
     monkeypatch.setattr(O, "regime", lambda c: {"bar": "2026-11-11", "bear": False, "hivol": False})
-    d = O.plan([1.0], EQ, None, NOW)
-    assert d["eligible"]["usdt"] == pytest.approx(7863.91)
-    assert d["eligible"]["usd"] == pytest.approx(8863.91)
+    # 20:36 Taipei snapshot: USDT wallet 4762.98515654 + unrealized 112.18358041.
+    margin = 4762.98515654 + 112.18358041
+    d = O.plan([1.0], EQ, None, NOW, usdt_margin=margin)
+    assert d["eligible"]["usd"] == 3875.17
+    assert d["eligible"]["usdc_excluded"] == 0.0
+    assert d["eligible"]["fa_excluded"] == 1000.0
     assert d["eligible"]["vbo_in_pool"] is False
-    assert d["weights"]["demo_e5_min5_x175_t05top20"] == pytest.approx(0.85)
-    assert d["weights"]["demo_r2s_top10_3k"] == pytest.approx(0.15)
-    assert d["weights"]["u1_live"] == 0.0 and d["weights"]["demo_funding_arb_1x"] == 0.0
-    e = d["targets"]["demo_e5_min5_x175_t05top20"]
-    r = d["targets"]["demo_r2s_top10_3k"]
-    assert e == 7534.32
-    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == 1329.59
-    assert r == 1329.59
-    assert r < d["slot_caps"]["demo_r2s_top10_3k"]["equity"] == 1464.08
-    assert "demo_r2s_top10_3k" not in d["cash_held_by_cap"]
-    assert e + r == pytest.approx(8863.91)
-    assert d["slot_caps"]["demo_r2s_top10_3k"]["reason"] == "r2s_mdd_review_20261111"
-    assert d["slot_caps"]["demo_r2s_top10_3k"]["closes_positions"] is False
-    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 1329.59
-    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5504.74, now=NOW, plan_doc=d) == 7534.32
+    assert d["weights"]["demo_e5_min5_x175_t05top20"] == 1.0
+    assert d["weights"]["demo_r2s_top10_3k"] == 0.0
+    assert d["targets"]["demo_e5_min5_x175_t05top20"] == 3875.17
+    assert d["targets"]["demo_r2s_top10_3k"] == 0.0
+    assert d["targets"]["u1_live"] == 0.0 and d["targets"]["demo_funding_arb_1x"] == 0.0
+    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=NOW, plan_doc=d) == 0.0
+    assert O.sizing_capital("demo_e5_min5_x175_t05top20", 5504.74, now=NOW, plan_doc=d) == 3875.17
 
 
 def test_cap_does_not_resize_or_flatten_and_signal_exits_still_trade():
