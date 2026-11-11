@@ -89,7 +89,7 @@
     var caps = st.slot_caps || p.slot_caps || {};
     var rcap = caps.demo_r2s_top10_3k || {};
     var rsub = rcap.equity != null
-      ? ("權重 " + pct(k.R) + "，實際上限 " + n(rcap.equity) + " USDT，差額留現金")
+      ? ("權重 " + pct(k.R) + "，上限 " + n(rcap.equity) + " USDT；超過才留現金")
       : "USDT 池";
     return '<section class="h-sec"><h2>組合權重</h2><div class="h-kpis">' +
       kpi("E", pct(k.E), "權重 " + pct(k.E) + "，不接收 R2S 差額") +
