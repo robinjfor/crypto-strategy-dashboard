@@ -495,12 +495,45 @@ def build_asset_daily(store, client, fc=None, force: bool = False, prev: dict | 
             if q:
                 from execution import base_asset
                 pos[p["symbol"]] = (base_asset(p["symbol"]), q, float(p.get("entryPrice") or 0))
+        transfers = _futures_transfers(fc)
+        if transfers:
+            doc = dict(doc)
+            doc["income"] = list(doc.get("income") or []) + [
+                {"time_ms": t["time_ms"], "asset": t["asset"], "income": t["amount"], "type": "TRANSFER"}
+                for t in transfers]
         out = asset_history.build(doc, spot, wal, pos, asset_history.kline_price_fn(), _dt.now(asset_history.TZ))
         out["built_day"] = today
+        out["transfers"] = transfers
         return out
     except Exception as e:  # noqa: BLE001
         log.warning("asset_daily_fail err=%s", e)
         return {"error": str(e)[:200], "built_day": None, "points": (prev or {}).get("points") or []}
+
+
+def _futures_transfers(fc) -> list[dict]:
+    """USD-M TRANSFER income since 2026-10-01. Empty when the read fails."""
+    import capital_basis
+    from datetime import datetime as _dt
+    start = int(_dt(2026, 10, 1, tzinfo=capital_basis_tz()).timestamp() * 1000)
+    try:
+        rows = fc.income_type("TRANSFER", start) if fc is not None and hasattr(fc, "income_type") else []
+    except Exception as e:  # noqa: BLE001
+        log.warning("futures_transfer_read_fail err=%s", e)
+        return []
+    return capital_basis.transfers_from_income(rows)
+
+
+def capital_basis_tz():
+    from datetime import timedelta, timezone
+    return timezone(timedelta(hours=8))
+
+
+def build_capital_basis(fc, nav, points, transfers: list | None = None) -> dict:
+    import capital_basis
+    rows = transfers if transfers is not None else _futures_transfers(fc)
+    return capital_basis.summarize(
+        [{"incomeType": "TRANSFER", "asset": t["asset"], "income": t["amount"], "time": t["time_ms"]} for t in rows],
+        points, nav)
 
 
 def record_asset_month(st: dict, ta: dict | None, at: str) -> None:
@@ -995,6 +1028,11 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             g["enabled"] = bool(g.get("approved") and g.get("enabled"))  # only Robin's site approval enables; unapproved forced off
         if daily is not None:
             s["asset_daily"] = daily
+            pts = ((daily or s.get("asset_daily") or {}).get("points"))
+            nav = (snap or {}).get("total_usdt")
+            xfers = (daily or {}).get("transfers") if isinstance(daily, dict) else None
+            s["futures_transfers"] = xfers or []
+            s["capital_basis"] = build_capital_basis(fc, nav, pts, xfers)
         if led_sum is not None:
             s["ledger_summary"], s["ledger_diff"] = led_sum, led_diff
         if lvb is not None:

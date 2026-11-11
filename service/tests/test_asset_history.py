@@ -18,3 +18,14 @@ def test_reconstruct_undo_and_value():
     assert pts["2026-10-01"] == 1100.0          # before the buy: 1000 USDT + 100 USDC
     assert pts["2026-10-02"] == round(969.97 + 40 + 99, 2)
     assert len(out["points"]) == 4 and pts["2026-09-30"] == 1100.0 and out["perps_flat_at_start"]
+
+
+def test_transfer_is_not_left_inside_the_october_start():
+    start = datetime(2026, 10, 1, tzinfo=TZ)
+    t = int((start + timedelta(days=4)).timestamp() * 1000)
+    doc = {"fills": [], "income": [{"time_ms": t, "asset": "USDT", "income": 500.0, "type": "TRANSFER"}]}
+    now = start + timedelta(days=6)
+    out = ah.build(doc, {"USDT": 1500.0}, {}, {}, lambda a, dt: None, now, start=start)
+    pts = dict(out["points"])
+    assert pts["2026-10-01"] == 1000.0
+    assert pts["2026-10-05"] == 1500.0

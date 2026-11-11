@@ -759,6 +759,12 @@
       renderLedger() +
       renderLiveVsBacktest() +
       '<p class="book-math-hint">驗算：現在餘額 ≈ 原本 + 已實現 + 未實現（若有入金／出金或手續費幣種差異，數字可能不完全對上）。</p>' +
+      '<p class="book-math-hint">R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除。' +
+      (cloud && cloud.capital_basis ? (" 起始 " + num(cloud.capital_basis.starting_total) +
+        "＝USDT-M " + num(cloud.capital_basis.usdt_m_deposit) + " ＋ USDC " + num(cloud.capital_basis.usdc_deposit) +
+        "。VBO 的 " + num(cloud.capital_basis.vbo_carve_usdt, 0) + " 從 USDT-M 劃出。損益 " + num(cloud.capital_basis.pnl) +
+        "，高點 " + num(cloud.capital_basis.peak) + "，最大回撤 " + num(cloud.capital_basis.max_drawdown) + "。") : "") +
+      "</p>" +
       "</section>";
   }
 
@@ -1244,6 +1250,8 @@
         "</div>" +
         '<div><span class="lbl">狀態</span> ' + esc(stZh) + "</div>" +
         (notion ? '<div><span class="lbl">名義</span> ' + esc(String(notion)) + " USDT</div>" : "") +
+        (String(a.slot || a.strategy_id || "").indexOf("r2s") >= 0
+          ? '<div>R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除。</div>' : "") +
         "</div></div></article>";
     }
     var cards = approved.length
@@ -1602,7 +1610,8 @@
       '<span class="hint">百分比來自雲端狀態，不是這頁寫死的數字</span></div>' +
       '<div class="card"><div class="kpi-grid">' +
       '<div class="kpi"><div class="label">E</div><div class="value">' + pct(k.E) + '</div><div class="sublabel">權重 ' + pct(k.E) + '，不接收 R2S 差額</div></div>' +
-      '<div class="kpi"><div class="label">R2S</div><div class="value">' + pct(k.R) + '</div><div class="sublabel">' + rsub + '</div></div>' +
+      '<div class="kpi"><div class="label">R2S</div><div class="value">' + pct(k.R) + '</div><div class="sublabel">' + rsub +
+      '。R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除</div></div>' +
       '<div class="kpi"><div class="label">U1</div><div class="value">' + pct(k.U) + '</div><div class="sublabel">' +
       (u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") + "</div></div>" +
       '<div class="kpi"><div class="label">資金費套利</div><div class="value">' + pct(k.F) + '</div><div class="sublabel">基礎權重</div></div>' +

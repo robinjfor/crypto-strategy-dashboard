@@ -22,11 +22,19 @@
       unr += Number(b.unrealized_pnl || 0) + Number(((b.futures || {}).unrealized_pnl) || 0);
     });
     var f = ta.futures || {};
+    var cb = st.capital_basis || {};
+    var src = cb.starting_total != null
+      ? ("起始資金 " + n(cb.starting_total) + "＝USDT-M 入金 " + n(cb.usdt_m_deposit) + " ＋ USDC 入金 " + n(cb.usdc_deposit)
+         + "。VBO 的 " + n(cb.vbo_carve_usdt, 0) + " 從 USDT-M 劃出，不是另一筆入金。損益 " + sn(cb.pnl)
+         + "，高點 " + n(cb.peak) + "，最大回撤 " + n(cb.max_drawdown) + "。")
+      : "";
     return '<section class="h-sec"><h2>資金總覽<a href="./account.html">帳戶明細 ›</a></h2><div class="h-kpis">' +
-      kpi("總資產（USDT 計）", n(ta.total_usdt), "現貨 " + n(ta.spot_usdt) + " · 永續 " + n(ta.futures_usdt) + (ta.complete ? "" : " · 不完整")) +
+      kpi("總資產（USDT 計）", n(cb.nav != null ? cb.nav : ta.total_usdt), "現貨 " + n(ta.spot_usdt) + " · 永續 " + n(ta.futures_usdt) + (ta.complete ? "" : " · 不完整")) +
       kpi("已實現損益", sn(real), "USDT " + sn((books.usdt || {}).realized_pnl) + " · USDC " + sn((books.usdc || {}).realized_pnl)) +
       kpi("未實現損益", sn(unr), "永續錢包 USDT " + n(f.USDT) + " · USDC " + n(f.USDC)) +
-      '</div><div class="h-note">來源：幣安 Demo 回讀（' + esc(ta.source || "binance") + '）。已實現損益為有幣安成交的已結算交易，未扣部分手續費。</div></section>';
+      '</div><div class="h-note">R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除。</div>' +
+      (src ? '<div class="h-note">' + src + esc(cb.method_note || "") + "</div>" : "") +
+      '<div class="h-note">來源：幣安 Demo 回讀（' + esc(ta.source || "binance") + '）。已實現損益為有幣安成交的已結算交易，未扣部分手續費。</div></section>';
   }
 
   function tpe(iso, withDate) {
@@ -93,7 +101,7 @@
       : "USDT 池";
     return '<section class="h-sec"><h2>組合權重</h2><div class="h-kpis">' +
       kpi("E", pct(k.E), "權重 " + pct(k.E) + "，不接收 R2S 差額") +
-      kpi("R2S", pct(k.R), rsub) +
+      kpi("R2S", pct(k.R), rsub + "。R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除") +
       kpi("U1", pct(k.U), u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") +
       kpi("資金費套利", pct(k.F), "基礎權重") +
       '</div><div class="h-note">' + esc(when) + (money ? " " + esc(money) : "") + "</div>" +
@@ -246,7 +254,7 @@
     return '<section class="h-sec"><h2>總資產走勢</h2>' + (pts.length ? '<div style="height:260px"><canvas id="monChart"></canvas></div>' +
       '<table class="h-tbl" style="margin-top:8px"><tr><th>月份</th><th>月初</th><th>月底</th><th>增減金額</th><th>增減%</th></tr>' + tbl + "</table>"
       : '<div class="empty-state">尚無資料</div>') +
-      '<div class="h-note">每日點為台北時間日終總資產（USDT 計）；最後一點為即時值。10/1 起的歷史由幣安帳戶成交、資金費紀錄逆推，並以幣安收盤價估值' +
+      '<div class="h-note">每日點為台北時間日終總資產（USDT 計），起始資金不含 R2S 的 3000 虛擬入金；最後一點為即時值。10/1 起的歷史由幣安帳戶成交、資金費與轉帳紀錄逆推，並以幣安收盤價估值' +
       (ad.built_at ? "（重建於 " + tpe(ad.built_at) + "）" : "（雲端重建中）") + "。月初＝上月最後一日日終。</div></section>";
   }
 

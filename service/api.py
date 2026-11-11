@@ -1449,6 +1449,12 @@ def build_status() -> dict:
         "orchestrator": {k: v for k, v in (state.get("orchestrator") or {}).items() if k != "history"} or None,
         "orchestrator_policy": __import__("orchestrator").policy_public(),
         "slot_caps": __import__("orchestrator").effective_slot_caps(state),
+        "capital_basis": (lambda _f: __import__("capital_basis").summarize(
+            state.get("futures_transfers") or [],
+            ((state.get("asset_daily") or {}).get("points")),
+            (total_assets or {}).get("total_usdt"),
+            None if _f.get("USDT") is None or _f.get("USDC") is None else float(_f["USDT"]) + float(_f["USDC"]),
+        ))((total_assets or {}).get("futures") or {}),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.
