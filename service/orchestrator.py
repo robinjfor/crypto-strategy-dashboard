@@ -37,6 +37,13 @@ SLOTS = {"E": "demo_e5_min5_x175_t05top20",  # took over E5 (demo_e5_min5_x175) 
           "U": "u1_live", "R": "demo_r2s_top10_3k", "F": "demo_funding_arb_1x"}
 # Robin 2026-11-11 02:14 Asia/Taipei: E 70% / R2S 30%, U1 paused, FA base stays 0.
 BASE_W = {"E": 0.70, "U": 0.0, "R": 0.30, "F": 0.0}
+# Ceiling on sizing equity. Does not change BASE_W and does not give the unused share to E.
+# R2S single-config replay MaxDD is 49%, above the 45% limit, so sizing stays at the equity
+# the live book was built on (2026-11-11). State["slot_caps"] overrides this; equity null clears it.
+DEFAULT_SLOT_CAPS = {
+    "demo_r2s_top10_3k": {"equity": 1464.08, "reason": "r2s_mdd_review_20261111",
+                          "closes_positions": False, "revokes_approval": False},
+}
 DEFAULT_CAP = {"E": 5000.0, "U": 1000.0, "R": 3000.0, "F": 1000.0}
 QUOTE = {"E": "USDT", "U": "USDC", "R": "USDT", "F": "USDT"}
 # Same-quote pool used as the weight base. U is USDC; F is the VBO carve / FA book and is not added.
@@ -105,7 +112,48 @@ def _pool_for(k: str, pools: dict) -> float:
     return float(pools["usdc"] if k == "U" else pools["usdt"])
 
 
-def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> dict:
+def effective_slot_caps(state: dict | None = None) -> dict:
+    """Code default, then state['slot_caps']. A stored equity of null removes that cap."""
+    out = {k: dict(v) for k, v in DEFAULT_SLOT_CAPS.items()}
+    for sid, spec in ((state or {}).get("slot_caps") or {}).items():
+        if spec is None or not isinstance(spec, dict) or spec.get("equity") is None:
+            out.pop(sid, None)
+        else:
+            out[sid] = dict(spec)
+    return out
+
+
+def equity_cap(slot_id: str, state: dict | None = None) -> float | None:
+    table = effective_slot_caps(state) if state is not None else (
+        _SLOT_CAPS if _SLOT_CAPS is not None else effective_slot_caps(None))
+    spec = (table or {}).get(slot_id)
+    if not spec or spec.get("equity") is None:
+        return None
+    try:
+        return max(0.0, float(spec["equity"]))
+    except (TypeError, ValueError):
+        return None
+
+
+def apply_equity_cap(slot_id: str, value: float | None) -> float | None:
+    if value is None:
+        return None
+    cap = equity_cap(slot_id)
+    if cap is None:
+        return value
+    return min(float(value), cap)
+
+
+def ensure_slot_caps(state: dict) -> dict:
+    """Seed missing caps. Does not overwrite a value already stored, including an explicit clear."""
+    cur = dict(state.get("slot_caps") or {})
+    for sid, spec in DEFAULT_SLOT_CAPS.items():
+        cur.setdefault(sid, dict(spec))
+    state["slot_caps"] = cur
+    return effective_slot_caps(state)
+
+
+def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, caps: dict | None = None) -> dict:
     rg = regime(close)
     w, x = weights(rg["bear"], rg["hivol"])
     pools = eligible_pools(equities)
@@ -113,9 +161,24 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> 
     P = float(sum(_eq(equities, k) for k in BASE_W))
     peak = max(P, float((prev or {}).get("peak") or 0.0))
     dd = 1 - P / peak if peak > 0 else 0.0
-    tgt = {k: round(_pool_for(k, pools) * w[k] * x, 2) for k in w}
+    raw = {k: round(_pool_for(k, pools) * w[k] * x, 2) for k in w}
+    caps = effective_slot_caps(None) if caps is None else caps
+    tgt, held_cash, cap_notes = {}, {}, []
+    for k, raw_v in raw.items():
+        spec = caps.get(SLOTS[k]) or {}
+        try:
+            cap_v = None if spec.get("equity") is None else max(0.0, float(spec["equity"]))
+        except (TypeError, ValueError):
+            cap_v = None
+        if cap_v is not None and raw_v > cap_v:
+            tgt[k] = round(cap_v, 2)
+            held_cash[SLOTS[k]] = round(raw_v - cap_v, 2)
+            cap_notes.append(f"{SLOTS[k]}: sizing capped at {cap_v:.2f} {QUOTE[k]} "
+                             f"(weight target {raw_v:.2f}; leftover stays cash; reason {spec.get('reason')})")
+        else:
+            tgt[k] = raw_v
     prev_t = (prev or {}).get("targets") or {}
-    actions = []
+    actions = list(cap_notes)
     for k in w:
         a, b = prev_t.get(SLOTS[k]), tgt[k]
         if a is None:
@@ -135,7 +198,10 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> 
             "sizing": "quote_pool",
             "regime": rg, "weights": {SLOTS[k]: round(w[k], 4) for k in w},
             "base_weights": {SLOTS[k]: BASE_W[k] for k in BASE_W}, "exposure_mult": x,
-            "targets": {SLOTS[k]: tgt[k] for k in w}, "target_quote": {SLOTS[k]: QUOTE[k] for k in w},
+            "targets": {SLOTS[k]: tgt[k] for k in w},
+            "uncapped_targets": {SLOTS[k]: raw[k] for k in w},
+            "slot_caps": caps, "cash_held_by_cap": held_cash,
+            "target_quote": {SLOTS[k]: QUOTE[k] for k in w},
             "quote_pool": quote_pool,
             "eligible": {"usdt": round(pools["usdt"], 2), "usdc": round(pools["usdc"], 2),
                          "vbo_reserve_usdt": round(pools["vbo_reserve_usdt"], 2),
@@ -147,7 +213,8 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime) -> 
             "notes": ("Targets = regime weight × that quote's eligible pool × hi-vol multiplier. "
                       "USDT pool is E+R2S ledger equity (same wallet). FA equity and the VBO 1000U carve "
                       "are excluded. USDC is not added to USDT targets and is not moved. "
-                      "U1 weight 0 does not close U1. No DD breaker.")}
+                      "U1 weight 0 does not close U1. A slot_caps ceiling keeps the unused share as cash "
+                      "and does not raise E. No DD breaker.")}
 
 
 def policy_public() -> dict:
@@ -176,8 +243,10 @@ def policy_public() -> dict:
                 "高波動把每個目標乘上 0.7，剩下 30% 依回測規則留成現金。",
                 "USDT 目標＝權重 ×（E 帳本＋R2S 帳本）。資金費套利帳本與 VBO 的 1,000 USDT 不計入，也不平倉。USDC 不計入 USDT 目標，也不移動。",
                 "U1 暫停只擋新開倉與加碼再平衡。減碼、訊號出場、強平與保證金去風險仍會下減少倉單。權重 0 不會把 U1 砍平。是否平掉 U1、USDC 要不要轉走，需要另外決定。",
-                "策略自己的 25% 再平衡帶仍有效。預設帳本下 E 從帳本上限 5,000 調到 5,600（約 +12%）可能落在帶內，當根不會為了這段差額下單；R2S 從舊的 15% 目標跳到 30% 會超過帶寬。",
-            ]}
+                "策略自己的 25% 再平衡帶仍有效。E 從帳本上限附近調到 70% 池子（約一成）可能落在帶內。",
+                "R2S 單一參數回測最大回撤約 49%，超過 45% 上限。sizing 凍結在 1,464.08 USDT（目前部位所用的權益，原因 r2s_mdd_review_20261111）。權重仍是 30%。差額留成現金，不加給 E，也不因為這個上限而減倉或撤銷核准。",
+            ],
+            "slot_caps": effective_slot_caps(None)}
 
 
 def apply_u1_pause(state: dict, *, now_iso: str | None = None) -> dict:
@@ -211,11 +280,13 @@ def apply_u1_pause(state: dict, *, now_iso: str | None = None) -> dict:
 
 # ---------------- consumer side (executors). Never raises; None/stale plan => unchanged fixed sizing.
 _ACTIVE: dict | None = None
+_SLOT_CAPS: dict | None = None
 
 
 def load(state: dict | None) -> dict | None:
-    global _ACTIVE
+    global _ACTIVE, _SLOT_CAPS
     _ACTIVE = (state or {}).get("orchestrator") or None
+    _SLOT_CAPS = effective_slot_caps(state)
     return _ACTIVE
 
 
@@ -223,14 +294,14 @@ def sizing_capital(slot_id: str, default: float, now: datetime | None = None, pl
     p = plan_doc if plan_doc is not None else _ACTIVE
     try:
         if not p or os.environ.get("ORCHESTRATOR_ENABLED", "1") != "1":
-            return default
+            return apply_equity_cap(slot_id, default)
         at = datetime.fromisoformat(str(p["generated_at"]))
         if (now or datetime.now(timezone.utc)) - at > MAX_AGE:
             log.warning("orchestrator_plan_stale at=%s -> fixed capital for %s", p.get("generated_at"), slot_id)
-            return default
+            return apply_equity_cap(slot_id, default)
         v = (p.get("targets") or {}).get(slot_id)
         if v is None:
-            return default
+            return apply_equity_cap(slot_id, default)
         v = max(0.0, float(v))
         if p.get("sizing") == "quote_pool":
             # Target is already weight × the quote pool. Do not also cap at this slot's own
@@ -239,12 +310,13 @@ def sizing_capital(slot_id: str, default: float, now: datetime | None = None, pl
             pool = (p.get("quote_pool") or {}).get(slot_id)
             if pool is not None:
                 v = min(v, max(0.0, float(pool)))
-            return v
-        # Plans written before quote_pool sizing stay capped at the slot ledger.
-        return v if default is None else min(v, max(0.0, float(default)))
+        else:
+            # Plans written before quote_pool sizing stay capped at the slot ledger.
+            v = v if default is None else min(v, max(0.0, float(default)))
+        return apply_equity_cap(slot_id, v)
     except Exception as e:  # noqa: BLE001
         log.warning("orchestrator_sizing_fail %s", e)
-        return default
+        return apply_equity_cap(slot_id, default)
 
 
 def plan_covers_open(now: datetime | None = None, plan_doc: dict | None = None) -> tuple[bool, str]:
@@ -329,7 +401,8 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     store = StateStore(); state = store.load()
     prev = state.get("orchestrator")
-    doc = plan(btc_closes(now), slot_equities(state, FuturesDemoClient()), prev, now)
+    doc = plan(btc_closes(now), slot_equities(state, FuturesDemoClient()), prev, now,
+               caps=effective_slot_caps(state))
     doc["dry_run"] = bool(dry_run)
     if doc["dd_alert"]:
         log.error("ORCHESTRATOR_DD_ALERT dd=%.4f peak=%.2f equity=%.2f", doc["drawdown"], doc["peak"], doc["portfolio_equity"])
@@ -346,6 +419,7 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
                                  + [{"bar": doc["decided_bar"], "P": doc["portfolio_equity"], "dd": doc["drawdown"],
                                      "bear": doc["regime"]["bear"], "hivol": doc["regime"]["hivol"]}]}
             apply_u1_pause(s, now_iso=now.isoformat())
+            ensure_slot_caps(s)
             return s
         store.mutate(mut)
     print(body)

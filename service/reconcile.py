@@ -1011,6 +1011,11 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             liq_distance.apply(s, liq_rows, now_iso_taipei())
         except Exception as e:  # noqa: BLE001
             log.warning("liq_distance_fail err=%s", e)
+        try:
+            import orchestrator
+            orchestrator.ensure_slot_caps(s)
+        except Exception as e:  # noqa: BLE001
+            log.warning("slot_caps_fail err=%s", e)
         return s
     st = store.mutate(mut)
     out = (st or {}).get("reconcile") or rep

@@ -56,15 +56,16 @@ def test_plan_targets_peak_dd_alert_no_breaker(monkeypatch):
     assert d["peak"] == 10000 and not d["dd_alert"]
     # USDT pool 8000; bear weights E .35 / R .475 / F .175; hi-vol x0.7. USDC is not in the sum.
     assert d["targets"]["demo_e5_min5_x175_t05top20"] == pytest.approx(8000 * .35 * .7)
+    assert d["uncapped_targets"]["demo_r2s_top10_3k"] == pytest.approx(8000 * .475 * .7)
+    assert d["targets"]["demo_r2s_top10_3k"] == 1464.08
     assert d["targets"]["u1_live"] == 0.0
-    assert sum(d["targets"].values()) == pytest.approx(8000 * .7)
 
 
 def test_sizing_capital_fallbacks(monkeypatch):
     now = datetime(2026, 10, 25, 0, 8, tzinfo=timezone.utc)
     p = {"generated_at": (now - timedelta(minutes=3)).isoformat(), "targets": {"demo_e5_min5_x175": 6000.0}}
     assert O.sizing_capital("demo_e5_min5_x175", 5000.0, now=now, plan_doc=p) == 5000.0  # capped at ledger equity
-    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=now, plan_doc=p) == 3000.0
+    assert O.sizing_capital("demo_r2s_top10_3k", 3000.0, now=now, plan_doc=p) == 1464.08  # MDD ceiling, not the 3,000 ledger
     stale = {**p, "generated_at": (now - timedelta(hours=31)).isoformat()}
     assert O.sizing_capital("demo_e5_min5_x175", 5000.0, now=now, plan_doc=stale) == 5000.0
     O.load({})
