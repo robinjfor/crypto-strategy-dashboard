@@ -37,6 +37,10 @@ on:
         description: "After deploy, run the portfolio orchestrator once in DRY mode (writes the GCS summary only; no state, no orders)"
         type: boolean
         default: false
+      run_orchestrator_live_now:
+        description: "After deploy, run the portfolio orchestrator once LIVE (writes today's plan + state; places no orders itself — the next 15-min reconcile trades it inside the E5 4h / R2S 2h open window)"
+        type: boolean
+        default: false
       run_shadow_ab_now:
         description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
         type: boolean
@@ -473,6 +477,18 @@ jobs:
           gcloud storage ls -l "${OBJ}"
           gcloud storage cat "${OBJ}" > /tmp/o.json
           python3 -c "import json;d=json.load(open('/tmp/o.json'));print(json.dumps({k:d[k] for k in ('decided_bar','dry_run','regime','weights','exposure_mult','targets','equity','portfolio_equity','peak','drawdown','dd_alert','actions')},indent=1));assert d['dry_run'] is True"
+
+      - name: Run orchestrator once (LIVE) + validate today's plan
+        if: ${{ inputs.run_orchestrator_live_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs execute "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" --wait
+          OBJ="gs://${B}/research/orchestrator/$(date -u +%F).json"
+          gcloud storage ls -l "${OBJ}"
+          gcloud storage cat "${OBJ}" > /tmp/o.json
+          python3 -c "import json;d=json.load(open('/tmp/o.json'));print(json.dumps({k:d.get(k) for k in ('generated_at','decided_bar','dry_run','regime','weights','exposure_mult','targets','eligible','actions')},indent=1));assert d['dry_run'] is False"
 
       - name: Start funding-arb target job once (async)
         if: ${{ inputs.run_fa_now }}

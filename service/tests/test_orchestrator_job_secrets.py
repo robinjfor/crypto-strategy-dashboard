@@ -103,3 +103,11 @@ def test_json_log_lines_carry_severity():
     rec = logging.LogRecord("orchestrator", logging.ERROR, __file__, 1, "orchestrator_skip reason=%s", ("x",), None)
     d = json.loads(O.CloudJsonFormatter().format(rec))
     assert d["severity"] == "ERROR" and "orchestrator_skip reason=x" in d["message"]
+
+
+def test_deploy_has_a_live_orchestrator_rerun_input():
+    y = (ROOT / ".github/workflows/deploy-trader.yml").read_text()
+    assert "run_orchestrator_live_now:" in y
+    i = y.index("Run orchestrator once (LIVE)")
+    blk = y[i:y.index("- name:", i + 10)]
+    assert "--dry-run" not in blk and "assert d['dry_run'] is False" in blk
