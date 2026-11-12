@@ -25,11 +25,13 @@
     var cb = st.capital_basis || {};
     var src = cb.starting_total != null
       ? ("起始資金 " + n(cb.starting_total) + "＝USDT-M 入金 " + n(cb.usdt_m_deposit) + " ＋ USDC 入金 " + n(cb.usdc_deposit)
-         + "。VBO 的 " + n(cb.vbo_carve_usdt, 0) + " 從 USDT-M 劃出，不是另一筆入金。損益 " + sn(cb.pnl)
+         + "。VBO 的 " + n(cb.vbo_carve_usdt, 0) + " 從 USDT-M 劃出，不是另一筆入金。淨值 " + n(cb.nav)
+         + "＝USDT-M " + n(cb.nav_usdt_m) + " ＋ USDC " + n(cb.nav_usdc_m) + "（錢包＋未實現，不含現貨）。損益 " + sn(cb.pnl)
          + "，高點 " + n(cb.peak) + "，最大回撤 " + n(cb.max_drawdown) + "。")
       : "";
     return '<section class="h-sec"><h2>資金總覽<a href="./account.html">帳戶明細 ›</a></h2><div class="h-kpis">' +
-      kpi("總資產（USDT 計）", n(cb.nav != null ? cb.nav : ta.total_usdt), "現貨 " + n(ta.spot_usdt) + " · 永續 " + n(ta.futures_usdt) + (ta.complete ? "" : " · 不完整")) +
+      kpi("合約淨值（USDT-M＋USDC）", n(cb.nav), "起始 " + n(cb.starting_total) + " · 損益 " + sn(cb.pnl) + " · 不含現貨") +
+      kpi("帳戶總額（含現貨，參考）", n(ta.total_usdt), "現貨 " + n(ta.spot_usdt) + " · 永續 " + n(ta.futures_usdt) + (ta.complete ? "" : " · 不完整")) +
       kpi("已實現損益", sn(real), "USDT " + sn((books.usdt || {}).realized_pnl) + " · USDC " + sn((books.usdc || {}).realized_pnl)) +
       kpi("未實現損益", sn(unr), "永續錢包 USDT " + n(f.USDT) + " · USDC " + n(f.USDC)) +
       '</div><div class="h-note">R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除。</div>' +

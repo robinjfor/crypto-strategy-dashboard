@@ -437,6 +437,8 @@ jobs:
           PY
 
       - name: Deploy portfolio orchestrator job + scheduler (UTC 00:05 = Taipei 08:05; before the 08:08 reconcile)
+        # Demo keys are mounted because the pool reads GET /fapi/v2/account (USDT margin balance).
+        # Read-only use: the orchestrator places no orders. Without them the job skips and writes no plan.
         run: |
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
@@ -446,7 +448,8 @@ jobs:
             --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
             --service-account="${RUNTIME_SA}" --task-timeout=300 --max-retries=1 \
             --set-env-vars="GCS_BUCKET=${BUCKET},FAPI_BASE_URL=https://fapi.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com" \
-            --clear-secrets --command=python --args=-u,orchestrator.py --memory=512Mi --cpu=1
+            --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
+            --command=python --args=-u,orchestrator.py --memory=512Mi --cpu=1
           gcloud run jobs add-iam-policy-binding "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" \
             --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
           URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${ORCH_JOB}:run"

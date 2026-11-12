@@ -501,6 +501,12 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
     store = StateStore(); state = store.load()
     fut = FuturesDemoClient()
     prev = state.get("orchestrator")
+    if not (getattr(fut, "api_key", "") and getattr(fut, "api_secret", "")):
+        # 2026-11-12 00:05 UTC: the job was deployed with --clear-secrets, so the signed
+        # account read failed and no plan was written. Say so plainly.
+        log.error("orchestrator_skip reason=missing_demo_api_key "
+                  "(job needs BINANCE_DEMO_API_KEY/SECRET to read the USDT margin balance)")
+        return {"skipped": "missing demo api key", "dry_run": bool(dry_run)}
     try:
         margin = usdt_margin_balance(fut.account())
     except Exception as e:  # noqa: BLE001
@@ -536,8 +542,38 @@ def run(dry_run: bool = False, now: datetime | None = None) -> dict:
     return doc
 
 
+class CloudJsonFormatter(logging.Formatter):
+    """One JSON line per record with a Cloud Logging severity, so severity>=WARNING queries see it.
+
+    Plain stderr text from a Cloud Run job carries no severity and is missed by those queries.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = record.getMessage()
+        if record.exc_info:
+            msg += "\n" + self.formatException(record.exc_info)
+        return json.dumps({"severity": record.levelname, "logger": record.name, "message": msg})
+
+
+def exit_code(result: dict | None) -> int:
+    """Non-zero when no plan was produced, so the Cloud Run execution shows as failed."""
+    return 1 if not result or result.get("skipped") else 0
+
+
+def _setup_logging() -> None:
+    h = logging.StreamHandler(sys.stdout)
+    h.setFormatter(CloudJsonFormatter())
+    root = logging.getLogger()
+    root.handlers[:] = [h]
+    root.setLevel(logging.INFO)
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    _setup_logging()
     dry = "--dry-run" in sys.argv or os.environ.get("ORCH_DRY_RUN") == "1"
-    run(dry_run=dry)
-    sys.exit(0)
+    try:
+        res = run(dry_run=dry)
+    except Exception:  # noqa: BLE001
+        log.exception("orchestrator_failed")
+        sys.exit(1)
+    sys.exit(exit_code(res))
