@@ -593,7 +593,8 @@
       '<p class="book-math-hint">R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除。' +
       (cloud && cloud.capital_basis ? (" 起始 " + num(cloud.capital_basis.starting_total) +
         "＝USDT-M " + num(cloud.capital_basis.usdt_m_deposit) + " ＋ USDC " + num(cloud.capital_basis.usdc_deposit) +
-        "。VBO 的 " + num(cloud.capital_basis.vbo_carve_usdt, 0) + " 從 USDT-M 劃出。損益 " + num(cloud.capital_basis.pnl) +
+        "。VBO 的 " + num(cloud.capital_basis.vbo_carve_usdt, 0) + " 從 USDT-M 劃出。淨值 " + num(cloud.capital_basis.nav) +
+        "（USDT-M＋USDC 合約錢包＋未實現，不含現貨）。損益 " + num(cloud.capital_basis.pnl) +
         "，高點 " + num(cloud.capital_basis.peak) + "，最大回撤 " + num(cloud.capital_basis.max_drawdown) + "。") : "") +
       "</p></section>";
   }

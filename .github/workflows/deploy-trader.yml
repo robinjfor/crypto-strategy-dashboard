@@ -37,6 +37,10 @@ on:
         description: "After deploy, run the portfolio orchestrator once in DRY mode (writes the GCS summary only; no state, no orders)"
         type: boolean
         default: false
+      run_orchestrator_live_now:
+        description: "After deploy, run the portfolio orchestrator once LIVE (writes today's plan + state; places no orders itself — the next 15-min reconcile trades it inside the E5 4h / R2S 2h open window)"
+        type: boolean
+        default: false
       run_shadow_ab_now:
         description: "After deploy, start the paper-only shadow A–E job once (async; no orders, no keys)"
         type: boolean
@@ -437,6 +441,8 @@ jobs:
           PY
 
       - name: Deploy portfolio orchestrator job + scheduler (UTC 00:05 = Taipei 08:05; before the 08:08 reconcile)
+        # Demo keys are mounted because the pool reads GET /fapi/v2/account (USDT margin balance).
+        # Read-only use: the orchestrator places no orders. Without them the job skips and writes no plan.
         run: |
           set -euo pipefail
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
@@ -446,7 +452,8 @@ jobs:
             --project="${PROJECT}" --region="${REGION}" --image="${IMAGE_URI}" \
             --service-account="${RUNTIME_SA}" --task-timeout=300 --max-retries=1 \
             --set-env-vars="GCS_BUCKET=${BUCKET},FAPI_BASE_URL=https://fapi.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com" \
-            --clear-secrets --command=python --args=-u,orchestrator.py --memory=512Mi --cpu=1
+            --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
+            --command=python --args=-u,orchestrator.py --memory=512Mi --cpu=1
           gcloud run jobs add-iam-policy-binding "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" \
             --member="serviceAccount:${RUNTIME_SA}" --role="roles/run.invoker" || true
           URI="https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/jobs/${ORCH_JOB}:run"
@@ -470,6 +477,18 @@ jobs:
           gcloud storage ls -l "${OBJ}"
           gcloud storage cat "${OBJ}" > /tmp/o.json
           python3 -c "import json;d=json.load(open('/tmp/o.json'));print(json.dumps({k:d[k] for k in ('decided_bar','dry_run','regime','weights','exposure_mult','targets','equity','portfolio_equity','peak','drawdown','dd_alert','actions')},indent=1));assert d['dry_run'] is True"
+
+      - name: Run orchestrator once (LIVE) + validate today's plan
+        if: ${{ inputs.run_orchestrator_live_now }}
+        run: |
+          set -euo pipefail
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          B="${{ vars.GCS_BUCKET }}"
+          gcloud run jobs execute "${ORCH_JOB}" --project="${PROJECT}" --region="${REGION}" --wait
+          OBJ="gs://${B}/research/orchestrator/$(date -u +%F).json"
+          gcloud storage ls -l "${OBJ}"
+          gcloud storage cat "${OBJ}" > /tmp/o.json
+          python3 -c "import json;d=json.load(open('/tmp/o.json'));print(json.dumps({k:d.get(k) for k in ('generated_at','decided_bar','dry_run','regime','weights','exposure_mult','targets','eligible','actions')},indent=1));assert d['dry_run'] is False"
 
       - name: Start funding-arb target job once (async)
         if: ${{ inputs.run_fa_now }}

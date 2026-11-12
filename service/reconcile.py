@@ -528,12 +528,24 @@ def capital_basis_tz():
     return timezone(timedelta(hours=8))
 
 
-def build_capital_basis(fc, nav, points, transfers: list | None = None) -> dict:
+def build_capital_basis(fc, snap, history, transfers: list | None = None) -> dict:
+    """NAV from the snapshot's USDT-M + USDC-M margin balances; spot only as a reference field."""
     import capital_basis
     rows = transfers if transfers is not None else _futures_transfers(fc)
     return capital_basis.summarize(
         [{"incomeType": "TRANSFER", "asset": t["asset"], "income": t["amount"], "time": t["time_ms"]} for t in rows],
-        points, nav)
+        (snap or {}).get("futures") or {}, history, (snap or {}).get("total_usdt"))
+
+
+def capital_basis_update(s: dict, snap: dict | None, fc=None) -> None:
+    """Refresh state capital_basis and its daily futures-NAV history. No network calls."""
+    import capital_basis
+    from datetime import datetime as _dt
+    day = _dt.now(capital_basis_tz()).strftime("%Y-%m-%d")
+    nav = capital_basis.futures_nav((snap or {}).get("futures"))
+    hist = capital_basis.update_history(s.get("capital_basis_history"), nav, day)
+    s["capital_basis_history"] = hist
+    s["capital_basis"] = build_capital_basis(fc, snap, hist, s.get("futures_transfers") or [])
 
 
 def record_asset_month(st: dict, ta: dict | None, at: str) -> None:
@@ -1028,11 +1040,10 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             g["enabled"] = bool(g.get("approved") and g.get("enabled"))  # only Robin's site approval enables; unapproved forced off
         if daily is not None:
             s["asset_daily"] = daily
-            pts = ((daily or s.get("asset_daily") or {}).get("points"))
-            nav = (snap or {}).get("total_usdt")
             xfers = (daily or {}).get("transfers") if isinstance(daily, dict) else None
             s["futures_transfers"] = xfers or []
-            s["capital_basis"] = build_capital_basis(fc, nav, pts, xfers)
+        if snap is not None:
+            capital_basis_update(s, snap, fc)
         if led_sum is not None:
             s["ledger_summary"], s["ledger_diff"] = led_sum, led_diff
         if lvb is not None:
