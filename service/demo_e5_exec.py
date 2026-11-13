@@ -8,7 +8,10 @@ equity (5,000U start + fills + fees + funding on its own book), not the shared D
 Orders are virtual-ledger intents netted per symbol with the other Demo slots (netting.py): no "held by another slot"
 skip, exchange min notional/stepSize apply to the net. Closes always run. Opens/increases are skipped while the account or
 slot is paused, a guard entry block is active, the symbol is TradFi, or it isn't listed on Demo.
-Targets older than yesterday (UTC) are never traded."""
+Targets older than yesterday (UTC) are never traded.
+Capital changes (2026-11-13): the orchestrator backtest scales E's whole book with its capital, so before planning,
+each held leg is resized by sizing capital / the capital it was last sized at (ledger frame_cap), with the same
+step, min-notional and 0.5% threshold rules; the day's signal trades are then planned on the resized book."""
 from __future__ import annotations
 
 import logging
@@ -86,6 +89,96 @@ def _target_weight(targets: dict, symbol: str) -> float:
     return 0.0
 
 
+# One-off migration seed for the capital frame (see frame_caps). The 2026-11-13 08:10 Taipei run
+# (bar 2026-11-12) sized at 1959.85. Holdings it did not trade were last sized under the 2026-11-12
+# plan, E target 3974.03 USDT (orchestrator action "sizing capital 3974.03 -> 1959.85").
+FRAME_SEED_PREV_CAP = {"2026-11-12": 3974.03}
+
+
+def frame_caps(ex: dict) -> dict:
+    """Sizing capital each held symbol was last sized at ({symbol: USDT}).
+
+    Ledgers written before this field existed are seeded once: symbols sent on the last executed bar
+    were sized at that bar's capital (last.equity); the rest at FRAME_SEED_PREV_CAP for that bar,
+    or at last.equity when no seed is known (no rescale, the old behaviour).
+    """
+    fc = ex.get("frame_cap")
+    if isinstance(fc, dict):
+        return {k: float(v) for k, v in fc.items() if v}
+    last = ex.get("last") or {}
+    last_eq = last.get("equity")
+    sent = {o.get("symbol") for o in last.get("sent") or []}
+    prev = FRAME_SEED_PREV_CAP.get(str(last.get("bar") or ""))
+    out = {}
+    for k, q in (ex.get("book") or {}).items():
+        if not q:
+            continue
+        v = last_eq if (k in sent or prev is None) else prev
+        if v:
+            out[k] = float(v)
+    return out
+
+
+def rescale_book(book: dict, frames: dict, eq: float, prices: dict, mins: dict, steps: dict,
+                 thr_notional: dict) -> tuple[dict, list[dict], set]:
+    """Scale every held qty by eq / the capital it was sized at (orchestrator backtest: E's PnL is
+    caps['E'] x E's return, so a capital change resizes the whole E book at once).
+
+    Same leg rules as the backtest planner: qty truncated to stepSize; a resized leg below the symbol
+    min notional is a residual close; a resize whose own notional is below max(MN, 0.5% of the S5
+    sleeve) is not sent and the symbol keeps its old frame, so the drift is retried next bar.
+    Returns (scaled book, resize orders, symbols whose resize was not sent)."""
+    out = dict(book); orders = []; held_back = set()
+    for s, u in book.items():
+        u = float(u or 0.0); f = frames.get(s)
+        if not u or not f or f <= 0 or s not in prices:
+            continue
+        k = float(eq) / float(f)
+        if abs(k - 1.0) < 1e-9:
+            continue
+        p = float(prices[s]); st = float(steps.get(s, 0.0) or 0.0); mn = float(mins.get(s, demo_e5.MIN_ORDER))
+        nu = u * k
+        if st > 0:
+            nu = float(np.trunc(nu / st + np.sign(nu) * 1e-9) * st)
+        if abs(nu) * p < mn:
+            orders.append({"symbol": s, "delta_qty": -u, "notional": abs(u) * p, "kind": "residual_close", "sleeve": "rescale", "k": round(k, 6)})
+            out[s] = 0.0
+        elif abs(nu - u) * p < max(mn, float(thr_notional.get(s, 0.0))):
+            held_back.add(s)
+        else:
+            orders.append({"symbol": s, "delta_qty": nu - u, "notional": abs(nu - u) * p, "kind": "rescale", "sleeve": "rescale", "k": round(k, 6)})
+            out[s] = nu
+    return out, orders, held_back
+
+
+FULL = ("close", "residual_close")
+
+
+def merge_rescale(plan: list[dict], resize: list[dict], prices: dict, mins: dict) -> list[dict]:
+    """One instruction list against the REAL book: plan_live ran on the scaled book, so a plan
+    order is a delta from the scaled qty. A plan close/flip wins (the executor closes the whole
+    real qty). Otherwise resize + plan order deltas are summed into one order."""
+    rs = {o["symbol"]: o for o in resize}
+    out = [o for o in plan if o["symbol"] not in rs]
+    for s, r in rs.items():
+        mine = [o for o in plan if o["symbol"] == s]
+        if any(o["kind"] in FULL for o in mine):
+            out += mine
+            continue
+        ords = [o for o in mine if o["kind"] == "order"]
+        out += [o for o in mine if o["kind"] != "order"]
+        if not ords:
+            out.append(r)
+            continue
+        d = float(r["delta_qty"]) + sum(float(o["delta_qty"]) for o in ords)
+        p = float(prices.get(s) or 0.0); n = abs(d) * p
+        if d == 0:
+            continue
+        kind = "order" if n >= float(mins.get(s, demo_e5.MIN_ORDER)) else "skip_min"
+        out.append({"symbol": s, "delta_qty": d, "notional": n, "kind": kind, "sleeve": ords[0].get("sleeve"), "k": r.get("k")})
+    return out
+
+
 def listed(info: dict) -> set:
     return {s["symbol"] for s in info.get("symbols") or [] if s.get("status", "TRADING") == "TRADING"}
 
@@ -155,14 +248,26 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
     for s in prices:  # strategy rule = spec mins; the exchange MIN_NOTIONAL is applied to the per-symbol NET (netting)
         mins.setdefault(s, demo_e5.MIN_ORDER)
         steps[s] = max(float(steps.get(s, 0.0)), lot_step(info, s))
-    plan = mod.plan_live(targets, book, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
+    # Capital change: resize the held book to the new sizing capital first (backtest return scaling),
+    # then plan the day's signal trades on the resized book. Only when the orchestrator plan sized it.
+    plan_eq = orchestrator.sizing_capital(SLOT, None, now=now) if only is None else None
+    frames = frame_caps(ex) if plan_eq is not None else {}
+    es = (1 - mod.W_U1) * eq
+    thr_n = {s: (0.0 if s in demo_e5.U1_SYMS else float(getattr(mod, "THR", 0.0)) * es) for s in prices}
+    book0 = {s: float(q) for s, q in book.items()}
+    pbook, resize, held_back = rescale_book(book0, frames, eq, prices, mins, steps, thr_n) if frames else (book0, [], set())
+    plan = mod.plan_live(targets, pbook, prices, eq, m=m, lt=lt, mins=mins, steps=steps)
+    if resize:
+        plan = merge_rescale(plan, resize, prices, mins)
     if only is not None:
         plan = [o for o in plan if o["symbol"] in only]
     blk = entry_block(state, SLOT)
     tag = bar.replace("-", "")[2:]
     out = {"bar": bar, "equity": round(eq, 2), "m": m, "lt": round(lt, 4), "planned": len(plan), "ledger_equity": round(eq_ledger, 2),
            "skipped_lt_min": sum(1 for o in plan if o["kind"] == "skip_min"),
-           "skipped_thr": sum(1 for o in plan if o["kind"] == "skip_thr"), "slot": SLOT, "sent": [], "skipped": [], "funding": round(fnd, 4)}
+           "skipped_thr": sum(1 for o in plan if o["kind"] == "skip_thr"), "slot": SLOT, "sent": [], "skipped": [], "funding": round(fnd, 4),
+           "rescale": {"orders": len(resize), "held_back": sorted(held_back),
+                       "k": {o["symbol"]: o["k"] for o in resize}}}
     own = netter is None
     netter = netter or netting.Netter(fut, info, tag=f"e5{tag}")
     for s in list((ex.get("forced_flat") or {})):
@@ -176,7 +281,7 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         if o["kind"] in ("skip_min", "skip_thr", "hold"):
             continue
         s = o["symbol"]; mine = float(book.get(s, 0.0))
-        full = o["kind"] in ("close", "residual_close")
+        full = o["kind"] in FULL
         d = -mine if full else float(o["delta_qty"])
         closing = full or (mine != 0 and abs(mine + d) < abs(mine) and np.sign(mine + d) in (0, np.sign(mine)))
         if s not in lst:
@@ -211,6 +316,18 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
         out["equity_after"] = round(equity(ex, prices), 2)
         if only is not None:
             out["late"] = sorted(only); ex["late_runs"] = (list(ex.get("late_runs") or []) + [out])[-50:]; return
+        if plan_eq is not None:
+            # Frame: the capital each held symbol is now sized at. A symbol whose resize was held back
+            # (or not filled) and whose qty did not move keeps its old frame, so the resize is retried.
+            nf = {}
+            for s2, q2 in (ex.get("book") or {}).items():
+                if not q2:
+                    continue
+                old_f = frames.get(s2)
+                unchanged = abs(float(q2) - book0.get(s2, 0.0)) < 1e-12
+                nf[s2] = round(float(old_f if (old_f and unchanged and (s2 in held_back or s2 in {r["symbol"] for r in resize})) else eq), 2)
+            ex["frame_cap"] = nf
+            ex["sizing_equity"] = round(float(eq), 2)
         ex.update(last_bar=bar, last=out)
         ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
     netter.after.append(finish)
