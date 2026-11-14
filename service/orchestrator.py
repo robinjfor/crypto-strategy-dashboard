@@ -194,7 +194,10 @@ def plan(close: pd.Series, equities: dict, prev: dict | None, now: datetime, cap
     rg = regime(close)
     w, x = weights(rg["bear"], rg["hivol"])
     pools = eligible_pools(equities, usdt_margin)
-    # P is mark-to-market of the four orchestrator books (DD alert only). It is not the sizing base.
+    # P is mark-to-market of the four virtual books, including R2S's 3000 credit when
+    # that ledger still carries it. DD alert only: it is not the sizing base, and it is
+    # not the number on the dashboard. /status replaces portfolio_equity, peak and
+    # drawdown with the USDT-M + USDC futures wallet (capital_basis).
     P = float(sum(_eq(equities, k) for k in BASE_W))
     peak = max(P, float((prev or {}).get("peak") or 0.0))
     dd = 1 - P / peak if peak > 0 else 0.0

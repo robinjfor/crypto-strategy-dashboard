@@ -1402,6 +1402,13 @@ def build_status() -> dict:
     total_assets = _total_assets(client, bals, books)
     _fc = _FDC()
     open_orders = _open_orders(client if client.api_key else None, _fc if _fc.api_key else None)
+    import capital_basis
+    capital_basis_view = capital_basis.summarize(
+        state.get("futures_transfers") or [],
+        (total_assets or {}).get("futures") or {},
+        state.get("capital_basis_history") or [],
+        (total_assets or {}).get("total_usdt"),
+    )
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -1446,15 +1453,10 @@ def build_status() -> dict:
         "migrations": state.get("migrations") or {},
         "demo_fa_exec": {k: v for k, v in (state.get("demo_fa_exec") or {}).items() if k != "history"},
         "netting": _safe_netting_view(state, positions),
-        "orchestrator": {k: v for k, v in (state.get("orchestrator") or {}).items() if k != "history"} or None,
+        "orchestrator": capital_basis.overlay_orchestrator(state.get("orchestrator"), capital_basis_view),
         "orchestrator_policy": __import__("orchestrator").policy_public(),
         "slot_caps": __import__("orchestrator").effective_slot_caps(state),
-        "capital_basis": __import__("capital_basis").summarize(
-            state.get("futures_transfers") or [],
-            (total_assets or {}).get("futures") or {},
-            state.get("capital_basis_history") or [],
-            (total_assets or {}).get("total_usdt"),
-        ),
+        "capital_basis": capital_basis_view,
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.

@@ -85,6 +85,25 @@
       "</div></div></div></section>";
   }
 
+  function portfolioKpis(st) {
+    var last = st.orchestrator || {};
+    var cb = st.capital_basis || {};
+    var wallet = last.portfolio_basis === "usd_m_futures_usdt_plus_usdc";
+    var nav = wallet ? last.portfolio_equity : cb.nav;
+    var start = wallet ? last.starting_total : cb.starting_total;
+    var peak = wallet ? last.peak : cb.peak;
+    var dd = wallet ? last.max_drawdown : cb.max_drawdown;
+    var frac = wallet ? last.drawdown : cb.max_drawdown_pct;
+    var usdt = wallet && last.nav_usdt_m != null ? last.nav_usdt_m : cb.nav_usdt_m;
+    var usdc = wallet && last.nav_usdc_m != null ? last.nav_usdc_m : cb.nav_usdc_m;
+    var show = function (v) { return v == null || v === "" || !isFinite(Number(v)) ? "—" : n(v); };
+    var pctDd = frac == null || !isFinite(Number(frac)) ? "—" : n(Number(frac) * 100, 2) + "%";
+    return kpi("組合淨值", show(nav), "USDT-M " + show(usdt) + " ＋ USDC " + show(usdc) + " · 錢包＋未實現，不含現貨") +
+      kpi("起始資金", show(start), "USDT-M 入金＋USDC 入金。不含 R2S 虛擬 3000，也不含其他策略虛擬本金") +
+      kpi("高點", show(peak), "合約淨值日序列，自 2026-10-01") +
+      kpi("最大回撤", show(dd), pctDd + " · 自該序列的高點");
+  }
+
   function blockPolicy(st) {
     var p = st.orchestrator_policy;
     if (!p || !p.base_weights_keys) return "";
@@ -102,6 +121,7 @@
       ? ("權重 " + pct(k.R) + "，上限 " + n(rcap.equity) + " USDT；超過才留現金")
       : "USDT 池";
     return '<section class="h-sec"><h2>組合權重</h2><div class="h-kpis">' +
+      portfolioKpis(st) +
       kpi("E", pct(k.E), "權重 " + pct(k.E) + "，不接收 R2S 差額") +
       kpi("R2S", pct(k.R), rsub + "。R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除") +
       kpi("U1", pct(k.U), u1.closes_positions ? "暫停並平倉" : "暫停開新倉，不平倉") +

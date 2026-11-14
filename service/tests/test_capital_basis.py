@@ -65,6 +65,81 @@ def test_transfer_income_replaces_the_derived_deposits():
     assert d["vbo_carve_usdt"] == 1000
 
 
+def test_wallet_portfolio_is_futures_nav_and_ignores_virtual_books():
+    """2026-11-12 08:52 Taipei wallet, versus the 2026-11-11 20:08 book sum.
+
+    The book sum is E+R+U+F from service/shadow_ab/pool_fix_compare.json and still
+    includes R2S's virtual 3000. It must not become portfolio_equity.
+    """
+    d = C.summarize([], FUT_1112, [])
+    w = C.wallet_portfolio(d)
+    assert w["portfolio_basis"] == "usd_m_futures_usdt_plus_usdc"
+    assert w["starting_total"] == 10000
+    assert w["portfolio_equity"] == 9677.01
+    assert w["nav_usdt_m"] == 4868.68 and w["nav_usdc_m"] == 4808.33
+    assert w["peak"] == 10000
+    assert w["max_drawdown"] == 322.99
+    assert w["drawdown"] == d["max_drawdown_pct"] == 0.032299
+    book_sum = round(4776.0098 + 3085.5987 + 808.478 + 1000.0, 2)
+    assert book_sum == 9670.09
+    assert w["portfolio_equity"] != book_sum
+
+
+def test_wallet_portfolio_peak_and_drawdown_follow_the_daily_series():
+    h = [["2026-11-01", 10300.0], ["2026-11-05", 9500.0]]
+    d = C.summarize([], FUT_1112, h)
+    w = C.wallet_portfolio(d)
+    assert w["portfolio_equity"] == 9677.01
+    assert w["peak"] == 10300.0
+    assert w["max_drawdown"] == 800.0
+    assert w["drawdown"] == d["max_drawdown_pct"]
+    assert w["starting_total"] == 10000
+
+
+def test_overlay_replaces_the_book_sum_and_leaves_sizing_alone():
+    stored = {
+        "targets": {"demo_e5_min5_x175_t05top20": 3875.17, "demo_r2s_top10_3k": 0.0,
+                    "u1_live": 0.0, "demo_funding_arb_1x": 0.0},
+        "weights": {"demo_e5_min5_x175_t05top20": 1.0, "demo_r2s_top10_3k": 0.0,
+                    "u1_live": 0.0, "demo_funding_arb_1x": 0.0},
+        "quote_pool": {"demo_e5_min5_x175_t05top20": 3875.17},
+        "sizing": "quote_pool",
+        "equity": {"demo_e5_min5_x175_t05top20": 4776.01, "demo_r2s_top10_3k": 3085.60,
+                   "u1_live": 808.48, "demo_funding_arb_1x": 1000.0},
+        "portfolio_equity": 9670.09,
+        "peak": 10000.0,
+        "drawdown": 0.033,
+        "history": [{"bar": "2026-11-11", "P": 9670.09, "dd": 0.033}],
+    }
+    basis = C.summarize([], FUT_1112, [["2026-11-01", 10300.0], ["2026-11-05", 9500.0]])
+    view = C.overlay_orchestrator(stored, basis)
+    assert view["portfolio_equity"] == 9677.01
+    assert view["peak"] == 10300.0
+    assert view["max_drawdown"] == 800.0
+    assert view["drawdown"] == basis["max_drawdown_pct"]
+    assert view["starting_total"] == 10000
+    assert view["targets"]["demo_e5_min5_x175_t05top20"] == 3875.17
+    assert view["targets"]["demo_r2s_top10_3k"] == 0.0
+    assert view["quote_pool"]["demo_e5_min5_x175_t05top20"] == 3875.17
+    assert view["weights"]["demo_e5_min5_x175_t05top20"] == 1.0
+    assert view["sizing"] == "quote_pool"
+    assert "history" not in view
+    assert stored["portfolio_equity"] == 9670.09 and stored["peak"] == 10000.0
+    assert stored["history"][0]["P"] == 9670.09
+
+
+def test_missing_wallet_leg_does_not_fall_back_to_the_virtual_book_sum():
+    basis = C.summarize([], {"USDT": 4868.68, "USDC": None}, [])
+    stored = {"portfolio_equity": 13000.0, "peak": 14000.0, "drawdown": 0.1,
+              "targets": {"demo_e5_min5_x175_t05top20": 3875.17}}
+    view = C.overlay_orchestrator(stored, basis)
+    assert view["portfolio_equity"] is None and view["peak"] is None
+    assert view["drawdown"] is None and view["max_drawdown"] is None
+    assert view["starting_total"] == 10000
+    assert view["targets"]["demo_e5_min5_x175_t05top20"] == 3875.17
+    assert stored["portfolio_equity"] == 13000.0
+
+
 def test_reconcile_update_uses_snapshot_futures_not_total():
     import reconcile
     s = {"futures_transfers": [{"asset": "USDT", "amount": 5000.0, "time_ms": 1}]}
