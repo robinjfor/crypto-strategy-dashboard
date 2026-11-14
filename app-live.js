@@ -1588,6 +1588,28 @@
     return list;
   }
 
+  function portfolioKpis() {
+    var last = (cloud && cloud.orchestrator) || {};
+    var cb = (cloud && cloud.capital_basis) || {};
+    var wallet = last.portfolio_basis === "usd_m_futures_usdt_plus_usdc";
+    var nav = wallet ? last.portfolio_equity : cb.nav;
+    var start = wallet ? last.starting_total : cb.starting_total;
+    var peak = wallet ? last.peak : cb.peak;
+    var dd = wallet ? last.max_drawdown : cb.max_drawdown;
+    var frac = wallet ? last.drawdown : cb.max_drawdown_pct;
+    var usdt = wallet && last.nav_usdt_m != null ? last.nav_usdt_m : cb.nav_usdt_m;
+    var usdc = wallet && last.nav_usdc_m != null ? last.nav_usdc_m : cb.nav_usdc_m;
+    var pctDd = frac == null || !isFinite(Number(frac)) ? "—" : num(Number(frac) * 100, 2) + "%";
+    function tile(label, value, sub) {
+      return '<div class="kpi"><div class="label">' + label + '</div><div class="value">' + value +
+        '</div><div class="sublabel">' + sub + "</div></div>";
+    }
+    return tile("組合淨值", num(nav), "USDT-M " + num(usdt) + " ＋ USDC " + num(usdc) + " · 錢包＋未實現，不含現貨") +
+      tile("起始資金", num(start), "USDT-M 入金＋USDC 入金。不含 R2S 虛擬 3000，也不含其他策略虛擬本金") +
+      tile("高點", num(peak), "合約淨值日序列，自 2026-10-01") +
+      tile("最大回撤", num(dd), pctDd + " · 自該序列的高點");
+  }
+
   function renderOrchestratorPolicy() {
     var p = cloud && cloud.orchestrator_policy;
     if (!p || !p.base_weights_keys) return "";
@@ -1610,6 +1632,7 @@
     return '<section class="section" id="sec-weights"><div class="section-head"><h2>組合權重</h2>' +
       '<span class="hint">百分比來自雲端狀態，不是這頁寫死的數字</span></div>' +
       '<div class="card"><div class="kpi-grid">' +
+      portfolioKpis() +
       '<div class="kpi"><div class="label">E</div><div class="value">' + pct(k.E) + '</div><div class="sublabel">權重 ' + pct(k.E) + '，不接收 R2S 差額</div></div>' +
       '<div class="kpi"><div class="label">R2S</div><div class="value">' + pct(k.R) + '</div><div class="sublabel">' + rsub +
       '。R2S 原本的 3000 為虛擬起始資金，未實際入金，已於 2026-11-11 扣除</div></div>' +
