@@ -141,6 +141,42 @@ def performance(points, starting_total: float, nav_now: float | None = None) -> 
     }
 
 
+def wallet_portfolio(basis: dict | None) -> dict:
+    """Dashboard portfolio fields. Same numbers as summarize(): futures NAV, not virtual books.
+
+    drawdown is the series max drawdown as a fraction of the peak it fell from
+    (max_drawdown_pct). max_drawdown is that drop in USDT. starting_total is the
+    deposit basis (USDT-M + USDC), which does not include R2S's virtual 3000.
+    """
+    b = basis or {}
+    return {
+        "portfolio_equity": b.get("nav"),
+        "peak": b.get("peak"),
+        "drawdown": b.get("max_drawdown_pct"),
+        "max_drawdown": b.get("max_drawdown"),
+        "starting_total": b.get("starting_total"),
+        "nav_usdt_m": b.get("nav_usdt_m"),
+        "nav_usdc_m": b.get("nav_usdc_m"),
+        "portfolio_basis": b.get("nav_scope") or "usd_m_futures_usdt_plus_usdc",
+    }
+
+
+def overlay_orchestrator(stored: dict | None, basis: dict | None) -> dict | None:
+    """Copy a stored plan for /status, then replace the portfolio fields.
+
+    Weights, targets, quote_pool and the per-slot equity map are left as the job
+    wrote them. portfolio_equity, peak and drawdown become the futures-wallet
+    basis. The caller's stored plan is not modified, so the job's drawdown alert
+    and sizing still read the book-sum series.
+    """
+    out = {k: v for k, v in (stored or {}).items() if k != "history"}
+    fields = wallet_portfolio(basis)
+    if not out and fields.get("starting_total") is None and fields.get("portfolio_equity") is None:
+        return None
+    out.update(fields)
+    return out
+
+
 def summarize(income_rows, futures: dict | None, history=None, account_total=None) -> dict:
     """NAV = USDT-M (wallet + unrealized) + USDC-M (wallet + unrealized). Spot is not in NAV.
 
