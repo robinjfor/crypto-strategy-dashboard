@@ -51,7 +51,27 @@ jobs:
               if isinstance(x,dict): return {k:scrub(v) for k,v in x.items() if not bad.search(str(k))}
               if isinstance(x,list): return [scrub(v) for v in x]
               return x
-          orch_state={k:v for k,v in (s.get('orchestrator') or {}).items() if k!='history'}
+          def overlay_orchestrator(stored, basis):
+              # Wallet fields match service/capital_basis.overlay_orchestrator. Book-sum
+              # portfolio_equity/peak/drawdown move to book_*. This does not write GCS.
+              out={k:v for k,v in (stored or {}).items() if k!='history'} if isinstance(stored, dict) else {}
+              out['book_portfolio_equity']=out.get('portfolio_equity')
+              out['book_peak']=out.get('peak')
+              out['book_drawdown']=out.get('drawdown')
+              b=basis if isinstance(basis, dict) else {}
+              if b.get('nav') is not None:
+                  out['portfolio_equity']=b.get('nav')
+                  out['peak']=b.get('peak')
+                  out['drawdown']=b.get('max_drawdown_pct')
+                  out['max_drawdown']=b.get('max_drawdown')
+                  out['starting_total']=b.get('starting_total')
+                  out['nav_usdt_m']=b.get('nav_usdt_m')
+                  out['nav_usdc_m']=b.get('nav_usdc_m')
+                  out['portfolio_basis']=b.get('nav_scope') or 'usd_m_futures_usdt_plus_usdc'
+              return out
+          cb=s.get('capital_basis') if isinstance(s, dict) else None
+          o=overlay_orchestrator(o, cb)
+          orch_state=overlay_orchestrator(s.get('orchestrator') if isinstance(s, dict) else None, cb)
           dc=s.get('demo_candidates') or {}
           slots={k:{f:v.get(f) for f in ('equity','capital','peak_equity','dd','status','last_run','positions','open_positions','enabled','approved','approved_by','parity_pass','cloud_ordering_ok','gates_day') if isinstance(v,dict) and f in v} for k,v in dc.items()}
           out={"orch_object":os.environ.get("OBJ"),"orch_objects":open('/tmp/list.txt').read().split(),
