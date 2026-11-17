@@ -820,6 +820,14 @@ def get_risk(status: dict, state: dict) -> Outcome:
     }))
 
 
+def get_bridge(status: dict, state: dict) -> Outcome:
+    import review_bridge
+    return Outcome(redact({
+        **review_bridge.build_bridge(status, state),
+        "updated_at": status.get("updated_at"),
+    }))
+
+
 def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -> Outcome:
     args = args or {}
     try:
@@ -884,6 +892,8 @@ def dispatch_read(name: str, args: dict, snapshot: Callable[[], tuple[dict, dict
         return get_reconciliation(status, state)
     if name == "get_risk":
         return get_risk(status, state)
+    if name == "get_bridge":
+        return get_bridge(status, state)
     if name == "get_orchestrator_plan":
         return get_orchestrator_plan(status, state, args)
     return Outcome({"ok": False, "error": "未知的工具"}, 404)
@@ -936,6 +946,12 @@ TOOLS: list[dict] = [
     {
         "name": "get_reconciliation",
         "description": "Parity mismatches split on the repo's parity-fix dates, each with a reason (APT 2026-10-03 included), rolling match rate, and realized slippage versus the signal or target price.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_bridge",
+        "description": "Demo capital bridge. Shows USDC unallocated and the USDT book-versus-wallet overcount. The residual is not absorbed. Does not change ledgers.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
@@ -1008,7 +1024,7 @@ TOOLS: list[dict] = [
 
 _READ_TOOLS = {
     "list_strategies", "get_performance", "get_positions", "get_trades",
-    "get_backtest", "get_reconciliation", "get_risk", "get_orchestrator_plan", "list_comments",
+    "get_backtest", "get_reconciliation", "get_risk", "get_bridge", "get_orchestrator_plan", "list_comments",
 }
 
 
@@ -1063,6 +1079,7 @@ def openapi_spec(base_url: str) -> dict:
                 "Backtest": {"type": "object"},
                 "Reconciliation": {"type": "object"},
                 "Risk": {"type": "object"},
+                "Bridge": {"type": "object"},
                 "Orchestrator": {"type": "object"},
                 "Comments": {"type": "object"},
                 "CommentWrite": {
@@ -1114,6 +1131,7 @@ def openapi_spec(base_url: str) -> dict:
             },
             "/review/reconciliation": {"get": {"operationId": "getReconciliation", "summary": "Parity periods, mismatch reasons, slippage", "responses": ok("Reconciliation")}},
             "/review/risk": {"get": {"operationId": "getRisk", "summary": "Display-only portfolio risk", "responses": ok("Risk")}},
+            "/review/bridge": {"get": {"operationId": "getBridge", "summary": "Capital bridge with the residual left visible", "responses": ok("Bridge")}},
             "/review/orchestrator": {
                 "get": {
                     "operationId": "getOrchestratorPlan",
@@ -1330,6 +1348,10 @@ def register(app, *, snapshot: Callable[[], tuple[dict, dict]], check_read, chec
     @app.route("/review/risk", methods=["GET"])
     def review_risk():
         return _read("get_risk")
+
+    @app.route("/review/bridge", methods=["GET"])
+    def review_bridge_route():
+        return _read("get_bridge")
 
     @app.route("/review/orchestrator", methods=["GET"])
     def review_orchestrator():
