@@ -53,17 +53,30 @@ jobs:
               return x
           def overlay_orchestrator(stored, basis):
               # Wallet fields match service/capital_basis.overlay_orchestrator. Book-sum
-              # portfolio_equity/peak/drawdown move to book_*. This does not write GCS.
-              out={k:v for k,v in (stored or {}).items() if k!='history'} if isinstance(stored, dict) else {}
+              # portfolio_equity/peak/drawdown move to book_*. drawdown on the wallet
+              # is the current drop (1 - nav/peak); max_drawdown_pct is the series max.
+              # This does not write GCS.
+              stored=stored if isinstance(stored, dict) else {}
+              out={k:v for k,v in stored.items() if k!='history'}
               out['book_portfolio_equity']=out.get('portfolio_equity')
               out['book_peak']=out.get('peak')
               out['book_drawdown']=out.get('drawdown')
+              hist=stored.get('history') if isinstance(stored.get('history'), list) else []
+              out['book_history']=[{'bar':r.get('bar'),'book_portfolio_equity':r.get('book_portfolio_equity', r.get('P')),'book_drawdown':r.get('book_drawdown', r.get('dd')),'bear':r.get('bear'),'hivol':r.get('hivol')} for r in hist if isinstance(r, dict)]
               b=basis if isinstance(basis, dict) else {}
               if b.get('nav') is not None:
-                  out['portfolio_equity']=b.get('nav')
-                  out['peak']=b.get('peak')
-                  out['drawdown']=b.get('max_drawdown_pct')
+                  nav=b.get('nav'); peak=b.get('peak'); cur=None
+                  try:
+                      if peak not in (None, '') and float(peak)>0:
+                          cur=round(1-float(nav)/float(peak), 6)
+                  except (TypeError, ValueError):
+                      cur=None
+                  out['portfolio_equity']=nav
+                  out['peak']=peak
+                  out['drawdown']=cur
+                  out['current_drawdown']=cur
                   out['max_drawdown']=b.get('max_drawdown')
+                  out['max_drawdown_pct']=b.get('max_drawdown_pct')
                   out['starting_total']=b.get('starting_total')
                   out['nav_usdt_m']=b.get('nav_usdt_m')
                   out['nav_usdc_m']=b.get('nav_usdc_m')

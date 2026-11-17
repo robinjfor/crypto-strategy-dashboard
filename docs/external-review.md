@@ -51,7 +51,7 @@ Team-only, dashboard session (the reviewer token receives **403**):
 
 Comment status values are `open`, `acknowledged`, `done`, and `rejected`. Timestamps are Asia/Taipei (`+08:00`). Comments are stored at `gs://$GCS_BUCKET/research/reviews/comments.json`. That object is private. Do not commit it, and do not create a signed or public URL for it.
 
-Figures come from the same `build_status()` path as `GET /status` (Binance Demo), plus the state fields that path already uses (`capital_basis_history`, orchestrator history). The latest orchestrator `portfolio_equity`, `peak`, and `drawdown` match `/status` (futures-wallet capital basis). History rows are the series the orchestrator job stored.
+Figures come from the same `build_status()` path as `GET /status` (Binance Demo), plus the state fields that path already uses (`capital_basis_history`, orchestrator history, the E5 ledger, and `trader/shadow_ab/e5_targets.json` when it is not already on the state). The latest orchestrator `portfolio_equity` and `peak` match `/status` (futures-wallet capital basis). `drawdown` and `current_drawdown` are `1 - nav/peak`. `max_drawdown_pct` is the deepest drop of that wallet series. `nav_history` / `history` on `/review/performance` is `capital_basis_history` (USDT-M + USDC futures, with the starting capital as the first point when the stored series begins later). `book_history` is the virtual-book sum the drawdown alert uses. `/review/backtest` still returns satellite and U1 parity rows, and adds `e5`: per-day target weight and quantity versus the E5 virtual book.
 
 The reviewer token is rejected on `/status` and on every `/control/*` route, including approve and revoke.
 

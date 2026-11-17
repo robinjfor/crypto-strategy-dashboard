@@ -79,7 +79,9 @@ def test_wallet_portfolio_is_futures_nav_and_ignores_virtual_books():
     assert w["nav_usdt_m"] == 4868.68 and w["nav_usdc_m"] == 4808.33
     assert w["peak"] == 10000
     assert w["max_drawdown"] == 322.99
-    assert w["drawdown"] == d["max_drawdown_pct"] == 0.032299
+    assert w["max_drawdown_pct"] == d["max_drawdown_pct"] == 0.032299
+    assert w["current_drawdown"] == d["current_drawdown"] == 0.032299
+    assert w["drawdown"] == w["current_drawdown"]
     book_sum = round(4776.0098 + 3085.5987 + 808.478 + 1000.0, 2)
     assert book_sum == 9670.09
     assert w["portfolio_equity"] != book_sum
@@ -92,8 +94,17 @@ def test_wallet_portfolio_peak_and_drawdown_follow_the_daily_series():
     assert w["portfolio_equity"] == 9677.01
     assert w["peak"] == 10300.0
     assert w["max_drawdown"] == 800.0
-    assert w["drawdown"] == d["max_drawdown_pct"]
+    assert w["max_drawdown_pct"] == d["max_drawdown_pct"] == round(800 / 10300, 6)
+    assert w["current_drawdown"] == d["current_drawdown"]
+    assert w["current_drawdown"] == round(1 - 9677.01 / 10300, 6)
+    assert w["drawdown"] == w["current_drawdown"]
+    assert w["current_drawdown"] != w["max_drawdown_pct"]
     assert w["starting_total"] == 10000
+    series = C.display_nav_history(h, d["starting_total"])
+    assert series[0] == ["2026-10-01", 10000.0]
+    assert series[-1] == ["2026-11-05", 9500.0]
+    assert [row["book_portfolio_equity"] for row in C.book_history(
+        {"history": [{"bar": "2026-11-11", "P": 6686.9, "dd": 0.328}]})] == [6686.9]
 
 
 def test_overlay_replaces_the_book_sum_and_leaves_sizing_alone():
@@ -116,7 +127,13 @@ def test_overlay_replaces_the_book_sum_and_leaves_sizing_alone():
     assert view["portfolio_equity"] == 9677.01
     assert view["peak"] == 10300.0
     assert view["max_drawdown"] == 800.0
-    assert view["drawdown"] == basis["max_drawdown_pct"]
+    assert view["max_drawdown_pct"] == basis["max_drawdown_pct"]
+    assert view["current_drawdown"] == basis["current_drawdown"] == round(1 - 9677.01 / 10300, 6)
+    assert view["drawdown"] == view["current_drawdown"]
+    assert view["book_portfolio_equity"] == 9670.09
+    assert view["book_drawdown"] == 0.033
+    assert view["book_history"][0]["book_portfolio_equity"] == 9670.09
+    assert view["book_history"][0]["book_drawdown"] == 0.033
     assert view["starting_total"] == 10000
     assert view["targets"]["demo_e5_min5_x175_t05top20"] == 3875.17
     assert view["targets"]["demo_r2s_top10_3k"] == 0.0

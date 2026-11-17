@@ -284,7 +284,12 @@ def test_each_read_tool_shape_and_redaction(client):
     assert perf["capital_basis"]["max_drawdown"] == 89.5
     assert perf["capital_basis"]["api_key"] == "[redacted]"
     assert perf["capital_basis"]["account_id"] == "[redacted]"
-    assert perf["nav_history"][1] == ["2026-11-17", 10010.5]
+    assert perf["nav_history"][0] == ["2026-10-01", 10000.0]
+    assert perf["nav_history"][-1] == ["2026-11-17", 10010.5]
+    assert perf["history"] == perf["nav_history"]
+    assert perf["capital_basis"]["current_drawdown"] == round(1 - 10010.5 / 10100, 6)
+    assert perf["book_history"][0]["book_portfolio_equity"] == 10000.0
+    assert "P" not in perf["book_history"][0]
     assert perf["virtual_books"]["demo_e5"]["pnl"] == 3.2
     assert perf["fees"]["books"]["usdt"]["fees_usdt"] == 1.25
     assert perf["fees"]["sleeves"]["demo_e5_exec"]["fees"] == 0.8
@@ -322,6 +327,10 @@ def test_each_read_tool_shape_and_redaction(client):
     assert plan["latest"]["portfolio_equity"] == 10010.5
     assert plan["latest"]["weights"]["demo_e5"] == 1.0
     assert plan["history"][0]["bar"] == "2026-11-16"
+    assert plan["history"][0]["book_portfolio_equity"] == 10000.0
+    assert plan["book_history"][0]["book_drawdown"] == 0.0
+    assert "P" not in plan["history"][0]
+    assert plan["nav_history"][-1] == ["2026-11-17", 10010.5]
     assert plan["policy"]["base_weights"]["demo_r2s"] == 0.0
     _no_secrets(plan)
 
@@ -339,7 +348,8 @@ def test_rest_mirrors_match_tools(client):
     assert trades["total"] == 4 and len(trades["trades"]) == 1
     assert client.get("/review/backtest?strategy=R2S", headers=_auth()).get_json()["rows"][0]["code"] == "R2S"
     orch = client.get("/review/orchestrator?history_limit=5", headers=_auth()).get_json()
-    assert orch["history"][0]["P"] == 10000.0
+    assert orch["history"][0]["book_portfolio_equity"] == 10000.0
+    assert orch["nav_history"][0] == ["2026-10-01", 10000.0]
 
 
 def test_comment_post_reply_status_and_redaction(client):

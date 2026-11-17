@@ -4,6 +4,7 @@
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
   function n(v, d) { var x = Number(v); return isFinite(x) ? x.toLocaleString("zh-TW", {minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d}) : "—"; }
+  function pctFrac(v) { var x = Number(v); return isFinite(x) ? n(x * 100, 2) + "%" : "—"; }
   function sn(v, d) { var x = Number(v); if (!isFinite(x)) return "—"; return '<span class="' + (x > 0 ? "pos" : x < 0 ? "neg" : "") + '">' + (x > 0 ? "+" : "") + n(x, d) + "</span>"; }
   function kpi(l, v, s) { return '<div class="h-kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : "") + "</div>"; }
   async function j(url) { var r = await fetch(url, {cache: "no-store"}); if (!r.ok) throw new Error(url + " HTTP " + r.status); return r.json(); }
@@ -27,7 +28,8 @@
       ? ("起始資金 " + n(cb.starting_total) + "＝USDT-M 入金 " + n(cb.usdt_m_deposit) + " ＋ USDC 入金 " + n(cb.usdc_deposit)
          + "。VBO 的 " + n(cb.vbo_carve_usdt, 0) + " 從 USDT-M 劃出，不是另一筆入金。淨值 " + n(cb.nav)
          + "＝USDT-M " + n(cb.nav_usdt_m) + " ＋ USDC " + n(cb.nav_usdc_m) + "（錢包＋未實現，不含現貨）。損益 " + sn(cb.pnl)
-         + "，高點 " + n(cb.peak) + "，最大回撤 " + n(cb.max_drawdown) + "。")
+         + "，高點 " + n(cb.peak) + "，目前回撤 " + pctFrac(cb.current_drawdown) + "，最大回撤 " + n(cb.max_drawdown)
+         + "（" + pctFrac(cb.max_drawdown_pct) + "）。")
       : "";
     return '<section class="h-sec"><h2>資金總覽<a href="./account.html">帳戶明細 ›</a></h2><div class="h-kpis">' +
       kpi("合約淨值（USDT-M＋USDC）", n(cb.nav), "起始 " + n(cb.starting_total) + " · 損益 " + sn(cb.pnl) + " · 不含現貨") +
@@ -92,16 +94,19 @@
     var nav = wallet ? last.portfolio_equity : cb.nav;
     var start = wallet ? last.starting_total : cb.starting_total;
     var peak = wallet ? last.peak : cb.peak;
-    var dd = wallet ? last.max_drawdown : cb.max_drawdown;
-    var frac = wallet ? last.drawdown : cb.max_drawdown_pct;
+    var cur = last.current_drawdown != null ? last.current_drawdown : cb.current_drawdown;
+    if (cur == null && nav != null && peak) cur = 1 - Number(nav) / Number(peak);
+    var curUsdt = (nav != null && peak != null) ? Number(peak) - Number(nav) : null;
+    var maxUsdt = last.max_drawdown != null ? last.max_drawdown : cb.max_drawdown;
+    var maxFrac = last.max_drawdown_pct != null ? last.max_drawdown_pct : cb.max_drawdown_pct;
     var usdt = wallet && last.nav_usdt_m != null ? last.nav_usdt_m : cb.nav_usdt_m;
     var usdc = wallet && last.nav_usdc_m != null ? last.nav_usdc_m : cb.nav_usdc_m;
     var show = function (v) { return v == null || v === "" || !isFinite(Number(v)) ? "—" : n(v); };
-    var pctDd = frac == null || !isFinite(Number(frac)) ? "—" : n(Number(frac) * 100, 2) + "%";
     return kpi("組合淨值", show(nav), "USDT-M " + show(usdt) + " ＋ USDC " + show(usdc) + " · 錢包＋未實現，不含現貨") +
       kpi("起始資金", show(start), "USDT-M 入金＋USDC 入金。不含 R2S 虛擬 3000，也不含其他策略虛擬本金") +
       kpi("高點", show(peak), "合約淨值日序列，自 2026-10-01") +
-      kpi("最大回撤", show(dd), pctDd + " · 自該序列的高點");
+      kpi("目前回撤", pctFrac(cur), show(curUsdt) + " · 1 − 淨值／高點") +
+      kpi("最大回撤", show(maxUsdt), pctFrac(maxFrac) + " · 該序列曾離開高點的最大幅度");
   }
 
   function blockPolicy(st) {
@@ -253,11 +258,14 @@
   }
 
   function series(st) {
-    var pts = (((st.asset_daily || {}).points) || []).slice();
-    var ta = (st.total_assets || {}).total_usdt;
+    var cb = st.capital_basis || {};
+    var pts = (st.nav_history || cb.nav_history || []).slice();
     var today = new Intl.DateTimeFormat("en-CA", {timeZone: "Asia/Taipei"}).format(new Date());
-    if (ta != null) { pts = pts.filter(function (p) { return p[0] !== today; }); pts.push([today, Number(ta)]); }
-    return pts.filter(function (p) { return p[0] >= "2026-09-30"; });
+    if (cb.nav != null && isFinite(Number(cb.nav))) {
+      pts = pts.filter(function (p) { return p && p[0] !== today; });
+      pts.push([today, Number(cb.nav)]);
+    }
+    return pts.filter(function (p) { return p && p[0] >= "2026-10-01" && isFinite(Number(p[1])); });
   }
   function months(pts) {
     var by = {}, order = [];
@@ -271,20 +279,18 @@
   }
   function blockChart(st) {
     var pts = series(st), ms = months(pts);
-    var ad = st.asset_daily || {};
     var tbl = ms.map(function (r) { return "<tr><td>" + r.m.replace("-", " 年 ") + " 月</td><td>" + n(r.start) + "</td><td>" + n(r.end) + "</td><td>" + sn(r.chg) + "</td><td>" + sn(r.pct) + "%</td></tr>"; }).join("");
-    return '<section class="h-sec"><h2>總資產走勢</h2>' + (pts.length ? '<div style="height:260px"><canvas id="monChart"></canvas></div>' +
+    return '<section class="h-sec"><h2>合約淨值走勢</h2>' + (pts.length ? '<div style="height:260px"><canvas id="monChart"></canvas></div>' +
       '<table class="h-tbl" style="margin-top:8px"><tr><th>月份</th><th>月初</th><th>月底</th><th>增減金額</th><th>增減%</th></tr>' + tbl + "</table>"
       : '<div class="empty-state">尚無資料</div>') +
-      '<div class="h-note">每日點為台北時間日終總資產（USDT 計），起始資金不含 R2S 的 3000 虛擬入金；最後一點為即時值。10/1 起的歷史由幣安帳戶成交、資金費與轉帳紀錄逆推，並以幣安收盤價估值' +
-      (ad.built_at ? "（重建於 " + tpe(ad.built_at) + "）" : "（雲端重建中）") + "。月初＝上月最後一日日終。</div></section>";
+      '<div class="h-note">每日點為 USDT-M ＋ USDC 合約淨值（錢包＋未實現，不含現貨），起點是起始資金 10,000；最後一點為即時淨值。虛擬帳本合計不畫在這張圖，只留在回撤警示用的帳本欄位。月初＝上月最後一日。</div></section>';
   }
 
   function drawChart(st) {
     var c = $("monChart"); if (!c || !window.Chart) return;
     var pts = series(st), labels = pts.map(function (p) { return p[0].slice(5).replace("-", "/"); }), vals = pts.map(function (p) { return p[1]; });
     var isEnd = pts.map(function (p, i) { return i === pts.length - 1 || (pts[i + 1] && pts[i + 1][0].slice(0, 7) !== p[0].slice(0, 7)); });
-    new Chart(c, {type: "line", data: {labels: labels, datasets: [{label: "總資產（USDT）", data: vals, borderColor: "#3b82f6", backgroundColor: "#3b82f633",
+    new Chart(c, {type: "line", data: {labels: labels, datasets: [{label: "合約淨值（USDT）", data: vals, borderColor: "#3b82f6", backgroundColor: "#3b82f633",
       tension: 0.2, pointRadius: isEnd.map(function (e) { return e ? 6 : 2; }), pointStyle: isEnd.map(function (e) { return e ? "rectRot" : "circle"; }),
       pointBackgroundColor: isEnd.map(function (e) { return e ? "#f59e0b" : "#3b82f6"; })}]},
       options: {maintainAspectRatio: false, plugins: {legend: {display: false}, tooltip: {callbacks: {label: function (x) { return n(x.parsed.y) + " USDT" + (isEnd[x.dataIndex] ? "（月底）" : ""); }}}},
