@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>實盤門檻 · Binance Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">G</div><div><h1>實盤門檻</h1><div class="sub">預設未就緒 · 只讀</div></div></div>
+      <nav class="nav-links">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link" href="./credibility.html">回測可信度</a>
+        <a class="nav-link active" href="./gate.html">實盤門檻</a>
+      </nav>
+    </header>
+    <main id="main" class="loading">載入中…</main>
+  </div>
+  <script src="./nav.js"></script>
+  <script>
+  (async function () {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+    if (!window.TraderAuth || !TraderAuth.getToken()) { document.getElementById("main").textContent = "請先登入"; return; }
+    const base = (TraderAuth.getApiBase && TraderAuth.getApiBase()) || "";
+    const res = await fetch(base + "/review/gate", {headers: {Authorization: "Bearer " + TraderAuth.getToken()}});
+    const d = await res.json();
+    const rows = (d.gates || []).map((g) => "<tr><td>" + esc(g.id) + "</td><td>" + esc(g.name_zh) + "</td><td>"
+      + esc(g.threshold) + "</td><td>" + esc(typeof g.value === "object" ? JSON.stringify(g.value) : g.value)
+      + "</td><td>" + esc(g.label_zh) + "</td></tr>").join("");
+    document.getElementById("main").innerHTML = "<section class='section'><div class='card'><div class='card-body'>"
+      + "<h2>" + esc(d.label_zh) + "（" + esc(d.page_status) + "）</h2>"
+      + "<p>核准人 " + esc(d.approver) + "。時間 " + esc(d.approved_at) + "。</p>"
+      + "<table><tr><th>門檻</th><th>說明</th><th>標準</th><th>現值</th><th>狀態</th></tr>" + rows + "</table>"
+      + "<p>" + esc(d.note || "") + "</p></div></div></section>";
+  })();
+  </script>
+</body>
+</html>

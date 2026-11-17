@@ -799,6 +799,14 @@ def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome
     return Outcome(redact(body))
 
 
+def get_gate(status: dict, state: dict) -> Outcome:
+    import review_gate
+    return Outcome(redact({
+        **review_gate.evaluate(status, state),
+        "updated_at": status.get("updated_at"),
+    }))
+
+
 def get_credibility(status: dict, state: dict) -> Outcome:
     import review_credibility
     return Outcome(redact({
@@ -910,6 +918,8 @@ def dispatch_read(name: str, args: dict, snapshot: Callable[[], tuple[dict, dict
         return get_backtest(status, state, args)
     if name == "get_credibility":
         return get_credibility(status, state)
+    if name == "get_gate":
+        return get_gate(status, state)
     if name == "get_reconciliation":
         return get_reconciliation(status, state)
     if name == "get_risk":
@@ -965,6 +975,12 @@ TOOLS: list[dict] = [
             },
             "additionalProperties": False,
         },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_gate",
+        "description": "Real-money readiness gates. Default is not ready until the config file is approved and every gate is met. Does not enable trading.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
@@ -1064,7 +1080,7 @@ TOOLS: list[dict] = [
 
 _READ_TOOLS = {
     "list_strategies", "get_performance", "get_positions", "get_trades",
-    "get_backtest", "get_credibility", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan", "list_comments",
+    "get_backtest", "get_credibility", "get_gate", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan", "list_comments",
 }
 
 
@@ -1121,6 +1137,7 @@ def openapi_spec(base_url: str) -> dict:
                 "Risk": {"type": "object"},
                 "Bridge": {"type": "object"},
                 "Credibility": {"type": "object"},
+                "Gate": {"type": "object"},
                 "StrategyDetail": {"type": "object"},
                 "Orchestrator": {"type": "object"},
                 "Comments": {"type": "object"},
@@ -1173,6 +1190,7 @@ def openapi_spec(base_url: str) -> dict:
             },
             "/review/reconciliation": {"get": {"operationId": "getReconciliation", "summary": "Parity periods, mismatch reasons, slippage", "responses": ok("Reconciliation")}},
             "/review/credibility": {"get": {"operationId": "getCredibility", "summary": "Backtest credibility and E5 parity capital", "responses": ok("Credibility")}},
+            "/review/gate": {"get": {"operationId": "getGate", "summary": "Real-money readiness gates", "responses": ok("Gate")}},
             "/review/risk": {"get": {"operationId": "getRisk", "summary": "Display-only portfolio risk", "responses": ok("Risk")}},
             "/review/bridge": {"get": {"operationId": "getBridge", "summary": "Capital bridge with the residual left visible", "responses": ok("Bridge")}},
             "/review/strategy": {
@@ -1399,6 +1417,10 @@ def register(app, *, snapshot: Callable[[], tuple[dict, dict]], check_read, chec
     @app.route("/review/credibility", methods=["GET"])
     def review_credibility_route():
         return _read("get_credibility")
+
+    @app.route("/review/gate", methods=["GET"])
+    def review_gate_route():
+        return _read("get_gate")
 
     @app.route("/review/risk", methods=["GET"])
     def review_risk():

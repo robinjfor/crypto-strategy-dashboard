@@ -250,7 +250,7 @@ def test_mcp_initialize_and_tools(client):
     names = [t["name"] for t in listed]
     assert names == [
         "list_strategies", "get_performance", "get_positions", "get_trades",
-        "get_backtest", "get_credibility", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan",
+        "get_backtest", "get_gate", "get_credibility", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan",
         "list_comments", "post_comment", "reply_comment",
     ]
     note = client.post("/mcp", data=json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}), headers=_auth())
@@ -463,7 +463,7 @@ def test_openapi_schema(client):
     assert spec["openapi"] == "3.0.3"
     assert spec["components"]["securitySchemes"]["reviewerBearer"]["scheme"] == "bearer"
     for path in ("/review/strategies", "/review/performance", "/review/positions", "/review/trades",
-                 "/review/backtest", "/review/credibility", "/review/reconciliation", "/review/strategy", "/review/risk", "/review/bridge",
+                 "/review/backtest", "/review/credibility", "/review/gate", "/review/reconciliation", "/review/strategy", "/review/risk", "/review/bridge",
                  "/review/orchestrator", "/review/comments"):
         assert path in spec["paths"]
     assert "auto_trader" in json.dumps(spec["components"]["schemas"])
