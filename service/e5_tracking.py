@@ -151,21 +151,37 @@ def _plans(state: dict, latest: dict | None) -> list[dict]:
     return [by[b] for b in order]
 
 
-def _sizing(snap: dict, ex: dict, state: dict, slot: str, latest: bool) -> float | None:
+def _virtual_capital(snap: dict, ex: dict) -> float | None:
+    """The ledger's own capital figure (often the virtual 5000), not the orchestrator target."""
     for key in ("sizing_capital", "equity", "K"):
-        if snap.get(key) is not None and _f(snap.get(key)) is not None:
-            return _f(snap.get(key))
-    if not latest:
-        return None
-    orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
-    target = _f((orch.get("targets") or {}).get(slot))
-    if target is not None:
-        return target
+        found = _f(snap.get(key))
+        if found is not None:
+            return found
     sized = _f(ex.get("sizing_equity"))
     if sized is not None:
         return sized
     last = ex.get("last") if isinstance(ex.get("last"), dict) else {}
     return _f(last.get("equity"))
+
+
+def _sizing(snap: dict, ex: dict, state: dict, slot: str, latest: bool) -> tuple[float | None, float | None, str]:
+    """Parity capital is the orchestrator target on the latest day when that target exists.
+
+    The virtual book (5000, or whatever the snapshot stored as equity/K) is returned beside it
+    and is not used to size the comparison.
+    """
+    virtual = _virtual_capital(snap, ex if latest else {})
+    target = None
+    if latest:
+        orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
+        target = _f((orch.get("targets") or {}).get(slot))
+    if target is not None:
+        return target, virtual, "orchestrator_target"
+    if virtual is not None:
+        return virtual, virtual, "virtual"
+    if not latest:
+        return None, None, "missing"
+    return None, None, "missing"
 
 
 def _qty_map(raw) -> dict:
@@ -443,7 +459,7 @@ def summarize_rows(rows: list[dict]) -> dict:
 
 def _day(snap: dict, ex: dict, state: dict, slot: str, mod, prices: dict, latest: bool) -> dict:
     bar = _bar(snap)
-    equity = _sizing(snap, ex, state, slot, latest)
+    equity, virtual_capital, capital_basis_label = _sizing(snap, ex, state, slot, latest)
     book, book_source = _book_for(snap, ex, latest)
     m, lt = _lt_m(snap, ex if latest else {})
     eu = es = None
@@ -479,18 +495,53 @@ def _day(snap: dict, ex: dict, state: dict, slot: str, mod, prices: dict, latest
                                            "target_weight": 0.0, "signal_weight": 0.0, "target_qty": 0.0,
                                            "price": prices.get(sym), "deadband": 0.0},
                                     float(qty), reasons.get(sym), es or eu or 0.0, equity or 0.0))
+    unpriced = []
+    for row in rows:
+        signal = row.get("signal_weight") or 0.0
+        actual = row.get("actual_qty") or 0.0
+        if row.get("price") is not None or abs(float(signal)) <= _QTY_TOL or abs(float(actual)) > _QTY_TOL:
+            continue
+        cause = price_cause(row["symbol"], state, snap, ex if latest else {})
+        row["price_cause"] = cause
+        unpriced.append({"symbol": row["symbol"], "cause": cause, "signal_weight": row.get("signal_weight")})
     return {
         "bar": bar or None,
         "latest": latest,
         "sizing_capital": _round(equity, 4),
+        "virtual_capital": _round(virtual_capital, 4),
+        "capital_basis_label": capital_basis_label,
+        "parity_capital_source": capital_basis_label,
         "u1_equity": _round(eu, 4),
         "s5_equity": _round(es, 4),
         "m": _round(m, 6),
         "lt": _round(lt, 6),
         "actual_source": book_source,
         "symbols": rows,
+        "unpriced_signals": unpriced,
         "summary": summarize_rows(rows),
     }
+
+
+def price_cause(symbol: str, state: dict, snap: dict, ex: dict) -> str:
+    """Why a signaled coin has no mark and no position. Display only."""
+    import tradfi
+    sym = str(symbol or "")
+    try:
+        tradfi_hit = tradfi.is_tradfi(sym, state=state)
+    except Exception:
+        tradfi_hit = False
+    if tradfi_hit:
+        return "tradfi"
+    lines: list[str] = []
+    for blob in (snap, ex if isinstance(ex, dict) else {}):
+        last = blob.get("last") if isinstance(blob.get("last"), dict) else {}
+        for line in list(blob.get("skipped") or []) + list(last.get("skipped") or []):
+            lines.append(str(line))
+    for line in lines:
+        head = line.split()[0] if line.split() else ""
+        if head == sym and "not listed" in line.lower():
+            return "not_listed_on_demo"
+    return "no_mark"
 
 
 def targets_from_state(state: dict | None) -> dict | None:

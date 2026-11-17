@@ -799,6 +799,14 @@ def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome
     return Outcome(redact(body))
 
 
+def get_credibility(status: dict, state: dict) -> Outcome:
+    import review_credibility
+    return Outcome(redact({
+        **review_credibility.build(status, state),
+        "updated_at": status.get("updated_at"),
+    }))
+
+
 def get_reconciliation(status: dict, state: dict) -> Outcome:
     import review_audit
     return Outcome(redact({
@@ -900,6 +908,8 @@ def dispatch_read(name: str, args: dict, snapshot: Callable[[], tuple[dict, dict
         return get_trades(status, state, args)
     if name == "get_backtest":
         return get_backtest(status, state, args)
+    if name == "get_credibility":
+        return get_credibility(status, state)
     if name == "get_reconciliation":
         return get_reconciliation(status, state)
     if name == "get_risk":
@@ -955,6 +965,12 @@ TOOLS: list[dict] = [
             },
             "additionalProperties": False,
         },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_credibility",
+        "description": "Backtest credibility. E5 parity capital is the orchestrator target. Fewer than 21 trading days is unverified. Unpriced signals are listed with a cause.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
@@ -1048,7 +1064,7 @@ TOOLS: list[dict] = [
 
 _READ_TOOLS = {
     "list_strategies", "get_performance", "get_positions", "get_trades",
-    "get_backtest", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan", "list_comments",
+    "get_backtest", "get_credibility", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan", "list_comments",
 }
 
 
@@ -1104,6 +1120,7 @@ def openapi_spec(base_url: str) -> dict:
                 "Reconciliation": {"type": "object"},
                 "Risk": {"type": "object"},
                 "Bridge": {"type": "object"},
+                "Credibility": {"type": "object"},
                 "StrategyDetail": {"type": "object"},
                 "Orchestrator": {"type": "object"},
                 "Comments": {"type": "object"},
@@ -1155,6 +1172,7 @@ def openapi_spec(base_url: str) -> dict:
                 }
             },
             "/review/reconciliation": {"get": {"operationId": "getReconciliation", "summary": "Parity periods, mismatch reasons, slippage", "responses": ok("Reconciliation")}},
+            "/review/credibility": {"get": {"operationId": "getCredibility", "summary": "Backtest credibility and E5 parity capital", "responses": ok("Credibility")}},
             "/review/risk": {"get": {"operationId": "getRisk", "summary": "Display-only portfolio risk", "responses": ok("Risk")}},
             "/review/bridge": {"get": {"operationId": "getBridge", "summary": "Capital bridge with the residual left visible", "responses": ok("Bridge")}},
             "/review/strategy": {
@@ -1377,6 +1395,10 @@ def register(app, *, snapshot: Callable[[], tuple[dict, dict]], check_read, chec
     @app.route("/review/reconciliation", methods=["GET"])
     def review_reconciliation():
         return _read("get_reconciliation")
+
+    @app.route("/review/credibility", methods=["GET"])
+    def review_credibility_route():
+        return _read("get_credibility")
 
     @app.route("/review/risk", methods=["GET"])
     def review_risk():

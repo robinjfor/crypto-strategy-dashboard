@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>回測可信度 · Binance Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">?</div><div><h1>回測可信度</h1><div class="sub">Demo · 只讀</div></div></div>
+      <nav class="nav-links">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link" href="./risk.html">風險</a>
+        <a class="nav-link active" href="./credibility.html">回測可信度</a>
+        <a class="nav-link" href="./gate.html">實盤門檻</a>
+      </nav>
+    </header>
+    <main id="main" class="loading">載入中…</main>
+  </div>
+  <script src="./nav.js"></script>
+  <script>
+  (async function () {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+    const show = (v) => (v == null || v === "" ? "missing" : esc(v));
+    if (!window.TraderAuth || !TraderAuth.getToken()) { document.getElementById("main").textContent = "請先登入"; return; }
+    const base = (TraderAuth.getApiBase && TraderAuth.getApiBase()) || "";
+    const res = await fetch(base + "/review/credibility", {headers: {Authorization: "Bearer " + TraderAuth.getToken()}});
+    const d = await res.json();
+    const coins = (d.unpriced_signals || []).map((r) => "<li>" + esc(r.symbol) + "：" + esc(r.cause) + "</li>").join("") || "<li>missing</li>";
+    const periods = (d.before_after || []).map((p) => "<li>" + esc(p.label) + " 相符 " + show(p.n_match) + " 不符 " + show(p.n_mismatch) + "</li>").join("");
+    document.getElementById("main").innerHTML = "<section class='section'><div class='card'><div class='card-body'>"
+      + "<p>版本 " + show(d.commit) + "。樣本期間 " + show(d.sample_period) + "。留出起點 " + esc(d.holdout_from)
+      + "。走步 " + show(d.walk_forward) + "。試驗數 " + show(d.trial_count) + "。DSR " + show(d.dsr) + "。</p>"
+      + "<p>對帳交易日 " + show(d.parity_days) + "。狀態 " + esc(d.parity_status) + "（" + esc(d.label_zh) + "）。"
+      + "追蹤誤差 " + show(d.parity_te) + "。達成 " + show(d.parity_achieved) + "。</p>"
+      + "<p>對帳資金 " + show(d.parity_capital) + "（" + esc(d.capital_basis_label) + "）。虛擬本金 " + show(d.virtual_capital) + "。</p>"
+      + "<p>修復前與修復後分開列：</p><ul>" + periods + "</ul>"
+      + "<p>有訊號但沒有價格、也沒有持倉：</p><ul>" + coins + "</ul>"
+      + "<p>" + esc(d.note || "") + "</p></div></div></section>";
+  })();
+  </script>
+</body>
+</html>
