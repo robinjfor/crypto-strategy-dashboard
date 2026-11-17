@@ -31,7 +31,7 @@ def detail(status: dict | None, state: dict | None, code: str | None) -> dict:
     row = rows.get(want)
     as_of = status.get("updated_at")
     if row is None:
-        return {"ok": False, "error": "missing", "display": "missing", "code": want}
+        return {"ok": False, "error": "缺值", "display": "缺值", "code": want}
     weight = None
     orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
     weights = orch.get("weights") if isinstance(orch.get("weights"), dict) else {}
@@ -76,25 +76,25 @@ def detail(status: dict | None, state: dict | None, code: str | None) -> dict:
         "env": "demo",
         "code": want,
         "version": version if version else None,
-        "version_display": version or "missing",
+        "version_display": version or "缺值",
         "slot": row["slot"],
         "strategy_capital_basis": row["strategy_capital_basis"],
         "strategy_capital_basis_label": row["strategy_capital_basis_label"],
         "virtual_capital": row["virtual_capital"],
         "orchestrator_target": row["orchestrator_target"],
         "weight": weight if weight is not None else None,
-        "weight_display": weight if weight is not None else "missing",
+        "weight_display": weight if weight is not None else "缺值",
         "equity": row["equity"] if row["equity"] is not None else None,
-        "equity_display": row["equity"] if row["equity"] is not None else "missing",
-        "realized": "missing",
-        "unrealized": "missing",
-        "net_pnl": row["net_pnl"] if row["net_pnl"] is not None else "missing",
-        "fees": row["fees"] if row["fees"] is not None else "missing",
-        "funding": row["funding"] if row["funding"] is not None else "missing",
-        "turnover_30d": turnover if turnover is not None else "missing",
+        "equity_display": row["equity"] if row["equity"] is not None else "缺值",
+        "realized": "缺值",
+        "unrealized": "缺值",
+        "net_pnl": row["net_pnl"] if row["net_pnl"] is not None else "缺值",
+        "fees": row["fees"] if row["fees"] is not None else "缺值",
+        "funding": row["funding"] if row["funding"] is not None else "缺值",
+        "turnover_30d": turnover if turnover is not None else "缺值",
         "n_trades": len(trades),
-        "start": start or "missing",
-        "end": "missing",
+        "start": start or "缺值",
+        "end": "缺值",
         "as_of": as_of,
         "footer": {
             "text_zh": "策略權益合計 + 未分配現金 + 差額 = 錢包淨值",

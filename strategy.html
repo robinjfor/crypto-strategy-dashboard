@@ -27,7 +27,7 @@
   (async function () {
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-    const show = (v) => (v == null || v === "" ? "missing" : esc(v));
+    const show = (v) => (v == null || v === "" || v === "missing" ? "缺值" : esc(v));
     async function apiBase() {
       const b = window.TraderAuth && TraderAuth.getApiBase && TraderAuth.getApiBase();
       if (b) return b;

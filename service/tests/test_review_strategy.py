@@ -26,9 +26,9 @@ def test_footer_uses_the_unabsorbed_diff_and_missing_stays_missing():
     assert card["strategy_capital_basis"] == 1986.13
     assert card["strategy_capital_basis_label"] == "orchestrator_target"
     assert card["weight"] == 1.0
-    assert card["realized"] == "missing"
-    assert card["unrealized"] == "missing"
-    assert card["turnover_30d"] == "missing"
+    assert card["realized"] == "缺值"
+    assert card["unrealized"] == "缺值"
+    assert card["turnover_30d"] == "缺值"
     foot = card["footer"]
     assert foot["text_zh"].startswith("策略權益合計")
     assert foot["bridge_diff"] == -993.19

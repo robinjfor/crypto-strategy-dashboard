@@ -961,7 +961,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "get_strategy",
-        "description": "One Demo strategy: capital basis, weight, fees, funding, turnover, and the bridge footer. Missing fields stay missing.",
+        "description": "One Demo strategy: capital basis, weight, fees, funding, turnover, and the bridge footer. Missing fields are 缺值.",
         "inputSchema": {
             "type": "object",
             "properties": {"code": {"type": "string", "description": "Strategy code. Default E5."}},
