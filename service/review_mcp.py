@@ -811,12 +811,16 @@ def get_reconciliation(status: dict, state: dict) -> Outcome:
 
 def get_risk(status: dict, state: dict) -> Outcome:
     import review_audit
+    import review_riskpage
     nav_history = _nav_history(status, state)
+    packed = {**status, "nav_history": nav_history}
+    risk = review_audit.portfolio_risk(packed, state)
     return Outcome(redact({
         "ok": True,
         "account": "binance_demo",
         "updated_at": status.get("updated_at"),
-        **review_audit.portfolio_risk({**status, "nav_history": nav_history}, state),
+        **risk,
+        **review_riskpage.page(packed, state, risk),
     }))
 
 

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>風險 · Binance Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">!</div><div><h1>風險</h1><div class="sub">Demo · 只顯示，不改倉位</div></div></div>
+      <nav class="nav-links">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link active" href="./risk.html">風險</a>
+        <a class="nav-link" href="./strategy.html">策略明細</a>
+        <a class="nav-link" href="./credibility.html">回測可信度</a>
+        <a class="nav-link" href="./gate.html">實盤門檻</a>
+      </nav>
+    </header>
+    <div class="err-banner" id="errBanner"></div>
+    <main id="main" class="loading">載入中…</main>
+  </div>
+  <script src="./nav.js"></script>
+  <script>
+  (async function () {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+    const show = (v) => (v == null || v === "" ? "missing" : esc(v));
+    if (!window.TraderAuth || !TraderAuth.getToken()) { document.getElementById("main").textContent = "請先登入"; return; }
+    const base = (TraderAuth.getApiBase && TraderAuth.getApiBase()) || "";
+    try {
+      const res = await fetch(base + "/review/risk", {headers: {Authorization: "Bearer " + TraderAuth.getToken()}});
+      const r = await res.json();
+      if (!res.ok) throw new Error(r.error || "讀取失敗");
+      const rows = (r.legs || []).map((leg) => "<tr><td>" + esc(leg.symbol) + "</td><td>" + show(leg.side)
+        + "</td><td>" + show(leg.exchange_leverage) + "</td><td>" + show(leg.isolated_wallet)
+        + "</td><td>" + show(leg.effective_leverage) + "</td><td>" + show(leg.mark)
+        + "</td><td>" + show(leg.liq) + "</td><td>" + show(leg.liq_distance)
+        + "</td><td>" + esc(leg.owner) + "</td><td>" + esc((leg.flags || []).join("、") || "—") + "</td></tr>").join("");
+      document.getElementById("main").innerHTML = '<section class="section"><div class="card"><div class="card-body">'
+        + "<p>目前回撤 " + show(r.current_drawdown) + "。最大回撤 " + show(r.max_drawdown_pct)
+        + "。總多 " + show(r.gross_long) + "。總空 " + show(r.gross_short) + "。淨曝險 " + show(r.net_exposure) + "。</p>"
+        + "<p>單日 −30% 損失／淨值 " + show(r.stress_loss_down_30)
+        + "。空單擠壓 +100% 損失／淨值 " + show(r.stress_loss_short_squeeze)
+        + "。單日虧損 " + show(r.daily_loss) + "。停機 " + show(r.halt) + "。</p>"
+        + "<p>相關熱圖：" + esc((r.correlation || {}).label_zh || "missing") + "</p>"
+        + "<table><tr><th>幣</th><th>方向</th><th>交易所槓桿</th><th>逐倉錢包</th><th>有效槓桿</th><th>標記價</th><th>強平價</th><th>強平距離</th><th>策略</th><th>旗標</th></tr>"
+        + rows + "</table></div></div></section>";
+    } catch (e) {
+      document.getElementById("errBanner").textContent = e.message || String(e);
+      document.getElementById("main").textContent = "載入失敗";
+    }
+  })();
+  </script>
+</body>
+</html>
