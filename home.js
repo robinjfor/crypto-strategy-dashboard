@@ -357,6 +357,8 @@
       if (p.liq_distance != null && Number(p.liq_distance) < 0.30) alerts.push(esc(p.raw_symbol || p.symbol) + " 強平距離低於 30%");
     });
     if (bridge && bridge.bridge_diff_red) alerts.push("資金橋差額超過 0.5 USDT");
+    var gap = bridge && bridge.unallocated_usdt_warning;
+    if (gap && gap.show) alerts.push('<span style="color:#fcd34d">' + esc(gap.label_zh || "") + " " + n(gap.amount) + "</span>");
     if (age.level === "stale") alerts.push("資料過期");
     else if (age.level === "yellow") alerts.push(age.text);
     var alertHtml = alerts.length ? "<ul>" + alerts.map(function (a) { return "<li>" + a + "</li>"; }).join("") + "</ul>" : "<p>目前沒有警示。</p>";

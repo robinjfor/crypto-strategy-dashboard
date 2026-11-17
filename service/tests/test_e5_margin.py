@@ -15,6 +15,27 @@ SLOT = V.SLOT
 KEY = V.STATE_KEY
 
 
+def test_review_positions_read_the_e5v_topup_and_the_reconcile_time():
+    st = {
+        "demo_e5v_exec": {
+            "last_run": {"at": "2026-11-17T08:08:00+08:00"},
+            "margin_topup": {"at": "2026-11-17T08:08:00+08:00", "symbols": {
+                "MOVRUSDT": {"target": 2.0, "margin_after": 1.7, "margin_before": 1.6, "status": "deadband", "shortfall": 0.01, "skip_threshold": 0.02},
+            }},
+            "margin_topup_log": [{"at": "2026-11-17T03:00:00+08:00", "symbols": {"MOVRUSDT": {"added": 0.2, "status": "topped_up"}}}],
+        }
+    }
+    view = M.review_view(st)
+    assert view["ledger"] == "demo_e5v_exec"
+    assert view["reconcile_last_run_at"] == "2026-11-17T08:08:00+08:00"
+    row = view["symbols"][0]
+    assert row["symbol"] == "MOVRUSDT"
+    assert row["target"] == 2.0
+    assert row["isolated_margin"] == 1.7
+    assert row["last_topup"]["added"] == 0.2
+    assert row["skipped_reason"] == "deadband"
+
+
 def test_shortfall_uses_entry_notional_over_1_75():
     assert M.TARGET_LV == 1.75
     assert M.shortfall(175, 87.5) == pytest.approx(12.5)
@@ -210,18 +231,28 @@ def test_opposite_exchange_leg_is_not_funded_by_e5():
     assert report["symbols"]["XUSDT"]["status"] == "skipped_opposite"
 
 
-def test_deadband_skips_a_sub_half_usdt_shortfall_and_sends_a_larger_one():
-    tiny = Exchange([_row("XUSDT", 175, 1.0, 99.6, 2)])
+def test_skip_threshold_is_five_cents_or_one_percent_of_target_whichever_is_smaller():
+    # Target wallet 100: 1% is 1.00, so the cap 0.05 binds.
+    assert M.skip_threshold(100) == pytest.approx(0.05)
+    # Target wallet 2: 1% is 0.02, so the percent binds. This is the small-alt case.
+    assert M.skip_threshold(2) == pytest.approx(0.02)
+    dust = Exchange([_row("XUSDT", 175, 1.0, 99.97, 2)])
     st = _state({"XUSDT": 175.0}, cash=1000.0)
-    report = M.topup(st, tiny, slot=SLOT, key=KEY, now=NOW)
-    assert tiny.adds == []
+    report = M.topup(st, dust, slot=SLOT, key=KEY, now=NOW)
+    assert dust.adds == []
     assert report["symbols"]["XUSDT"]["status"] == "deadband"
-    assert report["symbols"]["XUSDT"]["shortfall"] == pytest.approx(0.4)
-    wider = Exchange([_row("XUSDT", 175, 1.0, 99.4, 2)])
-    st2 = _state({"XUSDT": 175.0}, cash=1000.0)
-    report2 = M.topup(st2, wider, slot=SLOT, key=KEY, now=NOW)
-    assert wider.adds == [("XUSDT", 0.6)]
-    assert report2["symbols"]["XUSDT"]["status"] == "topped_up"
+    assert report["symbols"]["XUSDT"]["shortfall"] == pytest.approx(0.03)
+    # 0.40 used to be skipped by the 0.5 band (MOVR, W, ICNT, APR, PROM stayed at 2x).
+    kept = Exchange([_row("MOVRUSDT", 175, 1.0, 99.6, 2)])
+    st2 = _state({"MOVRUSDT": 175.0}, cash=1000.0)
+    report2 = M.topup(st2, kept, slot=SLOT, key=KEY, now=NOW)
+    assert kept.adds == [("MOVRUSDT", 0.4)]
+    assert report2["symbols"]["MOVRUSDT"]["status"] == "topped_up"
+    small = Exchange([_row("WUSDT", 3.5, 1.0, 1.97, 2)])
+    st3 = _state({"WUSDT": 3.5}, cash=1000.0)
+    report3 = M.topup(st3, small, slot=SLOT, key=KEY, now=NOW)
+    assert report3["symbols"]["WUSDT"]["skip_threshold"] == pytest.approx(0.02)
+    assert small.adds == [("WUSDT", 0.03)]
 
 
 def test_underwater_mark_still_funds_the_entry_wallet():
@@ -310,9 +341,9 @@ def test_direct_execute_tops_up_after_the_open(monkeypatch):
     st = _state()
     out = X.execute(st, fut, _tgt(), EXEC_NOW)
     assert {s for s, _ in fut.adds} == {"BTCUSDT", "ETHUSDT", "SOLUSDT"}
-    assert all(amount >= M.DEADBAND_USDT for _, amount in fut.adds)
+    assert all(amount >= M.SKIP_CAP_USDT for _, amount in fut.adds)
     btc = st["demo_e5_exec"]["margin_topup"]["symbols"]["BTCUSDT"]
-    assert btc["added"] >= M.DEADBAND_USDT
+    assert btc["added"] >= M.SKIP_CAP_USDT
     assert btc["margin_after"] >= btc["notional"] / 1.75
     assert btc["liq_after"] < btc["liq_before"]
     assert out["sent"] and st["demo_e5_exec"]["cash"] > 0

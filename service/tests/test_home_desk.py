@@ -22,6 +22,7 @@ def test_home_desk_phrases():
     assert "缺值" in text
     assert "未分配" in text
     assert "差額不自動抹平" in text
+    assert "未經 income 對到" in text or "unallocated_usdt_warning" in text
     assert "/review/bridge" in text
 
 

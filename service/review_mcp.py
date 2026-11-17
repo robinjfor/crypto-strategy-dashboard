@@ -675,6 +675,17 @@ def _futures_liq(status: dict) -> list:
 def get_positions(status: dict, state: dict) -> Outcome:
     import review_audit
     view = review_audit.annotate_positions(status, state)
+    import e5_margin
+    margin_topup = e5_margin.review_view(state)
+    by_margin = {str(r.get("symbol") or ""): r for r in margin_topup["symbols"]}
+    for row in view["positions"]:
+        extra = by_margin.get(str(row.get("raw_symbol") or ""))
+        if not extra:
+            continue
+        row["margin_target"] = extra.get("target")
+        row["isolated_margin"] = extra.get("isolated_margin")
+        row["last_topup"] = extra.get("last_topup")
+        row["skipped_reason"] = extra.get("skipped_reason")
     by_sym = {str(r.get("raw_symbol") or ""): r for r in view["positions"]}
     futures = []
     for row in _futures_liq(status):
@@ -694,6 +705,7 @@ def get_positions(status: dict, state: dict) -> Outcome:
         "vbo_3x": view["vbo_3x"],
         "e5_owned_3x": view["e5_owned_3x"],
         "e5_topup": view["e5_topup"],
+        "margin_topup": margin_topup,
         "vbo_3x_note": view["vbo_3x_note"],
         "liq_distance": status.get("liq_distance"),
         "futures_positions": futures,

@@ -31,7 +31,12 @@ def test_footer_uses_the_unabsorbed_diff_and_missing_stays_missing():
     assert card["turnover_30d"] == "缺值"
     foot = card["footer"]
     assert foot["text_zh"].startswith("策略權益合計")
-    assert foot["bridge_diff"] == -993.19
+    assert foot["bridge_diff"] == 6.81
     assert foot["unallocated_cash"] == 4000.0
+    assert foot["unallocated_usdt_unexplained"] == 6.81
+    assert foot["unallocated_usdt_warning"]["show"] is True
+    assert foot["unallocated_usdt_warning"]["level"] == "yellow"
+    assert foot["unallocated_usdt_warning"]["label_zh"] == "未經 income 對到"
+    assert card["equity"] == 2000.0
     assert foot["bridge_diff_red"] is True
     assert abs((foot["sum_strategy_equity"] + foot["unallocated_cash"] + foot["bridge_diff"]) - foot["nav"]) < 0.01
