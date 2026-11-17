@@ -41,13 +41,13 @@ def legs(status: dict, state: dict) -> list[dict]:
         notional = None if qty is None or mark is None else abs(qty * mark)
         out.append({
             "symbol": row.get("raw_symbol"),
-            "side": "SHORT" if (qty or 0) < 0 else ("LONG" if qty else "missing"),
-            "exchange_leverage": lev if lev is not None else "missing",
-            "isolated_wallet": wallet if wallet is not None else "missing",
-            "effective_leverage": eff if eff is not None else "missing",
-            "mark": mark if mark is not None else "missing",
-            "liq": row.get("liq") if row.get("liq") is not None else "missing",
-            "liq_distance": row.get("liq_distance") if row.get("liq_distance") is not None else "missing",
+            "side": "SHORT" if (qty or 0) < 0 else ("LONG" if qty else "缺值"),
+            "exchange_leverage": lev if lev is not None else "缺值",
+            "isolated_wallet": wallet if wallet is not None else "缺值",
+            "effective_leverage": eff if eff is not None else "缺值",
+            "mark": mark if mark is not None else "缺值",
+            "liq": row.get("liq") if row.get("liq") is not None else "缺值",
+            "liq_distance": row.get("liq_distance") if row.get("liq_distance") is not None else "缺值",
             "owner": owner_text,
             "strategy": owners[0]["strategy"] if len(owners) == 1 else (row.get("strategy") or "unowned"),
             "notional": None if notional is None else round(notional, 2),
@@ -82,29 +82,29 @@ def page(status: dict, state: dict, risk: dict) -> dict:
     top = []
     for row in ranked[:5]:
         share = None if not gross else round(row["notional"] / gross, 4)
-        top.append({"symbol": row["symbol"], "notional": row["notional"], "share": share if share is not None else "missing"})
+        top.append({"symbol": row["symbol"], "notional": row["notional"], "share": share if share is not None else "缺值"})
     squeeze = shorts_squeezed(status, state)
     down = (risk.get("stress_down_30") or {}).get("loss")
     def ratio(loss):
         if nav is None or not nav or loss is None:
-            return "missing"
+            return "缺值"
         return round(float(loss) / float(nav), 6)
     guards = status.get("guards") if isinstance(status.get("guards"), dict) else {}
     if "entry_blocked" in guards or status.get("paused") is not None:
         halted = bool(status.get("paused") or guards.get("entry_blocked"))
         halt = "halted" if halted else "not_halted"
     else:
-        halt = "missing"
+        halt = "缺值"
     worst = risk.get("worst_day_loss")
     return {
-        "current_drawdown": basis.get("current_drawdown") if basis.get("current_drawdown") is not None else "missing",
-        "max_drawdown_pct": basis.get("max_drawdown_pct") if basis.get("max_drawdown_pct") is not None else "missing",
+        "current_drawdown": basis.get("current_drawdown") if basis.get("current_drawdown") is not None else "缺值",
+        "max_drawdown_pct": basis.get("max_drawdown_pct") if basis.get("max_drawdown_pct") is not None else "缺值",
         "top5": top,
-        "correlation": {"display": "missing", "label_zh": "沒有各幣日報酬，相關熱圖 missing"},
+        "correlation": {"display": "缺值", "label_zh": "沒有各幣日報酬，相關熱圖缺值"},
         "stress_loss_down_30": ratio(down),
         "stress_loss_short_squeeze": ratio(squeeze["loss"]),
         "short_squeeze": squeeze,
-        "daily_loss": worst if worst is not None else "missing",
+        "daily_loss": worst if worst is not None else "缺值",
         "daily_loss_ratio": ratio(worst),
         "halt": halt,
         "legs": table,

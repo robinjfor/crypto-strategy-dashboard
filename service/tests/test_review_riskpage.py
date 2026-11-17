@@ -26,7 +26,7 @@ def test_flags_and_separate_drawdowns():
     # |qty| * entry / wallet = 300 * 0.5 / 50 = 3 > 1.75
     assert "eff_gt_1_75" in by["XRPUSDT"]["flags"]
     assert by["XRPUSDT"]["effective_leverage"] == 3.0
-    assert body["correlation"]["display"] == "missing"
+    assert body["correlation"]["display"] == "缺值"
     assert body["halt"] == "not_halted"
-    assert body["stress_loss_short_squeeze"] != "missing"
+    assert body["stress_loss_short_squeeze"] != "缺值"
     assert body["short_squeeze"]["loss"] > 0
