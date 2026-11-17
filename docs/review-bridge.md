@@ -6,13 +6,13 @@ Display only. The bridge does not change a ledger, an order, leverage, or margin
 
 USDT-M is one deposit of 5000. VBO's 1000 was carved out of that deposit, so the bridge subtracts `vbo_carve_usdt` 1000 from E5 equity before adding VBO. E5's deposit claim on the bridge is 4000. Unallocated USDC is the USDC wallet balance minus U1 equity, not U1's configured capital. The difference that remains is `bridge_diff` and is not absorbed. Income rows from `/fapi/v1/income`, when the snapshot has them, are grouped by type and symbol beside that difference.
 
-The live overcount named in review is **993.19**: E5+VBO+R2S sits that far above the USDT-M wallet. 1000 minus 993.19 is 6.81, which is cash already moved or pnl already inside one of the books. `GET /review/bridge` reports `usdt_book_over_wallet` as that difference. It does not subtract 993.19, and it does not subtract the 1000, to force `bridge_diff` to 0.
+Before this adjustment the review named a USDT-M overcount of 993.19 and a bridge residual of -776.26. Those figures counted E5 as if it still owned the full 5000 deposit. `GET /review/bridge` now subtracts the 1000 carve from E5 equity first. It does not subtract the remaining residual to force `bridge_diff` to 0. On a fixture with E5 cash 5000, VBO 1000, R2S 6.79, U1 equity 1000, and both wallets at 5000, `bridge_diff` is **-6.79**. This checkout has no live account snapshot, so that fixture is the number reported here.
 
-USDC is a separate 5000 deposit. U1's orchestrator cap and sleeve capital are **1000** (`orchestrator.DEFAULT_CAP["U"]`). The other **4000.00** is unallocated USDC cash: wallet balance minus that 1000. It stays on `unallocated_usdc`.
+USDC is a separate 5000 deposit. Unallocated USDC is the wallet balance minus U1 equity (cash plus position marks), not U1's configured capital of 1000. When U1 equity is 1000 the unallocated figure is **4000.00**.
 
 The retired APT 1h slot (`sat_apt_1h`, C8) was **750 USDT**, disabled 2026-10-07. It is not USDC cash and it is not the 4000. The bridge lists it so the two are not mixed.
 
-`bridge_diff = nav − (sum of strategy equity + unallocated_cash)`. When the absolute diff is above 0.5 USDT, `bridge_diff_red` is true.
+`bridge_diff = nav − (sum of strategy equity + unallocated_cash)`. `bridge_diff_red` is true when the absolute diff is at least 0.5 USDT. Income rows already on the snapshot (`futures_income`, from `/fapi/v1/income`) are grouped by type and symbol on `income_breakdown`. That grouping does not change `bridge_diff`.
 
 Paper NAV is a separate figure with `env: paper`. It is not added into the Demo NAV. Real has no account here: the figure is 尚未開通, not 0. A missing number is 缺值.
 

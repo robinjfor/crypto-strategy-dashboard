@@ -61,8 +61,16 @@ def test_nav_matches_status_and_the_overcount_is_not_absorbed():
     assert e5_equity == 4000.0
     income = bridge["income_breakdown"]
     assert income["total"] == -6.79
-    assert {row["type"]: row["amount"] for row in income["by_type"]}["fees"] == -4.0
+    by_type = {row["type"]: row["amount"] for row in income["by_type"]}
+    assert by_type["fees"] == -4.0
+    assert by_type["funding"] == -1.5
+    assert by_type["insurance_liquidation"] == -1.29
+    by_sym = {row["symbol"]: row["by_type"] for row in income["by_symbol"]}
+    assert by_sym["MOVRUSDT"] == [{"type": "fees", "amount": -4.0}]
+    assert by_sym["WUSDT"][0]["type"] == "funding"
+    assert by_sym["AIOTUSDT"][0]["type"] == "insurance_liquidation"
     assert bridge["bridge_diff_value"] == -6.79
+    assert bridge["vbo_carve_usdt"] == 1000.0
     assert bridge["absorbed"] is False
     assert bridge["paper_nav"]["env"] == "paper"
     assert bridge["paper_nav"]["value"] == 50.0
@@ -75,6 +83,16 @@ def test_nav_matches_status_and_the_overcount_is_not_absorbed():
     assert e5["orchestrator_target"] == 1986.13
     assert e5["strategy_capital_basis_label"] == "orchestrator_target"
     assert before["demo_e5v_exec"]["cash"] == 5000.0
+
+
+def test_unallocated_usdc_uses_u1_equity_not_the_sleeve_capital():
+    state = _state()
+    state["u1_live"]["cash"] = 1100.0
+    state["u1_live"]["capital_usdt"] = 1000.0
+    bridge = B.build_bridge(_status(), state)
+    assert bridge["unallocated_usdc"]["value"] == 3900.0
+    assert bridge["bridge_diff_value"] == -6.79
+    assert bridge["absorbed"] is False
 
 
 def test_half_usdt_residual_stays_red():

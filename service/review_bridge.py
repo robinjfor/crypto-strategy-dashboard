@@ -281,13 +281,13 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
                 "id": "usdt_book_over_wallet",
                 "amount": over,
                 "in_diff": True,
-                "note": "E5+VBO+R2S 減 USDT-M 錢包。活帳上這筆是 993.19 時，就是 1000 的雙重計算減掉約 6.81 的現金移動或損益，原樣顯示。",
+                "note": "E5 權益已先減 VBO 劃出的 1000，所以這筆不再含那 1000。剩下的是帳本與 USDT-M 錢包的差，原樣留在 bridge_diff，不吸收。",
             },
             {
                 "id": "unallocated_usdc",
                 "amount": unallocated_usdc,
                 "in_diff": False,
-                "note": "USDC 入金 5000，U1 編排與 sleeve 以 1000 計。5000−1000=4000 沒有策略。不是把差額吸進未分配。",
+                "note": "USDC 入金 5000 減 U1 權益。U1 權益約 1000 時未分配約 4000。這不是把差額吸進未分配。",
             },
             {
                 "id": "apt_750_usdt_slot",
