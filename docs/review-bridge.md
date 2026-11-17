@@ -14,7 +14,7 @@ The retired APT 1h slot (`sat_apt_1h`, C8) was **750 USDT**, disabled 2026-10-07
 
 `bridge_diff = nav − (sum of strategy equity + unallocated_cash)`. When the absolute diff is above 0.5 USDT, `bridge_diff_red` is true.
 
-Paper NAV is a separate figure with `env: paper`. It is not added into the Demo NAV. Real has no account here: the figure is `not yet enabled`, not 0.
+Paper NAV is a separate figure with `env: paper`. It is not added into the Demo NAV. Real has no account here: the figure is 尚未開通, not 0. A missing number is 缺值.
 
 ## (a) E5 parity capital, and coins with a signal but no price
 

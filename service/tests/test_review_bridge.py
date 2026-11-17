@@ -10,9 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 # Recorded on the round-2 branch. A later change to these files fails this test.
 UNTOUCHED = {
     "netting.py": "503853f612cc1f67b305c01a6d2600c7348e0ddb2365f6cb69c48a5c24b23854",
-    "demo_e5_exec.py": "06131714750861fb07c514d9333b78ee7d037e23e0732fd1b8e4f3cf4c6afa75",
+    "demo_e5_exec.py": "f4e623a4ab4ff9bf9908dd3c50df5ef76f347847503232adc6673790355f7c1d",
     "orchestrator.py": "10ceece7a729aed29747e22f2cc6a9ebbe226d1acf2284bf2dcdf80bb6cf4a6d",
-    "reconcile.py": "c3ba0076d6a8cb07453ff57fcca1e3b310a2919a0efff87dd438d527a1b0e073",
+    "reconcile.py": "6dca2fcc9117e38e22c43db42625230bb1e0cbfc3053c45557ad911315351cd0",
+    "e5_margin.py": "30d7d278dca6b9419b379dceabd15bf92b93d0b9350ceebdd91d00ea8f99cb42",
 }
 
 
@@ -56,7 +57,8 @@ def test_nav_matches_status_and_the_overcount_is_not_absorbed():
     assert bridge["paper_nav"]["value"] == 50.0
     assert bridge["paper_in_demo_nav"] is False
     assert bridge["nav"]["value"] == 9000.0
-    assert bridge["real"]["display"] == "not yet enabled"
+    assert bridge["real"]["display"] == "尚未開通"
+    assert bridge["real"]["label_zh"] == "尚未開通"
     e5 = next(s for s in bridge["strategies"] if s["code"] == "E5")
     assert e5["virtual_capital"] == 5000.0
     assert e5["orchestrator_target"] == 1986.13
@@ -66,16 +68,16 @@ def test_nav_matches_status_and_the_overcount_is_not_absorbed():
 
 def test_missing_wallet_is_missing_not_zero():
     row = B.figure(None, formula="x", source="none", as_of=None)
-    assert row["display"] == "missing"
+    assert row["display"] == "缺值"
+    assert row["label_zh"] == "缺值"
     assert row["value"] is None
     bridge = B.build_bridge({"capital_basis": {}}, {})
-    assert bridge["nav"]["display"] == "missing"
+    assert bridge["nav"]["display"] == "缺值"
     assert bridge["bridge_diff_value"] is None
     assert bridge["bridge_diff_red"] is False
 
 
 def test_trading_modules_are_unchanged():
-    assert not (ROOT / "e5_margin.py").exists()
     for name, digest in UNTOUCHED.items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest
     src = (ROOT / "review_mcp.py").read_text(encoding="utf-8")

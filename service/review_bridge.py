@@ -14,15 +14,17 @@ APT_USDT_SLOT = 750.0
 VBO_CARVE = 1000.0
 E5_VIRTUAL = 5000.0
 DIFF_RED = 0.5
+MISSING = "缺值"
+REAL_CLOSED = "尚未開通"
 
 
 def figure(value, *, formula: str, source: str, as_of: str | None, env: str = "demo", unit: str = "USDT"):
-    """One number with its environment. Missing stays missing. Real with no account is not 0."""
+    """One number with its environment. A missing value is 缺值. Real with no account is 尚未開通."""
     if env == "real":
         return {
             "value": None,
-            "display": "not yet enabled",
-            "label_zh": "尚未啟用",
+            "display": REAL_CLOSED,
+            "label_zh": REAL_CLOSED,
             "env": "real",
             "formula": formula,
             "source": source,
@@ -34,8 +36,8 @@ def figure(value, *, formula: str, source: str, as_of: str | None, env: str = "d
     if value is None:
         return {
             "value": None,
-            "display": "missing",
-            "label_zh": "missing",
+            "display": MISSING,
+            "label_zh": MISSING,
             "env": env,
             "formula": formula,
             "source": source,
@@ -47,8 +49,8 @@ def figure(value, *, formula: str, source: str, as_of: str | None, env: str = "d
     except (TypeError, ValueError):
         return {
             "value": None,
-            "display": "missing",
-            "label_zh": "missing",
+            "display": MISSING,
+            "label_zh": MISSING,
             "env": env,
             "formula": formula,
             "source": source,
@@ -270,11 +272,11 @@ def _strategy(code, slot, ledger, virtual, target, row, as_of, note) -> dict:
 def data_age_min(as_of: str | None, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     if not as_of:
-        return {"data_age_min": None, "display": "missing", "level": "missing"}
+        return {"data_age_min": None, "display": MISSING, "level": "missing", "label_zh": MISSING}
     try:
         stamp = datetime.fromisoformat(str(as_of))
     except ValueError:
-        return {"data_age_min": None, "display": "missing", "level": "missing"}
+        return {"data_age_min": None, "display": MISSING, "level": "missing", "label_zh": MISSING}
     if stamp.tzinfo is None:
         stamp = stamp.replace(tzinfo=timezone.utc)
     minutes = (now - stamp.astimezone(timezone.utc)).total_seconds() / 60.0
@@ -286,4 +288,4 @@ def data_age_min(as_of: str | None, now: datetime | None = None) -> dict:
     elif minutes > 2 * 60:
         level = "yellow"
     return {"data_age_min": round(minutes, 1), "display": f"{round(minutes, 1)}", "level": level,
-            "label_zh": "資料過舊" if level == "stale" else ("資料偏舊" if level == "yellow" else "資料時間正常")}
+            "label_zh": "資料過期" if level == "stale" else ("資料偏舊" if level == "yellow" else "資料時間正常")}
