@@ -3,9 +3,9 @@
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
-  function n(v, d) { var x = Number(v); return isFinite(x) ? x.toLocaleString("zh-TW", {minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d}) : "—"; }
-  function pctFrac(v) { var x = Number(v); return isFinite(x) ? n(x * 100, 2) + "%" : "—"; }
-  function sn(v, d) { var x = Number(v); if (!isFinite(x)) return "—"; return '<span class="' + (x > 0 ? "pos" : x < 0 ? "neg" : "") + '">' + (x > 0 ? "+" : "") + n(x, d) + "</span>"; }
+  function n(v, d) { var x = Number(v); return isFinite(x) ? x.toLocaleString("zh-TW", {minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d}) : "缺值"; }
+  function pctFrac(v) { var x = Number(v); return isFinite(x) ? n(x * 100, 2) + "%" : "缺值"; }
+  function sn(v, d) { var x = Number(v); if (!isFinite(x)) return "缺值"; return '<span class="' + (x > 0 ? "pos" : x < 0 ? "neg" : "") + '">' + (x > 0 ? "+" : "") + n(x, d) + "</span>"; }
   function kpi(l, v, s) { return '<div class="h-kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : "") + "</div>"; }
   async function j(url) { var r = await fetch(url, {cache: "no-store"}); if (!r.ok) throw new Error(url + " HTTP " + r.status); return r.json(); }
   async function apiBase() {
@@ -42,8 +42,8 @@
   }
 
   function tpe(iso, withDate) {
-    if (!iso) return "—";
-    var d = new Date(iso); if (isNaN(d)) return "—";
+    if (!iso) return "缺值";
+    var d = new Date(iso); if (isNaN(d)) return "缺值";
     var p = new Intl.DateTimeFormat("zh-TW", {timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).formatToParts(d);
     var g = function (t) { return (p.find(function (x) { return x.type === t; }) || {}).value; };
     return (withDate === false ? "" : g("month") + "/" + g("day") + " ") + g("hour") + ":" + g("minute");
@@ -101,7 +101,7 @@
     var maxFrac = last.max_drawdown_pct != null ? last.max_drawdown_pct : cb.max_drawdown_pct;
     var usdt = wallet && last.nav_usdt_m != null ? last.nav_usdt_m : cb.nav_usdt_m;
     var usdc = wallet && last.nav_usdc_m != null ? last.nav_usdc_m : cb.nav_usdc_m;
-    var show = function (v) { return v == null || v === "" || !isFinite(Number(v)) ? "—" : n(v); };
+    var show = function (v) { return v == null || v === "" || !isFinite(Number(v)) ? "缺值" : n(v); };
     return kpi("組合淨值", show(nav), "USDT-M " + show(usdt) + " ＋ USDC " + show(usdc) + " · 錢包＋未實現，不含現貨") +
       kpi("起始資金", show(start), "USDT-M 入金＋USDC 入金。不含 R2S 虛擬 3000，也不含其他策略虛擬本金") +
       kpi("高點", show(peak), "合約淨值日序列，自 2026-10-01") +
@@ -128,7 +128,7 @@
     var p = st.orchestrator_policy;
     if (!p || !p.base_weights_keys) return "";
     var k = p.base_weights_keys;
-    var pct = function (x) { var v = Number(x); return isFinite(v) ? n(v * 100, 1) + "%" : "—"; };
+    var pct = function (x) { var v = Number(x); return isFinite(v) ? n(v * 100, 1) + "%" : "缺值"; };
     var last = st.orchestrator || {};
     var tgt = last.targets || {};
     var when = last.generated_at ? ("上次編排 " + tpe(last.generated_at) + " · 曝險倍數 " + n(last.exposure_mult, 2)) : "尚未有編排結果。部署後由每日 08:05（台北）工作寫入後，這裡才會出現目標金額。";
@@ -164,14 +164,14 @@
       .map(function (e) { return "<li>" + tpe(e.at) + "　" + esc(e.reason_zh || e.action) + "</li>"; }).join("");
     return '<section class="h-sec"><h2>市場指標<span class="dim" style="font-size:12px;font-weight:400">每小時更新 · ' + tpe(m.at) + "</span></h2>" +
       '<div class="h-kpis">' +
-      kpi("擁擠度燈號", dot + " " + esc(c.light_zh || "—"), "BTC 7 日平均資金費 " + n(c.funding_7d_avg_pct, 4) + "%（過去一年第 " + n(c.funding_percentile, 0) + " 百分位）· 基差 " + sn(c.basis_pct, 3) + "%") +
-      kpi("BTC 現貨 ETF 資金流", sn(etf.sum_5d, 1) + ' <span style="font-size:13px">百萬美元／近 5 日</span>', etfTxt || "—") +
-      kpi("恐懼貪婪指數", (fg.value == null ? "—" : fg.value) + " " + esc(fg.label_zh || ""), "一週前 " + (fg.week_ago == null ? "—" : fg.week_ago)) +
+      kpi("擁擠度燈號", dot + " " + esc(c.light_zh || "缺值"), "BTC 7 日平均資金費 " + n(c.funding_7d_avg_pct, 4) + "%（過去一年第 " + n(c.funding_percentile, 0) + " 百分位）· 基差 " + sn(c.basis_pct, 3) + "%") +
+      kpi("BTC 現貨 ETF 資金流", sn(etf.sum_5d, 1) + ' <span style="font-size:13px">百萬美元／近 5 日</span>', etfTxt || "缺值") +
+      kpi("恐懼貪婪指數", (fg.value == null ? "缺值" : fg.value) + " " + esc(fg.label_zh || ""), "一週前 " + (fg.week_ago == null ? "缺值" : fg.week_ago)) +
       kpi("BTC 永續未平倉量", n((oi.btc_usd || 0) / 1e9, 2) + ' <span style="font-size:13px">十億美元</span>', "7 日 " + sn(oi.chg_7d_pct, 1) + "% · 30 日 " + sn(oi.chg_30d_pct, 1) + "%") +
       "</div>" +
       '<div style="margin-top:10px"><b>風控</b>　' + guardLine + "</div>" +
       '<ul class="h-note" style="margin:6px 0 0 18px">' +
-      "<li>經濟數據：公布前 1 小時至後 4 小時暫停新開倉。下一個：" + (cal.length ? cal.slice(0, 2).map(function (e) { return esc(e.kind_zh) + " " + tpe(e.at); }).join("、") : "—") +
+      "<li>經濟數據：公布前 1 小時至後 4 小時暫停新開倉。下一個：" + (cal.length ? cal.slice(0, 2).map(function (e) { return esc(e.kind_zh) + " " + tpe(e.at); }).join("、") : "缺值") +
       ((g.calendar || {}).calendar_stale ? "（⚠ 日曆需補充）" : "") + "</li>" +
       "<li>幣安下市／合約調整公告：涉及的幣種暫停開新倉並提醒，不會自動平倉。" + (gp ? "目前因公告暫停 " + gp + " 個策略。" : "目前無。") + "</li>" +
       "<li>穩定幣脫鉤（USDC/USDT 偏離超過 0.5%）：永續槓桿改為 1 倍並提醒。目前 " + n(((dep.usdc_usdt) || ((g.depeg || {}).usdc_usdt) || 1), 4) + (dep.active ? "，⚠ 已觸發" : "，正常") + "</li>" +
@@ -218,7 +218,7 @@
     var diff = (a40 && sh.equity != null) ? sh.equity - Number(a40.equity) : null;
     var findAB = function (re) { var k = Object.keys(ab).find(function (x) { return re.test(x); }); return k ? ab[k] : null; };
     var A = ab.A, B = ab.B, C = ab.C, D = ab.D, E = ab.E;
-    var r = function (name, eq, note) { return "<tr><td>" + name + "</td><td>" + (eq == null ? "—" : n(eq)) + "</td><td>" + (eq == null ? "—" : sn(Number(eq) - 1000)) + '</td><td class="dim">' + note + "</td></tr>"; };
+    var r = function (name, eq, note) { return "<tr><td>" + name + "</td><td>" + (eq == null ? "缺值" : n(eq)) + "</td><td>" + (eq == null ? "缺值" : sn(Number(eq) - 1000)) + '</td><td class="dim">' + note + "</td></tr>"; };
     return '<div class="h-sec" style="margin:0 0 10px;padding:12px 14px"><b>影子帳本比較</b>（僅模擬記帳，不下單，無核准按鈕；起始皆 1,000 USDC，10/21 起）' +
       '<table class="h-tbl" style="margin-top:6px"><tr><th>帳本</th><th>權益</th><th>損益</th><th>說明</th></tr>' +
       r("原版 U1（實盤）", sv.equity, "幣安回讀；10/21 已人工平倉，目前空手") +
@@ -262,8 +262,8 @@
     var avg = ok.length ? ok.reduce(function (a, x) { return a + x.bps; }, 0) / ok.length : null;
     return '<div class="h-sec"><h2>資金費率套利（測試網）成交滑價</h2><table class="h-tbl"><tr><th>日期</th><th>幣</th><th>腳</th><th>成交價</th><th>回測開盤價</th><th>滑價（基點）</th><th>晚於開盤</th></tr>' +
       r.map(function (x) {
-        return "<tr><td>" + esc(x.date) + "</td><td>" + esc(String(x.symbol).replace(/USDT$/, "")) + "</td><td>" + (leg[x.leg] || "") + (side[x.side] || "") + "</td><td>" + n(x.fill) + "</td><td>" + (x.open == null ? "—" : n(x.open)) +
-          "</td><td>" + (x.bps == null ? "—" : x.bps.toFixed(1)) + "</td><td>" + (x.lag_s == null ? "—" : Math.round(x.lag_s / 60) + " 分") + "</td></tr>";
+        return "<tr><td>" + esc(x.date) + "</td><td>" + esc(String(x.symbol).replace(/USDT$/, "")) + "</td><td>" + (leg[x.leg] || "") + (side[x.side] || "") + "</td><td>" + n(x.fill) + "</td><td>" + (x.open == null ? "缺值" : n(x.open)) +
+          "</td><td>" + (x.bps == null ? "缺值" : x.bps.toFixed(1)) + "</td><td>" + (x.lag_s == null ? "缺值" : Math.round(x.lag_s / 60) + " 分") + "</td></tr>";
       }).join("") + '</table><div class="h-note">回測以台北 08:00 開盤價成交；正值代表比回測差。' + (avg == null ? "" : "近期平均 " + avg.toFixed(1) + " 基點。") + "</div></div>";
   }
   function blockRetired(ev, appr) {
@@ -302,44 +302,44 @@
   }
 
   function ageLevel(iso) {
-    if (!iso) return {level: "missing", text: "missing"};
+    if (!iso) return {level: "missing", text: "缺值"};
     var t = new Date(iso).getTime();
-    if (!isFinite(t)) return {level: "missing", text: "missing"};
+    if (!isFinite(t)) return {level: "missing", text: "缺值"};
     var minutes = (Date.now() - t) / 60000;
-    if (minutes > 26 * 60) return {level: "stale", text: "stale data"};
+    if (minutes > 26 * 60) return {level: "stale", text: "資料過期"};
     if (minutes > 2 * 60) return {level: "yellow", text: "資料超過 2 小時"};
     return {level: "ok", text: "資料時間正常"};
   }
   function fig(label, value, formula, source, when) {
     return '<details class="h-kpi"><summary><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div></summary>'
-      + '<div class="s">公式：' + esc(formula) + "<br>來源：" + esc(source) + "<br>資料時間：" + esc(when || "missing") + " · 環境 demo</div></details>";
+      + '<div class="s">公式：' + esc(formula) + "<br>來源：" + esc(source) + "<br>資料時間：" + esc(when || "缺值") + " · 環境 demo</div></details>";
   }
   function blockDesk(st, bridge) {
     var cb = st.capital_basis || {};
-    var when = st.updated_at || "missing";
+    var when = st.updated_at || "缺值";
     var age = ageLevel(st.updated_at);
     var ageColor = age.level === "stale" ? "#fca5a5" : (age.level === "yellow" ? "#fcd34d" : "");
     var demo = '<div class="h-kpis" data-env="demo">'
-      + fig("淨值", cb.nav == null ? "missing" : n(cb.nav), "USDT-M 錢包＋未實現 ＋ USDC 錢包＋未實現。不含現貨，不含 Paper。", "GET /status capital_basis.nav", when)
+      + fig("淨值", cb.nav == null ? "缺值" : n(cb.nav), "USDT-M 錢包＋未實現 ＋ USDC 錢包＋未實現。不含現貨，不含 Paper。", "GET /status capital_basis.nav", when)
       + fig("目前回撤", pctFrac(cb.current_drawdown), "1 − 淨值／高點", "capital_basis.current_drawdown", when)
       + fig("最大回撤", pctFrac(cb.max_drawdown_pct), "合約淨值日序列曾離開高點的最大幅度。與目前回撤分開。", "capital_basis.max_drawdown_pct", when)
-      + fig("淨損益", cb.pnl == null ? "missing" : sn(cb.pnl), "淨值 − 起始資金", "capital_basis.pnl", when)
+      + fig("淨損益", cb.pnl == null ? "缺值" : sn(cb.pnl), "淨值 − 起始資金", "capital_basis.pnl", when)
       + "</div>";
-    var paperNav = st.paper && st.paper.nav != null ? n(st.paper.nav) : "missing";
+    var paperNav = st.paper && st.paper.nav != null ? n(st.paper.nav) : "缺值";
     var paper = '<p data-env="paper">Paper 不計入 Demo 淨值。Paper 淨值 ' + paperNav + '。</p>';
-    var real = '<p data-env="real">not yet enabled</p><p>尚未啟用。沒有實盤帳戶，顯示的不是 0。</p>';
+    var real = '<p data-env="real">尚未開通</p><p>沒有實盤帳戶，顯示的不是 0。</p>';
     var body = "";
     if (!bridge || !bridge.strategies) {
-      body = "<p>策略貢獻 missing</p>";
+      body = "<p>策略貢獻缺值</p>";
     } else {
       body = '<table class="h-tbl"><tr><th>策略</th><th>權益</th><th>資金基準</th></tr>'
         + bridge.strategies.map(function (s) {
           var label = s.strategy_capital_basis_label === "orchestrator_target" ? "編排目標" : "虛擬本金";
-          return "<tr><td>" + esc(s.code) + "</td><td>" + (s.equity == null ? "missing" : n(s.equity)) + "</td><td>" + label + " " + (s.strategy_capital_basis == null ? "missing" : n(s.strategy_capital_basis)) + "</td></tr>";
+          return "<tr><td>" + esc(s.code) + "</td><td>" + (s.equity == null ? "缺值" : n(s.equity)) + "</td><td>" + label + " " + (s.strategy_capital_basis == null ? "缺值" : n(s.strategy_capital_basis)) + "</td></tr>";
         }).join("")
-        + "<tr><td>未分配</td><td>" + (bridge.unallocated_cash && bridge.unallocated_cash.value != null ? n(bridge.unallocated_cash.value) : "missing") + "</td><td>錢包餘額減已配置</td></tr></table>";
+        + "<tr><td>未分配</td><td>" + (bridge.unallocated_cash && bridge.unallocated_cash.value != null ? n(bridge.unallocated_cash.value) : "缺值") + "</td><td>錢包餘額減已配置</td></tr></table>";
       var diff = bridge.bridge_diff_value;
-      body += '<p style="' + (bridge.bridge_diff_red ? "color:#fca5a5" : "") + '">差額 ' + (diff == null ? "missing" : n(diff))
+      body += '<p style="' + (bridge.bridge_diff_red ? "color:#fca5a5" : "") + '">差額 ' + (diff == null ? "缺值" : n(diff))
         + "。策略權益合計 + 未分配現金 + 差額 = 錢包淨值。差額不自動抹平。</p>";
     }
     var alerts = [];
@@ -347,7 +347,7 @@
       if (p.liq_distance != null && Number(p.liq_distance) < 0.30) alerts.push(esc(p.raw_symbol || p.symbol) + " 強平距離低於 30%");
     });
     if (bridge && bridge.bridge_diff_red) alerts.push("資金橋差額超過 0.5 USDT");
-    if (age.level === "stale") alerts.push("stale data");
+    if (age.level === "stale") alerts.push("資料過期");
     else if (age.level === "yellow") alerts.push(age.text);
     var alertHtml = alerts.length ? "<ul>" + alerts.map(function (a) { return "<li>" + a + "</li>"; }).join("") + "</ul>" : "<p>目前沒有警示。</p>";
     return '<section class="h-sec"><h2>帳戶</h2>'
