@@ -14,9 +14,22 @@
     if (p.indexOf("history") === 0) return "history";
     if (p.indexOf("backtest") === 0) return "backtest";
     if (p.indexOf("review") === 0) return "review";
+    if (p.indexOf("strategy") === 0) return "strategy";
+    if (p.indexOf("risk") === 0) return "risk";
+    if (p.indexOf("credibility") === 0) return "credibility";
+    if (p.indexOf("gate") === 0) return "gate";
     if (p.indexOf("watchlist") === 0) return "watchlist";
     return "home";
   }
+
+  var SCORE_PAGES = { backtest: 1, strategy: 1, risk: 1, credibility: 1, gate: 1 };
+  var SCORE_NAV = [
+    { id: "backtest", href: "./backtest.html", label: "策略評分" },
+    { id: "strategy", href: "./strategy.html", label: "策略明細" },
+    { id: "risk", href: "./risk.html", label: "風險" },
+    { id: "credibility", href: "./credibility.html", label: "回測可信度" },
+    { id: "gate", href: "./gate.html", label: "實盤門檻" }
+  ];
 
   var META = {
     home: {
@@ -47,6 +60,26 @@
       mark: "✎",
       title: "外部審閱",
       sub: "ChatGPT／Claude 的評論 · 團隊回覆與結案 · 不改交易"
+    },
+    strategy: {
+      mark: "☰",
+      title: "策略明細",
+      sub: "策略評分的下一層 · Demo · 只讀"
+    },
+    risk: {
+      mark: "!",
+      title: "風險",
+      sub: "策略評分的下一層 · 只顯示，不改倉位"
+    },
+    credibility: {
+      mark: "?",
+      title: "回測可信度",
+      sub: "策略評分的下一層 · Demo · 只讀"
+    },
+    gate: {
+      mark: "G",
+      title: "實盤門檻",
+      sub: "策略評分的下一層 · 只讀，不由此頁解鎖交易"
     },
     watchlist: {
       mark: "📡",
@@ -264,6 +297,7 @@
 
   function renderNav() {
     var id = pageId();
+    var top = SCORE_PAGES[id] ? "backtest" : id;
     var m = META[id] || META.home;
     var header = document.getElementById("siteHeader") || document.querySelector("header.topbar");
     if (!header) return;
@@ -272,7 +306,7 @@
     var nav = TABS.map(function (t) {
       return (
         '<a class="nav-link' +
-        (t.id === id ? " active" : "") +
+        (t.id === top ? " active" : "") +
         '" href="' +
         t.href +
         '">' +
@@ -315,6 +349,28 @@
         ctrl.appendChild(btn);
       }
     }
+    var old = document.getElementById("scoreSubnav");
+    if (old) old.remove();
+    if (SCORE_PAGES[id] && header.parentNode) {
+      var sub = document.createElement("nav");
+      sub.id = "scoreSubnav";
+      sub.className = "score-subnav";
+      sub.setAttribute("aria-label", "策略評分");
+      sub.innerHTML = SCORE_NAV.map(function (t) {
+        return '<a class="' + (t.id === id ? "on" : "") + '" href="' + t.href + '">' + esc(t.label) + "</a>";
+      }).join("");
+      header.insertAdjacentElement("afterend", sub);
+    }
+  }
+
+  function pnlHtml(value) {
+    if (value == null || value === "" || value === "缺值" || value === "missing") return "缺值";
+    var x = Number(value);
+    if (!isFinite(x)) return "缺值";
+    var word = x > 0 ? "盈利 " : x < 0 ? "虧損 " : "持平 ";
+    var cls = x > 0 ? "pos" : x < 0 ? "neg" : "";
+    var shown = (x > 0 ? "+" : "") + x.toLocaleString("zh-TW", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '<span class="' + cls + '">' + word + shown + "</span>";
   }
 
   // Expose helpers for page scripts (backtest / live)
@@ -326,7 +382,8 @@
     logout: logout,
     getApiBase: function () {
       return _apiBase;
-    }
+    },
+    pnlHtml: pnlHtml
   };
 
   patchFetch();

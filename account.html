@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Binance Demo 帳戶 · 真實成交</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -38,6 +40,7 @@
     <div class="cloud-banner hidden" id="cloudBanner">雲端連線失敗，顯示快取</div>
     <div class="stale-banner hidden" id="staleBanner"></div>
     <div class="err-banner" id="errBanner"></div>
+    <div id="accountDesk"></div>
     <div id="main" class="loading">載入中…</div>
     <div id="strategyModal" class="modal hidden" aria-hidden="true">
       <div class="modal-backdrop" data-close="1"></div>
@@ -52,6 +55,7 @@
   <script src="./zh-sanitize.js"></script>
   <script src="./exit-reasons.js"></script>
   <script src="./account-changes.js"></script>
+  <script src="./account-desk.js"></script>
   <script src="./app-live.js"></script>
 </body>
 </html>

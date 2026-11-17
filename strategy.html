@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>策略明細 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
 </head>
 <body>
   <div class="app">
@@ -44,25 +46,31 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "讀取失敗");
       const f = data.footer || {};
-      const red = f.bridge_diff_red ? "color:#fca5a5" : "";
-      const gap = f.unallocated_usdt_warning || {};
-      const yellow = gap.show
-        ? '<p style="color:#fcd34d">' + esc(gap.label_zh || "") + " " + show(gap.amount) + "</p>"
+      const pnl = (v) => (window.TraderAuth && TraderAuth.pnlHtml ? TraderAuth.pnlHtml(v) : show(v));
+      const cost = (data.fees === "缺值" || data.funding === "缺值") ? '<span class="tag warn">未完整扣成本</span>' : "";
+      const codes = ["E5", "VBO", "R2S", "FA", "U1"].map((c) => '<a class="' + (c === data.code ? "on" : "") + '" href="./strategy.html?code=' + c + '">' + c + "</a>").join("");
+      const warn = f.unallocated_usdt_warning && f.unallocated_usdt_warning.show
+        ? '<p style="color:#fcd34d">' + esc(f.unallocated_usdt_warning.label_zh || "") + " " + show(f.unallocated_usdt_warning.amount) + "</p>"
         : "";
       $("main").className = "";
-      $("main").innerHTML = '<section class="section"><div class="card"><div class="card-body">'
-        + "<h2>" + esc(data.code) + " · " + esc(data.slot) + "</h2>"
-        + "<p>環境 demo。版本 " + show(data.version_display) + "。資金基準 " + show(data.strategy_capital_basis)
-        + "（" + esc(data.strategy_capital_basis_label === "orchestrator_target" ? "編排目標" : "虛擬本金") + "）。權重 " + show(data.weight_display) + "。</p>"
-        + "<p>權益 " + show(data.equity_display) + "。淨損益 " + show(data.net_pnl)
-        + "。已實現 " + show(data.realized) + "。未實現 " + show(data.unrealized)
+      $("main").innerHTML = '<nav class="score-subnav" aria-label="策略">' + codes + "</nav>"
+        + '<section class="section"><div class="card"><div class="card-body">'
+        + "<h2>" + esc(data.code) + " · " + esc(data.slot) + " " + cost + "</h2>"
+        + '<div class="kpi-row">'
+        + '<div class="h-kpi"><div class="l">權益 <span class="info-mark">ⓘ</span></div><div class="v">' + show(data.equity_display) + '</div><div class="s">來源：GET /review/strategy。資料時間：' + show(data.as_of) + "。環境 demo。</div></div>"
+        + '<div class="h-kpi"><div class="l">淨損益</div><div class="v">' + pnl(data.net_pnl) + "</div></div>"
+        + '<div class="h-kpi"><div class="l">資金基準</div><div class="v">' + show(data.strategy_capital_basis) + '</div><div class="s">' + esc(data.strategy_capital_basis_label === "orchestrator_target" ? "編排目標" : "虛擬本金") + "</div></div>"
+        + '<div class="h-kpi"><div class="l">權重</div><div class="v">' + show(data.weight_display) + "</div></div>"
+        + "</div>"
+        + "<p>版本 " + show(data.version_display) + "。已實現 " + pnl(data.realized) + "。未實現 " + pnl(data.unrealized)
         + "。手續費 " + show(data.fees) + "。資金費 " + show(data.funding) + "。</p>"
         + "<p>三十日周轉 " + show(data.turnover_30d) + "。筆數 " + show(data.n_trades)
-        + "。開始 " + show(data.start) + "。結束 " + show(data.end) + "。資料時間 " + show(data.as_of) + "。</p>"
-        + '<p style="' + red + '">' + esc(f.text_zh || "") + "： "
-        + show(f.sum_strategy_equity) + " + " + show(f.unallocated_cash) + " + " + show(f.bridge_diff)
-        + " = " + show(f.nav) + "</p>"
-        + yellow
+        + "。開始 " + show(data.start) + "。結束 " + show(data.end) + "。</p>"
+        + '<p class="' + (f.bridge_diff_red ? "neg" : "") + '">' + esc(f.text_zh || "") + "： "
+        + show(f.sum_strategy_equity) + " + " + show(f.unallocated_cash) + " + " + pnl(f.bridge_diff)
+        + " = " + show(f.nav) + "。差額不自動抹平。</p>"
+        + warn
+        + '<p class="readonly-note">只讀。沒有下單、槓桿、配置或暫停按鈕。</p>'
         + "</div></div></section>";
     } catch (e) {
       $("errBanner").textContent = e.message || String(e);

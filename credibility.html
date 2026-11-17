@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>回測可信度 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
 </head>
 <body>
   <div class="app">
@@ -31,11 +33,14 @@
     const coins = (d.unpriced_signals || []).map((r) => "<li>" + esc(r.symbol) + "：" + esc(r.cause) + "</li>").join("") || "<li>缺值</li>";
     const periods = (d.before_after || []).map((p) => "<li>" + esc(p.label) + " 相符 " + show(p.n_match) + " 不符 " + show(p.n_mismatch) + "</li>").join("");
     document.getElementById("main").innerHTML = "<section class='section'><div class='card'><div class='card-body'>"
+      + '<div class="kpi-row">'
+      + '<div class="h-kpi"><div class="l">對帳交易日 <span class="info-mark">ⓘ</span></div><div class="v">' + show(d.parity_days) + '</div><div class="s">來源：GET /review/credibility。少於 21 日為未驗證。</div></div>'
+      + '<div class="h-kpi"><div class="l">狀態</div><div class="v">' + esc(d.label_zh || "缺值") + "</div></div>"
+      + '<div class="h-kpi"><div class="l">追蹤誤差</div><div class="v">' + show(d.parity_te) + "</div></div>"
+      + '<div class="h-kpi"><div class="l">對帳資金</div><div class="v">' + show(d.parity_capital) + '</div><div class="s">' + esc(d.capital_basis_label || "缺值") + "。虛擬本金 " + show(d.virtual_capital) + "。</div></div>"
+      + "</div>"
       + "<p>版本 " + show(d.commit) + "。樣本期間 " + show(d.sample_period) + "。留出起點 " + esc(d.holdout_from)
-      + "。走步 " + show(d.walk_forward) + "。試驗數 " + show(d.trial_count) + "。DSR " + show(d.dsr) + "。</p>"
-      + "<p>對帳交易日 " + show(d.parity_days) + "。狀態 " + esc(d.parity_status) + "（" + esc(d.label_zh) + "）。"
-      + "追蹤誤差 " + show(d.parity_te) + "。達成 " + show(d.parity_achieved) + "。</p>"
-      + "<p>對帳資金 " + show(d.parity_capital) + "（" + esc(d.capital_basis_label) + "）。虛擬本金 " + show(d.virtual_capital) + "。</p>"
+      + "。走步 " + show(d.walk_forward) + "。試驗數 " + show(d.trial_count) + "。DSR " + show(d.dsr) + "。達成 " + show(d.parity_achieved) + "。</p>"
       + "<p>修復前與修復後分開列：</p><ul>" + periods + "</ul>"
       + "<p>有訊號但沒有價格、也沒有持倉：</p><ul>" + coins + "</ul>"
       + "<p>" + esc(d.note || "") + "</p></div></div></section>";

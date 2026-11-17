@@ -26,6 +26,18 @@ def test_home_desk_phrases():
     assert "/review/bridge" in text
 
 
+def test_score_pages_stay_under_the_five_tabs():
+    nav = (HOME.parent / "nav.js").read_text(encoding="utf-8")
+    for label in ("總覽", "帳戶明細", "成交歷史", "策略評分", "外部審閱"):
+        assert label in nav
+    for href in ("./strategy.html", "./risk.html", "./credibility.html", "./gate.html"):
+        assert href in nav
+    assert "scoreSubnav" in nav
+    history = (HOME.parent / "history.js").read_text(encoding="utf-8")
+    assert "缺值" in history and "尚未開通" in history
+    assert "1.557" not in history and "776.26" not in (HOME.parent / "home.js").read_text(encoding="utf-8")
+
+
 def test_data_age_turns_yellow_after_two_hours_and_red_after_twenty_six():
     now = datetime(2026, 11, 17, 12, 0, tzinfo=timezone.utc)
     yellow = B.data_age_min((now - timedelta(hours=3)).isoformat(), now)

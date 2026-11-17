@@ -5,7 +5,12 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
   function n(v, d) { var x = Number(v); return isFinite(x) ? x.toLocaleString("zh-TW", {minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d}) : "缺值"; }
   function pctFrac(v) { var x = Number(v); return isFinite(x) ? n(x * 100, 2) + "%" : "缺值"; }
-  function sn(v, d) { var x = Number(v); if (!isFinite(x)) return "缺值"; return '<span class="' + (x > 0 ? "pos" : x < 0 ? "neg" : "") + '">' + (x > 0 ? "+" : "") + n(x, d) + "</span>"; }
+  function sn(v, d) {
+    var x = Number(v);
+    if (!isFinite(x)) return "缺值";
+    var word = x > 0 ? "盈利 " : x < 0 ? "虧損 " : "持平 ";
+    return '<span class="' + (x > 0 ? "pos" : x < 0 ? "neg" : "") + '">' + word + (x > 0 ? "+" : "") + n(x, d) + "</span>";
+  }
   function kpi(l, v, s) { return '<div class="h-kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : "") + "</div>"; }
   async function j(url) { var r = await fetch(url, {cache: "no-store"}); if (!r.ok) throw new Error(url + " HTTP " + r.status); return r.json(); }
   async function apiBase() {
@@ -311,20 +316,14 @@
     return {level: "ok", text: "資料時間正常"};
   }
   function fig(label, value, formula, source, when) {
-    return '<details class="h-kpi"><summary><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div></summary>'
-      + '<div class="s">公式：' + esc(formula) + "<br>來源：" + esc(source) + "<br>資料時間：" + esc(when || "缺值") + " · 環境 demo</div></details>";
+    return '<details class="h-kpi"><summary><div class="l">' + esc(label) + ' <span class="info-mark" title="來源、公式、資料時間">ⓘ</span></div><div class="v">' + value + '</div></summary>'
+      + '<div class="s">公式：' + esc(formula) + "<br>來源：" + esc(source || "來源缺失") + "<br>資料時間：" + esc(when || "缺值") + " · 環境 demo</div></details>";
   }
   function blockDesk(st, bridge) {
     var cb = st.capital_basis || {};
     var when = st.updated_at || "缺值";
     var age = ageLevel(st.updated_at);
     var ageColor = age.level === "stale" ? "#fca5a5" : (age.level === "yellow" ? "#fcd34d" : "");
-    var demo = '<div class="h-kpis" data-env="demo">'
-      + fig("淨值", cb.nav == null ? "缺值" : n(cb.nav), "USDT-M 錢包＋未實現 ＋ USDC 錢包＋未實現。不含現貨，不含 Paper。", "GET /status capital_basis.nav", when)
-      + fig("目前回撤", pctFrac(cb.current_drawdown), "1 − 淨值／高點", "capital_basis.current_drawdown", when)
-      + fig("最大回撤", pctFrac(cb.max_drawdown_pct), "合約淨值日序列曾離開高點的最大幅度。與目前回撤分開。", "capital_basis.max_drawdown_pct", when)
-      + fig("淨損益", cb.pnl == null ? "缺值" : sn(cb.pnl), "淨值 − 起始資金", "capital_basis.pnl", when)
-      + "</div>";
     var paperNav = st.paper && st.paper.nav != null ? n(st.paper.nav) : "缺值";
     var paper = '<p data-env="paper">Paper 不計入 Demo 淨值。Paper 淨值 ' + paperNav + '。</p>';
     var real = '<p data-env="real">尚未開通</p><p>沒有實盤帳戶，顯示的不是 0。</p>';
@@ -339,9 +338,20 @@
         }).join("")
         + "<tr><td>未分配</td><td>" + (bridge.unallocated_cash && bridge.unallocated_cash.value != null ? n(bridge.unallocated_cash.value) : "缺值") + "</td><td>錢包餘額減已配置</td></tr></table>";
       var diff = bridge.bridge_diff_value;
-      body += '<p style="' + (bridge.bridge_diff_red ? "color:#fca5a5" : "") + '">差額 ' + (diff == null ? "缺值" : n(diff))
+      var diffWord = diff == null ? "缺值" : (Number(diff) > 0 ? "正差額 " : Number(diff) < 0 ? "負差額 " : "差額為零 ");
+      var diffNum = diff == null ? "" : (Number(diff) > 0 ? "+" : "") + n(diff);
+      body += '<p class="' + (bridge.bridge_diff_red ? "neg" : "") + '">' + diffWord + diffNum
         + "。策略權益合計 + 未分配現金 + 差額 = 錢包淨值。差額不自動抹平。</p>";
     }
+    var demo = '<div class="h-kpis" data-env="demo">'
+      + fig("淨值", cb.nav == null ? "缺值" : n(cb.nav), "USDT-M 錢包＋未實現 ＋ USDC 錢包＋未實現。不含現貨，不含 Paper。", "GET /status capital_basis.nav", when)
+      + fig("目前回撤", pctFrac(cb.current_drawdown), "1 − 淨值／高點", "capital_basis.current_drawdown", when)
+      + fig("最大回撤", pctFrac(cb.max_drawdown_pct), "合約淨值日序列曾離開高點的最大幅度。與目前回撤分開。", "capital_basis.max_drawdown_pct", when)
+      + fig("淨損益", cb.pnl == null ? "缺值" : sn(cb.pnl), "淨值 − 起始資金。費用或資金費未分開時，這不是完整扣成本後的淨利。", "capital_basis.pnl", when)
+      + "</div>"
+      + '<div class="desk-split"><div>' + blockChart(st) + '</div><div class="h-sec"><h2>策略貢獻 <span class="info-mark" title="來源、公式、資料時間">ⓘ</span></h2>'
+      + '<div class="h-note">公式：策略權益合計 + 未分配現金 + 差額 = 錢包淨值。來源：GET /review/bridge。資料時間：' + esc(when) + "。</div>"
+      + body + "</div></div>";
     var alerts = [];
     (st.positions || []).forEach(function (p) {
       if (p.liq_distance != null && Number(p.liq_distance) < 0.30) alerts.push(esc(p.raw_symbol || p.symbol) + " 強平距離低於 30%");
@@ -352,9 +362,12 @@
     if (age.level === "stale") alerts.push("資料過期");
     else if (age.level === "yellow") alerts.push(age.text);
     var alertHtml = alerts.length ? "<ul>" + alerts.map(function (a) { return "<li>" + a + "</li>"; }).join("") + "</ul>" : "<p>目前沒有警示。</p>";
-    return '<section class="h-sec"><h2>帳戶</h2>'
-      + '<div class="h-kpis"><button type="button" data-tab="demo">Demo</button><button type="button" data-tab="paper">Paper</button><button type="button" data-tab="real">Real</button></div>'
-      + '<div data-panel="demo">' + demo + body + "</div>"
+    var banner = "";
+    if (bridge && bridge.bridge_diff_red) banner += '<div class="ia-banner">資金橋接仍有差額。差額需保留追查，不自動抹平。</div>';
+    if (age.level === "stale") banner += '<div class="ia-banner bad">資料過期。最後成功值不是即時資料。</div>';
+    return banner + '<section class="h-sec"><h2>帳戶</h2>'
+      + '<div class="env-switch"><button type="button" class="on" data-tab="demo">Demo</button><button type="button" data-tab="paper">Paper</button><button type="button" data-tab="real">Real</button></div>'
+      + '<div data-panel="demo">' + demo + "</div>"
       + '<div data-panel="paper" hidden>' + paper + "</div>"
       + '<div data-panel="real" hidden>' + real + "</div>"
       + '<div class="h-note" style="color:' + ageColor + '">資料時間 ' + esc(when) + " · " + esc(age.text) + "</div>"
@@ -386,13 +399,14 @@
       sd.synced_at = sab.updated_at; sd.analyst = sab.tv040 || []; sd.ab = [];
       Object.keys(sab.ledgers || {}).forEach(function (k) { var L = sab.ledgers[k] || {}; if (L.last) { var o = Object.assign({}, L.last); o.book = k; sd.ab.push(o); } });
       main.className = "";
-      var older = blockFunds(st) + blockRisk(st) + blockRunning(st) + blockPolicy(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st);
+      var older = blockFunds(st) + blockRisk(st) + blockRunning(st) + blockPolicy(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes));
       main.innerHTML = blockDesk(st, bridge) + '<details class="h-sec"><summary>先前的區塊</summary>' + older + "</details>" +
         '<div class="h-links">其他資訊：<a href="./strategy.html">策略明細</a><a href="./risk.html">風險</a><a href="./credibility.html">回測可信度</a><a href="./gate.html">實盤門檻</a><a href="./account.html">帳戶明細</a><a href="./history.html">成交歷史</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       main.querySelectorAll("[data-tab]").forEach(function (b) {
         b.onclick = function () {
           var name = b.getAttribute("data-tab");
+          main.querySelectorAll("[data-tab]").forEach(function (x) { x.classList.toggle("on", x === b); });
           main.querySelectorAll("[data-panel]").forEach(function (p) { p.hidden = p.getAttribute("data-panel") !== name; });
         };
       });
