@@ -45,6 +45,10 @@
       if (!res.ok) throw new Error(data.error || "讀取失敗");
       const f = data.footer || {};
       const red = f.bridge_diff_red ? "color:#fca5a5" : "";
+      const gap = f.unallocated_usdt_warning || {};
+      const yellow = gap.show
+        ? '<p style="color:#fcd34d">' + esc(gap.label_zh || "") + " " + show(gap.amount) + "</p>"
+        : "";
       $("main").className = "";
       $("main").innerHTML = '<section class="section"><div class="card"><div class="card-body">'
         + "<h2>" + esc(data.code) + " · " + esc(data.slot) + "</h2>"
@@ -58,6 +62,7 @@
         + '<p style="' + red + '">' + esc(f.text_zh || "") + "： "
         + show(f.sum_strategy_equity) + " + " + show(f.unallocated_cash) + " + " + show(f.bridge_diff)
         + " = " + show(f.nav) + "</p>"
+        + yellow
         + "</div></div></section>";
     } catch (e) {
       $("errBanner").textContent = e.message || String(e);

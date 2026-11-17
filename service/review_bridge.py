@@ -153,6 +153,35 @@ def income_breakdown(rows) -> dict:
     }
 
 
+def _income_net(rows) -> float:
+    """Signed sum of income rows. No rows, or none that parse, is 0."""
+    net = 0.0
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        raw = row.get("income") if row.get("income") is not None else row.get("amount")
+        try:
+            net += float(raw)
+        except (TypeError, ValueError):
+            continue
+    return round(net, 2)
+
+
+def unexplained_usdt(unallocated: float | None, rows) -> tuple[float | None, float | None]:
+    """How much of a wallet-above-books gap income rows do not cover.
+
+    A positive net of /fapi/v1/income (cash the exchange recorded coming in) can
+    match that gap, up to the gap itself. Fees and other negative income do not:
+    they make the wallet smaller, so they cannot explain cash sitting above the books.
+    Returns (matched, unexplained).
+    """
+    if unallocated is None:
+        return None, None
+    matched = min(float(unallocated), max(0.0, _income_net(rows)))
+    matched = round(matched, 2)
+    return matched, round(float(unallocated) - matched, 2)
+
+
 def _orch_target(state: dict, slot: str) -> float | None:
     orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
     targets = orch.get("targets") if isinstance(orch.get("targets"), dict) else {}
@@ -201,9 +230,16 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
     unallocated_usdt = None
     if usdt_balance is not None and book_sum is not None:
         unallocated_usdt = round(max(0.0, usdt_balance - book_sum), 2)
+    income_rows = status.get("futures_income") or state.get("futures_income")
+    _matched_usdt, unexplained = unexplained_usdt(unallocated_usdt, income_rows)
+    # At or above 0.5 the unmatched slice is not clean cash. Leaving it inside
+    # unallocated_cash would zero bridge_diff and turn a real residual non-red.
+    unexplained_warn = unexplained is not None and unexplained >= DIFF_RED
+    held_out = unexplained if unexplained_warn else 0.0
+    clean_usdt = None if unallocated_usdt is None else round(float(unallocated_usdt) - held_out, 2)
     unallocated_cash = None
-    if unallocated_usdc is not None or unallocated_usdt is not None:
-        unallocated_cash = round((unallocated_usdc or 0.0) + (unallocated_usdt or 0.0), 2)
+    if unallocated_usdc is not None or clean_usdt is not None:
+        unallocated_cash = round((unallocated_usdc or 0.0) + (clean_usdt or 0.0), 2)
     eq_parts = [e5.get("equity"), vbo.get("equity"), r2s.get("equity"), u1.get("equity"), fa.get("equity")]
     # Absent FA (equity None and not present) counts as 0. A present ledger with a missing mark stays missing.
     fa_present = bool(state.get("demo_fa_positions") or state.get("demo_fa_exec"))
@@ -256,8 +292,16 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
         "unallocated_usdt": figure(
             unallocated_usdt, formula="max(0, USDT 錢包餘額 − E5+VBO+R2S 權益)。帳本超過錢包時這裡是 0，差額留在 over。",
             source="books.usdt.futures.wallet", as_of=as_of),
+        "unallocated_usdt_unexplained": unexplained,
+        "unallocated_usdt_warning": {
+            "show": unexplained_warn,
+            "level": "yellow" if unexplained_warn else None,
+            "label_zh": "未經 income 對到" if unexplained_warn else None,
+            "amount": unexplained,
+        },
         "unallocated_cash": figure(
-            unallocated_cash, formula="unallocated_usdc + unallocated_usdt。不是把 bridge_diff 塞回來的餘數。",
+            unallocated_cash,
+            formula="unallocated_usdc + 已被 /fapi/v1/income 對上的 unallocated_usdt。未經 income 對到、且達到 0.5 的部分不計入乾淨未分配現金，留在 bridge_diff。",
             source="bridge", as_of=as_of),
         "sum_strategy_equity": figure(sum_eq, formula="E5+VBO+R2S+U1+FA 權益。沒有 FA 部位時 FA 以 0 計。",
                                      source="virtual ledgers", as_of=as_of),

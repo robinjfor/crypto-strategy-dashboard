@@ -14,6 +14,8 @@ The retired APT 1h slot (`sat_apt_1h`, C8) was **750 USDT**, disabled 2026-10-07
 
 `bridge_diff = nav − (sum of strategy equity + unallocated_cash)`. `bridge_diff_red` is true when the absolute diff is at least 0.5 USDT. Income rows already on the snapshot (`futures_income`, from `/fapi/v1/income`) are grouped by type and symbol on `income_breakdown`. That grouping does not change `bridge_diff`.
 
+`unallocated_usdt` is still `max(0, USDT wallet − E5+VBO+R2S)`. A positive net of those income rows can match that gap. `unallocated_usdt_unexplained` is the rest. When that remainder is at least 0.5 it is not counted as clean unallocated cash, so it stays in `bridge_diff`, and the bridge shows a yellow warning labeled 未經 income 對到. Negative income does not match a wallet surplus.
+
 Paper NAV is a separate figure with `env: paper`. It is not added into the Demo NAV. Real has no account here: the figure is 尚未開通, not 0. A missing number is 缺值.
 
 ## (a) E5 parity capital, and coins with a signal but no price
