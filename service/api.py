@@ -1482,6 +1482,17 @@ def build_status() -> dict:
         state.get("capital_basis_history") or [],
         (total_assets or {}).get("total_usdt"),
     )
+    _nav_for_risk = capital_basis.display_nav_history(
+        state.get("capital_basis_history"), capital_basis_view.get("starting_total"))
+    try:
+        import review_audit
+        portfolio_risk_view = review_audit.portfolio_risk(
+            {"positions": positions, "books": books, "capital_basis": capital_basis_view, "nav_history": _nav_for_risk},
+            state,
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("portfolio_risk_skip err=%s", type(e).__name__)
+        portfolio_risk_view = None
     return {
         "ok": True,
         "updated_at": now_iso_taipei(),
@@ -1530,6 +1541,7 @@ def build_status() -> dict:
         "orchestrator_policy": __import__("orchestrator").policy_public(),
         "slot_caps": __import__("orchestrator").effective_slot_caps(state),
         "capital_basis": capital_basis_view,
+        "portfolio_risk": portfolio_risk_view,
         "nav_history": capital_basis.display_nav_history(
             state.get("capital_basis_history"), capital_basis_view.get("starting_total")),
         "book_history": capital_basis.book_history(state.get("orchestrator")),

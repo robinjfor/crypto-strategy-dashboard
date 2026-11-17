@@ -250,7 +250,8 @@ def test_mcp_initialize_and_tools(client):
     names = [t["name"] for t in listed]
     assert names == [
         "list_strategies", "get_performance", "get_positions", "get_trades",
-        "get_backtest", "get_orchestrator_plan", "list_comments", "post_comment", "reply_comment",
+        "get_backtest", "get_reconciliation", "get_risk", "get_orchestrator_plan",
+        "list_comments", "post_comment", "reply_comment",
     ]
     note = client.post("/mcp", data=json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}), headers=_auth())
     assert note.status_code == 202
@@ -294,11 +295,24 @@ def test_each_read_tool_shape_and_redaction(client):
     assert perf["fees"]["books"]["usdt"]["fees_usdt"] == 1.25
     assert perf["fees"]["sleeves"]["demo_e5_exec"]["fees"] == 0.8
     assert "api_secret" not in perf["fees"]["sleeves"]["demo_e5_exec"]
+    bridge = perf["capital_bridge"]
+    assert bridge["start"] == 10000.0
+    assert bridge["wallet_nav"] == 10010.5
+    check = bridge["check"]
+    assert check["residual"] == round(check["wallet"] - check["sum_plus_unallocated"], 2)
+    assert perf["portfolio_risk"]["display_only"] is True
+    assert perf["portfolio_risk"]["gross_long"] == 900.0
     _no_secrets(perf)
 
     _result, positions = _tool(client, "get_positions")
     assert positions["positions"][0]["qty"] == 0.01
     assert positions["positions"][0]["liq_distance"] == 0.42
+    assert positions["positions"][0]["owner"] == "unowned"
+    assert positions["positions"][0]["strategy"] == "unowned"
+    assert positions["positions"][0]["leverage"] == 1
+    assert positions["vbo_3x"] == []
+    assert positions["e5_topup"]["includes_e5_owned_3x"] is True
+    assert positions["e5_topup"]["pr"] == 18
     assert "pin" not in positions["positions"][0]
     assert positions["liq_distance"]["positions"][0]["distance"] == 0.42
     assert positions["liq_distance"]["token"] == "[redacted]"
@@ -309,6 +323,7 @@ def test_each_read_tool_shape_and_redaction(client):
     assert len(trades["trades"]) == 2
     assert trades["next_cursor"] == "2"
     assert trades["trades"][0]["kind"] == "fill"
+    assert trades["trades"][0]["liquidation"] is False
     assert trades["trades"][0]["commission"] == 0.1
     _result, page2 = _tool(client, "get_trades", {"limit": 2, "cursor": trades["next_cursor"]})
     assert len(page2["trades"]) == 2
@@ -319,6 +334,8 @@ def test_each_read_tool_shape_and_redaction(client):
     assert backtest["parity"]["status"] == "ok"
     assert backtest["parity"]["n_match"] == 2
     assert {r["code"] for r in backtest["rows"]} == {"E5", "R2S"}
+    apt = backtest["reconciliation"]["apt_1003"]
+    assert apt["symbol"] == "APTUSDT" and apt["match"] is False and apt["reason"]
     _result, only = _tool(client, "get_backtest", {"strategy": "E5"})
     assert [r["code"] for r in only["rows"]] == ["E5"]
     _no_secrets(backtest)
@@ -446,7 +463,8 @@ def test_openapi_schema(client):
     assert spec["openapi"] == "3.0.3"
     assert spec["components"]["securitySchemes"]["reviewerBearer"]["scheme"] == "bearer"
     for path in ("/review/strategies", "/review/performance", "/review/positions", "/review/trades",
-                 "/review/backtest", "/review/orchestrator", "/review/comments"):
+                 "/review/backtest", "/review/reconciliation", "/review/risk",
+                 "/review/orchestrator", "/review/comments"):
         assert path in spec["paths"]
     assert "auto_trader" in json.dumps(spec["components"]["schemas"])
     assert "post" in spec["paths"]["/review/comments"]

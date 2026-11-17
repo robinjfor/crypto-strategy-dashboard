@@ -166,6 +166,8 @@
       try {
         const q = filter ? ("?status=" + encodeURIComponent(filter) + "&limit=100") : "?limit=100";
         const data = await call("/review/comments" + q);
+        let risk = null;
+        try { risk = await call("/review/risk"); } catch (e) { risk = null; }
         const rows = data.comments || [];
         const filters = STATUS.map(function (s) {
           return '<button type="button" data-filter="' + s.id + '"' + (s.id === filter ? ' class="active"' : "") + ">" + s.label + "</button>";
@@ -173,8 +175,15 @@
         const list = rows.length
           ? rows.map(card).join("")
           : '<div class="card"><div class="card-body empty-row">這個狀態還沒有評論</div></div>';
+        const riskLine = risk && risk.gross_long != null
+          ? '<div class="card" style="margin-bottom:12px"><div class="card-body">組合風險（只顯示）　總多 ' + esc(risk.gross_long)
+            + "　總空 " + esc(risk.gross_short) + "　淨 " + esc(risk.net_exposure)
+            + "　+30% " + esc((risk.stress_up_30 || {}).pnl) + "　−30% " + esc((risk.stress_down_30 || {}).pnl)
+            + "　單日最大虧損 " + esc(risk.worst_day_loss)
+            + '<div class="hint">讀取 GET /review/positions（含 owner）、/review/performance（資金橋）、/review/reconciliation、/review/risk、/review/trades（強平成交 liquidation）。不加保證金、不下單、不撤銷。</div></div></div>'
+          : '<div class="hint" style="margin-bottom:12px">部位 owner、資金橋、對帳、風險：GET /review/positions、/review/performance、/review/reconciliation、/review/risk。成交含強平旗標：GET /review/trades。</div>';
         $("main").className = "";
-        $("main").innerHTML = '<section class="section">'
+        $("main").innerHTML = riskLine + '<section class="section">'
           + '<div class="section-head"><h2>審閱評論</h2><span class="hint">' + rows.length
           + " 筆 · 時間為台北 · 外部審閱不能核准、下單或撤銷</span></div>"
           + '<div class="review-filters">' + filters + "</div>"

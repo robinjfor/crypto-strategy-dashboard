@@ -109,6 +109,21 @@
       kpi("最大回撤", show(maxUsdt), pctFrac(maxFrac) + " · 該序列曾離開高點的最大幅度");
   }
 
+  function blockRisk(st) {
+    var r = st.portfolio_risk;
+    if (!r || r.ok === false || r.gross_long == null) return "";
+    var up = (r.stress_up_30 || {}).pnl;
+    var dn = (r.stress_down_30 || {}).pnl;
+    return '<section class="h-sec"><h2>組合風險（只顯示）</h2><div class="h-kpis">' +
+      kpi("總多單", n(r.gross_long), "交易所淨名目") +
+      kpi("總空單", n(r.gross_short), "交易所淨名目") +
+      kpi("淨曝險", sn(r.net_exposure), "多減空") +
+      kpi("一起 +30%", sn(up), "逐倉穿過強平價時約虧掉該倉保證金") +
+      kpi("一起 −30%", sn(dn), "U1 全倉按標記價，不設逐倉上限") +
+      kpi("單日最大虧損", n(r.worst_day_loss), r.worst_day ? ("淨值日 " + esc(r.worst_day)) : "淨值日序列") +
+      "</div><div class=\"h-note\">" + esc(r.note || "") + " 不改槓桿、不加保證金、不下單。</div></section>";
+  }
+
   function blockPolicy(st) {
     var p = st.orchestrator_policy;
     if (!p || !p.base_weights_keys) return "";
@@ -309,7 +324,7 @@
       sd.synced_at = sab.updated_at; sd.analyst = sab.tv040 || []; sd.ab = [];
       Object.keys(sab.ledgers || {}).forEach(function (k) { var L = sab.ledgers[k] || {}; if (L.last) { var o = Object.assign({}, L.last); o.book = k; sd.ab.push(o); } });
       main.className = "";
-      main.innerHTML = blockFunds(st) + blockRunning(st) + blockPolicy(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
+      main.innerHTML = blockFunds(st) + blockRisk(st) + blockRunning(st) + blockPolicy(st) + blockMarket(st) + blockEval(ev, st, sd) + blockPending(st) + blockFaSlip(st) + blockRetired(ev, approvedCodes(st, codes)) + blockChart(st) +
         '<div class="h-links">其他資訊：<a href="./account.html">帳戶明細（持倉、對帳、實盤 vs 回測、幣安掛單、幣安帳本、控制紀錄）</a><a href="./history.html">成交歷史</a><a href="./backtest.html">策略評分</a></div>';
       main.querySelectorAll("[data-tg]").forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle("open"); }; });
       drawChart(st);

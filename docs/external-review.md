@@ -34,10 +34,12 @@ Until `REVIEWER_TOKEN` is set on the service, the dashboard login still works. C
 | --- | --- |
 | MCP (ChatGPT / Claude connectors) | `POST <SERVICE>/mcp` |
 | Strategies | `GET <SERVICE>/review/strategies` |
-| NAV, PnL, drawdown, virtual books, fees | `GET <SERVICE>/review/performance` |
-| Positions and liquidation distance | `GET <SERVICE>/review/positions` |
-| Fills, paged (`limit`, `cursor`) | `GET <SERVICE>/review/trades` |
-| Live-vs-backtest parity | `GET <SERVICE>/review/backtest` |
+| NAV, PnL, drawdown, capital bridge, risk, fees | `GET <SERVICE>/review/performance` |
+| Positions, owner, leverage, VBO 3x distance | `GET <SERVICE>/review/positions` |
+| Fills, including flagged liquidations, paged (`limit`, `cursor`) | `GET <SERVICE>/review/trades` |
+| Live-vs-backtest parity, plus reconciliation | `GET <SERVICE>/review/backtest` |
+| Mismatch reasons, periods, slippage | `GET <SERVICE>/review/reconciliation` |
+| Display-only portfolio risk | `GET <SERVICE>/review/risk` |
 | Orchestrator plan and history | `GET <SERVICE>/review/orchestrator` |
 | Comments | `GET <SERVICE>/review/comments` |
 | New comment | `POST <SERVICE>/review/comments` |
@@ -51,7 +53,17 @@ Team-only, dashboard session (the reviewer token receives **403**):
 
 Comment status values are `open`, `acknowledged`, `done`, and `rejected`. Timestamps are Asia/Taipei (`+08:00`). Comments are stored at `gs://$GCS_BUCKET/research/reviews/comments.json`. That object is private. Do not commit it, and do not create a signed or public URL for it.
 
-Figures come from the same `build_status()` path as `GET /status` (Binance Demo), plus the state fields that path already uses (`capital_basis_history`, orchestrator history, the E5 ledger, and `trader/shadow_ab/e5_targets.json` when it is not already on the state). The latest orchestrator `portfolio_equity` and `peak` match `/status` (futures-wallet capital basis). `drawdown` and `current_drawdown` are `1 - nav/peak`. `max_drawdown_pct` is the deepest drop of that wallet series. `nav_history` / `history` on `/review/performance` is `capital_basis_history` (USDT-M + USDC futures, with the starting capital as the first point when the stored series begins later). `book_history` is the virtual-book sum the drawdown alert uses. `/review/backtest` still returns satellite and U1 parity rows, and adds `e5`: per-day target weight and quantity versus the E5 virtual book.
+Figures come from the same `build_status()` path as `GET /status` (Binance Demo), plus the state fields that path already uses (`capital_basis_history`, orchestrator history, the E5 ledger, and `trader/shadow_ab/e5_targets.json` when it is not already on the state). The latest orchestrator `portfolio_equity` and `peak` match `/status` (futures-wallet capital basis). `drawdown` and `current_drawdown` are `1 - nav/peak`. `max_drawdown_pct` is the deepest drop of that wallet series. `nav_history` / `history` on `/review/performance` is `capital_basis_history` (USDT-M + USDC futures, with the starting capital as the first point when the stored series begins later). `book_history` is the virtual-book sum the drawdown alert uses. `/review/backtest` still returns satellite and U1 parity rows, and adds `e5`: per-day target weight and quantity versus the E5 virtual book. It also adds `reconciliation` (the same object as `GET /review/reconciliation`).
+
+`/review/positions` sets `owner` and `strategy` on every row from the virtual ledgers: E5 is `demo_e5v_exec` (slot `demo_e5_min5_x175_t05top20`), VBO, R2S, FA, and U1. Several owners are a list of `{owner, qty}` or `{strategy, qty}`. No ledger claim is `unowned`. `leverage` is always present. `vbo_3x` lists VBO legs whose exchange leverage is 3, with liquidation distance. That list is read-only. PR #18 (`e5_margin.topup`) walks every non-zero quantity in the active E5 book and does not filter on exchange leverage, so an E5-owned 3x leg is included there. This review path does not add margin or change leverage. PR #18 is a separate change.
+
+`/review/performance` adds `capital_bridge`: starting capital (10000 unless transfers say otherwise), then each strategy's net PnL (equity minus its reference capital; fees and funding are shown and are already inside ledger cash), then wallet NAV (USDT-M + USDC futures). `check` is `sum(ledgers) + unallocated` against that wallet. `unallocated` is the unrealized PnL of exchange positions no ledger owns. `residual` is wallet minus that sum, so a double-counted carve stays visible. `portfolio_risk` is the same display-only block as `GET /review/risk`.
+
+`/review/reconciliation` splits decided parity rows on the parity-fix commit dates in this repo (`9e6f7db` on 2026-10-08, `a770d7e` on 2026-10-21) plus any `parity_fixes` markers on state. Every mismatch has a `reason`. The C8 APT 1h row for 2026-10-03 is included: that day is inside the pre-fix window (slot rotated in 2026-10-01, stopped out 2026-10-07 09:58, fix committed 2026-10-08). There is no separate 10/03 fill print in the repo. Rolling match rate uses a 7-row window. Slippage is fill versus signal or target price, in bps, by day.
+
+`/review/trades` keeps fills and closed trades and adds recorded forced liquidations (`external_closes`, `forced_flat`, ledger adjustments, U1 sleeve-liquidation events, or a fill already flagged). Each of those rows has `liquidation: true`. Example shape: AIOT at 2026-11-17 03:47 Asia/Taipei when that close is on the state. This route does not call Binance.
+
+`/review/risk` and the overview panel are display-only: gross long, gross short, net exposure, a +30% and a −30% move of every coin together (an isolated leg that crosses its liquidation price loses about its isolated wallet, not the full mark-to-market; U1 is cross and is not capped), and the worst single-day drop in the wallet NAV history. Nothing in that response changes a position.
 
 The reviewer token is rejected on `/status` and on every `/control/*` route, including approve and revoke.
 
@@ -165,13 +177,15 @@ MCP is the same header file against `POST https://<SERVICE>/mcp`.
 Paste this as the connector or Custom GPT instructions:
 
 ```text
-You are a critical reviewer of a Binance Demo crypto strategy book. You have no authority to trade, approve, revoke, or change settings. Every number you cite must come from the tools (list_strategies, get_performance, get_positions, get_trades, get_backtest, get_orchestrator_plan). If a tool fails, say so. Do not invent fills, NAV, or backtest results.
+You are a critical reviewer of a Binance Demo crypto strategy book. You have no authority to trade, approve, revoke, or change settings. Every number you cite must come from the tools (list_strategies, get_performance, get_positions, get_trades, get_backtest, get_reconciliation, get_risk, get_orchestrator_plan). If a tool fails, say so. Do not invent fills, NAV, or backtest results.
 
 Review for:
 - strategy logic that does not match the stated params summary
 - overfitting: too many rules for the live sample, unstable weights, a backtest that the live book does not resemble
-- risk: leverage, liquidation distance, concentration, paused sleeves that still show exposure
-- live-versus-backtest deviation from get_backtest (mismatches, unsupported strategies, missing parity)
+- risk: leverage, liquidation distance, who owns each leg (get_positions owner; unowned is a finding), VBO 3x distance, and get_risk (gross, net, +30%/−30%, worst day). Do not ask to change leverage or add margin.
+- live-versus-backtest deviation from get_backtest and get_reconciliation (mismatch reasons, the split around 2026-10-08 and 2026-10-21, the APT 2026-10-03 row, rolling match rate, slippage)
+- the capital bridge on get_performance: per-strategy net, fees, funding, and the residual against the futures wallet
+- liquidation fills on get_trades (`liquidation: true`), including a recorded AIOT close when the state has one
 - fees and per-strategy virtual-book PnL versus the capital-basis NAV (futures wallet, not a sum of virtual books)
 
 Leave one post_comment per finding. reviewer is chatgpt, claude, or auto_trader (自動交易專家). topic is the strategy code or the risk theme. severity is info, low, medium, high, or critical. body states the evidence (tool fields, not guesses) and why it matters. suggested_action is advice for the team; it is not an order and must not say to move real money. Use reply_comment to continue a thread; set in_reply_to to nest under a specific reply. Do not ask for API keys, PINs, or account identifiers. Times you are shown are Asia/Taipei. The account is Binance Demo only.

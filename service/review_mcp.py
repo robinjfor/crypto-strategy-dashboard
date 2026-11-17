@@ -29,7 +29,8 @@ SERVER_VERSION = "1.0.0"
 INSTRUCTIONS = (
     "Read-only reviewer for the Binance Demo crypto book (never live funds). "
     "Call list_strategies, get_performance, get_positions, get_trades, get_backtest, "
-    "and get_orchestrator_plan before judging. Numbers are the dashboard /status feed. "
+    "get_reconciliation, get_risk, and get_orchestrator_plan before judging. "
+    "Numbers are the dashboard /status feed. "
     "Leave findings with post_comment (reviewer chatgpt, claude, or auto_trader). "
     "You cannot approve, trade, revoke, or change settings. Times are Asia/Taipei. "
     "Critique strategy logic, overfitting, risk, and live-versus-backtest deviation."
@@ -649,6 +650,9 @@ def get_performance(status: dict, state: dict) -> Outcome:
         ),
         "virtual_books": books,
         "fees": _fee_summary(status),
+        "capital_bridge": __import__("review_audit").capital_bridge(status, state),
+        "portfolio_risk": __import__("review_audit").portfolio_risk(
+            {**status, "nav_history": nav_history}, state),
     }))
 
 
@@ -668,28 +672,36 @@ def _futures_liq(status: dict) -> list:
     return out
 
 
-def get_positions(status: dict, _state: dict) -> Outcome:
-    rows = []
-    for pos in status.get("positions") or status.get("open_positions") or []:
-        if not isinstance(pos, dict):
-            continue
-        rows.append(_pick(pos, (
-            "symbol", "raw_symbol", "asset", "slot", "code", "strategy_id", "family",
-            "side", "qty", "entry", "mark", "unrealized_pnl", "market_value",
-            "leverage", "effective_leverage", "exchange_leverage_cap",
-            "liq", "liq_distance", "venue", "status", "margin_type",
-        )))
+def get_positions(status: dict, state: dict) -> Outcome:
+    import review_audit
+    view = review_audit.annotate_positions(status, state)
+    by_sym = {str(r.get("raw_symbol") or ""): r for r in view["positions"]}
+    futures = []
+    for row in _futures_liq(status):
+        owned = by_sym.get(str(row.get("symbol") or "").upper()) or {}
+        futures.append({
+            **row,
+            "owner": owned.get("owner", "unowned"),
+            "strategy": owned.get("strategy", "unowned"),
+            "owners": owned.get("owners") or [],
+            "leverage": owned.get("leverage", row.get("leverage")),
+        })
     return Outcome(redact({
         "ok": True,
         "account": "binance_demo",
         "updated_at": status.get("updated_at"),
-        "positions": rows,
+        "positions": view["positions"],
+        "vbo_3x": view["vbo_3x"],
+        "e5_owned_3x": view["e5_owned_3x"],
+        "e5_topup": view["e5_topup"],
+        "vbo_3x_note": view["vbo_3x_note"],
         "liq_distance": status.get("liq_distance"),
-        "futures_positions": _futures_liq(status),
+        "futures_positions": futures,
     }))
 
 
-def _trade_rows(status: dict) -> list:
+def _trade_rows(status: dict, state: dict | None = None) -> list:
+    import review_audit
     rows = []
     for src, kind in (("recent_fills", "fill"), ("closed_trades", "closed")):
         for t in status.get(src) or []:
@@ -699,15 +711,28 @@ def _trade_rows(status: dict) -> list:
                 "symbol", "code", "strategy_id", "slot", "side", "qty", "price",
                 "quoteQty", "commission", "commissionAsset", "fee", "pnl_usdt",
                 "realized_pnl_usdt", "time", "closed_at", "id", "orderId",
+                "clientOrderId", "cause", "reason",
             ))
             row["kind"] = kind
             row["time"] = t.get("time") or t.get("closed_at")
+            row["liquidation"] = bool(t.get("liquidation")) or review_audit._looks_like_liquidation(t)
+            if row["liquidation"]:
+                row["kind"] = "liquidation"
             rows.append(row)
+    seen = {(str(r.get("symbol") or ""), str(r.get("time") or ""), str(r.get("id") or "")) for r in rows}
+    for extra in review_audit.liquidation_trades(status, state or {}):
+        key = (str(extra.get("symbol") or ""), str(extra.get("time") or ""), str(extra.get("id") or ""))
+        if key in seen and key != ("", "", ""):
+            continue
+        if not extra.get("symbol"):
+            continue
+        seen.add(key)
+        rows.append(extra)
     rows.sort(key=lambda r: str(r.get("time") or ""), reverse=True)
     return rows
 
 
-def get_trades(status: dict, _state: dict, args: dict | None = None) -> Outcome:
+def get_trades(status: dict, state: dict, args: dict | None = None) -> Outcome:
     args = args or {}
     try:
         limit = int(args.get("limit") if args.get("limit") is not None else 30)
@@ -723,7 +748,7 @@ def get_trades(status: dict, _state: dict, args: dict | None = None) -> Outcome:
             return Outcome({"ok": False, "error": "cursor 無效"}, 400)
         if offset < 0:
             return Outcome({"ok": False, "error": "cursor 無效"}, 400)
-    rows = _trade_rows(status)
+    rows = _trade_rows(status, state)
     page = rows[offset:offset + limit]
     next_off = offset + limit
     return Outcome(redact({
@@ -763,6 +788,8 @@ def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome
         "live_vs_backtest": summary,
         "rows": rows[:200],
     }
+    import review_audit
+    body["reconciliation"] = review_audit.reconciliation(status, state)
     if e5_tracking.wanted(want, e5):
         if want and want not in e5_tracking.E5_CODES and want.upper() != "E5":
             for day in e5.get("days") or []:
@@ -770,6 +797,27 @@ def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome
                 day["summary"] = e5_tracking.summarize_rows(day["symbols"])
         body["e5"] = e5
     return Outcome(redact(body))
+
+
+def get_reconciliation(status: dict, state: dict) -> Outcome:
+    import review_audit
+    return Outcome(redact({
+        "ok": True,
+        "account": "binance_demo",
+        "updated_at": status.get("updated_at"),
+        **review_audit.reconciliation(status, state),
+    }))
+
+
+def get_risk(status: dict, state: dict) -> Outcome:
+    import review_audit
+    nav_history = _nav_history(status, state)
+    return Outcome(redact({
+        "ok": True,
+        "account": "binance_demo",
+        "updated_at": status.get("updated_at"),
+        **review_audit.portfolio_risk({**status, "nav_history": nav_history}, state),
+    }))
 
 
 def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -> Outcome:
@@ -832,6 +880,10 @@ def dispatch_read(name: str, args: dict, snapshot: Callable[[], tuple[dict, dict
         return get_trades(status, state, args)
     if name == "get_backtest":
         return get_backtest(status, state, args)
+    if name == "get_reconciliation":
+        return get_reconciliation(status, state)
+    if name == "get_risk":
+        return get_risk(status, state)
     if name == "get_orchestrator_plan":
         return get_orchestrator_plan(status, state, args)
     return Outcome({"ok": False, "error": "未知的工具"}, 404)
@@ -846,19 +898,19 @@ TOOLS: list[dict] = [
     },
     {
         "name": "get_performance",
-        "description": "Capital-basis NAV, PnL, current and max drawdown, and the daily wallet NAV history (USDT-M + USDC futures). book_history is the virtual-book sum, only for the drawdown alert. Same sources as dashboard /status.",
+        "description": "Capital-basis NAV, PnL, drawdown, the daily wallet NAV, the capital bridge (start, per-strategy net, fees, funding, wallet, residual), and display-only portfolio risk.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
         "name": "get_positions",
-        "description": "Current Demo positions and liquidation distance. Use this when reviewing risk and leverage.",
+        "description": "Demo positions with owner and strategy from the virtual ledgers (E5, VBO, R2S, FA, U1; unowned when none), leverage, and a read-only VBO 3x liquidation-distance list.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
         "name": "get_trades",
-        "description": "Recent Demo fills and closed trades, newest first. Page with cursor from the previous next_cursor.",
+        "description": "Recent Demo fills, closed trades, and recorded forced liquidations (liquidation true), newest first. Page with cursor from the previous next_cursor.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -871,7 +923,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "get_backtest",
-        "description": "Live-versus-backtest parity for satellite and U1 rows, plus E5 target-versus-actual: per-day target weight and qty against the E5 book, with skip_min, deadband, residual_close, and unfilled where recorded, and tracking error.",
+        "description": "Live-versus-backtest parity, E5 target versus actual, and reconciliation: mismatch reasons, before/after parity-fix dates, rolling match rate, and realized slippage.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -879,6 +931,18 @@ TOOLS: list[dict] = [
             },
             "additionalProperties": False,
         },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_reconciliation",
+        "description": "Parity mismatches split on the repo's parity-fix dates, each with a reason (APT 2026-10-03 included), rolling match rate, and realized slippage versus the signal or target price.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_risk",
+        "description": "Display-only portfolio risk: gross long, gross short, net exposure, +30% and -30% book stress with a rough isolated-liquidation cap, and the worst single-day NAV loss. Does not change positions.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
@@ -944,7 +1008,7 @@ TOOLS: list[dict] = [
 
 _READ_TOOLS = {
     "list_strategies", "get_performance", "get_positions", "get_trades",
-    "get_backtest", "get_orchestrator_plan", "list_comments",
+    "get_backtest", "get_reconciliation", "get_risk", "get_orchestrator_plan", "list_comments",
 }
 
 
@@ -997,6 +1061,8 @@ def openapi_spec(base_url: str) -> dict:
                 "Positions": {"type": "object"},
                 "Trades": {"type": "object"},
                 "Backtest": {"type": "object"},
+                "Reconciliation": {"type": "object"},
+                "Risk": {"type": "object"},
                 "Orchestrator": {"type": "object"},
                 "Comments": {"type": "object"},
                 "CommentWrite": {
@@ -1025,12 +1091,12 @@ def openapi_spec(base_url: str) -> dict:
         "security": [{"reviewerBearer": []}],
         "paths": {
             "/review/strategies": {"get": {"operationId": "listStrategies", "summary": "List strategies", "responses": ok("StrategyList")}},
-            "/review/performance": {"get": {"operationId": "getPerformance", "summary": "NAV, PnL, drawdown, fees", "responses": ok("Performance")}},
-            "/review/positions": {"get": {"operationId": "getPositions", "summary": "Positions and liquidation distance", "responses": ok("Positions")}},
+            "/review/performance": {"get": {"operationId": "getPerformance", "summary": "NAV, capital bridge, drawdown, risk, fees", "responses": ok("Performance")}},
+            "/review/positions": {"get": {"operationId": "getPositions", "summary": "Positions, owner, leverage, VBO 3x distance", "responses": ok("Positions")}},
             "/review/trades": {
                 "get": {
                     "operationId": "getTrades",
-                    "summary": "Recent fills, paged",
+                    "summary": "Fills, including flagged liquidations, paged",
                     "parameters": [
                         {"name": "limit", "in": "query", "schema": {"type": "integer"}},
                         {"name": "cursor", "in": "query", "schema": {"type": "string"}},
@@ -1046,6 +1112,8 @@ def openapi_spec(base_url: str) -> dict:
                     "responses": ok("Backtest"),
                 }
             },
+            "/review/reconciliation": {"get": {"operationId": "getReconciliation", "summary": "Parity periods, mismatch reasons, slippage", "responses": ok("Reconciliation")}},
+            "/review/risk": {"get": {"operationId": "getRisk", "summary": "Display-only portfolio risk", "responses": ok("Risk")}},
             "/review/orchestrator": {
                 "get": {
                     "operationId": "getOrchestratorPlan",
@@ -1254,6 +1322,14 @@ def register(app, *, snapshot: Callable[[], tuple[dict, dict]], check_read, chec
     @app.route("/review/backtest", methods=["GET"])
     def review_backtest():
         return _read("get_backtest", {"strategy": request.args.get("strategy")})
+
+    @app.route("/review/reconciliation", methods=["GET"])
+    def review_reconciliation():
+        return _read("get_reconciliation")
+
+    @app.route("/review/risk", methods=["GET"])
+    def review_risk():
+        return _read("get_risk")
 
     @app.route("/review/orchestrator", methods=["GET"])
     def review_orchestrator():
