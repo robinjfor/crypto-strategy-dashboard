@@ -131,6 +131,8 @@ printf '%s' '在此貼上你的API_SECRET' | gcloud secrets create BINANCE_DEMO_
 printf '%s' '新值' | gcloud secrets versions add BINANCE_DEMO_API_KEY --data-file=-
 ```
 
+外部審閱（ChatGPT／Claude 只讀＋留言，不能核准、下單或撤銷）使用另一個 secret：`REVIEWER_TOKEN`。建立方式、掛到 Cloud Run、以及連接器 URL 寫在 `docs/external-review.md`。不要把這組權杖寫進 repo。
+
 ---
 
 ## 4. 建立服務帳戶（執行用＋部署用）

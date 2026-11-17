@@ -238,6 +238,22 @@ jobs:
           MODE="${{ steps.mode.outputs.trader_mode }}"
           PIN_HASH="${{ steps.mode.outputs.pin_hash }}"
           SESS_SECRET="${{ steps.mode.outputs.session_secret }}"
+          # Reviewer MCP/REST only. Mounted when the secret already exists.
+          # The value is never echoed. Trading jobs do not receive it.
+          SECRETS="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest"
+          set +e
+          DESCRIBE_ERR=$(gcloud secrets describe REVIEWER_TOKEN --project="${PROJECT}" --format='value(name)' 2>&1)
+          DESCRIBE_CODE=$?
+          set -e
+          if [ "$DESCRIBE_CODE" -eq 0 ]; then
+            SECRETS="${SECRETS},REVIEWER_TOKEN=REVIEWER_TOKEN:latest"
+          elif echo "$DESCRIBE_ERR" | grep -qi "NOT_FOUND\|not found"; then
+            echo "REVIEWER_TOKEN is not in Secret Manager. External review stays disabled until the secret exists and the API service is deployed again. See docs/external-review.md."
+          else
+            echo "Could not check Secret Manager for REVIEWER_TOKEN. The API deploy stops so an existing mount is not dropped." >&2
+            echo "$DESCRIBE_ERR" >&2
+            exit 1
+          fi
 
           gcloud run deploy "${SERVICE_NAME}" \
             --project="${PROJECT}" \
@@ -249,7 +265,7 @@ jobs:
             --command=python \
             --args=-u,api.py \
             --set-env-vars="GCS_BUCKET=${BUCKET},TRADER_MODE=${MODE},TRADER_ENABLED=${ENABLED},BINANCE_BASE_URL=https://demo-api.binance.com,BINANCE_FUTURES_DEMO_BASE_URL=https://demo-fapi.binance.com,VISION_BASE_URL=https://data-api.binance.vision,DEMO_ACCEPTED=demo_funding_arb_1x;demo_r2s_top10_3k;demo_e5_min5_x175;demo_e5_min5_x175_t05top20;demo_vbo1h_top50_1k,CORS_ORIGIN=${CORS_ORIGIN},CONTROL_PIN_SALT=${PIN_SALT},CONTROL_PIN_HASH=${PIN_HASH},SESSION_HMAC_SECRET=${SESS_SECRET},TRADER_READONLY_TOKEN=${READONLY_TOKEN:-}" \
-            --set-secrets="BINANCE_DEMO_API_KEY=BINANCE_DEMO_API_KEY:latest,BINANCE_DEMO_API_SECRET=BINANCE_DEMO_API_SECRET:latest" \
+            --set-secrets="${SECRETS}" \
             --memory=512Mi \
             --cpu=1 \
             --min-instances=0 \
