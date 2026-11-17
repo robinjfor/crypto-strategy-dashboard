@@ -11,7 +11,9 @@ slot is paused, a guard entry block is active, the symbol is TradFi, or it isn't
 Targets older than yesterday (UTC) are never traded.
 Capital changes (2026-11-13): the orchestrator backtest scales E's whole book with its capital, so before planning,
 each held leg is resized by sizing capital / the capital it was last sized at (ledger frame_cap), with the same
-step, min-notional and 0.5% threshold rules; the day's signal trades are then planned on the resized book."""
+step, min-notional and 0.5% threshold rules; the day's signal trades are then planned on the resized book.
+After each open or resize, and again on later reconciles that do not trade, isolated margin on E5
+legs is topped up to entry notional / 1.75 (e5_margin). Exchange leverage stays where it already is."""
 from __future__ import annotations
 
 import logging
@@ -315,21 +317,30 @@ def execute(state: dict, fut, targets: dict | None, now: datetime | None = None,
     def finish():
         out["equity_after"] = round(equity(ex, prices), 2)
         if only is not None:
-            out["late"] = sorted(only); ex["late_runs"] = (list(ex.get("late_runs") or []) + [out])[-50:]; return
-        if plan_eq is not None:
-            # Frame: the capital each held symbol is now sized at. A symbol whose resize was held back
-            # (or not filled) and whose qty did not move keeps its old frame, so the resize is retried.
-            nf = {}
-            for s2, q2 in (ex.get("book") or {}).items():
-                if not q2:
-                    continue
-                old_f = frames.get(s2)
-                unchanged = abs(float(q2) - book0.get(s2, 0.0)) < 1e-12
-                nf[s2] = round(float(old_f if (old_f and unchanged and (s2 in held_back or s2 in {r["symbol"] for r in resize})) else eq), 2)
-            ex["frame_cap"] = nf
-            ex["sizing_equity"] = round(float(eq), 2)
-        ex.update(last_bar=bar, last=out)
-        ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
+            out["late"] = sorted(only); ex["late_runs"] = (list(ex.get("late_runs") or []) + [out])[-50:]
+        else:
+            if plan_eq is not None:
+                # Frame: the capital each held symbol is now sized at. A symbol whose resize was held back
+                # (or not filled) and whose qty did not move keeps its old frame, so the resize is retried.
+                nf = {}
+                for s2, q2 in (ex.get("book") or {}).items():
+                    if not q2:
+                        continue
+                    old_f = frames.get(s2)
+                    unchanged = abs(float(q2) - book0.get(s2, 0.0)) < 1e-12
+                    nf[s2] = round(float(old_f if (old_f and unchanged and (s2 in held_back or s2 in {r["symbol"] for r in resize})) else eq), 2)
+                ex["frame_cap"] = nf
+                ex["sizing_equity"] = round(float(eq), 2)
+            ex.update(last_bar=bar, last=out)
+            ex["history"] = (list(ex.get("history") or []) + [{"bar": bar, "equity": out["equity_after"], "sent": len(out["sent"])}])[-400:]
+        # Shared netter (reconcile) tops up after flush, once the book matches the fills.
+        # A direct execute flushes itself, so the top-up runs here, after those fills.
+        if own and hasattr(fut, "add_isolated_margin"):
+            try:
+                import e5_margin
+                e5_margin.topup(state, fut, slot=SLOT, key=KEY)
+            except Exception as e:  # noqa: BLE001
+                log.warning("e5_margin_topup_fail err=%s", e)
     netter.after.append(finish)
     if own:
         netter.flush()

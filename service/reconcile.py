@@ -737,6 +737,23 @@ def e5_traded(res) -> bool:
     return isinstance(res, dict) and not isinstance(res.get("skipped"), str) and bool(res.get("bar"))
 
 
+def merge_e5_margin(state: dict, pack: dict | None) -> None:
+    """Copy an E5 margin top-up onto the ledger reconcile is about to save. No orders."""
+    if not pack:
+        return
+    key = pack.get("key")
+    ledger = pack.get("ledger") or {}
+    if key and isinstance(ledger, dict) and ledger.get("margin_topup") is not None:
+        cur = dict(state.get(key) or {})
+        cur["margin_topup"] = ledger["margin_topup"]
+        if ledger.get("margin_topup_log") is not None:
+            cur["margin_topup_log"] = ledger["margin_topup_log"]
+        state[key] = cur
+    events = pack.get("events") or []
+    if events:
+        state["control_log"] = (list(state.get("control_log") or []) + list(events))[-200:]
+
+
 def e5_claim(store, key: str, state0: dict, tgt: dict | None, run: str):
     return slot_claim(store, key, state0, str((tgt or {}).get("decided_bar") or ""), run)
 
@@ -976,6 +993,16 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
     _last_run(e5_scratch, e5_key, e5_res)
     _last_run(r2s_scratch, "demo_r2s_exec", r2s_res)
     _last_run(vbo_scratch, "demo_vbo1h_exec", vbo_res)
+    # Existing E5 legs, including hours that do not trade and legacy 3x wallets.
+    # Adds isolated margin only. Does not set leverage and does not place an order.
+    e5_margin_pack = None
+    if e5_mod is not None and not fc_err:
+        try:
+            import e5_margin
+            e5_margin_pack = e5_margin.run_for_reconcile(
+                state0, e5_scratch, e5_traded(e5_res), e5_key, e5_mod.SLOT, fc)
+        except Exception as e:  # noqa: BLE001
+            log.warning("e5_margin_topup_fail err=%s", e)
     daily = build_asset_daily(store, client, fc, force=FORCE_PARITY, prev=state0.get("asset_daily")) if client is not None else None
     liq_rows: list = []
     if not fc_err:
@@ -1011,6 +1038,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
             elif e5_scratch.get(e5_key) is not None:
                 s[e5_key] = e5_scratch[e5_key]
             s["control_log"] = (list(s.get("control_log") or []) + e5_scratch["control_log"])[-200:]
+        merge_e5_margin(s, e5_margin_pack)
         if r2s_scratch is not None:
             if r2s_scratch.get("_last_run_only") or not e5_traded(r2s_res):
                 merge_untraded(s, "demo_r2s_exec", r2s_scratch, r2s_run)
