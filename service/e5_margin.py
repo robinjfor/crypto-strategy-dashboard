@@ -20,7 +20,8 @@ and by free USDT after leaving VBO's 1000 reserve. A shortfall the pool cannot c
 is topped up only for the remainder and logged. VBO's own positions are never topped up.
 
 Idempotent: a later run sees the wallet already at the target and does not transfer.
-Shortfalls below DEADBAND_USDT are left in place so a few cents do not move every hour.
+A shortfall is skipped only when it is below min(0.05 USDT, 1% of the target margin).
+The old 0.5 USDT band left MOVR, W, ICNT, APR, and PROM at 2x.
 """
 from __future__ import annotations
 
@@ -34,10 +35,16 @@ import isolated_liq
 log = logging.getLogger("e5_margin")
 
 TARGET_LV = float(demo_e5.LV)  # 1.75
-DEADBAND_USDT = 0.5
+SKIP_CAP_USDT = 0.05
+SKIP_PCT = 0.01
 _EPS = 1e-9
 # cum=0 long: liq(L) / entry = (1 - 1/L) / (1 - mmr). mmr cancels across two leverages.
 FORMULA = "wallet >= abs(qty)*entry/1.75; long liq ratio (1-1/1.75)/(1-1/2) when cum=0"
+
+
+def skip_threshold(target_margin: float) -> float:
+    """Skip a top-up only below the smaller of 0.05 USDT and 1% of the 1.75 wallet."""
+    return min(SKIP_CAP_USDT, SKIP_PCT * max(0.0, abs(float(target_margin))))
 
 
 def shortfall(notional: float, margin: float, lv: float = TARGET_LV) -> float:
@@ -105,13 +112,14 @@ def floor_cent(amount: float) -> float:
     return math.floor(amount * 100 + 1e-9) / 100.0
 
 
-def transfer_amount(need: float, budget: float) -> float:
-    """Cents to add. 0 when the shortfall or the remaining budget is under the deadband.
+def transfer_amount(need: float, budget: float, threshold: float | None = None) -> float:
+    """Cents to add. 0 when the shortfall or the remaining budget is under the skip threshold.
 
     The full shortfall is rounded up to the cent so the wallet is not left short by a
     fraction the API would drop. A partial fill is rounded down so it cannot exceed the budget.
     """
-    if need < DEADBAND_USDT - 1e-6 or budget < DEADBAND_USDT - 1e-6:
+    floor = SKIP_CAP_USDT if threshold is None else max(0.0, float(threshold))
+    if need < floor - 1e-6 or budget < floor - 1e-6:
         return 0.0
     if need <= budget + 1e-9:
         amount = ceil_cent(need)
@@ -119,7 +127,7 @@ def transfer_amount(need: float, budget: float) -> float:
             amount = floor_cent(budget)
     else:
         amount = floor_cent(min(need, budget))
-    if amount < DEADBAND_USDT - 1e-6:
+    if amount < floor - 1e-6:
         return 0.0
     return amount
 
@@ -229,21 +237,22 @@ def topup(state: dict, fut, *, slot: str, key: str, now: datetime | None = None)
         if not p.get("actionable"):
             p["added"] = 0.0
             continue
-        if stop and float(p.get("shortfall") or 0) >= DEADBAND_USDT - 1e-6:
+        need = float(p["shortfall"])
+        floor = float(p.get("skip_threshold") if p.get("skip_threshold") is not None else SKIP_CAP_USDT)
+        if stop and need >= floor - 1e-6:
             p["status"] = "skipped_balance"
             p["limit"] = "available"
             p["added"] = 0.0
             continue
-        need = float(p["shortfall"])
         if need <= 1e-6:
             p["status"] = "ok"
             p["added"] = 0.0
             continue
-        if need < DEADBAND_USDT - 1e-6:
+        if need < floor - 1e-6:
             p["status"] = "deadband"
             p["added"] = 0.0
             continue
-        amount = transfer_amount(need, left)
+        amount = transfer_amount(need, left, floor)
         if amount <= 0:
             p["status"] = "skipped_pool" if limit == "e5_pool" else "skipped_balance"
             p["limit"] = limit
@@ -358,11 +367,13 @@ def _plan_symbol(sym: str, e5_qty: float, rows: list[dict]) -> dict:
         base["status"] = "skipped_flat"
         return base
     need = shortfall(notional, margin)
+    target_margin = abs(notional) / TARGET_LV
     mmr = _mmr(row, entry, exch, margin, base.get("liq_exchange"), mark_n)
     liq = base.get("liq_exchange")
     if liq is None or liq <= 0:
         liq = liquidation_price_for_margin(entry, exch, margin, mmr)
     base.update(actionable=True, counts_posted=True, shortfall=need, margin_before=margin, mmr=mmr,
+                target_margin=target_margin, skip_threshold=skip_threshold(target_margin),
                 liq_before=liq, status="ok" if need <= 1e-6 else "short")
     return base
 
@@ -401,6 +412,7 @@ def _finalize(p: dict, refreshed: dict | None) -> dict:
         "distance_after": _round(distance(mark, liq_after), 6),
         "mark": _round(mark, 8),
         "status": p.get("status") or "ok",
+        "skip_threshold": _round(p.get("skip_threshold"), 4),
     }
     if p.get("limit"):
         out["limit"] = p["limit"]
@@ -410,7 +422,8 @@ def _finalize(p: dict, refreshed: dict | None) -> dict:
 
 
 def _report(at: str, *, symbols: dict, added: float, status: str, **extra) -> dict:
-    report = {"at": at, "target_lv": TARGET_LV, "deadband_usdt": DEADBAND_USDT, "formula": FORMULA,
+    report = {"at": at, "target_lv": TARGET_LV, "skip_cap_usdt": SKIP_CAP_USDT, "skip_pct": SKIP_PCT,
+              "formula": FORMULA,
               "orders": 0, "leverage_changes": 0, "added": added, "status": status, "symbols": symbols}
     report.update(extra)
     return report
@@ -568,6 +581,45 @@ def _available(fut) -> float | None:
     if raw in (None, ""):
         return None
     return max(0.0, float(raw))
+
+
+_SKIPPED = {"deadband", "skipped_pool", "skipped_balance", "skipped_flat", "skipped_opposite", "skipped_cross", "margin_unknown"}
+
+
+def review_view(state: dict | None) -> dict:
+    """Read-only top-up record for /review/positions. Does not call the exchange."""
+    state = state if isinstance(state, dict) else {}
+    ex = state.get("demo_e5v_exec") if isinstance(state.get("demo_e5v_exec"), dict) else {}
+    top = ex.get("margin_topup") if isinstance(ex.get("margin_topup"), dict) else {}
+    last_topup: dict[str, dict] = {}
+    for entry in ex.get("margin_topup_log") or []:
+        if not isinstance(entry, dict):
+            continue
+        for sym, row in (entry.get("symbols") or {}).items():
+            if isinstance(row, dict):
+                last_topup[str(sym)] = {"at": entry.get("at"), "added": row.get("added"), "status": row.get("status")}
+    symbols = []
+    for sym, row in sorted((top.get("symbols") or {}).items()):
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("status") or "")
+        symbols.append({
+            "symbol": sym,
+            "target": row.get("target"),
+            "isolated_margin": row.get("margin_after") if row.get("margin_after") is not None else row.get("margin_before"),
+            "last_topup": last_topup.get(str(sym)),
+            "skipped_reason": status if status in _SKIPPED else None,
+            "status": status or None,
+            "shortfall": row.get("shortfall"),
+            "skip_threshold": row.get("skip_threshold"),
+        })
+    last_run = ex.get("last_run") if isinstance(ex.get("last_run"), dict) else {}
+    return {
+        "ledger": "demo_e5v_exec",
+        "reconcile_last_run_at": last_run.get("at"),
+        "checked_at": top.get("at"),
+        "symbols": symbols,
+    }
 
 
 def _lev(row: dict):
