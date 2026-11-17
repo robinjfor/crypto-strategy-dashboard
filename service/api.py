@@ -1530,6 +1530,9 @@ def build_status() -> dict:
         "orchestrator_policy": __import__("orchestrator").policy_public(),
         "slot_caps": __import__("orchestrator").effective_slot_caps(state),
         "capital_basis": capital_basis_view,
+        "nav_history": capital_basis.display_nav_history(
+            state.get("capital_basis_history"), capital_basis_view.get("starting_total")),
+        "book_history": capital_basis.book_history(state.get("orchestrator")),
         "last_job_run_at_utc": meta.get("last_run_at_utc"),
         # Runner version (git commit baked into the image by deploy-trader):
         # runner_version = the Job that produced last_decisions; api_version = this API.

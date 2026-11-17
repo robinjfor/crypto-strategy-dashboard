@@ -80,10 +80,15 @@ def test_overlay_matches_status_wallet_fields_and_keeps_the_book_sum():
         assert view[k] == v == status[k]
     assert view["portfolio_equity"] == 9776.78
     assert view["peak"] == 10000
-    assert view["drawdown"] == 0.0293
+    assert view["current_drawdown"] == round(1 - 9776.78 / 10000, 6)
+    assert view["drawdown"] == view["current_drawdown"]
+    assert view["max_drawdown_pct"] == 0.0293
+    assert view["drawdown"] != view["max_drawdown_pct"]
     assert view["book_portfolio_equity"] == 6698.47
     assert view["book_peak"] == 9953.03
     assert view["book_drawdown"] == 0.3270
+    assert view["book_history"][0]["book_portfolio_equity"] == 6698.47
+    assert view["book_history"][0]["book_drawdown"] == 0.3270
     assert view["dd_alert"] is True
     assert view["targets"]["demo_e5_min5_x175_t05top20"] == 3875.17
     assert "history" not in view
@@ -96,7 +101,9 @@ def test_missing_nav_scope_uses_the_status_default_basis():
     view = overlay(BOOK, {"nav": 9776.78, "peak": 10000, "max_drawdown_pct": 0.0293})
     assert view["portfolio_basis"] == "usd_m_futures_usdt_plus_usdc"
     assert view["portfolio_equity"] == 9776.78
-    assert view["drawdown"] == 0.0293
+    assert view["current_drawdown"] == round(1 - 9776.78 / 10000, 6)
+    assert view["drawdown"] == view["current_drawdown"]
+    assert view["max_drawdown_pct"] == 0.0293
 
 
 def test_missing_nav_leaves_the_book_sum_in_place():

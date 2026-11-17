@@ -150,6 +150,7 @@
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  function pctFrac(v) { var x = Number(v); return isFinite(x) ? num(x * 100, 2) + "%" : "—"; }
   function num(v, d) {
     if (v == null || v === "" || Number.isNaN(Number(v))) return "—";
     return Number(v).toLocaleString("en-US", {
@@ -595,7 +596,8 @@
         "＝USDT-M " + num(cloud.capital_basis.usdt_m_deposit) + " ＋ USDC " + num(cloud.capital_basis.usdc_deposit) +
         "。VBO 的 " + num(cloud.capital_basis.vbo_carve_usdt, 0) + " 從 USDT-M 劃出。淨值 " + num(cloud.capital_basis.nav) +
         "（USDT-M＋USDC 合約錢包＋未實現，不含現貨）。損益 " + num(cloud.capital_basis.pnl) +
-        "，高點 " + num(cloud.capital_basis.peak) + "，最大回撤 " + num(cloud.capital_basis.max_drawdown) + "。") : "") +
+        "，高點 " + num(cloud.capital_basis.peak) + "，目前回撤 " + pctFrac(cloud.capital_basis.current_drawdown)
+        + "，最大回撤 " + num(cloud.capital_basis.max_drawdown) + "（" + pctFrac(cloud.capital_basis.max_drawdown_pct) + "）。") : "") +
       "</p></section>";
   }
 
@@ -1402,11 +1404,13 @@
     var nav = wallet ? last.portfolio_equity : cb.nav;
     var start = wallet ? last.starting_total : cb.starting_total;
     var peak = wallet ? last.peak : cb.peak;
-    var dd = wallet ? last.max_drawdown : cb.max_drawdown;
-    var frac = wallet ? last.drawdown : cb.max_drawdown_pct;
+    var cur = last.current_drawdown != null ? last.current_drawdown : cb.current_drawdown;
+    if (cur == null && nav != null && peak) cur = 1 - Number(nav) / Number(peak);
+    var curUsdt = (nav != null && peak != null) ? Number(peak) - Number(nav) : null;
+    var maxUsdt = last.max_drawdown != null ? last.max_drawdown : cb.max_drawdown;
+    var maxFrac = last.max_drawdown_pct != null ? last.max_drawdown_pct : cb.max_drawdown_pct;
     var usdt = wallet && last.nav_usdt_m != null ? last.nav_usdt_m : cb.nav_usdt_m;
     var usdc = wallet && last.nav_usdc_m != null ? last.nav_usdc_m : cb.nav_usdc_m;
-    var pctDd = frac == null || !isFinite(Number(frac)) ? "—" : num(Number(frac) * 100, 2) + "%";
     function tile(label, value, sub) {
       return '<div class="kpi"><div class="label">' + label + '</div><div class="value">' + value +
         '</div><div class="sublabel">' + sub + "</div></div>";
@@ -1414,7 +1418,8 @@
     return tile("組合淨值", num(nav), "USDT-M " + num(usdt) + " ＋ USDC " + num(usdc) + " · 錢包＋未實現，不含現貨") +
       tile("起始資金", num(start), "USDT-M 入金＋USDC 入金。不含 R2S 虛擬 3000，也不含其他策略虛擬本金") +
       tile("高點", num(peak), "合約淨值日序列，自 2026-10-01") +
-      tile("最大回撤", num(dd), pctDd + " · 自該序列的高點");
+      tile("目前回撤", pctFrac(cur), num(curUsdt) + " · 1 − 淨值／高點") +
+      tile("最大回撤", num(maxUsdt), pctFrac(maxFrac) + " · 該序列曾離開高點的最大幅度");
   }
 
   function renderOrchestratorPolicy() {

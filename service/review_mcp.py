@@ -604,10 +604,30 @@ def _fee_summary(status: dict) -> dict:
     return {"books": book_fees, "sleeves": sleeves}
 
 
-def get_performance(status: dict, state: dict) -> Outcome:
+def _nav_history(status: dict, state: dict) -> list:
+    import capital_basis
+    basis = status.get("capital_basis") if isinstance(status.get("capital_basis"), dict) else {}
     history = state.get("capital_basis_history") or []
     if not isinstance(history, list):
         history = []
+    start = basis.get("starting_total")
+    if start is None:
+        start = 10000.0
+    return capital_basis.display_nav_history(history, start)
+
+
+def _with_current_drawdown(basis: dict) -> dict:
+    import capital_basis
+    out = dict(basis or {})
+    if out.get("current_drawdown") is None:
+        out["current_drawdown"] = capital_basis.current_drawdown(out.get("nav"), out.get("peak"))
+    return out
+
+
+def get_performance(status: dict, state: dict) -> Outcome:
+    import capital_basis
+    nav_history = _nav_history(status, state)
+    book = capital_basis.book_history(state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else None)
     netting = (status.get("netting") or {}).get("slots") if isinstance(status.get("netting"), dict) else {}
     books = {}
     if isinstance(netting, dict):
@@ -618,9 +638,15 @@ def get_performance(status: dict, state: dict) -> Outcome:
         "ok": True,
         "account": "binance_demo",
         "updated_at": status.get("updated_at"),
-        "capital_basis": status.get("capital_basis") or {},
-        "nav_history": history[-400:],
-        "nav_history_note": "每日合約淨值，與 /status capital_basis 同一序列（Asia/Taipei 日）。",
+        "capital_basis": _with_current_drawdown(status.get("capital_basis") or {}),
+        "nav_history": nav_history[-400:],
+        "history": nav_history[-400:],
+        "book_history": book[-400:],
+        "nav_history_note": (
+            "每日合約淨值（USDT-M＋USDC 合約錢包＋未實現，不含現貨）。"
+            "序列起點是起始資金（沒有更早的點時為 10000）。"
+            "book_history 才是虛擬帳本合計，只供回撤警示對照，不是這條淨值。"
+        ),
         "virtual_books": books,
         "fees": _fee_summary(status),
     }))
@@ -710,7 +736,8 @@ def get_trades(status: dict, _state: dict, args: dict | None = None) -> Outcome:
     }))
 
 
-def get_backtest(status: dict, _state: dict, args: dict | None = None) -> Outcome:
+def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome:
+    import e5_tracking
     args = args or {}
     want = str(args.get("strategy") or "").strip()
     lv = status.get("live_vs_backtest") or {}
@@ -727,14 +754,22 @@ def get_backtest(status: dict, _state: dict, args: dict | None = None) -> Outcom
             continue
         rows.append(row)
     summary = {k: lv.get(k) for k in ("at", "day_utc", "n_match", "n_mismatch", "n_unsupported") if k in lv}
-    return Outcome(redact({
+    e5 = e5_tracking.compare(state, status)
+    body = {
         "ok": True,
         "account": "binance_demo",
         "updated_at": status.get("updated_at"),
         "parity": status.get("parity"),
         "live_vs_backtest": summary,
         "rows": rows[:200],
-    }))
+    }
+    if e5_tracking.wanted(want, e5):
+        if want and want not in e5_tracking.E5_CODES and want.upper() != "E5":
+            for day in e5.get("days") or []:
+                day["symbols"] = [r for r in day.get("symbols") or [] if r.get("symbol") == want]
+                day["summary"] = e5_tracking.summarize_rows(day["symbols"])
+        body["e5"] = e5
+    return Outcome(redact(body))
 
 
 def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -> Outcome:
@@ -744,9 +779,9 @@ def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -
     except (TypeError, ValueError):
         return Outcome({"ok": False, "error": "history_limit 必須是整數"}, 400)
     limit = min(120, max(1, limit))
-    hist = ((state.get("orchestrator") or {}).get("history") or []) if isinstance(state.get("orchestrator"), dict) else []
-    if not isinstance(hist, list):
-        hist = []
+    import capital_basis
+    stored = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
+    hist = capital_basis.book_history(stored)
     return Outcome(redact({
         "ok": True,
         "account": "binance_demo",
@@ -755,9 +790,12 @@ def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -
         "policy": status.get("orchestrator_policy"),
         "slot_caps": status.get("slot_caps"),
         "history": hist[-limit:],
+        "book_history": hist[-limit:],
+        "nav_history": _nav_history(status, state)[-400:],
         "history_note": (
-            "latest 的 portfolio_equity、peak、drawdown 與 /status 相同，已換成合約錢包 capital_basis。"
-            "history 是編排工作存下的序列。"
+            "latest 的 portfolio_equity、peak、current_drawdown 與 /status 相同，是合約錢包。"
+            "history 與 book_history 是虛擬帳本合計（book_portfolio_equity、book_drawdown），只供回撤警示對照。"
+            "淨值走勢用 nav_history（capital_basis_history，起點為起始資金）。"
         ),
     }))
 
@@ -808,7 +846,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "get_performance",
-        "description": "Capital-basis NAV, PnL, peak, and drawdown, the daily NAV history, per-strategy virtual-book PnL, and fees. Same sources as dashboard /status.",
+        "description": "Capital-basis NAV, PnL, current and max drawdown, and the daily wallet NAV history (USDT-M + USDC futures). book_history is the virtual-book sum, only for the drawdown alert. Same sources as dashboard /status.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
@@ -833,7 +871,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "get_backtest",
-        "description": "Live-versus-backtest parity for each strategy where a result exists. Use this for overfitting and live deviation.",
+        "description": "Live-versus-backtest parity for satellite and U1 rows, plus E5 target-versus-actual: per-day target weight and qty against the E5 book, with skip_min, deadband, residual_close, and unfilled where recorded, and tracking error.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1003,7 +1041,7 @@ def openapi_spec(base_url: str) -> dict:
             "/review/backtest": {
                 "get": {
                     "operationId": "getBacktest",
-                    "summary": "Backtest parity",
+                    "summary": "Satellite and U1 parity, plus E5 target versus actual",
                     "parameters": [{"name": "strategy", "in": "query", "schema": {"type": "string"}}],
                     "responses": ok("Backtest"),
                 }

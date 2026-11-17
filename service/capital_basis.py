@@ -107,8 +107,25 @@ def update_history(history, nav: float | None, day: str, keep: int = 400) -> lis
     return rows[-keep:]
 
 
+def current_drawdown(nav, peak) -> float | None:
+    """Fraction the NAV sits under its peak: 1 - nav/peak. None when either input is missing."""
+    try:
+        if nav is None or peak is None:
+            return None
+        nav_f, peak_f = float(nav), float(peak)
+    except (TypeError, ValueError):
+        return None
+    if peak_f <= 0:
+        return None
+    return round(1.0 - nav_f / peak_f, 6)
+
+
 def performance(points, starting_total: float, nav_now: float | None = None) -> dict:
-    """Peak and max drawdown: the start, then the futures-NAV daily series since 2026-10-01, then today."""
+    """Peak and max drawdown: the start, then the futures-NAV daily series since 2026-10-01, then today.
+
+    current_drawdown is 1 - nav/peak (where the book is now). max_drawdown_pct is the
+    deepest drop in that series, which is a different number once NAV has recovered.
+    """
     series: list[float] = [float(starting_total)]
     for p in points or []:
         if not p or len(p) < 2 or str(p[0]) < "2026-10-01":
@@ -118,7 +135,8 @@ def performance(points, starting_total: float, nav_now: float | None = None) -> 
         except (TypeError, ValueError):
             continue
     if nav_now is None:
-        return {"nav": None, "pnl": None, "peak": None, "max_drawdown": None, "max_drawdown_pct": None}
+        return {"nav": None, "pnl": None, "peak": None, "current_drawdown": None,
+                "max_drawdown": None, "max_drawdown_pct": None}
     series.append(float(nav_now))
     peak = series[0]
     max_dd = 0.0
@@ -132,28 +150,86 @@ def performance(points, starting_total: float, nav_now: float | None = None) -> 
                 max_dd = dd
                 max_dd_pct = dd / peak
     nav = series[-1]
+    peak_r = round(peak, 2)
+    nav_r = round(nav, 2)
     return {
-        "nav": round(nav, 2),
+        "nav": nav_r,
         "pnl": round(nav - float(starting_total), 2),
-        "peak": round(peak, 2),
+        "peak": peak_r,
+        "current_drawdown": current_drawdown(nav_r, peak_r),
         "max_drawdown": round(max_dd, 2),
         "max_drawdown_pct": round(max_dd_pct, 6),
     }
 
 
+NAV_HISTORY_START = "2026-10-01"
+
+
+def display_nav_history(history, starting_total, start: str = NAV_HISTORY_START) -> list:
+    """Wallet NAV series for the chart: [[YYYY-MM-DD, nav], ...].
+
+    Points before 2026-10-01 are dropped. When the stored series starts later, the
+    deposit basis (USDT-M + USDC, 10000 unless transfers say otherwise) is the first point.
+    """
+    dedup: dict[str, float] = {}
+    for p in history or []:
+        if not p or len(p) < 2 or str(p[0]) < start:
+            continue
+        try:
+            dedup[str(p[0])] = round(float(p[1]), 2)
+        except (TypeError, ValueError):
+            continue
+    rows = [[day, dedup[day]] for day in sorted(dedup)]
+    try:
+        anchor = None if starting_total is None else round(float(starting_total), 2)
+    except (TypeError, ValueError):
+        anchor = None
+    if anchor is not None and (not rows or rows[0][0] > start):
+        rows.insert(0, [start, anchor])
+    return rows
+
+
+def book_history(stored: dict | None) -> list:
+    """Virtual-book series the orchestrator stores for its drawdown alert.
+
+    Named book_* so it is not read as the wallet NAV. P and dd on the stored row
+    are that book sum and its drawdown from the book peak.
+    """
+    hist = (stored or {}).get("history") if isinstance(stored, dict) else None
+    out = []
+    if not isinstance(hist, list):
+        return out
+    for row in hist:
+        if not isinstance(row, dict):
+            continue
+        out.append({
+            "bar": row.get("bar"),
+            "book_portfolio_equity": row.get("book_portfolio_equity", row.get("P")),
+            "book_drawdown": row.get("book_drawdown", row.get("dd")),
+            "bear": row.get("bear"),
+            "hivol": row.get("hivol"),
+        })
+    return out
+
+
 def wallet_portfolio(basis: dict | None) -> dict:
     """Dashboard portfolio fields. Same numbers as summarize(): futures NAV, not virtual books.
 
-    drawdown is the series max drawdown as a fraction of the peak it fell from
-    (max_drawdown_pct). max_drawdown is that drop in USDT. starting_total is the
-    deposit basis (USDT-M + USDC), which does not include R2S's virtual 3000.
+    drawdown and current_drawdown are 1 - nav/peak. max_drawdown_pct is the deepest
+    drop of the futures-NAV series, and max_drawdown is that drop in USDT.
+    starting_total is the deposit basis (USDT-M + USDC), which does not include R2S's virtual 3000.
     """
     b = basis or {}
+    cur = b.get("current_drawdown")
+    if cur is None:
+        cur = current_drawdown(b.get("nav"), b.get("peak"))
     return {
         "portfolio_equity": b.get("nav"),
         "peak": b.get("peak"),
-        "drawdown": b.get("max_drawdown_pct"),
+        "drawdown": cur,
+        "current_drawdown": cur,
         "max_drawdown": b.get("max_drawdown"),
+        "max_drawdown_pct": b.get("max_drawdown_pct"),
         "starting_total": b.get("starting_total"),
         "nav_usdt_m": b.get("nav_usdt_m"),
         "nav_usdc_m": b.get("nav_usdc_m"),
@@ -165,14 +241,23 @@ def overlay_orchestrator(stored: dict | None, basis: dict | None) -> dict | None
     """Copy a stored plan for /status, then replace the portfolio fields.
 
     Weights, targets, quote_pool and the per-slot equity map are left as the job
-    wrote them. portfolio_equity, peak and drawdown become the futures-wallet
-    basis. The caller's stored plan is not modified, so the job's drawdown alert
-    and sizing still read the book-sum series.
+    wrote them. portfolio_equity and peak become the futures wallet. drawdown and
+    current_drawdown are 1 - nav/peak; max_drawdown_pct is the series maximum.
+    The stored history stays out of this object except as book_history, so the
+    virtual-book sum is not the NAV series. The caller's stored plan is not
+    modified, so the job's drawdown alert and sizing still read the book-sum series.
     """
-    out = {k: v for k, v in (stored or {}).items() if k != "history"}
+    stored = stored or {}
+    out = {k: v for k, v in stored.items() if k != "history"}
     fields = wallet_portfolio(basis)
     if not out and fields.get("starting_total") is None and fields.get("portfolio_equity") is None:
         return None
+    out["book_portfolio_equity"] = out.get("portfolio_equity")
+    out["book_peak"] = out.get("peak")
+    out["book_drawdown"] = out.get("drawdown")
+    out["book_history"] = book_history(stored)
+    # Always replace, including with None. A missing wallet leg must not leave the
+    # virtual-book sum on the fields the dashboard reads.
     out.update(fields)
     return out
 
