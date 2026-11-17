@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>外部審閱 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./redesign.css" />
   <style>
     .review-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
     .review-filters button.active { border-color: var(--accent); background: var(--accent-soft); color: #dbeafe; }
@@ -73,7 +74,8 @@
       { id: "open", label: "未處理" },
       { id: "acknowledged", label: "已收下" },
       { id: "done", label: "完成" },
-      { id: "rejected", label: "不採用" }
+      { id: "rejected", label: "不採用" },
+      { id: "high", label: "高嚴重度" }
     ];
     const STATUS_ZH = { open: "未處理", acknowledged: "已收下", done: "完成", rejected: "不採用" };
     const SEV_ZH = { info: "資訊", low: "低", medium: "中", high: "高", critical: "嚴重" };
@@ -164,11 +166,14 @@
         return;
       }
       try {
-        const q = filter ? ("?status=" + encodeURIComponent(filter) + "&limit=100") : "?limit=100";
+        const serverFilter = filter === "high" ? "" : filter;
+        const q = serverFilter ? ("?status=" + encodeURIComponent(serverFilter) + "&limit=100") : "?limit=100";
         const data = await call("/review/comments" + q);
         let risk = null;
         try { risk = await call("/review/risk"); } catch (e) { risk = null; }
-        const rows = data.comments || [];
+        const rows = (data.comments || []).filter(function (c) {
+          return filter !== "high" || c.severity === "high" || c.severity === "critical";
+        });
         const filters = STATUS.map(function (s) {
           return '<button type="button" data-filter="' + s.id + '"' + (s.id === filter ? ' class="active"' : "") + ">" + s.label + "</button>";
         }).join("");
@@ -186,7 +191,8 @@
         $("main").innerHTML = riskLine + '<section class="section">'
           + '<div class="section-head"><h2>審閱評論</h2><span class="hint">' + rows.length
           + " 筆 · 時間為台北 · 外部審閱不能核准、下單或撤銷</span></div>"
-          + '<div class="review-filters">' + filters + "</div>"
+          + '<div class="h-note"><span class="info-mark">ⓘ</span> 來源：GET /review/comments。回覆與狀態寫回評論，不下單、不配置、不呼叫 /control。</div>'
+          + '<div class="review-filters hist-filters">' + filters + "</div>"
           + '<div class="review-list">' + list + "</div></section>";
       } catch (e) {
         showErr("載入失敗：" + (e && e.message ? e.message : e));

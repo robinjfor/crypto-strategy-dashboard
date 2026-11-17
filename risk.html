@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>風險 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
 </head>
 <body>
   <div class="app">
@@ -37,15 +39,23 @@
         + "</td><td>" + show(leg.effective_leverage) + "</td><td>" + show(leg.mark)
         + "</td><td>" + show(leg.liq) + "</td><td>" + show(leg.liq_distance)
         + "</td><td>" + esc(leg.owner) + "</td><td>" + esc((leg.flags || []).join("、") || "無") + "</td></tr>").join("");
+      const pnl = (v) => (window.TraderAuth && TraderAuth.pnlHtml ? TraderAuth.pnlHtml(v) : show(v));
       document.getElementById("main").innerHTML = '<section class="section"><div class="card"><div class="card-body">'
-        + "<p>目前回撤 " + show(r.current_drawdown) + "。最大回撤 " + show(r.max_drawdown_pct)
-        + "。總多 " + show(r.gross_long) + "。總空 " + show(r.gross_short) + "。淨曝險 " + show(r.net_exposure) + "。</p>"
-        + "<p>單日 −30% 損失／淨值 " + show(r.stress_loss_down_30)
-        + "。空單擠壓 +100% 損失／淨值 " + show(r.stress_loss_short_squeeze)
-        + "。單日虧損 " + show(r.daily_loss) + "。停機 " + show(r.halt) + "。</p>"
+        + '<div class="kpi-row">'
+        + '<div class="h-kpi"><div class="l">目前回撤 <span class="info-mark">ⓘ</span></div><div class="v">' + show(r.current_drawdown) + '</div><div class="s">公式：1 − 淨值／高點。來源：GET /review/risk。與最大回撤分開。</div></div>'
+        + '<div class="h-kpi"><div class="l">最大回撤 <span class="info-mark">ⓘ</span></div><div class="v">' + show(r.max_drawdown_pct) + '</div><div class="s">公式：合約淨值日序列的最大跌幅。來源：GET /review/risk。</div></div>'
+        + '<div class="h-kpi"><div class="l">總多</div><div class="v">' + show(r.gross_long) + "</div></div>"
+        + '<div class="h-kpi"><div class="l">總空</div><div class="v">' + show(r.gross_short) + "</div></div>"
+        + '<div class="h-kpi"><div class="l">淨曝險</div><div class="v">' + pnl(r.net_exposure) + "</div></div>"
+        + "</div>"
+        + "<p>單日 −30% 損失／淨值 " + pnl(r.stress_loss_down_30)
+        + "。空單擠壓 +100% 損失／淨值 " + pnl(r.stress_loss_short_squeeze)
+        + "。單日虧損 " + pnl(r.daily_loss) + "。停機 " + show(r.halt) + "。</p>"
         + "<p>相關熱圖：" + esc((r.correlation || {}).label_zh || "缺值") + "</p>"
-        + "<table><tr><th>幣</th><th>方向</th><th>交易所槓桿</th><th>逐倉錢包</th><th>有效槓桿</th><th>標記價</th><th>強平價</th><th>強平距離</th><th>策略</th><th>旗標</th></tr>"
-        + rows + "</table></div></div></section>";
+        + '<div class="table-scroll"><table class="data"><tr><th>幣</th><th>方向</th><th>交易所槓桿</th><th>逐倉錢包</th><th>有效槓桿</th><th>標記價</th><th>強平價</th><th>強平距離</th><th>策略</th><th>旗標</th></tr>'
+        + rows + "</table></div>"
+        + '<p class="readonly-note">只顯示。不改槓桿、不加保證金、不下單。</p>'
+        + "</div></div></section>";
     } catch (e) {
       document.getElementById("errBanner").textContent = e.message || String(e);
       document.getElementById("main").textContent = "載入失敗";

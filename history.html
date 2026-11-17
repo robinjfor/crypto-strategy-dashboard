@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>成交歷史 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
 </head>
 <body>
   <div class="app">
@@ -31,67 +33,6 @@
   <script src="./zh-sanitize.js"></script>
   <script src="./exit-reasons.js"></script>
   <script src="./account-changes.js"></script>
-  <script>
-  (async function () {
-    const $ = (id) => document.getElementById(id);
-    const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    const num = (v, d) => (v == null || Number.isNaN(Number(v))) ? "—" : Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
-    const reason = (c) => (typeof window.reasonZh === "function" ? window.reasonZh(c) : (c || "—"));
-    try {
-      let rows = [];
-      let sourceHint = "靜態快取";
-      let cloudOk = false;
-      try {
-        const cfg = await (await fetch("./data/cloud_api.json?t="+Date.now(),{cache:"no-store"})).json();
-        if (cfg && cfg.base) {
-          const st = await (await fetch(cfg.base.replace(/\/$/,"") + "/status?t="+Date.now(),{cache:"no-store",mode:"cors"})).json();
-          cloudOk = !!(st && st.ok !== false);
-          rows = window.buildAccountChanges(st);
-          if (cloudOk) sourceHint = "雲端";
-        }
-      } catch (_) { cloudOk = false; }
-      if (!cloudOk) $("cloudBanner").classList.remove("hidden");
-      if (!rows.length) {
-        try {
-          const arr = await (await fetch("./data/strategy-crypto-s2/settlement.json?t="+Date.now(),{cache:"no-store"})).json();
-          if (Array.isArray(arr)) rows = arr;
-        } catch (_) {
-          try {
-            const text = await (await fetch("./state/settlement.jsonl?t="+Date.now(),{cache:"no-store"})).text();
-            rows = text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
-          } catch (_2) { rows = []; }
-        }
-      }
-      rows = rows.slice().sort((a,b) => (b.ms || Date.parse(b.ts||b.time||"") || 0) - (a.ms || Date.parse(a.ts||a.time||"") || 0));
-      const body = rows.length ? rows.map((r) => {
-        const kind = r.kind || "—";
-        const side = r.side || (String(kind).toUpperCase()==="OPEN"?"BUY":String(kind).toUpperCase()==="CLOSE"?"SELL":"—");
-        const pnl = r.realized_pnl_usdt != null ? r.realized_pnl_usdt : r.pnl_usdt;
-        const cls = pnl > 0 ? "pos" : pnl < 0 ? "neg" : "";
-        const displaySymbol = (r.code ? r.code + " " : "") + (r.symbol || "—");
-        return `<tr>
-          <td>${esc(r.ts||r.time||"—")}</td><td>${esc(kind)}</td><td><strong>${esc(displaySymbol)}</strong></td>
-          <td>${esc(side)}</td><td class="num">${num(r.qty,4)}</td><td class="num">${num(r.price,4)}</td>
-          <td class="num">${r.fee==null?"—":num(r.fee,4)}</td>
-          <td class="num ${cls}">${pnl==null?"—":num(pnl,2)}</td>
-          <td>${esc(reason(r.reason||kind))}</td>
-          <td>${esc(r.source||sourceHint)}</td>
-        </tr>`;
-      }).join("") : `<tr><td colspan="10" class="empty-row">尚無成交</td></tr>`;
-      $("main").className = "";
-      $("main").innerHTML = `<section class="section">
-        <div class="section-head"><h2>完整成交歷史</h2><span class="hint">${rows.length} 筆 · ${sourceHint}</span></div>
-        <div class="card"><div class="table-scroll"><table class="data">
-          <thead><tr><th>時間</th><th>類型</th><th>標的</th><th>方向</th><th class="num">數量</th><th class="num">價格</th><th class="num">手續費</th><th class="num">已實現損益</th><th>原因</th><th>來源</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table></div></div>
-      </section>`;
-    } catch (e) {
-      $("errBanner").textContent = "載入失敗：" + e.message;
-      $("errBanner").classList.remove("hidden");
-      $("main").textContent = "載入失敗";
-    }
-  })();
-  </script>
+  <script src="./history.js"></script>
 </body>
 </html>

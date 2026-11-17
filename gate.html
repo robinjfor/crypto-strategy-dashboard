@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>實盤門檻 · Binance Demo</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./home.css" />
+  <link rel="stylesheet" href="./redesign.css" />
 </head>
 <body>
   <div class="app">
@@ -29,11 +31,18 @@
     const rows = (d.gates || []).map((g) => "<tr><td>" + esc(g.id) + "</td><td>" + esc(g.name_zh) + "</td><td>"
       + esc(g.threshold) + "</td><td>" + esc(typeof g.value === "object" ? JSON.stringify(g.value) : g.value)
       + "</td><td>" + esc(g.label_zh) + "</td></tr>").join("");
+    const checks = (d.gates || []).map((g) => '<div class="gate-row"><b>' + esc(g.id) + " " + esc(g.name_zh)
+      + '</b><span class="badge">' + esc(g.label_zh) + "</span></div>"
+      + '<div class="h-note">標準 ' + esc(g.threshold) + "。現值 " + esc(typeof g.value === "object" ? JSON.stringify(g.value) : g.value)
+      + "。來源：GET /review/gate。 <span class=\"info-mark\">ⓘ</span></div>").join("");
     document.getElementById("main").innerHTML = "<section class='section'><div class='card'><div class='card-body'>"
       + "<h2>" + esc(d.label_zh) + "（" + esc(d.page_status) + "）</h2>"
       + "<p>核准人 " + esc(d.approver) + "。時間 " + esc(d.approved_at) + "。</p>"
-      + "<table><tr><th>門檻</th><th>說明</th><th>標準</th><th>現值</th><th>狀態</th></tr>" + rows + "</table>"
-      + "<p>" + esc(d.note || "") + "</p></div></div></section>";
+      + checks
+      + '<div class="table-scroll"><table class="data"><tr><th>門檻</th><th>說明</th><th>標準</th><th>現值</th><th>狀態</th></tr>' + rows + "</table></div>"
+      + "<p>" + esc(d.note || "") + "</p>"
+      + '<p class="readonly-note">此頁只顯示評估，沒有下單、配置或解鎖按鈕。</p>'
+      + "</div></div></section>";
   })();
   </script>
 </body>
