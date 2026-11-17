@@ -46,3 +46,5 @@ python main.py dry-run
 
 Manual only: `.github/workflows/deploy-trader.yml` (`workflow_dispatch`).  
 See `GCP_SETUP_zh.md`. Default scheduler args = `dry-run` until `TRADER_MODE=live`.
+
+External reviewers (ChatGPT / Claude) use `POST /mcp` and `GET /review/*` with `REVIEWER_TOKEN`. Setup: `docs/external-review.md`. That token cannot call `/control/*`.

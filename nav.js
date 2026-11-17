@@ -13,6 +13,7 @@
     if (p.indexOf("account") === 0) return "account";
     if (p.indexOf("history") === 0) return "history";
     if (p.indexOf("backtest") === 0) return "backtest";
+    if (p.indexOf("review") === 0) return "review";
     if (p.indexOf("watchlist") === 0) return "watchlist";
     return "home";
   }
@@ -42,6 +43,11 @@
       title: "策略評分",
       sub: "統一 3 年回測 · 起始 10,000 USDT · 僅回測報告"
     },
+    review: {
+      mark: "✎",
+      title: "外部審閱",
+      sub: "ChatGPT／Claude 的評論 · 團隊回覆與結案 · 不改交易"
+    },
     watchlist: {
       mark: "📡",
       title: "追蹤名單",
@@ -53,7 +59,8 @@
     { id: "home", href: "./", label: "總覽" },
     { id: "account", href: "./account.html", label: "帳戶明細" },
     { id: "history", href: "./history.html", label: "成交歷史" },
-    { id: "backtest", href: "./backtest.html", label: "策略評分" }
+    { id: "backtest", href: "./backtest.html", label: "策略評分" },
+    { id: "review", href: "./review.html", label: "外部審閱" }
   ];
 
   function esc(s) {

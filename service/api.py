@@ -24,6 +24,7 @@ from allocation import (
 )
 from strategy import now_iso_taipei
 from strategy_codes import add_code, code_for, code_for_symbol, family_for_strategy_id, family_code
+import review_mcp
 
 
 
@@ -171,8 +172,10 @@ def _pin_digest(pin: str) -> str:
 
 def _cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = CORS_ORIGIN
-    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = f"Content-Type, {PIN_HEADER}, {AUTH_HEADER}"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = (
+        f"Content-Type, Accept, {PIN_HEADER}, {AUTH_HEADER}, MCP-Protocol-Version, Mcp-Session-Id"
+    )
     resp.headers["Access-Control-Max-Age"] = "3600"
     return resp
 
@@ -306,6 +309,9 @@ def _check_auth(allow_readonly: bool = False) -> tuple[bool, str, int]:
             if allow_readonly and request.method == "GET":
                 return True, "", 200
             return False, "唯讀權杖不可用於此操作", 403
+        if review_mcp.is_reviewer_token(token):
+            # Reviewer bearer is not a session. It cannot reach /status or /control.
+            return False, "外部審閱權杖不可用於此操作", 403
         if verify_session_token(token):
             return True, "", 200
         # Expired/invalid session (HMAC, unguessable) — not a PIN guess; don't count.
@@ -326,6 +332,73 @@ def _check_auth(allow_readonly: bool = False) -> tuple[bool, str, int]:
 def _check_pin() -> tuple[bool, str, int]:
     """Back-compat alias — prefer session Bearer via _check_auth."""
     return _check_auth()
+
+
+def _presented_bearer() -> str:
+    auth = request.headers.get(AUTH_HEADER) or ""
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
+def _check_review_read() -> tuple[bool, str, int]:
+    """Session (dashboard) or reviewer token (header or connector query param)."""
+    https_err = _require_https()
+    if https_err is not None:
+        return https_err
+    bearer = _presented_bearer()
+    presented = review_mcp._presented_from_request()
+    if review_mcp.is_reviewer_token(presented):
+        return True, "", 200
+    if bearer and _is_readonly_token(bearer):
+        return False, "唯讀權杖不可用於此操作", 403
+    if bearer and verify_session_token(bearer):
+        return True, "", 200
+    if not presented and not bearer:
+        return False, "未登入或缺少審閱權杖", 401
+    if not review_mcp.reviewer_configured():
+        return False, "伺服器未設定 REVIEWER_TOKEN", 503
+    return False, "審閱權杖無效", 401
+
+
+def _check_reviewer_only() -> tuple[bool, str, int]:
+    """Reviewer token only. A dashboard session cannot post as an external reviewer."""
+    https_err = _require_https()
+    if https_err is not None:
+        return https_err
+    bearer = _presented_bearer()
+    presented = review_mcp._presented_from_request()
+    if bearer and _is_readonly_token(bearer):
+        return False, "唯讀權杖不可用於此操作", 403
+    if bearer and verify_session_token(bearer) and not review_mcp.is_reviewer_token(presented):
+        return False, "請使用審閱權杖，登入工作階段不能代替", 403
+    if review_mcp.is_reviewer_token(presented):
+        return True, "", 200
+    if not presented and not bearer:
+        return False, "缺少審閱權杖", 401
+    if not review_mcp.reviewer_configured():
+        return False, "伺服器未設定 REVIEWER_TOKEN", 503
+    return False, "審閱權杖無效", 401
+
+
+def _check_review_reply() -> tuple[bool, str, int]:
+    """Reviewer token or dashboard session. Both may reply; only the session changes status."""
+    https_err = _require_https()
+    if https_err is not None:
+        return https_err
+    bearer = _presented_bearer()
+    presented = review_mcp._presented_from_request()
+    if review_mcp.is_reviewer_token(presented):
+        return True, "", 200
+    if bearer and _is_readonly_token(bearer):
+        return False, "唯讀權杖不可用於此操作", 403
+    if bearer and verify_session_token(bearer):
+        return True, "", 200
+    if not presented and not bearer:
+        return False, "未登入或缺少審閱權杖", 401
+    if not review_mcp.reviewer_configured():
+        return False, "伺服器未設定 REVIEWER_TOKEN", 503
+    return False, "審閱權杖無效", 401
 
 
 @app.route("/auth/login", methods=["POST"])
@@ -2329,9 +2402,49 @@ def revoke():
 
 
 
+_review_cache: dict[str, Any] = {"ts": 0.0, "data": None}
+
+
+def review_snapshot() -> tuple[dict, dict]:
+    """Same builder as /status, plus the state object it reads, cached briefly.
+
+    A connector calling several tools in one turn should not stampede Binance.
+    """
+    ttl = float(os.environ.get("REVIEW_SNAPSHOT_TTL_SEC") or 15)
+    now = time.time()
+    cached = _review_cache.get("data")
+    if cached is not None and now - float(_review_cache.get("ts") or 0) < ttl:
+        return cached
+    status = build_status()
+    if not isinstance(status, dict):
+        status = {}
+    try:
+        state = StateStore().load()
+    except Exception as e:  # noqa: BLE001
+        log.warning("review_state_load_fail err=%s", type(e).__name__)
+        state = {}
+    if not isinstance(state, dict):
+        state = {}
+    data = (status, state)
+    _review_cache["ts"] = now
+    _review_cache["data"] = data
+    return data
+
+
+review_mcp.register(
+    app,
+    snapshot=lambda: review_snapshot(),
+    check_read=lambda: _check_review_read(),
+    check_write=lambda: _check_reviewer_only(),
+    check_reply=lambda: _check_review_reply(),
+    check_team=lambda: _check_auth(),
+    client_ip=lambda: _client_ip(),
+)
+
+
 def main():
     port = int(os.environ.get("PORT") or 8080)
-    log.info("api_listen port=%s cors=%s pin_hash_set=%s", port, CORS_ORIGIN, bool(PIN_HASH))
+    log.info("api_listen port=%s cors=%s pin_hash_set=%s reviewer=%s", port, CORS_ORIGIN, bool(PIN_HASH), review_mcp.reviewer_configured())
     app.run(host="0.0.0.0", port=port)
 
 

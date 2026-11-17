@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>外部審閱 · Binance Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .review-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .review-filters button.active { border-color: var(--accent); background: var(--accent-soft); color: #dbeafe; }
+    .review-list { display: flex; flex-direction: column; gap: 12px; }
+    .review-card { padding: 16px 18px; }
+    .review-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .review-topic { font-weight: 650; }
+    .review-meta { color: var(--text-dim); font-size: 0.75rem; }
+    .review-body { white-space: pre-wrap; margin: 8px 0; }
+    .review-action { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 8px; }
+    .review-replies { border-top: 1px solid var(--border-soft); margin-top: 10px; padding-top: 8px; }
+    .review-reply { margin: 6px 0; font-size: 0.875rem; }
+    .review-reply .who { color: var(--cyan); font-weight: 600; margin-right: 6px; }
+    textarea.review-text, input.review-text {
+      width: 100%; box-sizing: border-box; margin-top: 8px;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font: inherit;
+    }
+    textarea.review-text { min-height: 72px; resize: vertical; }
+    .review-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+    .badge.sev-critical, .badge.sev-high { background: var(--red-soft); color: #fca5a5; }
+    .badge.sev-medium { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge.sev-low, .badge.sev-info { background: var(--accent-soft); color: #93c5fd; }
+    .badge.st-open { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge.st-acknowledged { background: var(--accent-soft); color: #93c5fd; }
+    .badge.st-done { background: var(--green-soft); color: #86efac; }
+    .badge.st-rejected { background: #334155; color: #cbd5e1; }
+    .badge.who-chatgpt { background: #14532d; color: #bbf7d0; }
+    .badge.who-claude { background: #4a3416; color: #fcd34d; }
+    .badge.who-auto_trader { background: rgba(34,211,238,0.16); color: #67e8f9; }
+    .badge.who-team { background: var(--accent-soft); color: #bfdbfe; }
+    .review-reply { border-left: 2px solid var(--border); padding-left: 10px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar" id="siteHeader">
+      <div class="brand">
+        <div class="brand-mark">✎</div>
+        <div>
+          <h1>外部審閱</h1>
+          <div class="sub">ChatGPT／Claude 的評論 · 團隊回覆與結案 · 不改交易</div>
+        </div>
+      </div>
+      <nav class="nav-links" aria-label="主選單">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link" href="./account.html">帳戶明細</a>
+        <a class="nav-link" href="./history.html">成交歷史</a>
+        <a class="nav-link" href="./backtest.html">策略評分</a>
+        <a class="nav-link active" href="./review.html">外部審閱</a>
+      </nav>
+      <div class="controls"></div>
+    </header>
+    <div class="err-banner hidden" id="errBanner"></div>
+    <main id="main" class="loading">載入中…</main>
+  </div>
+  <script src="./nav.js"></script>
+  <script>
+  (async function () {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const STATUS = [
+      { id: "", label: "全部" },
+      { id: "open", label: "未處理" },
+      { id: "acknowledged", label: "已收下" },
+      { id: "done", label: "完成" },
+      { id: "rejected", label: "不採用" }
+    ];
+    const STATUS_ZH = { open: "未處理", acknowledged: "已收下", done: "完成", rejected: "不採用" };
+    const SEV_ZH = { info: "資訊", low: "低", medium: "中", high: "高", critical: "嚴重" };
+    const WHO_ZH = { team: "團隊", chatgpt: "ChatGPT", claude: "Claude", auto_trader: "自動交易專家", other: "其他" };
+    const who = (name) => WHO_ZH[name] || name || "";
+    function badge(author) {
+      var cls = "who-" + String(author || "other").replace(/[^a-z0-9_-]/g, "");
+      return '<span class="badge ' + cls + '">' + esc(who(author)) + "</span>";
+    }
+    function renderThread(nodes, depth) {
+      return (nodes || []).map(function (r) {
+        return '<div class="review-reply" style="margin-left:' + (depth * 14) + 'px">'
+          + badge(r.author)
+          + '<span class="review-meta"> · ' + esc(r.created_at || "") + "</span>"
+          + '<div class="review-body">' + esc(r.body) + "</div>"
+          + renderThread(r.replies, depth + 1)
+          + "</div>";
+      }).join("");
+    }
+    let filter = "open";
+    let base = "";
+
+    function showErr(msg) {
+      $("errBanner").textContent = msg || "";
+      $("errBanner").classList.toggle("hidden", !msg);
+    }
+
+    async function apiBase() {
+      if (window.TraderAuth && TraderAuth.getApiBase()) return TraderAuth.getApiBase();
+      try {
+        const cfg = await (await fetch("./data/cloud_api.json?t=" + Date.now(), { cache: "no-store" })).json();
+        return String(cfg.base || "").replace(/\/$/, "");
+      } catch (e) {
+        return "";
+      }
+    }
+
+    async function call(path, options) {
+      const res = await fetch(base + path, options || {});
+      const data = await res.json().catch(function () { return {}; });
+      if (!res.ok || data.ok === false) {
+        throw new Error((data && data.error) || ("HTTP " + res.status));
+      }
+      return data;
+    }
+
+    function card(c) {
+      const thread = (c.thread && c.thread.length) ? c.thread : (c.replies || []);
+      const replies = renderThread(thread, 0);
+      const events = (c.status_events || []).filter(function (e) { return e && e.note; }).map(function (e) {
+        return '<div class="review-reply">' + badge("team")
+          + '<span class="review-meta"> · ' + esc(e.at || "") + ' · ' + esc(STATUS_ZH[e.status] || e.status) + '</span>'
+          + '<div class="review-body">' + esc(e.note) + '</div></div>';
+      }).join("");
+      return '<article class="card review-card" data-id="' + esc(c.id) + '">'
+        + '<div class="review-top">'
+        + '<span class="review-topic">' + esc(c.topic || "（無題）") + '</span>'
+        + '<span class="badge sev-' + esc(c.severity || "medium") + '">' + esc(SEV_ZH[c.severity] || c.severity || "") + '</span>'
+        + '<span class="badge st-' + esc(c.status || "open") + '">' + esc(STATUS_ZH[c.status] || c.status || "") + '</span>'
+        + badge(c.reviewer)
+        + '<span class="review-meta">' + (c.strategy ? esc(c.strategy) + " · " : "") + esc(c.created_at || "") + "</span>"
+        + "</div>"
+        + '<div class="review-body">' + esc(c.body) + "</div>"
+        + (c.suggested_action ? '<div class="review-action">建議：' + esc(c.suggested_action) + "</div>" : "")
+        + '<div class="review-replies">' + replies + events + "</div>"
+        + '<textarea class="review-text" data-role="reply" placeholder="團隊回覆"></textarea>'
+        + '<div class="review-row">'
+        + '<select data-role="status">'
+        + STATUS.filter(function (s) { return s.id; }).map(function (s) {
+            return '<option value="' + s.id + '"' + (s.id === c.status ? " selected" : "") + ">" + s.label + "</option>";
+          }).join("")
+        + "</select>"
+        + '<button type="button" class="primary" data-role="save">儲存回覆／狀態</button>'
+        + "</div></article>";
+    }
+
+    async function load() {
+      showErr("");
+      if (!window.TraderAuth || !TraderAuth.getToken()) {
+        $("main").className = "";
+        $("main").textContent = "請先登入";
+        return;
+      }
+      base = await apiBase();
+      if (!base) {
+        showErr("無法讀取雲端 API 位址");
+        $("main").textContent = "無法連線";
+        return;
+      }
+      try {
+        const q = filter ? ("?status=" + encodeURIComponent(filter) + "&limit=100") : "?limit=100";
+        const data = await call("/review/comments" + q);
+        const rows = data.comments || [];
+        const filters = STATUS.map(function (s) {
+          return '<button type="button" data-filter="' + s.id + '"' + (s.id === filter ? ' class="active"' : "") + ">" + s.label + "</button>";
+        }).join("");
+        const list = rows.length
+          ? rows.map(card).join("")
+          : '<div class="card"><div class="card-body empty-row">這個狀態還沒有評論</div></div>';
+        $("main").className = "";
+        $("main").innerHTML = '<section class="section">'
+          + '<div class="section-head"><h2>審閱評論</h2><span class="hint">' + rows.length
+          + " 筆 · 時間為台北 · 外部審閱不能核准、下單或撤銷</span></div>"
+          + '<div class="review-filters">' + filters + "</div>"
+          + '<div class="review-list">' + list + "</div></section>";
+      } catch (e) {
+        showErr("載入失敗：" + (e && e.message ? e.message : e));
+        $("main").className = "";
+        $("main").textContent = "載入失敗";
+      }
+    }
+
+    document.getElementById("main").addEventListener("click", async function (ev) {
+      const filterBtn = ev.target.closest("[data-filter]");
+      if (filterBtn) {
+        filter = filterBtn.getAttribute("data-filter") || "";
+        await load();
+        return;
+      }
+      const save = ev.target.closest("[data-role=save]");
+      if (!save) return;
+      const cardEl = save.closest("[data-id]");
+      const id = cardEl.getAttribute("data-id");
+      const reply = (cardEl.querySelector("[data-role=reply]").value || "").trim();
+      const status = cardEl.querySelector("[data-role=status]").value;
+      save.disabled = true;
+      try {
+        if (reply) await call("/review/comments/" + encodeURIComponent(id) + "/reply", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: reply })
+        });
+        await call("/review/comments/" + encodeURIComponent(id) + "/status", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: status })
+        });
+        await load();
+      } catch (e) {
+        showErr(e && e.message ? e.message : String(e));
+        save.disabled = false;
+      }
+    });
+
+    await load();
+  })();
+  </script>
+</body>
+</html>
