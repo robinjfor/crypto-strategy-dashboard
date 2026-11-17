@@ -27,6 +27,29 @@ def test_default_config_is_not_ready_and_a_large_bridge_diff_is_not_met():
     assert page["not_thresholds"] == ["625 USDT/月", "回測年報酬"]
 
 
+def test_g9_reads_the_comment_store(monkeypatch, tmp_path):
+    path = tmp_path / "comments.json"
+    path.write_text(json.dumps({"version": 1, "comments": [
+        {"severity": "critical", "status": "open", "body": "still open"},
+        {"severity": "critical", "status": "acknowledged", "body": "not closed"},
+        {"severity": "critical", "status": "done", "body": "closed"},
+        {"severity": "low", "status": "open", "body": "not critical"},
+    ]}), encoding="utf-8")
+    monkeypatch.setenv("REVIEW_COMMENTS_PATH", str(path))
+    monkeypatch.delenv("GCS_BUCKET", raising=False)
+    from review_mcp import get_gate
+    g9 = next(g for g in get_gate({}, {}).body["gates"] if g["id"] == "G9")
+    assert g9["status"] == "not_met"
+    assert g9["value"] == 2
+    path.write_text(json.dumps({"version": 1, "comments": [
+        {"severity": "critical", "status": "done"},
+        {"severity": "critical", "status": "rejected"},
+    ]}), encoding="utf-8")
+    g9 = next(g for g in get_gate({}, {}).body["gates"] if g["id"] == "G9")
+    assert g9["status"] == "met"
+    assert g9["value"] == 0
+
+
 def test_unapproved_config_stays_not_ready_even_if_marks_were_met(tmp_path):
     path = tmp_path / "readiness_gate.json"
     path.write_text(json.dumps({"approved": False, "approved_by": None, "approved_at": None}), encoding="utf-8")

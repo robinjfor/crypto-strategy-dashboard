@@ -801,8 +801,12 @@ def get_backtest(status: dict, state: dict, args: dict | None = None) -> Outcome
 
 def get_gate(status: dict, state: dict) -> Outcome:
     import review_gate
+    try:
+        comments = CommentStore().load().get("comments") or []
+    except Exception:  # noqa: BLE001
+        comments = None
     return Outcome(redact({
-        **review_gate.evaluate(status, state),
+        **review_gate.evaluate(status, state, comments=comments),
         "updated_at": status.get("updated_at"),
     }))
 
