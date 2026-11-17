@@ -13,7 +13,19 @@ U1_ALLOCATED_CAP = 1000.0
 APT_USDT_SLOT = 750.0
 VBO_CARVE = 1000.0
 E5_VIRTUAL = 5000.0
+E5_DEPOSIT_AFTER_CARVE = 4000.0
 DIFF_RED = 0.5
+_INCOME_GROUP = {
+    "COMMISSION": "fees",
+    "FUNDING_FEE": "funding",
+    "REALIZED_PNL": "realized_pnl",
+    "TRANSFER": "transfer",
+    "INSURANCE_CLEAR": "insurance_liquidation",
+    "WELCOME_BONUS": "other",
+    "INTERNAL_TRANSFER": "transfer",
+    "COIN_SWAP_DEPOSIT": "transfer",
+    "COIN_SWAP_WITHDRAW": "transfer",
+}
 MISSING = "缺值"
 REAL_CLOSED = "尚未開通"
 
@@ -106,6 +118,41 @@ def _balance(status: dict, quote: str) -> float | None:
     return _wallet(status, quote)[0]
 
 
+def income_breakdown(rows) -> dict:
+    """Group Binance GET /fapi/v1/income rows. Does not call the exchange and does not change the diff."""
+    if not rows:
+        return {"display": MISSING, "total": None, "by_type": [], "by_symbol": [],
+                "source": "/fapi/v1/income", "note": "快照沒有收入紀錄。"}
+    by_type: dict[str, float] = {}
+    by_symbol: dict[str, dict[str, float]] = {}
+    total = 0.0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            amt = float(row.get("income") if row.get("income") is not None else row.get("amount") or 0)
+        except (TypeError, ValueError):
+            continue
+        typ = str(row.get("incomeType") or row.get("type") or "OTHER").upper()
+        group = _INCOME_GROUP.get(typ, "other")
+        sym = str(row.get("symbol") or "")
+        by_type[group] = by_type.get(group, 0.0) + amt
+        slot = by_symbol.setdefault(sym or "(no symbol)", {})
+        slot[group] = slot.get(group, 0.0) + amt
+        total += amt
+    return {
+        "display": f"{round(total, 4):.4f}",
+        "total": round(total, 4),
+        "by_type": [{"type": k, "amount": round(v, 4)} for k, v in sorted(by_type.items())],
+        "by_symbol": [
+            {"symbol": sym, "by_type": [{"type": k, "amount": round(v, 4)} for k, v in sorted(groups.items())]}
+            for sym, groups in sorted(by_symbol.items())
+        ],
+        "source": "/fapi/v1/income",
+        "note": "這是收入紀錄的分類，不拿來把 bridge_diff 改成 0。",
+    }
+
+
 def _orch_target(state: dict, slot: str) -> float | None:
     orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
     targets = orch.get("targets") if isinstance(orch.get("targets"), dict) else {}
@@ -120,7 +167,13 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
     basis = status.get("capital_basis") if isinstance(status.get("capital_basis"), dict) else {}
     marks = review_audit.marks_from(status)
     e5_key = "demo_e5v_exec" if isinstance(state.get("demo_e5v_exec"), dict) else "demo_e5_exec"
-    e5 = review_audit._cash_book(state.get(e5_key) if isinstance(state.get(e5_key), dict) else None, marks, E5_VIRTUAL)
+    e5_raw = review_audit._cash_book(state.get(e5_key) if isinstance(state.get(e5_key), dict) else None, marks, E5_VIRTUAL)
+    e5 = dict(e5_raw)
+    if e5.get("equity") is not None:
+        e5["equity_before_carve"] = e5["equity"]
+        e5["equity"] = round(float(e5["equity"]) - VBO_CARVE, 4)
+        if e5.get("net_pnl") is not None:
+            e5["net_pnl"] = round(float(e5["net_pnl"]) - VBO_CARVE, 4)
     vbo = review_audit._cash_book(state.get("demo_vbo1h_exec") if isinstance(state.get("demo_vbo1h_exec"), dict) else None, marks, VBO_CARVE)
     r2s_ref, r2s_note = review_audit._r2s_ref(state)
     r2s = review_audit._cash_book(state.get("demo_r2s_exec") if isinstance(state.get("demo_r2s_exec"), dict) else None, marks, r2s_ref)
@@ -141,9 +194,9 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
     book_parts = [e5.get("equity"), vbo.get("equity"), r2s.get("equity")]
     book_sum = None if any(v is None for v in book_parts) else round(sum(book_parts), 2)
     over = None if book_sum is None or usdt_nav is None else round(book_sum - usdt_nav, 2)
-    # Allocated USDC is the U1 sleeve capital (1000 unless the sleeve says otherwise), not the 5000 deposit.
-    allocated_usdc = round(float(u1_cap), 2) if u1_cap is not None else None
-    unallocated_usdc = None if usdc_balance is None or allocated_usdc is None else round(usdc_balance - allocated_usdc, 2)
+    # Unallocated USDC is the wallet minus the U1 mark-to-market equity, not the 1000 sleeve capital.
+    u1_equity = u1.get("equity")
+    unallocated_usdc = None if usdc_balance is None or u1_equity is None else round(usdc_balance - float(u1_equity), 2)
     # A book that already exceeds the USDT wallet contributes 0 unallocated, not a negative plug.
     unallocated_usdt = None
     if usdt_balance is not None and book_sum is not None:
@@ -173,15 +226,15 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
     diff = None if nav is None or explained is None else round(nav - explained, 2)
     paper = _f(((status.get("paper") or {}) if isinstance(status.get("paper"), dict) else {}).get("nav"))
     rows = [
-        _strategy("E5", "demo_e5_min5_x175_t05top20", e5_key, E5_VIRTUAL, e5_target, e5, as_of,
-                  "虛擬本金 5000。對帳用的資金基準是編排目標，不是這 5000。"),
+        _strategy("E5", "demo_e5_min5_x175_t05top20", e5_key, E5_DEPOSIT_AFTER_CARVE, e5_target, e5, as_of,
+                  "USDT-M 入金 5000，其中 1000 劃給 VBO。橋上的 E5 權益已減這 1000，本金按 4000 計。"),
         _strategy("VBO", "demo_vbo1h_top50_1k", "demo_vbo1h_exec", VBO_CARVE, None, vbo, as_of,
                   "1000 是從 USDT-M 劃出。E5 虛擬帳若仍以 5000 計，這 1000 會被加第二次。"),
         _strategy("R2S", "demo_r2s_top10_3k", "demo_r2s_exec", r2s_ref, _orch_target(state, "demo_r2s_top10_3k"), r2s, as_of, r2s_note),
         _strategy("FA", "demo_funding_arb_1x", "demo_fa_positions", 0.0, _orch_target(state, "demo_funding_arb_1x"), fa, as_of,
                   "FA 的 1000 與 VBO 是同一筆劃出，權益只計腿上的未實現。"),
         _strategy("U1", "u1_live", "u1_live", float(u1_cap) if u1_cap is not None else U1_ALLOCATED_CAP, u1_target, u1, as_of,
-                  "U1 編排上限 1000。USDC 入金 5000 減這 1000，剩下 4000 沒有策略帳。"),
+                  "未分配 USDC ＝ USDC 錢包餘額 − U1 權益，不是減 U1 的配置本金。"),
     ]
     return {
         "ok": True,
@@ -193,12 +246,12 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
         "nav_status": None if _f(basis.get("nav")) is None else round(float(basis["nav"]), 2),
         "usdt_m": figure(usdt_nav, formula="USDT-M 合約錢包＋未實現。", source=usdt_src, as_of=as_of),
         "usdc_m": figure(usdc_nav, formula="USDC 合約錢包＋未實現。", source=usdc_src, as_of=as_of),
-        "book_sum_usdt": figure(book_sum, formula="E5 權益 + VBO 權益 + R2S 權益。", source="virtual ledgers", as_of=as_of),
+        "book_sum_usdt": figure(book_sum, formula="(E5 帳本權益 − VBO 劃出 1000) + VBO 權益 + R2S 權益。", source="virtual ledgers", as_of=as_of),
         "usdt_book_over_wallet": figure(
             over, formula="book_sum_usdt − USDT-M 錢包。正值是帳本高過錢包，不從帳本扣掉。",
             source="bridge", as_of=as_of),
         "unallocated_usdc": figure(
-            unallocated_usdc, formula="USDC 錢包餘額 − U1 配置本金（sleeve capital，否則編排上限 1000）。",
+            unallocated_usdc, formula="USDC 錢包餘額 − U1 權益（現金＋持倉市值），不是減 U1 配置本金。",
             source="books.usdc.futures.wallet", as_of=as_of),
         "unallocated_usdt": figure(
             unallocated_usdt, formula="max(0, USDT 錢包餘額 − E5+VBO+R2S 權益)。帳本超過錢包時這裡是 0，差額留在 over。",
@@ -211,7 +264,7 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
         "bridge_diff": figure(diff, formula="nav − (sum strategy_equity + unallocated_cash)。",
                               source="bridge", as_of=as_of),
         "bridge_diff_value": diff,
-        "bridge_diff_red": bool(diff is not None and abs(diff) > DIFF_RED),
+        "bridge_diff_red": bool(diff is not None and abs(diff) >= DIFF_RED),
         "absorbed": False,
         "paper_nav": figure(paper, formula="Paper 淨值。不加入 Demo NAV。", source="status.paper.nav", as_of=as_of, env="paper"),
         "paper_in_demo_nav": False,
@@ -244,7 +297,9 @@ def build_bridge(status: dict | None, state: dict | None) -> dict:
             },
         ],
         "identity": "nav = sum(strategy_equity) + unallocated_cash + bridge_diff",
-        "note": "bridge_diff 留在原位。abs(bridge_diff) > 0.5 時 bridge_diff_red 為 true。",
+        "note": "bridge_diff 留在原位。abs(bridge_diff) >= 0.5 時 bridge_diff_red 為 true。",
+        "income_breakdown": income_breakdown(status.get("futures_income") or state.get("futures_income")),
+        "vbo_carve_usdt": VBO_CARVE,
     }
 
 

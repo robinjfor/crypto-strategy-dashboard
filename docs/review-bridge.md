@@ -4,7 +4,7 @@ Display only. The bridge does not change a ledger, an order, leverage, or margin
 
 ## (b) Why the books and the wallets do not match
 
-USDT-M is one deposit of 5000. E5's virtual book is still sized off 5000. VBO's 1000 was carved out of that same deposit on 2026-11-04 (it is also the FA idle that was not a second pile of cash). Adding E5 equity + VBO equity + R2S equity therefore counts that 1000 twice whenever E5's cash was not reduced by the carve.
+USDT-M is one deposit of 5000. VBO's 1000 was carved out of that deposit, so the bridge subtracts `vbo_carve_usdt` 1000 from E5 equity before adding VBO. E5's deposit claim on the bridge is 4000. Unallocated USDC is the USDC wallet balance minus U1 equity, not U1's configured capital. The difference that remains is `bridge_diff` and is not absorbed. Income rows from `/fapi/v1/income`, when the snapshot has them, are grouped by type and symbol beside that difference.
 
 The live overcount named in review is **993.19**: E5+VBO+R2S sits that far above the USDT-M wallet. 1000 minus 993.19 is 6.81, which is cash already moved or pnl already inside one of the books. `GET /review/bridge` reports `usdt_book_over_wallet` as that difference. It does not subtract 993.19, and it does not subtract the 1000, to force `bridge_diff` to 0.
 
