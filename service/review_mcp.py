@@ -828,6 +828,14 @@ def get_bridge(status: dict, state: dict) -> Outcome:
     }))
 
 
+def get_strategy(status: dict, state: dict, args: dict | None = None) -> Outcome:
+    import review_strategy
+    args = args or {}
+    body = review_strategy.detail(status, state, args.get("code") or args.get("strategy"))
+    status_code = 200 if body.get("ok") else 404
+    return Outcome(redact(body), status_code)
+
+
 def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -> Outcome:
     args = args or {}
     try:
@@ -894,6 +902,8 @@ def dispatch_read(name: str, args: dict, snapshot: Callable[[], tuple[dict, dict
         return get_risk(status, state)
     if name == "get_bridge":
         return get_bridge(status, state)
+    if name == "get_strategy":
+        return get_strategy(status, state, args)
     if name == "get_orchestrator_plan":
         return get_orchestrator_plan(status, state, args)
     return Outcome({"ok": False, "error": "未知的工具"}, 404)
@@ -947,6 +957,16 @@ TOOLS: list[dict] = [
         "name": "get_reconciliation",
         "description": "Parity mismatches split on the repo's parity-fix dates, each with a reason (APT 2026-10-03 included), rolling match rate, and realized slippage versus the signal or target price.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
+    },
+    {
+        "name": "get_strategy",
+        "description": "One Demo strategy: capital basis, weight, fees, funding, turnover, and the bridge footer. Missing fields stay missing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"code": {"type": "string", "description": "Strategy code. Default E5."}},
+            "additionalProperties": False,
+        },
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
     },
     {
@@ -1024,7 +1044,7 @@ TOOLS: list[dict] = [
 
 _READ_TOOLS = {
     "list_strategies", "get_performance", "get_positions", "get_trades",
-    "get_backtest", "get_reconciliation", "get_risk", "get_bridge", "get_orchestrator_plan", "list_comments",
+    "get_backtest", "get_reconciliation", "get_strategy", "get_bridge", "get_risk", "get_orchestrator_plan", "list_comments",
 }
 
 
@@ -1080,6 +1100,7 @@ def openapi_spec(base_url: str) -> dict:
                 "Reconciliation": {"type": "object"},
                 "Risk": {"type": "object"},
                 "Bridge": {"type": "object"},
+                "StrategyDetail": {"type": "object"},
                 "Orchestrator": {"type": "object"},
                 "Comments": {"type": "object"},
                 "CommentWrite": {
@@ -1132,6 +1153,14 @@ def openapi_spec(base_url: str) -> dict:
             "/review/reconciliation": {"get": {"operationId": "getReconciliation", "summary": "Parity periods, mismatch reasons, slippage", "responses": ok("Reconciliation")}},
             "/review/risk": {"get": {"operationId": "getRisk", "summary": "Display-only portfolio risk", "responses": ok("Risk")}},
             "/review/bridge": {"get": {"operationId": "getBridge", "summary": "Capital bridge with the residual left visible", "responses": ok("Bridge")}},
+            "/review/strategy": {
+                "get": {
+                    "operationId": "getStrategy",
+                    "summary": "One strategy and the bridge footer",
+                    "parameters": [{"name": "code", "in": "query", "schema": {"type": "string"}}],
+                    "responses": ok("StrategyDetail"),
+                }
+            },
             "/review/orchestrator": {
                 "get": {
                     "operationId": "getOrchestratorPlan",
@@ -1352,6 +1381,10 @@ def register(app, *, snapshot: Callable[[], tuple[dict, dict]], check_read, chec
     @app.route("/review/bridge", methods=["GET"])
     def review_bridge_route():
         return _read("get_bridge")
+
+    @app.route("/review/strategy", methods=["GET"])
+    def review_strategy_route():
+        return _read("get_strategy", {"code": request.args.get("code")})
 
     @app.route("/review/orchestrator", methods=["GET"])
     def review_orchestrator():

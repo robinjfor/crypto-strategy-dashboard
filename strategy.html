@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>策略明細 · Binance Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">☰</div><div><h1>策略明細</h1><div class="sub">Demo · 只讀</div></div></div>
+      <nav class="nav-links" aria-label="主選單">
+        <a class="nav-link" href="./">總覽</a>
+        <a class="nav-link" href="./risk.html">風險</a>
+        <a class="nav-link active" href="./strategy.html">策略明細</a>
+        <a class="nav-link" href="./credibility.html">回測可信度</a>
+        <a class="nav-link" href="./gate.html">實盤門檻</a>
+        <a class="nav-link" href="./review.html">外部審閱</a>
+      </nav>
+    </header>
+    <div class="err-banner" id="errBanner"></div>
+    <main id="main" class="loading">載入中…</main>
+  </div>
+  <script src="./nav.js"></script>
+  <script>
+  (async function () {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+    const show = (v) => (v == null || v === "" ? "missing" : esc(v));
+    async function apiBase() {
+      const b = window.TraderAuth && TraderAuth.getApiBase && TraderAuth.getApiBase();
+      if (b) return b;
+      const cfg = await fetch("./data/cloud_api.json").then((r) => r.json());
+      return String(cfg.base || "").replace(/\/$/, "");
+    }
+    if (!window.TraderAuth || !TraderAuth.getToken()) { $("main").textContent = "請先登入"; return; }
+    const code = (new URLSearchParams(location.search).get("code") || "E5").toUpperCase();
+    try {
+      const base = await apiBase();
+      const res = await fetch(base + "/review/strategy?code=" + encodeURIComponent(code), {
+        headers: { Authorization: "Bearer " + TraderAuth.getToken() }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "讀取失敗");
+      const f = data.footer || {};
+      const red = f.bridge_diff_red ? "color:#fca5a5" : "";
+      $("main").className = "";
+      $("main").innerHTML = '<section class="section"><div class="card"><div class="card-body">'
+        + "<h2>" + esc(data.code) + " · " + esc(data.slot) + "</h2>"
+        + "<p>環境 demo。版本 " + show(data.version_display) + "。資金基準 " + show(data.strategy_capital_basis)
+        + "（" + esc(data.strategy_capital_basis_label === "orchestrator_target" ? "編排目標" : "虛擬本金") + "）。權重 " + show(data.weight_display) + "。</p>"
+        + "<p>權益 " + show(data.equity_display) + "。淨損益 " + show(data.net_pnl)
+        + "。已實現 " + show(data.realized) + "。未實現 " + show(data.unrealized)
+        + "。手續費 " + show(data.fees) + "。資金費 " + show(data.funding) + "。</p>"
+        + "<p>三十日周轉 " + show(data.turnover_30d) + "。筆數 " + show(data.n_trades)
+        + "。開始 " + show(data.start) + "。結束 " + show(data.end) + "。資料時間 " + show(data.as_of) + "。</p>"
+        + '<p style="' + red + '">' + esc(f.text_zh || "") + "： "
+        + show(f.sum_strategy_equity) + " + " + show(f.unallocated_cash) + " + " + show(f.bridge_diff)
+        + " = " + show(f.nav) + "</p>"
+        + "</div></div></section>";
+    } catch (e) {
+      $("errBanner").textContent = e.message || String(e);
+      $("main").textContent = "載入失敗";
+    }
+  })();
+  </script>
+</body>
+</html>
