@@ -100,6 +100,8 @@ def detail(status: dict | None, state: dict | None, code: str | None) -> dict:
             "text_zh": "策略權益合計 + 未分配現金 + 差額 = 錢包淨值",
             "sum_strategy_equity": built["sum_strategy_equity"]["value"],
             "unallocated_cash": built["unallocated_cash"]["value"],
+            "unallocated_usdt_unexplained": built.get("unallocated_usdt_unexplained"),
+            "unallocated_usdt_warning": built.get("unallocated_usdt_warning"),
             "bridge_diff": built["bridge_diff_value"],
             "nav": built["nav"]["value"],
             "bridge_diff_red": built["bridge_diff_red"],

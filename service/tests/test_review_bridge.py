@@ -20,21 +20,26 @@ UNTOUCHED = {
 def _status():
     return {
         "updated_at": "2026-11-17T12:00:00+08:00",
-        "capital_basis": {"nav": 9000.0, "nav_usdt_m": 4000.0, "nav_usdc_m": 5000.0, "starting_total": 10000.0},
+        "capital_basis": {"nav": 10000.0, "nav_usdt_m": 5000.0, "nav_usdc_m": 5000.0, "starting_total": 10000.0},
         "books": {
-            "usdt": {"futures": {"wallet": 4000.0, "margin_balance": 4000.0}},
+            "usdt": {"futures": {"wallet": 5000.0, "margin_balance": 5000.0}},
             "usdc": {"futures": {"wallet": 5000.0, "margin_balance": 5000.0}},
         },
         "paper": {"nav": 50.0},
         "positions": [],
+        "futures_income": [
+            {"incomeType": "COMMISSION", "symbol": "MOVRUSDT", "income": "-4.00"},
+            {"incomeType": "FUNDING_FEE", "symbol": "WUSDT", "income": "-1.50"},
+            {"incomeType": "INSURANCE_CLEAR", "symbol": "AIOTUSDT", "income": "-1.29"},
+        ],
     }
 
 
 def _state():
     return {
-        "demo_e5v_exec": {"cash": 3000.0, "book": {}},
-        "demo_vbo1h_exec": {"cash": 1500.0, "book": {}},
-        "demo_r2s_exec": {"cash": 493.19, "book": {}},
+        "demo_e5v_exec": {"cash": 5000.0, "book": {}},
+        "demo_vbo1h_exec": {"cash": 1000.0, "book": {}},
+        "demo_r2s_exec": {"cash": 6.79, "book": {}},
         "migrations": {"r2s_unfunded_principal_20261111": {"done": True}},
         "u1_live": {"cash": 1000.0, "capital_usdt": 1000.0, "quote": "USDC", "units": {}, "slot": "u1_live"},
         "orchestrator": {"targets": {"demo_e5_min5_x175_t05top20": 1986.13, "u1_live": 1000.0}},
@@ -44,26 +49,128 @@ def _state():
 def test_nav_matches_status_and_the_overcount_is_not_absorbed():
     before = _state()
     bridge = B.build_bridge(_status(), before)
-    assert bridge["nav"]["value"] == 9000.0
+    assert bridge["nav"]["value"] == 10000.0
     assert abs(bridge["nav"]["value"] - _status()["capital_basis"]["nav"]) < 0.01
     assert bridge["nav"]["env"] == "demo"
-    assert bridge["usdt_book_over_wallet"]["value"] == 993.19
+    assert bridge["usdt_book_over_wallet"]["value"] == 6.79
     assert bridge["unallocated_usdc"]["value"] == 4000.0
     assert bridge["unallocated_cash"]["value"] == 4000.0
-    assert bridge["bridge_diff_value"] == -993.19
+    assert bridge["bridge_diff_value"] == -6.79
     assert bridge["bridge_diff_red"] is True
+    e5_equity = next(s for s in bridge["strategies"] if s["code"] == "E5")["equity"]
+    assert e5_equity == 4000.0
+    income = bridge["income_breakdown"]
+    assert income["total"] == -6.79
+    by_type = {row["type"]: row["amount"] for row in income["by_type"]}
+    assert by_type["fees"] == -4.0
+    assert by_type["funding"] == -1.5
+    assert by_type["insurance_liquidation"] == -1.29
+    by_sym = {row["symbol"]: row["by_type"] for row in income["by_symbol"]}
+    assert by_sym["MOVRUSDT"] == [{"type": "fees", "amount": -4.0}]
+    assert by_sym["WUSDT"][0]["type"] == "funding"
+    assert by_sym["AIOTUSDT"][0]["type"] == "insurance_liquidation"
+    assert bridge["bridge_diff_value"] == -6.79
+    assert bridge["vbo_carve_usdt"] == 1000.0
+    assert bridge["unallocated_usdt"]["value"] == 0.0
+    assert bridge["unallocated_usdt_unexplained"] == 0.0
+    assert bridge["unallocated_usdt_warning"]["show"] is False
     assert bridge["absorbed"] is False
     assert bridge["paper_nav"]["env"] == "paper"
     assert bridge["paper_nav"]["value"] == 50.0
     assert bridge["paper_in_demo_nav"] is False
-    assert bridge["nav"]["value"] == 9000.0
+    assert bridge["nav"]["value"] == 10000.0
     assert bridge["real"]["display"] == "尚未開通"
     assert bridge["real"]["label_zh"] == "尚未開通"
     e5 = next(s for s in bridge["strategies"] if s["code"] == "E5")
-    assert e5["virtual_capital"] == 5000.0
+    assert e5["virtual_capital"] == 4000.0
     assert e5["orchestrator_target"] == 1986.13
     assert e5["strategy_capital_basis_label"] == "orchestrator_target"
-    assert before["demo_e5v_exec"]["cash"] == 3000.0
+    assert before["demo_e5v_exec"]["cash"] == 5000.0
+
+
+def _surplus_state():
+    """Wallet 4000, books 3993.19 after the VBO carve: 6.81 of USDT above the books."""
+    return {
+        "demo_e5v_exec": {"cash": 3000.0, "book": {}},
+        "demo_vbo1h_exec": {"cash": 1500.0, "book": {}},
+        "demo_r2s_exec": {"cash": 493.19, "book": {}},
+        "migrations": {"r2s_unfunded_principal_20261111": {"done": True}},
+        "u1_live": {"cash": 1000.0, "capital_usdt": 1000.0, "quote": "USDC", "units": {}},
+    }
+
+
+def _surplus_status(income=None):
+    status = {
+        "updated_at": "2026-11-17T12:00:00+08:00",
+        "capital_basis": {"nav": 9000.0, "nav_usdt_m": 4000.0, "nav_usdc_m": 5000.0},
+        "books": {
+            "usdt": {"futures": {"wallet": 4000.0}},
+            "usdc": {"futures": {"wallet": 5000.0}},
+        },
+    }
+    if income is not None:
+        status["futures_income"] = income
+    return status
+
+
+def test_wallet_surplus_without_income_is_not_clean_unallocated():
+    bridge = B.build_bridge(_surplus_status(), _surplus_state())
+    assert bridge["unallocated_usdt"]["value"] == 6.81
+    assert bridge["unallocated_usdt_unexplained"] == 6.81
+    warn = bridge["unallocated_usdt_warning"]
+    assert warn["show"] is True
+    assert warn["level"] == "yellow"
+    assert warn["label_zh"] == "未經 income 對到"
+    assert warn["amount"] == 6.81
+    assert bridge["unallocated_cash"]["value"] == 4000.0
+    assert bridge["bridge_diff_value"] == 6.81
+    assert bridge["bridge_diff_red"] is True
+    assert bridge["absorbed"] is False
+
+
+def test_positive_income_matches_the_surplus_and_a_short_match_stays_yellow():
+    covered = B.build_bridge(
+        _surplus_status([{"incomeType": "TRANSFER", "symbol": "", "income": "6.81"}]),
+        _surplus_state(),
+    )
+    assert covered["unallocated_usdt_unexplained"] == 0.0
+    assert covered["unallocated_usdt_warning"]["show"] is False
+    assert covered["unallocated_cash"]["value"] == 4006.81
+    assert covered["bridge_diff_value"] == 0.0
+    assert covered["bridge_diff_red"] is False
+    short = B.build_bridge(
+        _surplus_status([
+            {"incomeType": "TRANSFER", "symbol": "", "income": "6.00"},
+            {"incomeType": "COMMISSION", "symbol": "MOVRUSDT", "income": "-4.00"},
+        ]),
+        _surplus_state(),
+    )
+    # Net income is +2.00. Fees do not explain cash above the books, and the
+    # transfer covers only part of the 6.81, so 4.81 stays unexplained.
+    assert short["unallocated_usdt_unexplained"] == 4.81
+    assert short["unallocated_usdt_warning"]["label_zh"] == "未經 income 對到"
+    assert short["unallocated_cash"]["value"] == 4002.0
+    assert short["bridge_diff_value"] == 4.81
+    assert short["bridge_diff_red"] is True
+
+
+def test_unallocated_usdc_uses_u1_equity_not_the_sleeve_capital():
+    state = _state()
+    state["u1_live"]["cash"] = 1100.0
+    state["u1_live"]["capital_usdt"] = 1000.0
+    bridge = B.build_bridge(_status(), state)
+    assert bridge["unallocated_usdc"]["value"] == 3900.0
+    assert bridge["bridge_diff_value"] == -6.79
+    assert bridge["absorbed"] is False
+
+
+def test_half_usdt_residual_stays_red():
+    status = _status()
+    status["capital_basis"]["nav"] = 10006.29
+    bridge = B.build_bridge(status, _state())
+    assert bridge["bridge_diff_value"] == -0.5
+    assert bridge["bridge_diff_red"] is True
+    assert bridge["absorbed"] is False
 
 
 def test_missing_wallet_is_missing_not_zero():
