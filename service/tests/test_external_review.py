@@ -438,6 +438,7 @@ def test_openapi_schema(client):
     for path in ("/review/strategies", "/review/performance", "/review/positions", "/review/trades",
                  "/review/backtest", "/review/orchestrator", "/review/comments"):
         assert path in spec["paths"]
+    assert "auto_trader" in json.dumps(spec["components"]["schemas"])
     assert "post" in spec["paths"]["/review/comments"]
     assert "/review/comments/{comment_id}/reply" in spec["paths"]
     assert "/control/revoke" not in json.dumps(spec)
@@ -463,3 +464,60 @@ def test_session_cannot_post_external_comment(client):
     res = client.post("/review/comments", headers=_auth(tok), json={"reviewer": "other", "topic": "x", "body": "y"})
     assert res.status_code == 403
     assert client.get("/review/comments", headers=_auth(tok)).status_code == 200
+
+
+def test_auto_trader_thread(client):
+    posted = client.post("/review/comments", headers=_auth(), json={
+        "reviewer": "auto_trader",
+        "topic": "liquidation distance",
+        "strategy": "demo_e5",
+        "severity": "high",
+        "body": "distance should be checked against the exchange mark",
+        "suggested_action": "do not add size",
+    })
+    assert posted.status_code == 200, posted.get_data(as_text=True)
+    root = posted.get_json()["comment"]
+    assert root["reviewer"] == "auto_trader"
+    assert root["display_name"] == "自動交易專家"
+    cid = root["id"]
+
+    denied = client.post("/review/comments", headers=_auth(), json={
+        "reviewer": "team", "topic": "nope", "body": "impersonate",
+    })
+    assert denied.status_code == 400
+
+    claude = client.post(f"/review/comments/{cid}/reply", headers=_auth(), json={
+        "reviewer": "claude", "body": "agreed, 0.42 is still wide",
+    })
+    assert claude.status_code == 200
+    first = claude.get_json()["comment"]["replies"][0]
+    assert first["author"] == "claude"
+    assert first["display_name"] == "Claude"
+    assert first["in_reply_to"] is None
+
+    nested = client.post(f"/review/comments/{cid}/reply", headers=_auth(), json={
+        "reviewer": "auto_trader",
+        "body": "then the open question is the cap, not the distance",
+        "in_reply_to": first["id"],
+    })
+    assert nested.status_code == 200, nested.get_data(as_text=True)
+    comment = nested.get_json()["comment"]
+    assert [r["author"] for r in comment["replies"]] == ["claude", "auto_trader"]
+    assert comment["replies"][1]["in_reply_to"] == first["id"]
+    assert comment["replies"][1]["display_name"] == "自動交易專家"
+    thread = comment["thread"]
+    assert len(thread) == 1
+    assert thread[0]["author"] == "claude"
+    assert thread[0]["replies"][0]["author"] == "auto_trader"
+    assert thread[0]["replies"][0]["display_name"] == "自動交易專家"
+
+    missing = client.post(f"/review/comments/{cid}/reply", headers=_auth(), json={
+        "reviewer": "chatgpt", "body": "orphan", "in_reply_to": "r_" + "ab" * 8,
+    })
+    assert missing.status_code == 400
+
+    listed = _tool(client, "list_comments")[1]
+    match = next(c for c in listed["comments"] if c["id"] == cid)
+    assert match["display_name"] == "自動交易專家"
+    assert match["thread"][0]["replies"][0]["author"] == "auto_trader"
+    _no_secrets(listed)

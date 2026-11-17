@@ -30,12 +30,20 @@ INSTRUCTIONS = (
     "Read-only reviewer for the Binance Demo crypto book (never live funds). "
     "Call list_strategies, get_performance, get_positions, get_trades, get_backtest, "
     "and get_orchestrator_plan before judging. Numbers are the dashboard /status feed. "
-    "Leave findings with post_comment (reviewer chatgpt, claude, or other). "
+    "Leave findings with post_comment (reviewer chatgpt, claude, or auto_trader). "
     "You cannot approve, trade, revoke, or change settings. Times are Asia/Taipei. "
     "Critique strategy logic, overfitting, risk, and live-versus-backtest deviation."
 )
 
-REVIEWERS = {"chatgpt", "claude", "other"}
+REVIEWERS = {"chatgpt", "claude", "auto_trader", "other"}
+REVIEWER_LABELS = {
+    "chatgpt": "ChatGPT",
+    "claude": "Claude",
+    "auto_trader": "自動交易專家",
+    "team": "團隊",
+    "other": "其他",
+}
+_REPLY_ID = re.compile(r"^r_[0-9a-f]{16}$")
 SEVERITIES = {"info", "low", "medium", "high", "critical"}
 STATUSES = {"open", "acknowledged", "done", "rejected"}
 _SLUG = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
@@ -167,8 +175,15 @@ def _clip(raw: Any, limit: int) -> str:
     return str(raw or "").strip()[:limit]
 
 
-def normalize_reviewer(raw: Any) -> str | None:
+def display_name(author: str | None) -> str:
+    key = str(author or "")
+    return REVIEWER_LABELS.get(key, key)
+
+
+def normalize_reviewer(raw: Any, *, allow_team: bool = False) -> str | None:
     s = str(raw or "").strip().lower()
+    if s == "team":
+        return "team" if allow_team else None
     if s in REVIEWERS or _SLUG.match(s):
         return s
     return None
@@ -258,10 +273,48 @@ class CommentStore:
         raise RuntimeError(f"comment_store_failed: {type(last).__name__ if last else 'unknown'}")
 
 
+def _public_reply(r: dict) -> dict:
+    author = str(r.get("author") or "")
+    return {
+        "id": r.get("id"),
+        "author": author,
+        "display_name": display_name(author),
+        "body": r.get("body"),
+        "created_at": r.get("created_at"),
+        "timezone": "Asia/Taipei",
+        "in_reply_to": r.get("in_reply_to"),
+    }
+
+
+def _thread_nodes(flat: list[dict]) -> list[dict]:
+    """Nest replies under the comment. A reply with in_reply_to sits under that reply."""
+    nodes: list[dict] = []
+    by_id: dict[str, dict] = {}
+    order: dict[str, int] = {}
+    for i, r in enumerate(flat):
+        node = {k: v for k, v in r.items() if k != "replies"}
+        node["replies"] = []
+        rid = str(r.get("id") or "")
+        by_id[rid] = node
+        order[rid] = i
+        nodes.append(node)
+    roots: list[dict] = []
+    for node in nodes:
+        parent = str(node.get("in_reply_to") or "")
+        host = by_id.get(parent)
+        if host is not None and order.get(parent, 10**9) < order.get(str(node.get("id") or ""), -1):
+            host["replies"].append(node)
+        else:
+            roots.append(node)
+    return roots
+
+
 def _public_comment(c: dict) -> dict:
+    flat = [_public_reply(r) for r in (c.get("replies") or []) if isinstance(r, dict)]
     return redact({
         "id": c.get("id"),
         "reviewer": c.get("reviewer"),
+        "display_name": display_name(str(c.get("reviewer") or "")),
         "topic": c.get("topic"),
         "strategy": c.get("strategy"),
         "severity": c.get("severity"),
@@ -271,7 +324,8 @@ def _public_comment(c: dict) -> dict:
         "created_at": c.get("created_at"),
         "updated_at": c.get("updated_at"),
         "timezone": "Asia/Taipei",
-        "replies": c.get("replies") or [],
+        "replies": flat,
+        "thread": _thread_nodes(flat),
         "status_events": c.get("status_events") or [],
     })
 
@@ -312,9 +366,11 @@ def list_comments_view(status_filter: str | None = None, limit: int = 50) -> Out
 
 
 def post_comment(args: dict, ip: str) -> Outcome:
+    if str(args.get("reviewer") or "").strip().lower() == "team":
+        return Outcome({"ok": False, "error": "reviewer team 只能由儀表板登入使用"}, 400)
     reviewer = normalize_reviewer(args.get("reviewer"))
     if not reviewer:
-        return Outcome({"ok": False, "error": "reviewer 須為 chatgpt、claude、other，或短名稱"}, 400)
+        return Outcome({"ok": False, "error": "reviewer 須為 chatgpt、claude、auto_trader、other，或短名稱"}, 400)
     topic = _clip(args.get("topic") or args.get("strategy"), _env_int("REVIEW_TOPIC_MAX", DEFAULT_TOPIC_MAX))
     if not topic:
         return Outcome({"ok": False, "error": "缺少 topic 或 strategy"}, 400)
@@ -383,11 +439,16 @@ def reply_comment(args: dict, ip: str, *, author: str) -> Outcome:
         return Outcome({"ok": False, "error": "缺少 body"}, 400)
     if len(str(body_raw)) > reply_max:
         return Outcome({"ok": False, "error": f"body 超過 {reply_max} 字"}, 400)
+    if str(args.get("reviewer") or "").strip().lower() == "team" and author != "team":
+        return Outcome({"ok": False, "error": "reviewer team 只能由儀表板登入使用"}, 400)
     who = author
     if author != "team":
         who = normalize_reviewer(args.get("reviewer") or author) or ""
         if not who:
             return Outcome({"ok": False, "error": "reply 需要 reviewer"}, 400)
+    parent = str(args.get("in_reply_to") or "").strip() or None
+    if parent and not _REPLY_ID.match(parent):
+        return Outcome({"ok": False, "error": "in_reply_to 無效"}, 400)
     retry = rate_limit(ip, "write")
     if retry is not None:
         return Outcome({"ok": False, "error": "回覆過於頻繁，請稍後再試"}, 429, retry_after=retry)
@@ -395,15 +456,21 @@ def reply_comment(args: dict, ip: str, *, author: str) -> Outcome:
     reply = {
         "id": "r_" + uuid.uuid4().hex[:16],
         "author": who,
+        "display_name": display_name(who),
         "body": _scrub(str(body_raw).strip()),
         "created_at": now,
         "timezone": "Asia/Taipei",
+        "in_reply_to": parent,
     }
     found: dict = {}
 
     def mut(st: dict) -> dict:
         for c in st.get("comments") or []:
             if isinstance(c, dict) and c.get("id") == cid:
+                existing = [x.get("id") for x in (c.get("replies") or []) if isinstance(x, dict)]
+                if parent and parent not in existing:
+                    found["missing_parent"] = True
+                    return st
                 c.setdefault("replies", []).append(reply)
                 c["replies"] = c["replies"][-50:]
                 c["updated_at"] = now
@@ -415,6 +482,8 @@ def reply_comment(args: dict, ip: str, *, author: str) -> Outcome:
         CommentStore().mutate(mut)
     except RuntimeError:
         return Outcome({"ok": False, "error": "回覆未能寫入"}, 500)
+    if found.get("missing_parent"):
+        return Outcome({"ok": False, "error": "in_reply_to 不在這則評論"}, 400)
     if "c" not in found:
         return Outcome({"ok": False, "error": "找不到評論"}, 404)
     return Outcome({"ok": True, "comment": _public_comment(found["c"])})
@@ -788,7 +857,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "list_comments",
-        "description": "List reviewer comments and team responses. Times are Asia/Taipei.",
+        "description": "List comment threads. Replies nest under the comment and show author identity (chatgpt, claude, auto_trader, team). Times are Asia/Taipei.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -801,11 +870,11 @@ TOOLS: list[dict] = [
     },
     {
         "name": "post_comment",
-        "description": "File a review comment. Does not change trading, approvals, or settings. reviewer is chatgpt, claude, or other.",
+        "description": "File a review comment. Does not change trading, approvals, or settings. reviewer is chatgpt, claude, or auto_trader.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "reviewer": {"type": "string", "description": "chatgpt, claude, other, or a short slug."},
+                "reviewer": {"type": "string", "description": "chatgpt, claude, auto_trader, other, or a short slug. Not team."},
                 "topic": {"type": "string", "description": "Subject, often a strategy code or risk theme."},
                 "strategy": {"type": "string", "description": "Optional strategy id or slot."},
                 "severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
@@ -819,13 +888,14 @@ TOOLS: list[dict] = [
     },
     {
         "name": "reply_comment",
-        "description": "Reply to an existing review comment. Does not change comment status, approvals, or trading.",
+        "description": "Reply inside a comment thread. Set in_reply_to to nest under an existing reply. Does not change status, approvals, or trading.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "comment_id": {"type": "string"},
-                "reviewer": {"type": "string", "description": "chatgpt, claude, other, or a short slug."},
+                "reviewer": {"type": "string", "description": "chatgpt, claude, auto_trader, other, or a short slug. Not team."},
                 "body": {"type": "string"},
+                "in_reply_to": {"type": "string", "description": "Optional reply id in this thread. Omit to reply to the comment itself."},
             },
             "required": ["comment_id", "body"],
             "additionalProperties": False,
@@ -895,7 +965,7 @@ def openapi_spec(base_url: str) -> dict:
                     "type": "object",
                     "required": ["reviewer", "topic", "body"],
                     "properties": {
-                        "reviewer": {"type": "string", "enum": ["chatgpt", "claude", "other"]},
+                        "reviewer": {"type": "string", "enum": ["chatgpt", "claude", "auto_trader", "other"]},
                         "topic": {"type": "string"},
                         "strategy": {"type": "string"},
                         "severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
@@ -907,8 +977,9 @@ def openapi_spec(base_url: str) -> dict:
                     "type": "object",
                     "required": ["body"],
                     "properties": {
-                        "reviewer": {"type": "string"},
+                        "reviewer": {"type": "string", "enum": ["chatgpt", "claude", "auto_trader", "other"]},
                         "body": {"type": "string"},
+                        "in_reply_to": {"type": "string", "description": "Reply id to nest under. Omit to reply to the comment."},
                     },
                 },
             },

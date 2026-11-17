@@ -131,7 +131,7 @@ printf '%s' '在此貼上你的API_SECRET' | gcloud secrets create BINANCE_DEMO_
 printf '%s' '新值' | gcloud secrets versions add BINANCE_DEMO_API_KEY --data-file=-
 ```
 
-外部審閱（ChatGPT／Claude 只讀＋留言，不能核准、下單或撤銷）使用另一個 secret：`REVIEWER_TOKEN`。建立方式、掛到 Cloud Run、以及連接器 URL 寫在 `docs/external-review.md`。不要把這組權杖寫進 repo。
+外部審閱（ChatGPT／Claude／自動交易專家，只讀＋留言，不能核准、下單或撤銷）使用 secret `REVIEWER_TOKEN`。GitHub Actions 已有同名 secret；`deploy-trader` 會把它寫進 Secret Manager（沒有就建立，內容不同就加新版本）再掛到 API。部署用服務帳戶需要 `roles/secretmanager.admin`，或 `roles/secretmanager.secretAccessor` 加上 `roles/secretmanager.secretVersionAdder`（第一次建立 secret 需要 admin）。細節在 `docs/external-review.md`。不要把這組權杖寫進 repo。
 
 ---
 

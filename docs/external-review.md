@@ -1,6 +1,8 @@
-# External review (ChatGPT and Claude)
+# External review (ChatGPT, Claude, and 自動交易專家)
 
 Reviewers can read Binance **Demo** strategy and performance data and leave comments. They cannot approve a strategy, place or cancel orders, revoke an approval, or change settings. The book is the Demo account already shown on the dashboard. Nothing in this path sends a live-trading request.
+
+Participants: `chatgpt` (ChatGPT), `claude` (Claude), `auto_trader` (自動交易專家), and `team` (團隊, dashboard login only).
 
 The Cloud Run service is `crypto-trader-api` (region `asia-east1`). Replace `<SERVICE>` below with its URL, for example the `base` value in `data/cloud_api.json`. Do not put the reviewer token in git, in this file, or in a chat.
 
@@ -12,20 +14,24 @@ Requirements:
 
 - At least 32 characters. `openssl rand -base64 32` is a good size.
 - Different from the dashboard PIN, the session secret, and `TRADER_READONLY_TOKEN`.
-- Stored only in Secret Manager. The next API deploy mounts it. This repo never contains the value.
+- Stored as the GitHub Actions secret `REVIEWER_TOKEN` and in Secret Manager. This repo never contains the value.
 
-Create it without printing it (the pipe does not echo the secret):
+No local gcloud is required. `deploy-trader` reads the Actions secret (it masks the value with `::add-mask::` and never prints it). When that secret is non-empty, the workflow creates Secret Manager secret `REVIEWER_TOKEN` with automatic replication if it is missing, or adds a version when the SHA-256 of the latest value differs. It then mounts that secret on the **API service only**. Trading jobs do not receive it.
+
+The deploy service account needs `roles/secretmanager.admin`, or both `roles/secretmanager.secretAccessor` and `roles/secretmanager.secretVersionAdder`. Creating the secret the first time requires `roles/secretmanager.admin`. If that permission is missing, the deploy fails and names the role. It does not skip the write.
+
+If the Actions secret is empty, the workflow leaves Secret Manager unchanged and mounts `REVIEWER_TOKEN` only when the secret is already there.
+
+The runtime service account (`trader-runtime`) already has `roles/secretmanager.secretAccessor` from `service/GCP_SETUP_zh.md`, which is what Cloud Run uses to mount the secret.
+
+A manual create, without printing the value, is only a fallback when the Actions secret is empty:
 
 ```bash
 openssl rand -base64 32 | tr -d '\n' | gcloud secrets create REVIEWER_TOKEN \
   --data-file=- --replication-policy=automatic
 ```
 
-The runtime service account (`trader-runtime`) already has `roles/secretmanager.secretAccessor` from `service/GCP_SETUP_zh.md`, which is what Cloud Run uses to mount the secret.
-
-`deploy-trader` mounts `REVIEWER_TOKEN` on the **API service only** when the secret already exists. It does not mount it on the trading jobs. Create the secret before the next manual deploy. If the secret is missing, that deploy still succeeds and logs a reminder; reviewer calls then return **503** `伺服器未設定 REVIEWER_TOKEN` until a later deploy or the update below.
-
-After the image that contains this feature is deployed, a new secret version is picked up by rolling the API revision (Cloud Run pins `latest` at deploy time):
+Changing the GitHub Actions secret and running `deploy-trader` adds a Secret Manager version when the hash differs, then mounts it. Cloud Run pins `latest` at deploy time, so that run is what picks the new value up. A manual rotation that does not go through the workflow:
 
 ```bash
 openssl rand -base64 32 | tr -d '\n' | gcloud secrets versions add REVIEWER_TOKEN --data-file=-
@@ -34,8 +40,6 @@ gcloud run services update crypto-trader-api \
   --project="$PROJECT_ID" --region=asia-east1 \
   --update-secrets=REVIEWER_TOKEN=REVIEWER_TOKEN:latest
 ```
-
-Do not run `deploy-trader` just to rotate the token. The `services update` command only refreshes the mounted secret.
 
 Until the secret is mounted, the dashboard login still works. Connectors do not.
 
@@ -137,7 +141,39 @@ Because the token sits in the URL, treat the plugin configuration as secret, res
 
 ## 5. Dashboard
 
-`review.html` is linked from the site nav as **外部審閱**. It uses the existing dashboard login (session bearer), not the reviewer token. The team can filter by status, reply, and move a comment through 未處理 / 已收下 / 完成 / 不採用. Replies are stored on the comment. Nothing on this page approves, trades, or revokes.
+`review.html` is linked from the site nav as **外部審閱**. It uses the existing dashboard login (session bearer), not the reviewer token. Author badges are ChatGPT, Claude, 自動交易專家, and 團隊. Replies nest under the comment (a reply can target another reply with `in_reply_to`). The team can filter by status, reply, and move a comment through 未處理 / 已收下 / 完成 / 不採用. Nothing on this page approves, trades, or revokes.
+
+## Internal agent: 自動交易專家
+
+Id `auto_trader`. It uses the same reviewer token over REST or MCP. It can post a comment, reply inside a thread, and list threads. It cannot set status, approve, trade, or revoke. `team` is not a reviewer id for this token; the dashboard login is the only way to appear as 團隊.
+
+Read the token from a file. Do not paste it into the command, a chat, or git. The shell snippets below never expand the token into the curl command line.
+
+```bash
+export REVIEWER_TOKEN_FILE=/path/to/reviewer-token   # mode 600, one line, not in git
+umask 077
+HDR=$(mktemp)
+python3 -c 'import os, pathlib
+token = pathlib.Path(os.environ["REVIEWER_TOKEN_FILE"]).read_text().strip("\n")
+pathlib.Path(os.environ["HDR"]).write_text("Authorization: Bearer " + token + "\n")'
+HDR="$HDR"
+
+# List threads
+curl -sS -H @"$HDR" "https://<SERVICE>/review/comments?status=open"
+
+# Post
+curl -sS -H @"$HDR" -H "Content-Type: application/json" \
+  --data '{"reviewer":"auto_trader","topic":"E5 risk","severity":"medium","body":"liquidation distance is the open question","suggested_action":"compare with the exchange mark"}' \
+  "https://<SERVICE>/review/comments"
+
+# Reply, nested under an existing reply id
+curl -sS -H @"$HDR" -H "Content-Type: application/json" \
+  --data '{"reviewer":"auto_trader","body":"the 0.42 distance is the exchange figure","in_reply_to":"r_REPLACEME"}' \
+  "https://<SERVICE>/review/comments/c_REPLACEME/reply"
+rm -f "$HDR"
+```
+
+MCP is the same header file against `POST https://<SERVICE>/mcp`.
 
 ## 6. Suggested reviewer prompt
 
@@ -153,7 +189,7 @@ Review for:
 - live-versus-backtest deviation from get_backtest (mismatches, unsupported strategies, missing parity)
 - fees and per-strategy virtual-book PnL versus the capital-basis NAV (futures wallet, not a sum of virtual books)
 
-Leave one post_comment per finding. reviewer is chatgpt or claude (use other only if you are neither). topic is the strategy code or the risk theme. severity is info, low, medium, high, or critical. body states the evidence (tool fields, not guesses) and why it matters. suggested_action is advice for the team; it is not an order and must not say to move real money. Use reply_comment only to add to a comment you already filed. Do not ask for API keys, PINs, or account identifiers. Times you are shown are Asia/Taipei. The account is Binance Demo only.
+Leave one post_comment per finding. reviewer is chatgpt, claude, or auto_trader (自動交易專家). topic is the strategy code or the risk theme. severity is info, low, medium, high, or critical. body states the evidence (tool fields, not guesses) and why it matters. suggested_action is advice for the team; it is not an order and must not say to move real money. Use reply_comment to continue a thread; set in_reply_to to nest under a specific reply. Do not ask for API keys, PINs, or account identifiers. Times you are shown are Asia/Taipei. The account is Binance Demo only.
 ```
 
 ## 7. What reviewers cannot do
