@@ -8,40 +8,25 @@ The Cloud Run service is `crypto-trader-api` (region `asia-east1`). Replace `<SE
 
 ## 1. Set `REVIEWER_TOKEN`
 
-The API reads the env var `REVIEWER_TOKEN`, the same way it reads the Binance Demo key: Cloud Run injects a Secret Manager secret into the process environment. The process does not call Secret Manager on each request, and it does not log the value.
+The API reads the environment variable `REVIEWER_TOKEN`. The process does not log the value. Cloud Run stores it as a plain environment variable on the `crypto-trader-api` service. It is not a Secret Manager secret, and `deploy-trader` does not describe, create, add a version of, or mount one.
 
 Requirements:
 
 - At least 32 characters. `openssl rand -base64 32` is a good size.
 - Different from the dashboard PIN, the session secret, and `TRADER_READONLY_TOKEN`.
-- Stored as the GitHub Actions secret `REVIEWER_TOKEN` and in Secret Manager. This repo never contains the value.
+- Stored as the GitHub Actions secret `REVIEWER_TOKEN`. This repo never contains the value.
 
-No local gcloud is required. `deploy-trader` reads the Actions secret (it masks the value with `::add-mask::` and never prints it). When that secret is non-empty, the workflow creates Secret Manager secret `REVIEWER_TOKEN` with automatic replication if it is missing, or adds a version when the SHA-256 of the latest value differs. It then mounts that secret on the **API service only**. Trading jobs do not receive it.
+No local gcloud is required. `deploy-trader` reads that Actions secret, masks it with `::add-mask::`, and never prints it. When the secret is non-empty and at least 32 characters, the workflow writes the API service environment variables to a mode-600 file and passes that file to `gcloud run deploy` as `--update-env-vars`. The token is not placed on the shell command line. The update applies to the **API service only**. Trading jobs do not receive `REVIEWER_TOKEN`. The Binance Demo key mounts are unchanged: `BINANCE_DEMO_API_KEY` and `BINANCE_DEMO_API_SECRET` still come from Secret Manager.
 
-The deploy service account needs `roles/secretmanager.admin`, or both `roles/secretmanager.secretAccessor` and `roles/secretmanager.secretVersionAdder`. Creating the secret the first time requires `roles/secretmanager.admin`. If that permission is missing, the deploy fails and names the role. It does not skip the write.
+`--update-env-vars` changes only the keys in that file. Other environment variables already on the service stay as they are. `--set-env-vars` is not used for this service, because it would replace the full set and drop `REVIEWER_TOKEN` when the GitHub secret is empty.
 
-If the Actions secret is empty, the workflow leaves Secret Manager unchanged and mounts `REVIEWER_TOKEN` only when the secret is already there.
+If the Actions secret is empty, the workflow omits `REVIEWER_TOKEN` from the update. The value already on the service is left unchanged and is not removed. A non-empty secret shorter than 32 characters fails the deploy before Cloud Run is updated.
 
-The runtime service account (`trader-runtime`) already has `roles/secretmanager.secretAccessor` from `service/GCP_SETUP_zh.md`, which is what Cloud Run uses to mount the secret.
+Anyone who can view the Cloud Run service can read this variable. That includes `roles/run.viewer` and every role that includes it (for example `roles/run.developer`, `roles/editor`, and `roles/owner`), including the service details page in the console. Grant viewer access only to people who may hold the reviewer token.
 
-A manual create, without printing the value, is only a fallback when the Actions secret is empty:
+Rotate the token by generating a new value, updating the GitHub Actions secret `REVIEWER_TOKEN`, and running `deploy-trader` again. That deploy writes the new value onto the API service. There is no Secret Manager version to add.
 
-```bash
-openssl rand -base64 32 | tr -d '\n' | gcloud secrets create REVIEWER_TOKEN \
-  --data-file=- --replication-policy=automatic
-```
-
-Changing the GitHub Actions secret and running `deploy-trader` adds a Secret Manager version when the hash differs, then mounts it. Cloud Run pins `latest` at deploy time, so that run is what picks the new value up. A manual rotation that does not go through the workflow:
-
-```bash
-openssl rand -base64 32 | tr -d '\n' | gcloud secrets versions add REVIEWER_TOKEN --data-file=-
-
-gcloud run services update crypto-trader-api \
-  --project="$PROJECT_ID" --region=asia-east1 \
-  --update-secrets=REVIEWER_TOKEN=REVIEWER_TOKEN:latest
-```
-
-Until the secret is mounted, the dashboard login still works. Connectors do not.
+Until `REVIEWER_TOKEN` is set on the service, the dashboard login still works. Connectors do not.
 
 ## 2. Endpoints
 

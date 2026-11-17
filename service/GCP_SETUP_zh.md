@@ -131,7 +131,7 @@ printf '%s' '在此貼上你的API_SECRET' | gcloud secrets create BINANCE_DEMO_
 printf '%s' '新值' | gcloud secrets versions add BINANCE_DEMO_API_KEY --data-file=-
 ```
 
-外部審閱（ChatGPT／Claude／自動交易專家，只讀＋留言，不能核准、下單或撤銷）使用 secret `REVIEWER_TOKEN`。GitHub Actions 已有同名 secret；`deploy-trader` 會把它寫進 Secret Manager（沒有就建立，內容不同就加新版本）再掛到 API。部署用服務帳戶需要 `roles/secretmanager.admin`，或 `roles/secretmanager.secretAccessor` 加上 `roles/secretmanager.secretVersionAdder`（第一次建立 secret 需要 admin）。細節在 `docs/external-review.md`。不要把這組權杖寫進 repo。
+外部審閱（ChatGPT／Claude／自動交易專家，只讀＋留言，不能核准、下單或撤銷）使用環境變數 `REVIEWER_TOKEN`，不是 Secret Manager。GitHub Actions 已有同名 secret；secret 非空且至少 32 字元時，`deploy-trader` 只用 `--update-env-vars` 把它寫進 API 服務。交易用的 job 不會拿到這組值。secret 留空時，服務上既有的 `REVIEWER_TOKEN` 保持不變、不會被刪掉。擁有 Cloud Run viewer 的人可以從服務設定讀到這個值。輪替：更新 GitHub secret 後再跑一次 `deploy-trader`。細節在 `docs/external-review.md`。不要把這組權杖寫進 repo。
 
 ---
 
