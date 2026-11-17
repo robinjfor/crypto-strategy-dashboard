@@ -23,12 +23,12 @@
   <script>
   (async function () {
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-    const show = (v) => (v == null || v === "" ? "missing" : esc(v));
+    const show = (v) => (v == null || v === "" || v === "missing" ? "缺值" : esc(v));
     if (!window.TraderAuth || !TraderAuth.getToken()) { document.getElementById("main").textContent = "請先登入"; return; }
     const base = (TraderAuth.getApiBase && TraderAuth.getApiBase()) || "";
     const res = await fetch(base + "/review/credibility", {headers: {Authorization: "Bearer " + TraderAuth.getToken()}});
     const d = await res.json();
-    const coins = (d.unpriced_signals || []).map((r) => "<li>" + esc(r.symbol) + "：" + esc(r.cause) + "</li>").join("") || "<li>missing</li>";
+    const coins = (d.unpriced_signals || []).map((r) => "<li>" + esc(r.symbol) + "：" + esc(r.cause) + "</li>").join("") || "<li>缺值</li>";
     const periods = (d.before_after || []).map((p) => "<li>" + esc(p.label) + " 相符 " + show(p.n_match) + " 不符 " + show(p.n_mismatch) + "</li>").join("");
     document.getElementById("main").innerHTML = "<section class='section'><div class='card'><div class='card-body'>"
       + "<p>版本 " + show(d.commit) + "。樣本期間 " + show(d.sample_period) + "。留出起點 " + esc(d.holdout_from)

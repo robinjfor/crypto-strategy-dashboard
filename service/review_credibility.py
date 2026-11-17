@@ -5,6 +5,13 @@ import e5_tracking
 import review_audit
 
 HOLDOUT_FROM = "2026-10-01"
+MISSING = "缺值"
+
+
+def _show(value):
+    if value is None or value == "" or value == "missing":
+        return MISSING
+    return value
 PARITY_DAYS_REQUIRED = 21
 # Assumptions already fixed in the Demo code. Not a measured live sample.
 ASSUMPTIONS = {
@@ -32,21 +39,21 @@ def build(status: dict | None, state: dict | None) -> dict:
     return {
         "ok": True,
         "env": "demo",
-        "commit": status.get("api_version") or status.get("runner_version") or "missing",
-        "sample_period": "missing",
+        "commit": _show(status.get("api_version") or status.get("runner_version")),
+        "sample_period": MISSING,
         "holdout_from": HOLDOUT_FROM,
-        "walk_forward": "missing",
+        "walk_forward": MISSING,
         "assumptions": ASSUMPTIONS,
-        "trial_count": "missing",
-        "dsr": "missing",
+        "trial_count": MISSING,
+        "dsr": MISSING,
         "parity_days": parity_days,
         "parity_status": "unverified" if not verified else "verified",
         "label_zh": "未驗證" if not verified else "已驗證",
-        "parity_te": te if te is not None else "missing",
-        "parity_achieved": achieved if achieved is not None else "missing",
-        "parity_capital": latest.get("sizing_capital") if latest else "missing",
-        "virtual_capital": latest.get("virtual_capital") if latest else "missing",
-        "capital_basis_label": latest.get("capital_basis_label") if latest else "missing",
+        "parity_te": _show(te),
+        "parity_achieved": _show(achieved),
+        "parity_capital": _show(latest.get("sizing_capital") if latest else None),
+        "virtual_capital": _show(latest.get("virtual_capital") if latest else None),
+        "capital_basis_label": _show(latest.get("capital_basis_label") if latest else None),
         "orchestrator_target": report.get("orchestrator_target"),
         "before_after": [
             {"label": p.get("label"), "from": p.get("from"), "until": p.get("until"),

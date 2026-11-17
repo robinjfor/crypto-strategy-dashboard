@@ -2,7 +2,7 @@
 
 The latest E5 parity day uses `orchestrator.targets.demo_e5_min5_x175_t05top20` as `sizing_capital`. A snapshot `equity` or `K` of 5000 stays on `virtual_capital` and is not the comparison capital. Example: target 1986.13 with virtual 5000. Older days that have no orchestrator target for that bar still show the virtual figure and are labeled `virtual`.
 
-Fewer than 21 parity days is `unverified`（未驗證）. Trial count and DSR are `missing`; this page does not invent them. Before and after the parity-fix dates (2026-10-08 and 2026-10-21) are separate rows.
+Fewer than 21 parity days is `unverified`（未驗證）. Trial count and DSR are 缺值; this page does not invent them. Before and after the parity-fix dates (2026-10-08 and 2026-10-21) are separate rows.
 
 A coin with a non-zero signal weight, a null price, and no book quantity is listed with one cause:
 

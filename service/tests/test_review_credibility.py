@@ -61,4 +61,4 @@ def test_seven_unpriced_signals_each_have_a_cause_and_short_samples_are_unverifi
     assert cred["parity_days"] < 21
     assert cred["parity_status"] == "unverified"
     assert cred["parity_capital"] == 1986.13
-    assert cred["dsr"] == "missing"
+    assert cred["dsr"] == "缺值"
