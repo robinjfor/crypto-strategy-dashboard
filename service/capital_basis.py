@@ -262,12 +262,15 @@ def overlay_orchestrator(stored: dict | None, basis: dict | None) -> dict | None
     return out
 
 
-def summarize(income_rows, futures: dict | None, history=None, account_total=None) -> dict:
+def summarize(income_rows, futures: dict | None, history=None, account_total=None,
+              complete=None, spot_usdt=None, futures_usdt=None) -> dict:
     """NAV = USDT-M (wallet + unrealized) + USDC-M (wallet + unrealized). Spot is not in NAV.
 
     futures: {"USDT": marginBalance, "USDC": marginBalance} from GET /fapi/v2/account.
     history: futures-NAV daily series from update_history. account_total (spot included) is
-    reported for reference only and never used for PnL.
+    reported for reference only and never used for PnL. It is written only when the spot
+    read is complete. complete=False (empty spot list or a failed read) omits it.
+    complete=None keeps the previous callers, which pass a total they already trust.
     """
     dep = deposits(transfers_from_income(income_rows))
     nav = futures_nav(futures)
@@ -276,7 +279,19 @@ def summarize(income_rows, futures: dict | None, history=None, account_total=Non
            "nav_note": "淨值＝USDT-M 合約錢包＋未實現 ＋ USDC 合約錢包＋未實現，不含現貨。損益＝淨值 − 起始資金。",
            "nav_usdt_m": None if (futures or {}).get("USDT") is None else round(float(futures["USDT"]), 2),
            "nav_usdc_m": None if (futures or {}).get("USDC") is None else round(float(futures["USDC"]), 2)}
-    if account_total is not None:
+    if complete is not None:
+        out["complete"] = bool(complete)
+    if spot_usdt is not None:
+        try:
+            out["spot_usdt"] = round(float(spot_usdt), 4)
+        except (TypeError, ValueError):
+            out["spot_usdt"] = None
+    if futures_usdt is not None:
+        try:
+            out["futures_usdt"] = round(float(futures_usdt), 4)
+        except (TypeError, ValueError):
+            out["futures_usdt"] = None
+    if account_total is not None and complete is not False:
         try:
             out["account_total_incl_spot"] = round(float(account_total), 2)
         except (TypeError, ValueError):

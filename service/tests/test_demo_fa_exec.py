@@ -50,6 +50,25 @@ def _accept(monkeypatch):
 T1 = {"decided_bar": "2026-11-01", "K": 10, "held": ["AUSDT", "BUSDT"]}
 
 
+def test_zero_weight_skips_with_the_weight_reason_not_the_ordering_gate():
+    st = _state(cloud_ordering_ok=False)
+    st["orchestrator"] = {"weights": {demo_fa.SLOT: 0}, "targets": {demo_fa.SLOT: 1000}}
+    assert demo_fa_exec.active(st) == (False, "權重為 0")
+    assert demo_fa_exec.execute(st, Spot(), Fut(), T1)["skipped"] == "權重為 0"
+    st["orchestrator"] = {"weights": {demo_fa.SLOT: 0.4}, "targets": {demo_fa.SLOT: 0}}
+    assert demo_fa_exec.active(st)[1] == "權重為 0"
+    detail = demo_fa_exec.note_ordering(st, {"pass": False})
+    assert detail["informational"] is True and detail["weight_note"] == "權重為 0" and detail["pass"] is False
+
+
+def test_positive_weight_with_ordering_false_is_still_blocked():
+    st = _state(cloud_ordering_ok=False)
+    st["orchestrator"] = {"weights": {demo_fa.SLOT: 0.4}, "targets": {demo_fa.SLOT: 1000}}
+    assert demo_fa_exec.active(st) == (False, "下單測試未通過")
+    assert demo_fa_exec.execute(st, Spot(), Fut(), T1) == {"skipped": "下單測試未通過"}
+    assert demo_fa_exec.note_ordering(st, {"pass": False}) == {"pass": False}
+
+
 def test_noop_unless_enabled_approved_accepted(monkeypatch):
     f = Fut()
     for st in (_state(enabled=False), _state(approved=False)):

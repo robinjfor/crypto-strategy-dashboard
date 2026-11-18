@@ -638,6 +638,12 @@ def run_demo_gates(state0: dict) -> dict:
         except Exception as e:  # noqa: BLE001
             log.warning("demo_gates_fail slot=%s err=%s", slot, e)
             g = {"gates_day": day, "parity_pass": False, "cloud_ordering_ok": False, "error": str(e)[:200]}
+        if slot == demo_fa.SLOT:
+            import demo_fa_exec
+            # Weight 0 still records the check. active() skips with 權重為 0 and does not treat this flag as the reason.
+            g["ordering_detail"] = demo_fa_exec.note_ordering(state0, g.get("ordering_detail"))
+            if demo_fa_exec.weight_is_zero(state0):
+                g["ordering_informational"] = True
         out[slot] = g
     try:  # demo_e5 (E-minnot): parity is box-side (committed parity_E5.json); small real Demo test orders only on --force-parity, until passed
         import demo_e5
@@ -878,6 +884,7 @@ def run_once(store=None, *, client=None, fc=None) -> dict:
                 fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
                 fa_scratch["demo_fa_exec"]["last_run"] = {"at": now_iso_taipei(), "result": json.loads(json.dumps(res, default=str)[:4000]) if len(json.dumps(res, default=str)) <= 4000 else str(res)[:2000]}
             else:
+                # Weight 0 is 「權重為 0」, not 「下單測試未通過」. A positive weight still stops on cloud_ordering_ok.
                 fa_scratch["demo_fa_exec"] = dict(fa_scratch.get("demo_fa_exec") or {})
                 fa_scratch["demo_fa_exec"]["last_run"] = {"at": now_iso_taipei(), "result": {"skipped": demo_fa_exec.active(fa_scratch)[1]}}
         except Exception as e:  # noqa: BLE001

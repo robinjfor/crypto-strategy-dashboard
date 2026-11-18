@@ -553,6 +553,7 @@ def list_strategies(status: dict, _state: dict) -> Outcome:
             continue
         sid = slot.get("slot")
         spec = alloc.get(sid) or {}
+        fa_ord = _fa_ordering(status, _state) if sid == "demo_funding_arb_1x" else None
         rows.append({
             "slot": sid,
             "strategy_id": slot.get("strategy_id"),
@@ -574,6 +575,11 @@ def list_strategies(status: dict, _state: dict) -> Outcome:
             "params_summary": slot.get("entry_condition"),
             "leverage": slot.get("leverage"),
             "quote_usdt": slot.get("quote_usdt"),
+            **({
+                "cloud_ordering_ok": fa_ord.get("cloud_ordering_ok"),
+                "ordering_detail": fa_ord.get("ordering_detail"),
+                "last_run": fa_ord.get("last_run"),
+            } if fa_ord else {}),
         })
     return Outcome(redact({
         "ok": True,
@@ -625,6 +631,45 @@ def _with_current_drawdown(basis: dict) -> dict:
     return out
 
 
+def _basis_with_spot(status: dict) -> dict:
+    """capital_basis plus the spot completeness fields. An incomplete spot read drops the incl-spot total."""
+    basis = _with_current_drawdown(status.get("capital_basis") or {})
+    ta = status.get("total_assets") if isinstance(status.get("total_assets"), dict) else {}
+    if not ta and "complete" not in basis:
+        return basis
+    if ta:
+        basis["spot_usdt"] = ta.get("spot_usdt")
+        basis["futures_usdt"] = ta.get("futures_usdt")
+        basis["complete"] = bool(ta.get("complete"))
+    if basis.get("complete") is False:
+        basis.pop("account_total_incl_spot", None)
+    return basis
+
+
+def _fa_ordering(status: dict, state: dict) -> dict:
+    """FA ordering check and the last reconcile skip/run. Read-only."""
+    slot = "demo_funding_arb_1x"
+    row: dict = {}
+    cands = status.get("demo_candidates")
+    if isinstance(cands, list):
+        row = next((c for c in cands if isinstance(c, dict) and (c.get("id") == slot or c.get("slot") == slot)), {}) or {}
+    elif isinstance(cands, dict) and isinstance(cands.get(slot), dict):
+        row = cands[slot]
+    if not row:
+        raw = (state.get("demo_candidates") or {}).get(slot) if isinstance(state.get("demo_candidates"), dict) else None
+        row = raw if isinstance(raw, dict) else {}
+    ex = status.get("demo_fa_exec") if isinstance(status.get("demo_fa_exec"), dict) else {}
+    if not ex.get("last_run"):
+        stored = state.get("demo_fa_exec") if isinstance(state.get("demo_fa_exec"), dict) else {}
+        ex = stored or ex
+    return {
+        "slot": slot,
+        "cloud_ordering_ok": row.get("cloud_ordering_ok"),
+        "ordering_detail": row.get("ordering_detail"),
+        "last_run": ex.get("last_run"),
+    }
+
+
 def get_performance(status: dict, state: dict) -> Outcome:
     import capital_basis
     nav_history = _nav_history(status, state)
@@ -639,7 +684,7 @@ def get_performance(status: dict, state: dict) -> Outcome:
         "ok": True,
         "account": "binance_demo",
         "updated_at": status.get("updated_at"),
-        "capital_basis": _with_current_drawdown(status.get("capital_basis") or {}),
+        "capital_basis": _basis_with_spot(status),
         "nav_history": nav_history[-400:],
         "history": nav_history[-400:],
         "book_history": book[-400:],
@@ -892,6 +937,7 @@ def get_orchestrator_plan(status: dict, state: dict, args: dict | None = None) -
         "history": hist[-limit:],
         "book_history": hist[-limit:],
         "nav_history": _nav_history(status, state)[-400:],
+        "fa": _fa_ordering(status, state),
         "history_note": (
             "latest 的 portfolio_equity、peak、current_drawdown 與 /status 相同，是合約錢包。"
             "history 與 book_history 是虛擬帳本合計（book_portfolio_equity、book_drawdown），只供回撤警示對照。"
