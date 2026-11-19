@@ -104,6 +104,24 @@ def test_total_assets_includes_futures_wallets():
     assert api._total_assets(C(), bals, books)["complete"] is False
 
 
+def test_empty_or_failed_spot_is_not_a_complete_account():
+    import api
+    import capital_basis
+
+    class C:
+        def all_prices(self):
+            raise RuntimeError("spot down")
+
+    books = {"usdt": {"futures": {"margin_balance": 5000.0}}, "usdc": {"futures": {"margin_balance": 5000.0}}}
+    empty = api._total_assets(C(), [], books)
+    assert empty["complete"] is False and empty["spot_usdt"] == 0.0
+    basis = capital_basis.summarize([], empty["futures"], [], empty.get("total_usdt"), complete=False,
+                                    spot_usdt=empty["spot_usdt"], futures_usdt=empty["futures_usdt"])
+    assert "account_total_incl_spot" not in basis
+    failed = api._total_assets(C(), [{"asset": "USDT", "free": "1", "locked": "0"}], books)
+    assert failed["complete"] is False and failed.get("error")
+
+
 def test_record_asset_month():
     import reconcile
     st = {}

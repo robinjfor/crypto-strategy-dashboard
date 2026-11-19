@@ -35,6 +35,14 @@ def test_nav_is_futures_only_and_matches_the_1112_snapshot():
     assert d["peak"] == 10000 and d["max_drawdown"] == 322.99
 
 
+def test_incomplete_spot_does_not_write_the_account_total():
+    d = C.summarize([], FUT_1112, [], account_total=20120.22, complete=False, spot_usdt=0.0, futures_usdt=9677.01)
+    assert d["nav"] == 9677.01
+    assert "account_total_incl_spot" not in d
+    assert d["complete"] is False
+    assert d["spot_usdt"] == 0.0 and d["futures_usdt"] == 9677.01
+
+
 def test_missing_leg_gives_no_nav_instead_of_a_fake_loss():
     d = C.summarize([], {"USDT": 4868.68, "USDC": None}, [], account_total=20120.22)
     assert d["nav"] is None and d["pnl"] is None

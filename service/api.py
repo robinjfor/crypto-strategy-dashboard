@@ -1330,11 +1330,16 @@ def _open_orders(client, fc) -> dict:
 
 def _total_assets(client, bals: list, books: dict) -> dict:
     """Whole account in USDT terms, every number from Binance: all spot balances (incl. dust) valued at
-    Binance ticker prices + USD-M USDT and USDC futures margin balances (wallet + unrealized)."""
-    out: dict = {"source": "binance", "spot_usdt": 0.0, "futures": {}, "unpriced": []}
+    Binance ticker prices + USD-M USDT and USDC futures margin balances (wallet + unrealized).
+
+    An empty spot list, or a failed spot read, is not a complete account. spot_usdt 0 from that
+    case must not be stored as account_total_incl_spot.
+    """
+    out: dict = {"source": "binance", "spot_usdt": 0.0, "futures": {}, "unpriced": [], "complete": False}
     try:
         prices = {}
-        if bals:
+        spot_read = isinstance(bals, list) and len(bals) > 0
+        if spot_read:
             prices = {r["symbol"]: float(r["price"]) for r in client.all_prices() or []}
         for b in bals or []:
             a = str(b["asset"]).upper()
@@ -1359,9 +1364,11 @@ def _total_assets(client, bals: list, books: dict) -> dict:
         out["spot_usdt"] = round(out["spot_usdt"], 4)
         out["futures_usdt"] = round(fut_total, 4)
         out["total_usdt"] = round(out["spot_usdt"] + fut_total, 4)
-        out["complete"] = not out["unpriced"] and all(v is not None for v in out["futures"].values())
+        futures_ok = bool(out["futures"]) and all(v is not None for v in out["futures"].values())
+        out["complete"] = spot_read and not out["unpriced"] and futures_ok
     except Exception as e:  # noqa: BLE001
         out["error"] = str(e)[:200]
+        out["complete"] = False
     return out
 
 
@@ -1476,11 +1483,15 @@ def build_status() -> dict:
     _fc = _FDC()
     open_orders = _open_orders(client if client.api_key else None, _fc if _fc.api_key else None)
     import capital_basis
+    _ta = total_assets or {}
     capital_basis_view = capital_basis.summarize(
         state.get("futures_transfers") or [],
-        (total_assets or {}).get("futures") or {},
+        _ta.get("futures") or {},
         state.get("capital_basis_history") or [],
-        (total_assets or {}).get("total_usdt"),
+        _ta.get("total_usdt") if _ta.get("complete") else None,
+        complete=bool(_ta.get("complete")),
+        spot_usdt=_ta.get("spot_usdt"),
+        futures_usdt=_ta.get("futures_usdt"),
     )
     _nav_for_risk = capital_basis.display_nav_history(
         state.get("capital_basis_history"), capital_basis_view.get("starting_total"))

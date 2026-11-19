@@ -549,3 +549,35 @@ def test_auto_trader_thread(client):
     assert match["display_name"] == "自動交易專家"
     assert match["thread"][0]["replies"][0]["author"] == "auto_trader"
     _no_secrets(listed)
+
+
+def test_performance_reports_spot_fields_and_drops_an_incomplete_total():
+    import review_mcp
+    status = {
+        "updated_at": "2026-11-17T12:00:00+08:00",
+        "capital_basis": {"nav": 10000.0, "peak": 10000.0, "account_total_incl_spot": 10000.0},
+        "total_assets": {"spot_usdt": 0.0, "futures_usdt": 10000.0, "total_usdt": 10000.0, "complete": False},
+    }
+    basis = review_mcp.get_performance(status, {}).body["capital_basis"]
+    assert basis["spot_usdt"] == 0.0 and basis["futures_usdt"] == 10000.0 and basis["complete"] is False
+    assert "account_total_incl_spot" not in basis
+
+
+def test_orchestrator_exposes_the_fa_ordering_check_and_last_run():
+    import review_mcp
+    status = {
+        "updated_at": "2026-11-17T12:00:00+08:00",
+        "demo_candidates": [{
+            "id": "demo_funding_arb_1x",
+            "cloud_ordering_ok": False,
+            "ordering_detail": {"pass": False, "informational": True, "weight_note": "權重為 0"},
+        }],
+        "demo_fa_exec": {"last_run": {"at": "2026-11-17T08:08:00+08:00", "result": {"skipped": "權重為 0"}}},
+        "armed_slots": [{"slot": "demo_funding_arb_1x", "strategy_id": "fa", "code": "FA"}],
+    }
+    plan = review_mcp.get_orchestrator_plan(status, {}).body["fa"]
+    assert plan["cloud_ordering_ok"] is False
+    assert plan["ordering_detail"]["weight_note"] == "權重為 0"
+    assert plan["last_run"]["result"]["skipped"] == "權重為 0"
+    row = review_mcp.list_strategies(status, {}).body["strategies"][0]
+    assert row["cloud_ordering_ok"] is False and row["last_run"]["result"]["skipped"] == "權重為 0"

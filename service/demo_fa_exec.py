@@ -18,8 +18,37 @@ log = logging.getLogger("demo_fa_exec")
 PERP_LEVERAGE = 3  # perp margin = 1/3 notional (isolated), net 1x with the spot leg
 
 
+def _orch_number(state: dict, field: str):
+    orch = state.get("orchestrator") if isinstance(state.get("orchestrator"), dict) else {}
+    bag = orch.get(field) if isinstance(orch.get(field), dict) else {}
+    raw = bag.get(demo_fa.SLOT)
+    try:
+        if raw is None or raw == "":
+            return None
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def weight_is_zero(state: dict) -> bool:
+    """True when the orchestrator weight or the sizing target for FA is present and not positive."""
+    weight, target = _orch_number(state, "weights"), _orch_number(state, "targets")
+    return (weight is not None and weight <= 0) or (target is not None and target <= 0)
+
+
+def note_ordering(state: dict, detail: dict | None) -> dict:
+    """The daily ordering check still runs at weight 0. It does not gate orders until the weight is positive."""
+    out = dict(detail or {})
+    if weight_is_zero(state):
+        out["informational"] = True
+        out["weight_note"] = "權重為 0"
+    return out
+
+
 def active(state: dict) -> tuple[bool, str]:
     from demo_candidates import accepted
+    if weight_is_zero(state):
+        return False, "權重為 0"
     g = (state.get("demo_candidates") or {}).get(demo_fa.SLOT) or {}
     for k, why in (("enabled", "未啟用"), ("approved", "未批准"), ("parity_pass", "對帳未通過"), ("cloud_ordering_ok", "下單測試未通過")):
         if not g.get(k):
